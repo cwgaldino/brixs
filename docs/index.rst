@@ -15,7 +15,7 @@ Python package for analysis of RIXS spectra.
    File manipulation <filemanip>
    Interaction module <intermanip>
    Model functions module <model_functions>
-   Examples <examples>
+.. Examples <examples>
 
 
 
