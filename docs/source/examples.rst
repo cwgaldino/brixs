@@ -1,8 +1,0 @@
-
-
-
-Examples
-==================
-
-bla bla bla
-
