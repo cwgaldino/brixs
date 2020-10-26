@@ -185,8 +185,8 @@ def parsed_filelist(dirpath='.', string='*', ref=0, type='int'):
     return parsed_folder
 
 
-def save_string(string, filePath='./Untitled.txt', checkOverwrite=False):
-    """Save string to txt file.
+def save_text(string, filePath='./Untitled.txt', checkOverwrite=False):
+    """Save text to txt file.
 
     Args:
         string (str): string to be saved.
@@ -196,7 +196,7 @@ def save_string(string, filePath='./Untitled.txt', checkOverwrite=False):
             and ask if user want to overwrite file.
 
     See Also:
-        :py:func:`load_string`
+        :py:func:`load_text`
     """
     filePath = Path(filePath)
 
@@ -217,8 +217,8 @@ def save_string(string, filePath='./Untitled.txt', checkOverwrite=False):
     f.close()
 
 
-def load_string(filePath):
-    """Load string from txt file.
+def load_text(filePath):
+    """Load text from txt file.
 
     Args:
         filePath (str or pathlib.Path): filepath to load.
@@ -227,7 +227,7 @@ def load_string(filePath):
         string.
 
     See Also:
-        :py:func:`save_string`
+        :py:func:`save_text`
     """
     f = Path(filePath).open()
     text = f.read()
@@ -289,7 +289,7 @@ def load_obj(filepath, dict_keys_to_int=False):
         filepath (str or pathlib.Path): file path to load.
         dict_keys_to_int (bool, optional): If True, it will change ALL
             numeric dict keys (even for key in nested dictionarys to int, e.g.,
-            dictObject["0.0"] will be dictObject[0].
+            dictObject["0.0"] will turn into dictObject[0].
 
     Returns:
         object.
@@ -394,7 +394,7 @@ def save_data(obj, filepath='./untitled.txt', col_labels=True, data_format='% .1
     np.savetxt(filepath, obj, fmt=data_format, delimiter=delimiter, newline=newline, header=header, footer=footer, comments=commentFlag)
 
 
-def getComments(filepath, commentFlag='#', stopFlag='#'):
+def load_Comments(filepath, commentFlag='#', stopFlag='#'):
     """Return comments from text files.
 
     Comments must be indicated at the begining of the line by the comment flag.
