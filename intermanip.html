@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>interact &#8212; brixs 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Model functions" href="model_functions.html" />
+    <link rel="prev" title="filemanip" href="filemanip.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-brixs.intermanip">
+<span id="interact"></span><h1>interact<a class="headerlink" href="#module-brixs.intermanip" title="Permalink to this headline">¶</a></h1>
+<p>Everyday use functions for user interaction.</p>
+<dl class="function">
+<dt id="brixs.intermanip.makeSound">
+<code class="sig-prename descclassname">brixs.intermanip.</code><code class="sig-name descname">makeSound</code><span class="sig-paren">(</span><em class="sig-param">duration=1</em>, <em class="sig-param">freq=440</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.makeSound" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a sound.</p>
+<p>On linux (tested on ubuntu) it uses sox (<code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">sox</span></code>).
+On windows it uses the python package winsound (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">winsound</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>duration</strong> (<em>int</em><em>, </em><em>optional</em>) – duration in seconds.</p></li>
+<li><p><strong>freq</strong> (<em>int</em><em>, </em><em>optional</em>) – frequence of sound in Hertz</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.intermanip.query_yes_no">
+<code class="sig-prename descclassname">brixs.intermanip.</code><code class="sig-name descname">query_yes_no</code><span class="sig-paren">(</span><em class="sig-param">question</em>, <em class="sig-param">default='yes'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.query_yes_no" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ask a yes/no question and return answer.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It accepts many variations of yes and no as answer, like, “y”, “YES”, “N”, …</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>question</strong> (<em>str</em>) – string that is presented to the user.</p></li>
+<li><p><strong>default</strong> (<em>'yes'</em><em>, </em><em>'no'</em><em> or </em><em>None</em>) – default answer if the user just hits
+&lt;Enter&gt;. If None, an answer is required of the user.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True for “yes” or False for “no”.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.intermanip.sayOutLoud">
+<code class="sig-prename descclassname">brixs.intermanip.</code><code class="sig-name descname">sayOutLoud</code><span class="sig-paren">(</span><em class="sig-param">message</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.sayOutLoud" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate speech like sounds.</p>
+<p>On Linux (tested only on ubuntu 18.04) speech-dispatcher package is necessary
+(<code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt-get</span> <span class="pre">install</span> <span class="pre">-y</span> <span class="pre">speech-dispatcher</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>message</strong> (<em>str</em>) – message to be said out loud.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">brixs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filemanip.html">File manipulation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interaction module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_functions.html">Model functions module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="filemanip.html" title="previous chapter">filemanip</a></li>
+      <li>Next: <a href="model_functions.html" title="next chapter">Model functions</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Carlos Galdino.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/intermanip.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
