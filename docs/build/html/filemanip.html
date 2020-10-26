@@ -1,0 +1,409 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>filemanip &#8212; brixs 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="interact" href="intermanip.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-brixs.filemanip">
+<span id="filemanip"></span><h1>filemanip<a class="headerlink" href="#module-brixs.filemanip" title="Permalink to this headline">¶</a></h1>
+<p>Everyday use functions for file handling.</p>
+<dl class="function">
+<dt id="brixs.filemanip.filelist">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">filelist</code><span class="sig-paren">(</span><em class="sig-param">dirpath='.'</em>, <em class="sig-param">string='*'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.filelist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list with all the files containg <cite>string</cite> in its name.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>List is sorted by the filename.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirpath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – list with full file directory</p></li>
+<li><p><strong>paths.</strong> – </p></li>
+<li><p><strong>string</strong> (<em>str</em><em>, </em><em>optional</em>) – string to look for in file names.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.parsed_filelist" title="brixs.filemanip.parsed_filelist"><code class="xref py py-func docutils literal notranslate"><span class="pre">parsed_filelist()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.load_Comments">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">load_Comments</code><span class="sig-paren">(</span><em class="sig-param">filepath</em>, <em class="sig-param">commentFlag='#'</em>, <em class="sig-param">stopFlag='#'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.load_Comments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return comments from text files.</p>
+<p>Comments must be indicated at the begining of the line by the comment flag.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em>) – fullpath to file</p></li>
+<li><p><strong>commentFlag</strong> (<em>str</em><em>, </em><em>optional</em>) – string that indicate line is a comment.</p></li>
+<li><p><strong>stopFlag</strong> (<em>str</em><em>, </em><em>optional</em>) – string that indicates line to stop looking for
+comments. Use <cite>None</cite> to read all lines in file (useful for reading
+file with comments not only at the beginning). If <cite>stopFlag</cite> is
+equal to <cite>commentFlag</cite> it will read from the first line with
+<cite>commentFlag</cite> and keep reading until <cite>commentFlag</cite> does not apper
+anymore (useful to read comments at the beginning of a file).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list with comments or -1 if no comment is found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.load_data">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">load_data</code><span class="sig-paren">(</span><em class="sig-param">filepath</em>, <em class="sig-param">delimiter='</em>, <em class="sig-param">'</em>, <em class="sig-param">commentFlag='#'</em>, <em class="sig-param">col_labels=None</em>, <em class="sig-param">force_array=False</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.load_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data from text file. Data is formated in a dictionary or array.</p>
+<p>The dictionary keys are set as the label of the corresponding data columns, where
+the last comment line before data starts is assumed to have the labels of each data column.
+If column labels cannot be found, data is imported as an array.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function has not been fully tested.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em>) – path to file</p></li>
+<li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – The string used to separate values. If whitespaces are used,
+consecutive whitespaces act as delimiter. Use <code class="docutils literal notranslate"><span class="pre">\t</span></code> for tab.</p></li>
+<li><p><strong>commentFlag</strong> (<em>str</em><em>, </em><em>optional</em>) – string indicating comments.</p></li>
+<li><p><strong>col_labels</strong> (<em>list</em><em>, </em><em>optional</em>) – <p>use this if loading data from a file that does
+not have a header or if you want to change the columns labels imported
+from the file. Its lenght must have the same as the number of
+columns in data.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>To avoid importing a data column, use <code class="docutils literal notranslate"><span class="pre">col_labels</span></code> and put an asterisk (*) in front of the corresponding label.</p>
+</div>
+</p></li>
+<li><p><strong>force_array</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">force_array=True</span></code>, data it will be returned in a array.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary or array.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.save_data" title="brixs.filemanip.save_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_data()</span></code></a>.</p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.load_obj">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">load_obj</code><span class="sig-paren">(</span><em class="sig-param">filepath</em>, <em class="sig-param">dict_keys_to_int=False</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.load_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load object (array, dictionary, list, etc…) from a txt file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em>) – file path to load.</p></li>
+<li><p><strong>dict_keys_to_int</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, it will change ALL
+numeric dict keys (even for key in nested dictionarys to int, e.g.,
+dictObject[“0.0”] will turn into dictObject[0].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>object.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.save_obj" title="brixs.filemanip.save_obj"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_obj()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.load_text">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">load_text</code><span class="sig-paren">(</span><em class="sig-param">filePath</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.load_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load text from txt file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filePath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em>) – filepath to load.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>string.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.save_text" title="brixs.filemanip.save_text"><code class="xref py py-func docutils literal notranslate"><span class="pre">save_text()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.parsed_filelist">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">parsed_filelist</code><span class="sig-paren">(</span><em class="sig-param">dirpath='.'</em>, <em class="sig-param">string='*'</em>, <em class="sig-param">ref=0</em>, <em class="sig-param">type='int'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.parsed_filelist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a filelist organized in a dictionary.</p>
+<p>I searches for numbers (float and int) within the filenames (or foldernames)
+and uses them as keys for the dictionary. Filenames (or foldernames) must
+have the same pattern.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirpath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – directory path.</p></li>
+<li><p><strong>string</strong> (<em>str</em><em>, </em><em>optional</em>) – string to filter filenames.</p></li>
+<li><p><strong>ref</strong> (<em>int</em><em>, </em><em>optional</em>) – index of the reference number to be used as key.</p></li>
+<li><p><strong>type</strong> (<em>string</em><em>, </em><em>optional</em>) – if ‘int’, dict keys are transormed in integers.
+If ‘float’, dict keys are transformed into float.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary. Dict keys are some number found in filename.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.filelist" title="brixs.filemanip.filelist"><code class="xref py py-func docutils literal notranslate"><span class="pre">filelist()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.rename_files">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">rename_files</code><span class="sig-paren">(</span><em class="sig-param">filelist</em>, <em class="sig-param">pattern</em>, <em class="sig-param">newPattern</em>, <em class="sig-param">ask=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.rename_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the filename pattern of files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filelist</strong> (<em>list</em>) – list of filepaths (string or pathlib.Path object).</p></li>
+<li><p><strong>pattern</strong> (<em>str</em>) – string that represents the filename pattern. Use <code class="docutils literal notranslate"><span class="pre">{}</span></code> to collect values within the file name.</p></li>
+<li><p><strong>newPattern</strong> (<em>str</em>) – <p>Each chunk of information assigned with <code class="docutils literal notranslate"><span class="pre">{}</span></code> in <code class="docutils literal notranslate"><span class="pre">pattern</span></code>
+is assigned a number based on its position. The first chunk is
+0, then 1, and so on. Use <code class="docutils literal notranslate"><span class="pre">{position}</span></code> to define the new pattern,</p>
+<p class="rubric">Example</p>
+<p>If filename is ‘data_5K-8.dat’, <code class="docutils literal notranslate"><span class="pre">pattern</span> <span class="pre">=</span> <span class="pre">{}_{}K-{}.dat</span></code> and
+<code class="docutils literal notranslate"><span class="pre">newPattern={2}_{1}K.dat</span></code>. The new filename will be: ‘8_5K.dat’.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">\</span></code> as an escape key.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">{n}</span></code> in <code class="docutils literal notranslate"><span class="pre">newPattern</span></code> to inlcude the filenane index number (index within filelist).</p>
+</div>
+</p></li>
+<li><p><strong>ask</strong> (<em>bool</em>) – If true, it shows all the new filenames and asks for permission to rename.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.rmdir">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">rmdir</code><span class="sig-paren">(</span><em class="sig-param">dirpath</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.rmdir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a directory and everyting in it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dirpath</strong> (<em>string</em><em> or </em><em>pathlib.Path</em>) – directory path.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.save_data">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">save_data</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">filepath='./untitled.txt'</em>, <em class="sig-param">col_labels=True</em>, <em class="sig-param">data_format='% .10e'</em>, <em class="sig-param">header=''</em>, <em class="sig-param">footer=''</em>, <em class="sig-param">delimiter='</em>, <em class="sig-param">'</em>, <em class="sig-param">commentFlag='# '</em>, <em class="sig-param">newline='\n'</em>, <em class="sig-param">checkOverwrite=False</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.save_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save an array or a dictionary in a txt file.</p>
+<p>If obj is a dictionary, <code class="docutils literal notranslate"><span class="pre">col_labels</span></code> are the keys of the dictionary.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">*</span></code> in front of a dict key to do not save it to the file.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This function has not been fully tested.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>dict</em><em>, </em><em>list</em><em>, or </em><em>numpy.array</em>) – data to be saved to a file.</p></li>
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path to save file.</p></li>
+<li><p><strong>col_labels</strong> (<em>bool</em><em>, </em><em>optional</em>) – When obj is a dictonary, <code class="docutils literal notranslate"><span class="pre">col_labels=true</span></code>
+makes the dict keys to be added to the header as column labels.</p></li>
+<li><p><strong>data_format</strong> (<em>string</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – <p>If obj is a list, fmt can also
+be a list where each fmt element is associated with a column. If
+obj is a dict, fmt can also be a dict with same keys of obj. Then,
+each fmt value is associated with the corresponding column.</p>
+<p>See <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt">np.savetxt</a> documentation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span><span class="o">%</span><span class="p">[</span><span class="n">flag</span><span class="p">]</span><span class="n">width</span><span class="p">[</span><span class="o">.</span><span class="n">precision</span><span class="p">]</span><span class="n">specifier</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul>
+<li><p>flag can be: ‘-‘ for left justify, ‘+’, whch forces to precede</p></li>
+<li><p>result with + or -, or ‘0’ to Left pad the number with zeros
+instead of space (see width).</p></li>
+<li><p>width is the minimum number of characters to be printed.</p></li>
+<li><p>precision is tipically the number of significant digits</p></li>
+<li><p>specifier is the type of notation. Tipically, either ‘e’ for
+scientific notation of ‘f’ for decimal floating point.</p></li>
+<li><p>a common fmt strings is: ‘%.3f’ for 3 decimal places.</p></li>
+</ul>
+</p></li>
+<li><p><strong>header</strong> (<em>str</em><em>, </em><em>oprional</em>) – string that will be written at the beggining of
+the file (comment flag is added automatically).</p></li>
+<li><p><strong>footer</strong> (<em>str</em><em>, </em><em>oprional</em>) – string that will be written at the end of the
+file (comment flag is added automatically).</p></li>
+<li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – The string used to separate values.</p></li>
+<li><p><strong>commentFlag</strong> (<em>str</em><em>, </em><em>optional</em>) – string that flag comments.</p></li>
+<li><p><strong>newline</strong> (<em>str</em><em>, </em><em>optional</em>) – string to indicate new lines.</p></li>
+<li><p><strong>checkOverwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, it will check if file exists
+and ask if user want to overwrite file.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.load_data" title="brixs.filemanip.load_data"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_data()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.save_obj">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">save_obj</code><span class="sig-paren">(</span><em class="sig-param">obj</em>, <em class="sig-param">filepath='./Untitled.txt'</em>, <em class="sig-param">checkOverwrite=False</em>, <em class="sig-param">prettyPrint=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.save_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save object (array, dictionary, list, etc…) to a txt file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>object</em>) – object to be saved.</p></li>
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path to save file.</p></li>
+<li><p><strong>checkOverwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, it will check if file exists
+and ask if user want to overwrite file.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.load_obj" title="brixs.filemanip.load_obj"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_obj()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.filemanip.save_text">
+<code class="sig-prename descclassname">brixs.filemanip.</code><code class="sig-name descname">save_text</code><span class="sig-paren">(</span><em class="sig-param">string</em>, <em class="sig-param">filePath='./Untitled.txt'</em>, <em class="sig-param">checkOverwrite=False</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.filemanip.save_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save text to txt file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>string</strong> (<em>str</em>) – string to be saved.</p></li>
+<li><p><strong>filePath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path to save file. If no path
+is given, current working directory is used.</p></li>
+<li><p><strong>checkOverwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, it will check if file exists
+and ask if user want to overwrite file.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.filemanip.load_text" title="brixs.filemanip.load_text"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_text()</span></code></a></p>
+</div>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">brixs</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">File manipulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intermanip.html">Interaction module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_functions.html">Model functions module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="intermanip.html" title="next chapter">interact</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Carlos Galdino.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.1.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/filemanip.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
