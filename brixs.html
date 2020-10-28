@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>brixs &#8212; brixs 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/clipboard.min.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="filemanip" href="filemanip.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="filemanip.html" title="filemanip"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-brixs.brixs">
+<span id="brixs"></span><h1>brixs<a class="headerlink" href="#module-brixs.brixs" title="Permalink to this headline">¶</a></h1>
+<p>Python package for analysis of RIXS spectra.</p>
+<p>bla bla bla.</p>
+<dl class="function">
+<dt id="brixs.brixs.simulate_spectrum">
+<code class="sig-prename descclassname">brixs.brixs.</code><code class="sig-name descname">simulate_spectrum</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">w</em>, <em class="sig-param">excitations</em>, <em class="sig-param">factor=1</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.simulate_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a function I(E) which returns the intensity of a spectrum.</p>
+<p>The spectrum is composed by an elastic peak and many other peak refered as
+excitations. The area, position, and width of those excitations are
+in terms of the amplitude, position, and width of the elastic peak.</p>
+<p>Peaks have a gaussian profile.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>c</strong> (<em>int</em><em> or </em><em>float</em>) – position of elastic peak in energy.</p></li>
+<li><p><strong>w</strong> (<em>int</em><em> or </em><em>float</em>) – fwhm of the elastic peak in energy.</p></li>
+<li><p><strong>excitations</strong> (<em>list</em>) – list of excitations. Each element must be a list
+with three elements: the relative area compared to the elastic peak
+area, the distance from the elastic peak in energy units, and the
+relative width compared to the elastic peak width.</p></li>
+<li><p><strong>factor</strong> (<em>int</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Multiplicative factor. The default is 1,
+wich mean that the elastic peak goes from 0 to 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>function.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>Simulate a spectrum with two excitations with half the area of the
+elastic peak and twice its fwhm.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">I</span> <span class="o">=</span> <span class="n">brixs</span><span class="o">.</span><span class="n">simulate_spectrum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">excitations</span><span class="o">=</span><span class="p">[[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="n">factor</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">I</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Energy (eV)&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Intensity&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<a class="reference external image-reference" href="/_figs/ggg.png"><img alt="_images/ggg.png" class="align-center" src="_images/ggg.png" style="width: 400px;" /></a>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.brixs.simulate_photon_events">
+<code class="sig-prename descclassname">brixs.brixs.</code><code class="sig-name descname">simulate_photon_events</code><span class="sig-paren">(</span><em class="sig-param">I</em>, <em class="sig-param">background=0</em>, <em class="sig-param">noise=0</em>, <em class="sig-param">exposure=1000000.0</em>, <em class="sig-param">dispersion=8450.0</em>, <em class="sig-param">x_max=0.05222</em>, <em class="sig-param">y_max=0.02573</em>, <em class="sig-param">y_zero=0</em>, <em class="sig-param">angle=0</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.simulate_photon_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>angle          = 0     # degrees (rotation vector pointing out of the detector plane)
+dispersion     = 8.45 * (10**-3 / 10**-6) # eV/m
+y_zero         = 0      # ev
+length         = (52.22e-3, 25.73e-3)  # m</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="installation.html"
+                        title="previous chapter">Installation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="filemanip.html"
+                        title="next chapter">filemanip</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/brixs.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="filemanip.html" title="filemanip"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Carlos Galdino.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.1.1.
+    </div>
+  </body>
+</html>
