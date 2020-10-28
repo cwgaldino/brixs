@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Fit."""
+"""Python package for analysis of RIXS spectra.
+
+Galdino"""
 
 # standard libraries
 import matplotlib.pyplot as plt
@@ -28,39 +30,41 @@ def simulate_spectrum(c, w, excitations, factor=1):
 
     The spectrum is composed by an elastic peak and many other peak refered as
     excitations. The area, position, and width of those excitations are in terms
-     of the amplitude, position, and width of the elastic peak.
+    of the amplitude, position, and width of the elastic peak.
 
-     Peaks have a gaussian profile.
+    Peaks have a gaussian profile.
 
-     Args:
+    Args:
         c (int or float): position of elastic peak in energy.
         w (int or float): fwhm of the elastic peak in energy.
         excitations (list): list of excitations. Each element must be a list
-        with three elements: the relative area compared to the elastic peak
-        area, the distance from the elastic peak in energy units, and the
-        relative width compared to the elastic peak width.
+            with three elements: the relative area compared to the elastic peak
+            area, the distance from the elastic peak in energy units, and the
+            relative width compared to the elastic peak width.
         factor (int or float, optional): Multiplicative factor. The default is
-        1, wich mean that the elastic peak goes from 0 to 1.
+            1, wich mean that the elastic peak goes from 0 to 1.
 
-        Returns:
-            function.
+    Returns:
+        function.
 
-        Example:
-            Simulate a spectrum with two excitations with half the area of the
-            elastic peak and twice its fwhm.
+    Example:
+        Simulate a spectrum with two excitations with half the area of the
+        elastic peak and twice its fwhm.
 
-            >>> import matplotlib.pyplot as plt
-            >>> import numpy as np
-            >>> I = brixs.simulate_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]], factor=1)
-            >>> x = np.linspace(-2, 6, 1000)
-            >>> plt.plot(x, I(x))
-            >>> plt.xlabel('Energy (eV)')
-            >>> plt.ylabel('Intensity')
-            >>> plt.show()
+        >>> import brixs.brixs as brixs
+        >>> import matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>> I = brixs.simulate_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]], factor=1)
+        >>> x = np.linspace(-2, 6, 1000)
+        >>> plt.plot(x, I(x))
+        >>> plt.xlabel('Energy (eV)')
+        >>> plt.ylabel('Intensity')
+        >>> plt.show()
 
-            .. image:: /_figs/simulate_spectrum.png
-                :target: /_static/simulate_spectrum.png
-                :width: 600
+        .. image:: /_figs/simulate_spectrum.png
+            :target: /_static/simulate_spectrum.png
+            :width: 400
+            :align: center
 
     """
     I = f'lambda energy: {factor}*(fwhmGauss(energy, 1, {c}, {w})'
