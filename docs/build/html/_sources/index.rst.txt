@@ -12,6 +12,7 @@ Python package for analysis of RIXS spectra.
    :maxdepth: 2
 
    Installation <installation>
+   brixs <brixs>
    File manipulation <filemanip>
    Interaction module <intermanip>
    Model functions module <model_functions>
