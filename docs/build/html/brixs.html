@@ -48,14 +48,14 @@
   <div class="section" id="module-brixs.brixs">
 <span id="brixs"></span><h1>brixs<a class="headerlink" href="#module-brixs.brixs" title="Permalink to this headline">¶</a></h1>
 <p>Python package for analysis of RIXS spectra.</p>
-<p>bla bla bla.</p>
+<p>Galdino</p>
 <dl class="function">
 <dt id="brixs.brixs.simulate_spectrum">
 <code class="sig-prename descclassname">brixs.brixs.</code><code class="sig-name descname">simulate_spectrum</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">w</em>, <em class="sig-param">excitations</em>, <em class="sig-param">factor=1</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.simulate_spectrum" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a function I(E) which returns the intensity of a spectrum.</p>
 <p>The spectrum is composed by an elastic peak and many other peak refered as
-excitations. The area, position, and width of those excitations are
-in terms of the amplitude, position, and width of the elastic peak.</p>
+excitations. The area, position, and width of those excitations are in terms
+of the amplitude, position, and width of the elastic peak.</p>
 <p>Peaks have a gaussian profile.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -66,8 +66,8 @@ in terms of the amplitude, position, and width of the elastic peak.</p>
 with three elements: the relative area compared to the elastic peak
 area, the distance from the elastic peak in energy units, and the
 relative width compared to the elastic peak width.</p></li>
-<li><p><strong>factor</strong> (<em>int</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Multiplicative factor. The default is 1,
-wich mean that the elastic peak goes from 0 to 1.</p></li>
+<li><p><strong>factor</strong> (<em>int</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Multiplicative factor. The default is
+1, wich mean that the elastic peak goes from 0 to 1.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -77,7 +77,8 @@ wich mean that the elastic peak goes from 0 to 1.</p></li>
 <p class="rubric">Example</p>
 <p>Simulate a spectrum with two excitations with half the area of the
 elastic peak and twice its fwhm.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">brixs.brixs</span> <span class="k">as</span> <span class="nn">brixs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">I</span> <span class="o">=</span> <span class="n">brixs</span><span class="o">.</span><span class="n">simulate_spectrum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">excitations</span><span class="o">=</span><span class="p">[[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="n">factor</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
@@ -87,7 +88,7 @@ elastic peak and twice its fwhm.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="/_figs/ggg.png"><img alt="_images/ggg.png" class="align-center" src="_images/ggg.png" style="width: 400px;" /></a>
+<a class="reference external image-reference" href="/_static/simulate_spectrum.png"><img alt="_images/simulate_spectrum.png" class="align-center" src="_images/simulate_spectrum.png" style="width: 400px;" /></a>
 </dd></dl>
 
 <dl class="function">
