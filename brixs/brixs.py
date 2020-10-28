@@ -13,16 +13,12 @@ from matplotlib.transforms import Bbox
 import warnings
 
 # backpack
-import sys
-sys.path.append('/home/galdino/github/py-backpack')
-import backpack.filemanip as fmanip
-import backpack.figmanip as figmanip
-import backpack.arraymanip as manip
-from backpack.arraymanip import index
-from backpack.model_functions import fwhmGauss, fwhmAreaGauss
-import importlib
-importlib.reload(manip)
-importlib.reload(figmanip)
+import brixs
+import brixs.arraymanip as manip
+from brixs.arraymanip import index
+import brixs.filemanip as fmanip
+import brixs.figmanip as figmanip
+from brixs.model_functions import fwhmGauss, fwhmAreaGauss
 
 
 def simulate_spectrum(c, w, excitations, factor=1):
