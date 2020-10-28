@@ -61,8 +61,8 @@ def simulate_spectrum(c, w, excitations, factor=1):
         >>> plt.ylabel('Intensity')
         >>> plt.show()
 
-        .. image:: /_figs/simulate_spectrum.png
-            :target: simulate_spectrum.png
+        .. image:: _figs/simulate_spectrum.png
+            :target: _static/simulate_spectrum.png
             :width: 400
             :align: center
 
