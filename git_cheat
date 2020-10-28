@@ -1,0 +1,13 @@
+
+git checkout --track origin/gh-branches
+
+# Start the ssh-agent in the background.
+eval "$(ssh-agent -s)"
+
+# Add your SSH private key to the ssh-agent.
+ssh-add ~/.ssh/id_rsa
+
+# change remote URL from HTTPS to SSH
+git remote -v
+git remote set-url origin git@github.com:cwgaldino/brixs.git
+git remote -v
