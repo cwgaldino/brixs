@@ -1,29 +1,43 @@
-.. brixs documentation master file, created by
-   sphinx-quickstart on Fri Oct 23 12:37:28 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
+#######
 BRIXS
-=================================
+#######
 
 BRIXS is a python package for analysis of RIXS spectra.
+
+.. The core of the BRIXS package is spectrum and image manipulation obtained in RIXS experiments.
 
 .. toctree::
    :maxdepth: 2
 
    Installation <installation>
-   brixs <brixs>
-   Simulating spectra and CCD images <simulate>
+   CCD images and spectrum manipulation <brixs>
+   Simulation of test spectra and fake CCD images <simulate>
 
-teste dsaf sadf
+Support modules
+=================
+
+BRIXS brings a set of python modules that are considered
+"everyday use". They not only add functionality to the main modules, but also
+can be used directly by the user.
 
 .. toctree::
   :maxdepth: 2
 
-   File manipulation <filemanip>
+   Array manipulation module <arraymanip>
+   File manipulation module <filemanip>
+   Matplotlib figure manipulation module <figmanip>
    Interaction module <intermanip>
    Model functions module <model_functions>
-.. Examples <examples>
+
+Tutorials and Examples
+=========================
+
+.. toctree::
+ :maxdepth: 2
+
+  Example 1 <example1>
+  Example 2 <example2>
 
 
 

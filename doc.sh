@@ -10,6 +10,8 @@ git rm -rf .
 rm -r brixs
 rm -r brixs.egg-info
 rm -r build
+rm -r dist
+rm -r docs
 tar xzf /tmp/html.tgz
 git add .
 git commit -a -m "publish the docs"
