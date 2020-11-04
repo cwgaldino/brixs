@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>interact &#8212; brixs 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/clipboard.min.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="filemanip" href="filemanip.html" />
+    <link rel="prev" title="brixs" href="brixs.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="filemanip.html" title="filemanip"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="brixs.html" title="brixs"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-brixs.arraymanip">
+<span id="interact"></span><h1>interact<a class="headerlink" href="#module-brixs.arraymanip" title="Permalink to this headline">¶</a></h1>
+<p>Everyday use functions for array manipulation.</p>
+<dl class="function">
+<dt id="brixs.arraymanip.index">
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">index</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">value</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the index of the element in array which is closest to value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array.</p></li>
+<li><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.arraymanip.extract">
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">extract</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">ranges</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.extract" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns x and y elements that fall whithin x intervals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of x values or a list of pairs. Each pair represents
+the start and stop of a data range.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>y is reduced based on x array.</p>
+<p class="rubric">Examples</p>
+<p>Use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ranges</span><span class="o">=</span><span class="p">[[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">14</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>to extract data from 2 to 7 and 9 to 14.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If data ranges intersept with each other, the returned data with have repeated elements.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Reduced x and y arrays</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.arraymanip.peak_fit">
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">peak_fit</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">guess_c</em>, <em class="sig-param">guess_A</em>, <em class="sig-param">guess_w</em>, <em class="sig-param">guess_offset=0</em>, <em class="sig-param">fixed_m=False</em>, <em class="sig-param">start=None</em>, <em class="sig-param">stop=None</em>, <em class="sig-param">asymmetry=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.peak_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit a peak with a pseudo-voigt curve.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">asymmetry=True</span></code>, peak asymmetry is taken into account by fiting first
+half of the peak with a different FHWM and m than the second half (m is the
+factor from 1 to 0 of the lorentzian amount).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array</p></li>
+<li><p><strong>guess_c</strong> (<em>float</em><em> or </em><em>int</em>) – guess Center</p></li>
+<li><p><strong>guess_A</strong> (<em>float</em><em> or </em><em>int</em>) – guess Amplitude</p></li>
+<li><p><strong>guess_w</strong> (<em>float</em><em> or </em><em>int</em>) – guess FWHM</p></li>
+<li><p><strong>guess_offset</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – guess Offset [0]</p></li>
+<li><p><strong>fixed_m</strong> (<em>False</em><em> or </em><em>number</em>) – if false, <code class="docutils literal notranslate"><span class="pre">m</span></code> will be a fitting parameter. If
+<code class="docutils literal notranslate"><span class="pre">fixed_m=number</span></code>, <code class="docutils literal notranslate"><span class="pre">number</span></code> will be used for <code class="docutils literal notranslate"><span class="pre">m</span></code>.</p></li>
+<li><p><strong>start</strong> (<em>float</em><em> or </em><em>int</em>) – start x value to fit the peak. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, full
+data is used.</p></li>
+<li><p><strong>stop</strong> (<em>float</em><em> or </em><em>int</em>) – final x value to fit the peak.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, full
+data is used.</p></li>
+<li><p><strong>asymmetry</strong> – Bool value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ol class="arabic simple">
+<li><p>2 column (x,y) array with the fitted peak.</p></li>
+<li><dl class="simple">
+<dt>2 column (x,y) array with “Smoothed” fitted peak. This is just the</dt><dd><p>fitted peak array with a linear interpolation with 100 times more data points.</p>
+</dd>
+</dl>
+</li>
+<li><p>An array with the optimized parameters for Amplitude, Center, FWHM and offset.</p></li>
+</ol>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.arraymanip.shift">
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">shift</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">shift</em>, <em class="sig-param">mode='hard'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shift (x, y) data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>shift</strong> (<em>float</em><em> or </em><em>int</em>) – shift value.</p></li>
+<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – If mode is <code class="docutils literal notranslate"><span class="pre">x</span></code> or <code class="docutils literal notranslate"><span class="pre">hard</span></code>, y is fully preserved
+and while x is shifted. If mode is <code class="docutils literal notranslate"><span class="pre">y</span></code> or <code class="docutils literal notranslate"><span class="pre">interp</span></code>, x is preserved
+while y is interpolated with a shift.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is always better to use <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code> since the form of y is fully
+preserved, which prevents information loss. Sometimes, one can get better
+results by increasing the number of (x,y) data points before doing a ‘y’
+shift (this can be done by interpolating the data).</p>
+<p>After applying a shift using the <code class="docutils literal notranslate"><span class="pre">interp</span></code> or <code class="docutils literal notranslate"><span class="pre">y</span></code> mode, one can apply a
+‘inversed’ shift to retrieve the original data. The diference between the retrieved
+y data and the original data will give an ideia of the information loss
+caused by the interpolation.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Shifted x and y.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.arraymanip.movingaverage">
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">movingaverage</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">window_size</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.movingaverage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the moving average of an array.</p>
+<p>The returned array has the same length of the original array.</p>
+<p class="rubric">Example</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+<span class="go">[0. 1. 2. 3. 4. 5. 6. 7. 8. 9.]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="mi">2</span><span class="p">))</span>
+<span class="go">[0. , 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="mi">3</span><span class="p">))</span>
+<span class="go">[0.33333333 1. 2. 3. 4. 5. 6.  7. 8. 5.66666667]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="mi">4</span><span class="p">))</span>
+<span class="go">[0.25 0.75 1.5  2.5  3.5  4.5  5.5  6.5  7.5  6.  ]</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Note by the example that the resulting array contains boundary effects.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> (<em>list</em><em> or </em><em>np.array</em>) – array.</p></li>
+<li><p><strong>window_size</strong> (<em>int</em>) – number of points to average.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="brixs.html"
+                        title="previous chapter">brixs</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="filemanip.html"
+                        title="next chapter">filemanip</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/arraymanip.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="filemanip.html" title="filemanip"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="brixs.html" title="brixs"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Carlos Galdino.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.1.1.
+    </div>
+  </body>
+</html>
