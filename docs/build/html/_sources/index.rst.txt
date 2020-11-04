@@ -3,16 +3,23 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-brixs
+BRIXS
 =================================
 
-Python package for analysis of RIXS spectra.
+BRIXS is a python package for analysis of RIXS spectra.
 
 .. toctree::
    :maxdepth: 2
 
    Installation <installation>
    brixs <brixs>
+   Simulating spectra and CCD images <simulate>
+
+teste dsaf sadf
+
+.. toctree::
+  :maxdepth: 2
+
    File manipulation <filemanip>
    Interaction module <intermanip>
    Model functions module <model_functions>

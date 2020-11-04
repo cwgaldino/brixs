@@ -20,83 +20,6 @@ import brixs.filemanip as fmanip
 import brixs.figmanip as figmanip
 from brixs.model_functions import fwhmGauss, fwhmAreaGauss
 
-
-def simulate_spectrum(c, w, excitations, factor=1):
-    """Returns a function I(E) which returns the intensity of a spectrum.
-
-    The spectrum is composed by an elastic peak and many other peak refered as
-    excitations. The area, position, and width of those excitations are in terms
-    of the amplitude, position, and width of the elastic peak.
-
-    Peaks have a gaussian profile.
-
-    Args:
-        c (int or float): position of elastic peak in energy.
-        w (int or float): fwhm of the elastic peak in energy.
-        excitations (list): list of excitations. Each element must be a list
-            with three elements: the relative area compared to the elastic peak
-            area, the distance from the elastic peak in energy units, and the
-            relative width compared to the elastic peak width.
-        factor (int or float, optional): Multiplicative factor. The default is
-            1, wich mean that the elastic peak goes from 0 to 1.
-
-    Returns:
-        function.
-
-    Example:
-        Simulate a spectrum with two excitations with half the area of the
-        elastic peak and twice its fwhm.
-
-        >>> import brixs.brixs as brixs
-        >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
-        >>> I = brixs.simulate_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]], factor=1)
-        >>> x = np.linspace(-2, 6, 1000)
-        >>> plt.plot(x, I(x))
-        >>> plt.xlabel('Energy (eV)')
-        >>> plt.ylabel('Intensity')
-        >>> plt.show()
-
-        .. image:: _figs/simulate_spectrum.png
-            :target: _static/simulate_spectrum.png
-            :width: 400
-            :align: center
-
-    """
-    I = f'lambda energy: {factor}*(fwhmGauss(energy, 1, {c}, {w})'
-
-    area = np.sqrt(np.pi)*w/2/np.sqrt(np.log(2))
-
-    for excitation in excitations:
-        I += f'+fwhmAreaGauss(energy, A={excitation[0]}*{area}, c={c}+{excitation[1]}, w={excitation[2]}*{w})'
-
-    I += ')'
-
-    return eval(I)
-
-
-def simulate_photon_events(I, background=0, noise=0, exposure=100e4, dispersion= 8.45 * (10**-3 / 10**-6), x_max=52.22e-3, y_max=25.73e-3, y_zero=0, angle=0):
-    """     angle          = 0     # degrees (rotation vector pointing out of the detector plane)
-            dispersion     = 8.45 * (10**-3 / 10**-6) # eV/m
-            y_zero         = 0      # ev
-            length         = (52.22e-3, 25.73e-3)  # m
-    """
-    random_y     = (y_max   *np.random.rand(int(exposure)))
-    random_x     = (x_max   *np.random.rand(int(exposure)))
-    random_noise = np.random.default_rng().normal(0, noise, size=int(exposure))
-
-    energy = (random_y + (random_x-x_max/2) * (np.tan(np.radians(angle))) ) *dispersion
-    prob = (I(energy  + y_zero) + background)*(1 + random_noise) / (1+background)
-
-    choose   = (prob > np.random.rand(len(prob)))
-    y_spatial = random_y[choose]  # m
-    x_spatial = random_x[choose]  # m
-
-    I2 = np.ones(len(y_spatial))
-
-    return np.vstack((x_spatial, y_spatial, I2)).transpose()
-
-
 class photon_events():
 
     def __init__(self, filepath=None, data=None, x_max=None, y_max=None):
@@ -172,38 +95,38 @@ class photon_events():
         fmanip.save_data(self.data, filepath=Path(filepath), header=header)
 
 
-    def apply_spread(self, type='gaussian', x_spread=5e-6, y_spread=5e-6):
-        for photon_event in self.data:
-            photon_event[0] += np.random.normal(0, x_spread)
-            photon_event[1] += np.random.normal(0, y_spread)
+    # def apply_spread(self, type='gaussian', x_spread=5e-6, y_spread=5e-6):
+    #     for photon_event in self.data:
+    #         photon_event[0] += np.random.normal(0, x_spread)
+    #         photon_event[1] += np.random.normal(0, y_spread)
+    #
+    #         if photon_event[0] > self.x_max:
+    #             photon_event[0] = self.x_max
+    #         elif photon_event[0] < 0:
+                # photon_event[0] = 0
+    #
+    #         if photon_event[1] > self.y_max:
+    #             photon_event[1] = self.y_max
+    #         elif photon_event[1] < 0:
+    #             photon_event[1] = 0
 
-            if photon_event[0] > self.x_max:
-                photon_event[0] = self.x_max
-            elif photon_event[0] < 0:
-                photon_event[0] = 0
 
-            if photon_event[1] > self.y_max:
-                photon_event[1] = self.y_max
-            elif photon_event[1] < 0:
-                photon_event[1] = 0
-
-
-    def calculate_overlaps(self, x_min_between_events=5e-6, y_min_between_events=5e-6):
-
-        overlap_x = [abs(self.data[:, 0]-x)<x_min_between_events for x in self.data[:, 0]]
-        overlap_y = [abs(self.data[:, 1]-y)<y_min_between_events for y in self.data[:, 1]]
-
-        overlaps = [sum(x*y)>1 for x, y in zip(overlap_x, overlap_y)]
-        self.n_overlaps = sum(overlaps)/2
-
-        data_overlaped = []
-        for idx, photon_event in enumerate(data):
-            if overlaps[idx]:
-                data_overlaped.append(photon_event)
-        self.data_overlaped = np.array(data_overlaped)
-
-        self.x_min_between_events = x_min_between_events
-        self.y_min_between_events = y_min_between_events
+    # def calculate_overlaps(self, x_min_between_events=5e-6, y_min_between_events=5e-6):
+    #
+    #     overlap_x = [abs(self.data[:, 0]-x)<x_min_between_events for x in self.data[:, 0]]
+    #     overlap_y = [abs(self.data[:, 1]-y)<y_min_between_events for y in self.data[:, 1]]
+    #
+    #     overlaps = [sum(x*y)>1 for x, y in zip(overlap_x, overlap_y)]
+    #     self.n_overlaps = sum(overlaps)/2
+    #
+    #     data_overlaped = []
+    #     for idx, photon_event in enumerate(data):
+    #         if overlaps[idx]:
+    #             data_overlaped.append(photon_event)
+    #     self.data_overlaped = np.array(data_overlaped)
+    #
+    #     self.x_min_between_events = x_min_between_events
+    #     self.y_min_between_events = y_min_between_events
 
 
     def bining(self, binx, biny):
@@ -223,23 +146,23 @@ class photon_events():
         return np.convolve(interval, window, 'same')
 
 
-    def plot_overlaped(self, ax=None, pointsize=5):
-
-        if ax is None:
-            fig = figmanip.figure()
-            ax = fig.add_subplot(111)
-            ax.set_facecolor('black')
-
-        ax.errorbar(self.data_overlaped[:, 0]*10**3, self.data_overlaped[:, 1]*10**3,
-                     linewidth=0,
-                     fmt='o',
-                     mfc = 'red',
-                     elinewidth = 1,
-                     yerr=self.y_min_between_events *10**3,
-                     xerr=self.x_min_between_events *10**3,
-                     marker='o',
-                     ms=pointsize)
-        return ax
+    # def plot_overlaped(self, ax=None, pointsize=5):
+    #
+    #     if ax is None:
+    #         fig = figmanip.figure()
+    #         ax = fig.add_subplot(111)
+    #         ax.set_facecolor('black')
+    #
+    #     ax.errorbar(self.data_overlaped[:, 0]*10**3, self.data_overlaped[:, 1]*10**3,
+    #                  linewidth=0,
+    #                  fmt='o',
+    #                  mfc = 'red',
+    #                  elinewidth = 1,
+    #                  yerr=self.y_min_between_events *10**3,
+    #                  xerr=self.x_min_between_events *10**3,
+    #                  marker='o',
+    #                  ms=pointsize)
+    #     return ax
 
 
     def plot(self, ax=None, pointsize=5, show_binx=False, show_biny=False, show_curvature=False, shift=0, show_lim=False):

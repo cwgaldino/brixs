@@ -15,8 +15,12 @@ setuptools.setup(
     packages=['brixs'],
     packages_dir={'brixs': './brixs'},
     py_modules=['brixs',
+                'brixs.arraymanip',
+                'brixs.figmanip',
                 'brixs.filemanip',
-                'brixs.intermanip'],
+                'brixs.intermanip',
+                'brixs.model_functions',
+                'brixs.simulate'],
     # package_data={'brixs': ['./default_parameters.dat']
     #                 },
     classifiers=[
