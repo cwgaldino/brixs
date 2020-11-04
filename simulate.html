@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>interact &#8212; brixs 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script type="text/javascript" src="_static/clipboard.min.js"></script>
+    <script type="text/javascript" src="_static/copybutton.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-brixs.simulate">
+<span id="interact"></span><h1>interact<a class="headerlink" href="#module-brixs.simulate" title="Permalink to this headline">¶</a></h1>
+<p>Simulation of RIXS spectra.</p>
+<dl class="function">
+<dt id="brixs.simulate.simulate_spectrum">
+<code class="sig-prename descclassname">brixs.simulate.</code><code class="sig-name descname">simulate_spectrum</code><span class="sig-paren">(</span><em class="sig-param">c</em>, <em class="sig-param">w</em>, <em class="sig-param">excitations</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.simulate.simulate_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a function I(E) of a simulated RIXS spectrum.</p>
+<p>I(E) is a function that returns the intensity of the simulated spectrum. The
+spectrum is composed by an elastic peak and many other peaks refered as
+excitations. The area, position, and width of those excitations are in terms
+of the amplitude, position, and width of the elastic peak. All peaks have a
+gaussian profile and the maximum value of the elastic peak is 1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>c</strong> (<em>int</em><em> or </em><em>float</em>) – position of elastic peak in energy.</p></li>
+<li><p><strong>w</strong> (<em>int</em><em> or </em><em>float</em>) – fwhm of the elastic peak in energy.</p></li>
+<li><p><strong>excitations</strong> (<em>list</em>) – list of excitations. Each element must be a list
+with three elements: the relative area compared to the elastic peak
+area, the distance from the elastic peak in energy units, and the
+relative width compared to the elastic peak width.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>function.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.simulate.simulate_photon_events" title="brixs.simulate.simulate_photon_events"><code class="xref py py-func docutils literal notranslate"><span class="pre">simulate_photon_events()</span></code></a></p>
+</div>
+<p class="rubric">Example</p>
+<p>Simulate a spectrum with two excitations with half the area of the
+elastic peak and twice its fwhm.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">brixs.simulate</span> <span class="kn">import</span> <span class="n">simulate_spectrum</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">I</span> <span class="o">=</span> <span class="n">simulate_spectrum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">excitations</span><span class="o">=</span><span class="p">[[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">I</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Energy (eV)&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Intensity&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<a class="reference external image-reference" href="_static/simulate_spectrum.png"><img alt="_images/simulate_spectrum.png" class="align-center" src="_images/simulate_spectrum.png" style="width: 600px;" /></a>
+</dd></dl>
+
+<dl class="function">
+<dt id="brixs.simulate.simulate_photon_events">
+<code class="sig-prename descclassname">brixs.simulate.</code><code class="sig-name descname">simulate_photon_events</code><span class="sig-paren">(</span><em class="sig-param">I</em>, <em class="sig-param">background=0</em>, <em class="sig-param">noise=0</em>, <em class="sig-param">exposure=1000000.0</em>, <em class="sig-param">dispersion=8450.0</em>, <em class="sig-param">x_max=0.05222</em>, <em class="sig-param">y_max=0.02573</em>, <em class="sig-param">y_zero_energy=0</em>, <em class="sig-param">angle=0</em>, <em class="sig-param">psf_fwhm=(0</em>, <em class="sig-param">0)</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.simulate.simulate_photon_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of simulated photon events, based on a simulated spectrum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>I</strong> (<em>function</em>) – a function that returns the intensity of a spectrum as a
+function of the energy. The maximum of the elastic peak is expected
+to be equal to 1.</p></li>
+<li><p><strong>background</strong> (<em>float</em><em>, </em><em>optional</em>) – this value will be added to
+the spectrum. Can also be called offset. The final spectrum is
+normalized so that the maximum of the elastic peak is equal to 1.
+Recomended value: from 0 to 1, assuming the  maximum of the elastic
+peak is equal to 1.</p></li>
+<li><p><strong>noise</strong> (<em>float</em><em>, </em><em>optional</em>) – This
+adds a random gaussian probability (from -<code class="docutils literal notranslate"><span class="pre">noise</span></code> to <code class="docutils literal notranslate"><span class="pre">noise</span></code>) to the
+probability finding a photon at a certain position. Recomended value:
+from 0 to 1, assuming the  maximum of the elastic peak is equal to 1.</p></li>
+<li><p><strong>exposure</strong> (<em>float</em><em>, </em><em>optional</em>) – number of random (x, y) positions to test test
+the probability of finding a photon.</p></li>
+<li><p><strong>dispersion</strong> (<em>float</em><em>, </em><em>optional</em>) – must be given in units of [energy/distance. This is
+the value used for converting from energy units to positional units.</p></li>
+<li><p><strong>x_max</strong> (<em>float</em><em>, </em><em>optional</em>) – maximum value of x (detector’s size in the x
+direction).</p></li>
+<li><p><strong>y_max</strong> (<em>float</em><em>, </em><em>optional</em>) – maximum value of y (detector’s size in the y
+direction).</p></li>
+<li><p><strong>y_zero_energy</strong> (<em>float</em><em>, </em><em>optional</em>) – energy value of isoenergetic lines at
+y=0 (minimum energy value). The maximum energy value is calculated
+by <code class="docutils literal notranslate"><span class="pre">y_max</span></code> <span class="math notranslate nohighlight">\(\times\)</span> <code class="docutils literal notranslate"><span class="pre">dispersion</span></code>.</p></li>
+<li><p><strong>angle</strong> (<em>float</em><em>, </em><em>optional</em>) – rotation of the detector.</p></li>
+<li><p><strong>psf_fwhm</strong> (<em>float</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – fwhm value of the gaussian error
+included in the (x, y) position to simulated precision errors of the detector and beamline.
+If one value is given, this is used for both x and y directions. If two values are given,
+they are used separetely for the x and y directions, respectively.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The script does not expect the user to input
+the parameter in any specific set units, like energy in eV’s or lenght in
+meters. The only requirement is that the user keeps the units consistent.
+If meter is used as the unit of lenght of a certain parameter, then meter
+shall be used in all other parameters.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>array with three columns, x, y, and I. The latter will always be equal to 1, i.e., only one
+photon is detected at each position.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.simulate.simulate_spectrum" title="brixs.simulate.simulate_spectrum"><code class="xref py py-func docutils literal notranslate"><span class="pre">simulate_spectrum()</span></code></a></p>
+</div>
+<p>This functions creates a 2d probability distribution of detecting a photon
+onto the detector’s active area. Then, it creates a list of random (x, y)
+positions whithin (0, <code class="docutils literal notranslate"><span class="pre">x_max</span></code>) and (0, <code class="docutils literal notranslate"><span class="pre">y_max</span></code>). Finally, it tests each
+positions against the probability distribution to see if a photon is
+detected on that position.</p>
+<p>The figure below shows a schematic representation
+of a RIXS spectrometer. In (a), we can see that the diffraction gratting
+will disperse scattered photon onto the detector along the y direction. The
+dispersion given in units of energy per length must be known in advance and
+assigned to <code class="docutils literal notranslate"><span class="pre">dispersion</span></code> parameter. By default, the position <code class="docutils literal notranslate"><span class="pre">y=0</span></code> is
+assigned to energy zero, but one can change that by assinging a different value
+to <code class="docutils literal notranslate"><span class="pre">y_zero_energy</span></code>.</p>
+<p>In (a) one can see the that the <code class="docutils literal notranslate"><span class="pre">angle</span></code> parameter rotates the detector and
+desalign the isoenergetic lines with the edge of the detector (See (b) and (c)).</p>
+<a class="reference external image-reference" href="_static/spectrometer_1.svg"><div align="center" class="align-center"><img alt="_images/spectrometer_1.svg" src="_images/spectrometer_1.svg" width="600" /></div>
+</a>
+<p>The algorithm works in the following manner:</p>
+<p>1) we create a list of random (x, y) positions. The variable <code class="docutils literal notranslate"><span class="pre">exposure</span></code>
+gives the lenght of this list. The higher the value of <code class="docutils literal notranslate"><span class="pre">exposure</span></code>, the more
+random position will be created and tested. Note that, this parameter emulates
+the effect of a longer or shorter exposure time, however, it cannot be directly
+associated with the real exposure time of a experiment.</p>
+<p>2) The variable <code class="docutils literal notranslate"><span class="pre">I(E)</span></code>, which is a function that returns the intensity of a spectrum as a
+function of the energy (This can be generated by <a class="reference internal" href="#brixs.simulate.simulate_spectrum" title="brixs.simulate.simulate_spectrum"><code class="xref py py-func docutils literal notranslate"><span class="pre">simulate_spectrum()</span></code></a>), is
+proportional to the probability of finding a photon at a certain position in the detector.
+Therefore, one can calculate the probability of detecting a photon at each of the
+random (x, y) position created in step 1. The equation below depicts how background and
+noise affect this probability.</p>
+<div class="math notranslate nohighlight">
+\[\text{Prob}(x, y) = (I(\text{energy}  + \text{y_zero_energy}) + \text{background})*(1 + \text{random_noise}) / (1 + \text{background})\]</div>
+<p>where the (x, y) position is converted into energy by taking into account the
+<code class="docutils literal notranslate"><span class="pre">dispersion</span></code> and the parameter <code class="docutils literal notranslate"><span class="pre">angle</span></code>.</p>
+<p>3) After we have calculated the probability of finding an photon for each (x, y)
+position we test each probability, e.g., if the probability of finding a photon
+in a certain position is 70%, we simulate a riggeed coin flip where the
+outcome has 70% chance of being heads. After tossing the coin, if the result
+is heads, the photon is counted and the respetive (x, y) position is included
+in the <code class="docutils literal notranslate"><span class="pre">photon_event</span></code> list. If the result is tails, that position is
+discarted.</p>
+<p>4) At this point the <code class="docutils literal notranslate"><span class="pre">photon_event</span></code> list is ready. As a final step,
+we can simulate precision errors which tipically comes from the
+limited resolution of the detector or possible instabilities of the beamline
+itself. This is done by adding a random gaussian error in each of the (x, y)
+positions in the <code class="docutils literal notranslate"><span class="pre">photon_event</span></code> list, e.g., a certain position <span class="math notranslate nohighlight">\((x, y)\)</span> where
+a photon as detected will became <span class="math notranslate nohighlight">\((x+\Delta x, y+\Delta y)\)</span>, where
+<span class="math notranslate nohighlight">\(\Delta x\)</span> and <span class="math notranslate nohighlight">\(\Delta y\)</span> are a random gaussian error.
+The width of the gaussian error is set by <cite>psf_fwhm</cite>.</p>
+<p class="rubric">Example</p>
+<p>Simulate a <code class="docutils literal notranslate"><span class="pre">photon_event</span></code> list of a generic spectrum. The spectrum
+will have two excitations with half the area of the
+elastic peak and twice its fwhm.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">brixs.simulate</span> <span class="kn">import</span> <span class="n">simulate_spectrum</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">brixs.simulate</span> <span class="kn">import</span> <span class="n">simulate_photon_events</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># simulating a generic spectrum</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">I</span> <span class="o">=</span> <span class="n">simulate_spectrum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">excitations</span><span class="o">=</span><span class="p">[[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># simulating the photon_event list(where we&#39;re using energy in eV&#39;s and length in meters)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">photon_events</span> <span class="o">=</span> <span class="n">simulate_photon_events</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="mf">0.02</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">noise</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">exposure</span><span class="o">=</span><span class="mf">50e4</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">dispersion</span><span class="o">=</span> <span class="mf">8.45</span> <span class="o">*</span> <span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">6</span><span class="p">),</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">x_max</span><span class="o">=</span><span class="mf">52.22e-3</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">y_max</span><span class="o">=</span><span class="mf">25.73e-3</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">y_zero_energy</span><span class="o">=-</span><span class="mi">20</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">angle</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                                                <span class="n">psf_fwhm</span><span class="o">=</span><span class="p">(</span><span class="mf">3e-6</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">photon_events</span><span class="p">)</span>
+<span class="go">    [[1.36263387e-02 2.29071963e-03 1.00000000e+00]</span>
+<span class="go">     [3.19917559e-02 4.48965702e-04 1.00000000e+00]</span>
+<span class="go">     [4.96047073e-02 9.76363776e-05 1.00000000e+00]</span>
+<span class="go">     ...</span>
+<span class="go">     [2.37889174e-04 1.50658922e-02 1.00000000e+00]</span>
+<span class="go">     [1.58122734e-02 4.33273762e-03 1.00000000e+00]</span>
+<span class="go">     [4.61469585e-02 2.45566831e-03 1.00000000e+00]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># ploting photon_events</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">photon_events</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>         <span class="n">photon_events</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">10</span><span class="o">**</span><span class="mi">3</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>         <span class="n">linewidth</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>         <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>         <span class="n">ms</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x position (mm)&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;y position (mm)&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<a class="reference external image-reference" href="_static/photon_events1.png"><img alt="_images/photon_events1.png" class="align-center" src="_images/photon_events1.png" style="width: 600px;" /></a>
+<p>Zooming in, we can clearly see the isoenergetic lines formed by the elastic
+peak and the other two excitations.</p>
+<a class="reference external image-reference" href="_static/photon_events2.png"><img alt="_images/photon_events2.png" class="align-center" src="_images/photon_events2.png" style="width: 600px;" /></a>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/simulate.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Carlos Galdino.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.1.1.
+    </div>
+  </body>
+</html>
