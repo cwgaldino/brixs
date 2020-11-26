@@ -497,7 +497,7 @@ class spectra():
 
 
     def calculate_shifts(self, ref=0, type='cross-correlation', start=None, stop=None):
-
+        """ we gotta fix the fact that it does two correlations"""
 
         self._check_array()
 
