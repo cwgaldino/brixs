@@ -19,7 +19,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="filemanip" href="filemanip.html" />
-    <link rel="prev" title="interact" href="simulate.html" /> 
+    <link rel="prev" title="interact" href="dummy.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -34,7 +34,7 @@
           <a href="filemanip.html" title="filemanip"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="simulate.html" title="interact"
+          <a href="dummy.html" title="interact"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
       </ul>
@@ -102,9 +102,6 @@ the start and stop of a data range.</p></li>
 <dt id="brixs.arraymanip.peak_fit">
 <code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">peak_fit</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">guess_c</em>, <em class="sig-param">guess_A</em>, <em class="sig-param">guess_w</em>, <em class="sig-param">guess_offset=0</em>, <em class="sig-param">fixed_m=False</em>, <em class="sig-param">start=None</em>, <em class="sig-param">stop=None</em>, <em class="sig-param">asymmetry=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.peak_fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit a peak with a pseudo-voigt curve.</p>
-<p>If <code class="docutils literal notranslate"><span class="pre">asymmetry=True</span></code>, peak asymmetry is taken into account by fiting first
-half of the peak with a different FHWM and m than the second half (m is the
-factor from 1 to 0 of the lorentzian amount).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -120,7 +117,9 @@ factor from 1 to 0 of the lorentzian amount).</p>
 data is used.</p></li>
 <li><p><strong>stop</strong> (<em>float</em><em> or </em><em>int</em>) – final x value to fit the peak.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, full
 data is used.</p></li>
-<li><p><strong>asymmetry</strong> – Bool value.</p></li>
+<li><p><strong>asymmetry</strong> – Bool value. If <code class="docutils literal notranslate"><span class="pre">asymmetry=True</span></code>, peak asymmetry is taken into account by fiting first</p></li>
+<li><p><strong>of the peak with a different FHWM and m than the second half</strong><strong> (</strong><strong>m is the</strong> (<em>half</em>) – </p></li>
+<li><p><strong>from 1 to 0 of the lorentzian amount</strong><strong>)</strong><strong></strong> (<em>factor</em>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -174,7 +173,7 @@ caused by the interpolation.</p>
 
 <dl class="function">
 <dt id="brixs.arraymanip.movingaverage">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">movingaverage</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">window_size</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.movingaverage" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">movingaverage</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">window_size</em>, <em class="sig-param">remove_boundary_effects=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.movingaverage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the moving average of an array.</p>
 <p>The returned array has the same length of the original array.</p>
 <p class="rubric">Example</p>
@@ -205,6 +204,12 @@ caused by the interpolation.</p>
 </dl>
 </dd></dl>
 
+<dl class="function">
+<dt id="brixs.arraymanip.derivative">
+<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">derivative</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">order=1</em>, <em class="sig-param">window_size=1</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>if window_size &gt; 1, boundary effects might be</p>
+</dd></dl>
+
 </div>
 
 
@@ -214,7 +219,7 @@ caused by the interpolation.</p>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="simulate.html"
+  <p class="topless"><a href="dummy.html"
                         title="previous chapter">interact</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="filemanip.html"
@@ -253,7 +258,7 @@ caused by the interpolation.</p>
           <a href="filemanip.html" title="filemanip"
              >next</a> |</li>
         <li class="right" >
-          <a href="simulate.html" title="interact"
+          <a href="dummy.html" title="interact"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">brixs 0.1 documentation</a> &#187;</li> 
       </ul>

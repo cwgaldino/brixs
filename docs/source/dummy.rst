@@ -4,5 +4,5 @@
 interact
 ==================
 
-.. automodule:: brixs.simulate
+.. automodule:: brixs.dummy
     :members:

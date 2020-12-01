@@ -481,7 +481,7 @@ def load_data(filepath, delimiter=',', commentFlag='#', col_labels=None, force_a
     filepath = Path(filepath)
 
     # get header
-    header = load_Comments(filepath, commentFlag=commentFlag, stopFlag=commentFlag)
+    header = getComments(filepath, commentFlag=commentFlag, stopFlag=commentFlag)
 
     # get data
     if delimiter is ' ':
@@ -602,7 +602,7 @@ def load_data(filepath, delimiter=',', commentFlag='#', col_labels=None, force_a
 
 
 #
-# def _load_Comments(fullpath, commentFlag='#', stopFlag='#H'):
+# def _getComments(fullpath, commentFlag='#', stopFlag='#H'):
 #     """Extract comments from text files.
 #
 #     Comments must be indicated at the begining of the line.
@@ -896,7 +896,7 @@ def load_data(filepath, delimiter=',', commentFlag='#', col_labels=None, force_a
 #     # get header
 #     if keyFlag is None:
 #         keyFlag = commentFlag
-#     header = _load_Comments(fullpath, commentFlag=commentFlag, stopFlag=keyFlag)
+#     header = _getComments(fullpath, commentFlag=commentFlag, stopFlag=keyFlag)
 #
 #     # get header from file (keylist2 -> total key list from file)
 #     if (useKeys is None or useKeys == []) and keyList is not None:

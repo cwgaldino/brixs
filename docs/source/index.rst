@@ -12,7 +12,7 @@ BRIXS is a python package for analysis of RIXS spectra.
 
    Installation <installation>
    CCD images and spectrum manipulation <brixs>
-   Simulation of test spectra and fake CCD images <simulate>
+   Generate dummy spectra and fake CCD images for testing<dummy>
 
 Support modules
 =================

@@ -53,12 +53,15 @@ def extract(x, y, ranges):
         x_clean.append(x[choose_range])
         y_clean.append(y[choose_range])
 
-    return np.hstack(x_clean), np.hstack(y_clean)
+    return np.array(x_clean).flatten(), np.array(y_clean).flatten()
 
 
 def peak_fit(x, y, guess_c, guess_A, guess_w, guess_offset=0, fixed_m=False, start=None, stop=None, asymmetry=True):
     """Fit a peak with a pseudo-voigt curve.
 
+    If ``asymmetry=True``, peak asymmetry is taken into account by fiting first
+    half of the peak with a different FHWM and m than the second half (m is the
+    factor from 1 to 0 of the lorentzian amount).
 
     Args:
         x (list or array): 1d array
@@ -73,9 +76,7 @@ def peak_fit(x, y, guess_c, guess_A, guess_w, guess_offset=0, fixed_m=False, sta
             data is used.
         stop (float or int): final x value to fit the peak.  If ``None``, full
             data is used.
-        asymmetry: Bool value. If ``asymmetry=True``, peak asymmetry is taken into account by fiting first
-        half of the peak with a different FHWM and m than the second half (m is the
-        factor from 1 to 0 of the lorentzian amount).
+        asymmetry: Bool value.
 
     Returns:
         1) 2 column (x,y) array with the fitted peak.
@@ -147,41 +148,37 @@ def shift(x, y, shift, mode='hard'):
         x (list or array): 1D array.
         y (list or array): 1D array.
         shift (float or int): shift value.
-        mode (string, optional): If ``mode='x'`` or ``mode='hard'``, y is fully preserved
-            while x is shifted. If ``mode='y'``, ``'interp'``, or ``'soft'``, x is preserved
-            while y is interpolated with a shift. If ``mode='roll'``, x is also preserved
-            and y elements are rolled along the array (``shift`` value must be an integer).
+        mode (string, optional): If mode is ``x`` or ``hard``, y is fully preserved
+            and while x is shifted. If mode is ``y`` or ``interp``, x is preserved
+            while y is interpolated with a shift.
 
     Warning:
-        It is always better to use ``mode='hard'`` or ``'roll'`` since the form of y is fully
-        preserved (no interpolation). After applying a shift using the ``mode='interp'``,
-        one can apply a
-        'inverse' shift to retrieve the original data. The diference between the retrieved
+        It is always better to use ``mode='hard'`` since the form of y is fully
+        preserved, which prevents information loss. Sometimes, one can get better
+        results by increasing the number of (x,y) data points before doing a 'y'
+        shift (this can be done by interpolating the data).
+
+        After applying a shift using the ``interp`` or ``y`` mode, one can apply a
+        'inversed' shift to retrieve the original data. The diference between the retrieved
         y data and the original data will give an ideia of the information loss
         caused by the interpolation.
 
     Returns:
         Shifted x and y.
     """
-    x = copy.deepcopy(np.array(x))
-    y = copy.deepcopy(np.array(y))
+    x = np.array(x)
+    y = np.array(y)
 
-    if mode == 'y' or mode == 'interp' or mode=='soft':
-        y = np.interp(x, x + shift, y)
+    if mode == 'y' or mode == 'interp':
+        y_shifted = np.interp(x, x + shift, y)
+
+        return x, y_shifted
 
     elif mode == 'x' or mode == 'hard':
-        x = np.array(x) + shift
+        return np.array(x) + shift, y
 
-    elif mode == 'roll' or mode == 'rotate':
-        y = np.roll(y, shift)
-        if shift > 0:
-            y[:shift] = 0
-        elif shift < 0:
-            y[shift:] = 0
 
-    return x, y
-
-def movingaverage(array, window_size, remove_boundary_effects=True):
+def movingaverage(array, window_size):
     """Returns the moving average of an array.
 
     The returned array has the same length of the original array.
@@ -211,15 +208,10 @@ def movingaverage(array, window_size, remove_boundary_effects=True):
 
     array = np.array(array)
     window = np.ones(int(window_size))/float(window_size)
-    final = np.convolve(array, window, 'same')
-
-    if remove_boundary_effects:
-        final = final[int(window_size/2):]
-    return final
+    return np.convolve(array, window, 'same')
 
 
 def derivative(x, y, order=1, window_size=1):
-    """ if window_size > 1, boundary effects might be """
 
     if order<0:
         raise ValueError('order must be a positive integer.')
@@ -246,7 +238,7 @@ def derivative(x, y, order=1, window_size=1):
 
 
 
-
+    
 # def increasing_monotonicity(dataX, dataY):
 #     """Returns an array sorted and monotonic.
 #
