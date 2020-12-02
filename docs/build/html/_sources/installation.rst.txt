@@ -4,13 +4,13 @@
 Installation
 ==================
 
-Clone (or download) the GitHub repository
+Currently, there are two ways to install BRIXS:
 
->>> import sys
->>> sys.path.append('/home/galdino/github/brixs')
-sys.path.append(r'C:\Users\carlo\github\brixs')
-import brixs.filemanip as fmanip
+1) via 'pip install' from the GitHub repository
+
+.. code-block:: bash
+
+    pip install git+https://github.com/cwgaldino/brixs#egg=httpie
 
 
-bla bla bla
-
+2) Clone (or download) the GitHub repository

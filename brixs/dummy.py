@@ -1,6 +1,16 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Generates dummy RIXS spectra."""
+"""Module for generating dummy RIXS spectra.
+
+This module is based on two functions, one for generating dummy photon events lists
+and another one for generating dummy spectra.
+
+.. autosummary::
+
+    dummy_spectrum
+    dummy_photon_events
+
+"""
 
 # standard libraries
 import numpy as np
@@ -13,7 +23,7 @@ from .arraymanip import index
 from .model_functions import fwhmGauss, fwhmAreaGauss
 
 
-def dummy_spectrum(c, w, excitations):
+def dummy_spectrum(c=0, w=1, excitations=None):
     """Returns a function I(E) of a simulated RIXS spectrum.
 
     I(E) is a function that returns the intensity of the simulated spectrum. The
@@ -23,9 +33,9 @@ def dummy_spectrum(c, w, excitations):
     gaussian profile and the maximum value of the elastic peak is 1.
 
     Args:
-        c (int or float): position of elastic peak in energy.
-        w (int or float): fwhm of the elastic peak in energy.
-        excitations (list): list of excitations. Each element must be a list
+        c (number, optional): position of elastic peak in energy. Default is 0.
+        w (number, optional): fwhm of the elastic peak in energy. Default is 1
+        excitations (list, optional): list of excitations. Each element must be a list
             with three elements: the relative area compared to the elastic peak
             area, the distance from the elastic peak in energy units, and the
             relative width compared to the elastic peak width.
@@ -60,8 +70,9 @@ def dummy_spectrum(c, w, excitations):
 
     area = np.sqrt(np.pi)*w/2/np.sqrt(np.log(2))
 
-    for excitation in excitations:
-        I += f'+fwhmAreaGauss(energy, A={excitation[0]}*{area}, c={c}+{excitation[1]}, w={excitation[2]}*{w})'
+    if excitations is not None:
+        for excitation in excitations:
+            I += f'+fwhmAreaGauss(energy, A={excitation[0]}*{area}, c={c}+{excitation[1]}, w={excitation[2]}*{w})'
 
     return eval(I)
 

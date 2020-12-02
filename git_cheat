@@ -1,5 +1,20 @@
+# create gh-branches
+git checkout -b <gh-branches> (if it does not exist)
+git checkout --track origin/gh-branches (if it exists)
+same as git checkout -b branch origin/gh-branches
 
-git checkout --track origin/gh-branches
+# git workflow
+git checkout <branch> or git checkout -b <new-branch>
+do stuff=====
+git status
+git add *
+git commit -m 'message'
+git push -u origin <branch>
+git checkout main
+git merge <branch>
+
+
+
 
 # Start the ssh-agent in the background.
 eval "$(ssh-agent -s)"
