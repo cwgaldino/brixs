@@ -11,8 +11,8 @@ BRIXS is a python package for analysis of RIXS spectra.
    :maxdepth: 2
 
    Installation <installation>
-   CCD images and spectrum manipulation <brixs>
-   Simulation of test spectra and fake CCD images <simulate>
+   Spectra manipulation <brixs>
+   Dummy RIXS spctra generation <dummy>
 
 Support modules
 =================
@@ -30,17 +30,22 @@ can be used directly by the user.
    Interaction module <intermanip>
    Model functions module <model_functions>
 
-Tutorials and Examples
+Examples
 =========================
+
+Note that, the functionality of the package is not fully explored by these examples.
 
 .. toctree::
  :maxdepth: 2
 
-  Example 1 <example1>
-  Example 2 <example2>
+  Example 1: Extract the spectrum of a dummy photon events list <example1>
+  Example 2: Dealing with many spectra <example2>
 
 
+See on GitHub
+=================
 
+Report issues on GitHub: https://github.com/cwgaldino/brixs
 
 
 Indices and tables
