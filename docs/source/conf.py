@@ -13,6 +13,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
+import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
@@ -34,7 +35,9 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx_copybutton',
               'sphinx.ext.mathjax',
               'sphinx.ext.githubpages',
-              'sphinx.ext.doctest']
+              'sphinx.ext.doctest',
+              'sphinx.ext.autosummary',
+              'sphinx_rtd_theme']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -50,7 +53,8 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'nature'
+#html_theme = 'nature'
+html_theme = 'sphinx_rtd_theme'
 # html_theme = 'classic'
 
 # Add any paths that contain custom static files (such as style sheets) here,

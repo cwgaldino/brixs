@@ -1,14 +1,18 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Python module for analysis of RIXS spectra.
+"""Module for analysis of RIXS spectra.
 
-This module is based on three objects:
+This module is based on three class, one for dealing with photon events lists,
+one for dealing with single spectra, a another one to deal with many spectra at
+a time.
 
-:py:class:`photon_events`.
 
-:py:class:`spectrum`.
+.. autosummary::
 
-:py:class:`spectra`.
+    photon_events
+    spectrum
+    spectra
+
 """
 
 # standard libraries
@@ -40,67 +44,6 @@ class photon_events():
             by the data.
         y_max (float, optional): maximum y value. If ``None``, it will be infered
             by the data.
-
-    Example:
-        Simple usage: Gets a photon event list and remove the rotation of the
-        detector.
-
-        >>> import brixs
-        >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
-        >>> plt.ion()
-        >>> # simulating a generic spectrum
-        >>> I = brixs.dummy_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]])
-        >>> # simulating the photon_event list
-        >>> data = brixs.dummy_photon_events(I, noise=0.02, background=0.01, y_zero_energy=-20, angle=2)
-        >>> # initializing photon_events object
-        >>> p = brixs.photon_events(data=data)
-        >>> # set binning
-        >>> p.set_binning((10, 50))
-        >>> p.plot(show_bins=True)
-
-        .. image:: _figs/bins.png
-            :target: _static/bins.png
-            :width: 600
-            :align: center
-
-        >>> # plot columns
-        >>> p.plot_columns(columns='all', shift=100)
-
-        .. image:: _figs/columns.png
-            :target: _static/columns.png
-            :width: 600
-            :align: center
-
-        >>> # fitting offsets
-        >>> p.set_binning((10, 1000))
-        >>> p.calculate_offsets(ranges=[[0,  0.005]])
-        >>> p.fit_offsets()
-        >>> p.plot(show_offsets=True, show_offsets_fit=True)
-
-        .. image:: _figs/offsets.png
-            :target: _static/offsets.png
-            :width: 600
-            :align: center
-
-        .. image:: _figs/offsets_zoom.png
-            :target: _static/offsets_zoom.png
-            :width: 600
-            :align: center
-
-        >>> # remove offsets
-        >>> p.offsets_correction()
-        >>> p.plot()
-
-        .. image:: _figs/final.png
-            :target: _static/final.png
-            :width: 600
-            :align: center
-
-        .. image:: _figs/final_zoom.png
-            :target: _static/final_zoom.png
-            :width: 600
-            :align: center
 
     """
 
@@ -390,6 +333,7 @@ class photon_events():
         """
         self.data[:, 0], self.data[:, 1] = f(self.data[:, 0], self.data[:, 1])
         self.x_max, self.y_max  = f(self.x_max, self.y_max)
+        self.set_binning(bins=self.bins)
 
 
     def calculate_spectrum(self, y_bins=None, y_bins_size=None):
@@ -407,11 +351,14 @@ class photon_events():
             self.spectrum = spectrum(data=np.vstack((self.y_centers, sum(self.hist))).transpose())
         else:
             temp = photon_events(data=self.data)
-            temp.binning(bins=(1, y_bins), bins_size=(self.x_max+1, y_bins_size))
+            if y_bins_size is not None:
+                temp.set_binning(bins_size=(self.x_max+1, y_bins_size))
+            elif y_bins is not None:
+                temp.set_binning(bins=(1, y_bins))
             self.spectrum = spectrum(data=np.vstack((temp.y_centers, sum(temp.hist))).transpose())
 
 
-    def plot(self, ax=None, pointsize=1, show_bins=(False, False), show_offsets=False, show_offsets_fit=False):
+    def plot(self, ax=None, pointsize=1, show_bins=(False, False), show_offsets=False, show_offsets_fit=False, **kwargs):
         """Plot photon events.
 
         args:
@@ -428,6 +375,7 @@ class photon_events():
                 defined by the offsets values is displayed in yellow.
                 The ranges of data used to calculate
                 the offsets are marked by green and red lines.
+            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data (photon events).
 
         returns:
             matplotlib.axes
@@ -437,12 +385,18 @@ class photon_events():
             ax = fig.add_subplot(111)
             ax.set_facecolor('black')
 
+        if 'marker' not in kwargs:
+            kwargs['marker'] = 'o'
+        if 'ms' not in kwargs:
+            kwargs['ms'] = pointsize
+        if 'mfc' not in kwargs:
+            kwargs['mfc'] = 'white'
+        if 'markeredgewidth' not in kwargs:
+            kwargs['markeredgewidth'] = 0
+
         ax.plot(self.data[:, 0], self.data[:, 1],
                      linewidth=0,
-                     marker='o',
-                     mfc = 'white',
-                     markeredgewidth = 0,
-                     ms=pointsize)
+                     **kwargs)
 
         try:
             if len(show_bins) == 1:
@@ -473,8 +427,8 @@ class photon_events():
 
         if show_offsets or show_offsets_fit:
             for r in self.offsets_ranges:
-                plt.axhlines(r[0], color='green', linewidth=2, zorder=10)
-                plt.axhlines(r[1], color='red', linewidth=2, zorder=10)
+                plt.axhline(r[0], color='green', linewidth=2, zorder=10)
+                plt.axhline(r[1], color='red', linewidth=2, zorder=10)
 
         return ax
 
@@ -576,6 +530,7 @@ class photon_events():
                     plt.axvline(r[0], color='green', linewidth=1.2, zorder=10)
                     plt.axvline(r[1], color='red', linewidth=1.2, zorder=10)
 
+        return ax
 
     # def calculate_overlaps(self, x_min_between_events=5e-6, y_min_between_events=5e-6):
     #
@@ -793,7 +748,7 @@ class spectrum():
 
             # temp[:, 1] =
 
-        self.data = np.vstack((x, np.interp(x, self.data[:, 0], self.data[:, 1]))).transpose()
+        self.data = np.column_stack((x, np.interp(x, self.data[:, 0], self.data[:, 1])))
         # return spectrum(data=temp)
 
     def apply_shift(self, shift, mode='hard'):
@@ -817,24 +772,26 @@ class spectrum():
         Returns:
             None
         """
-        x = self.data[:, 0]
-        y = self.data[:, 1]
+        # print(
+        # x = self.data[:, 0]
+        # y = self.data[:, 1]
+        #
+        # if mode == 'y' or mode == 'interp' or mode=='soft':
+        #     y = np.interp(x, x + shift, y)
+        #
+        # elif mode == 'x' or mode == 'hard':
+        #     x = np.array(x) + shift
+        #
+        # elif mode == 'roll' or mode == 'rotate':
+        #     y = np.roll(y, shift)
+        #     if shift > 0:
+        #         y[:shift] = 0
+        #     elif shift < 0:
+        #         y[shift:] = 0
 
-        if mode == 'y' or mode == 'interp' or mode=='soft':
-            y = np.interp(x, x + shift, y)
-
-        elif mode == 'x' or mode == 'hard':
-            x = np.array(x) + shift
-
-        elif mode == 'roll' or mode == 'rotate':
-            y = np.roll(y, shift)
-            if shift > 0:
-                y[:shift] = 0
-            elif shift < 0:
-                y[shift:] = 0
-
-        self.data[:, 0] = x
-        self.data[:, 1] = y
+            # self.apply_correction(self, f)
+        x, y = am.shift(self.data[:, 0], self.data[:, 1], shift=shift, mode=mode)
+        self.data = np.column_stack((x, y))
 
 
     def peak_fit(self, ranges=None, **kwargs):
@@ -1091,7 +1048,7 @@ class spectra():
                 stop = min([max(s.data[:, 0]) for s in self.spectrum])
 
         for spectrum in self.spectrum:
-            spectrum.interpolate(x=x, start=start, stop=stop, num=num, step=step)
+            spectrum.interp(x=x, start=start, stop=stop, num=num, step=step)
 
 
     def check_x(self, max_error=0.001):
@@ -1192,7 +1149,7 @@ class spectra():
         self.shift_ranges = ranges
 
 
-    def apply_shift(self, mode=None):
+    def shifts_correction(self, mode=None):
         """Shift data.
 
         Args:
@@ -1216,13 +1173,17 @@ class spectra():
         """
 
         if mode is None:
-            if self.shift_mode == 'cross_correlation':
+            if self.shift_mode == 'cross-correlation':
                 mode = 'roll'
             elif self.shift_mode == 'fit':
                 mode = 'soft'
+            else:
+                warnings.warn(f'Shift mode ({self.shift_mode}) not recognized.', stacklevel=2)
+                return
 
-        for i in range(self.get_spectra_count):
-            self.spectrum[i].apply_shift(shift=elf.shifts[i], mode=mode)
+        for i in range(self.get_spectra_count()):
+            self.spectrum[i].apply_shift(shift=self.shifts[i], mode=mode)
+
 
 
     def crop(self, start=None, stop=None):
@@ -1256,12 +1217,12 @@ class spectra():
     def calculate_sum(self):
         """Sum all spectra."""
 
-        self._check_array()
+        self.check_x()
 
         temp = copy.deepcopy(self.spectrum[0])
         for i in range(1, self.get_spectra_count()):
             temp.data[:, 1] += self.spectrum[i].data[:, 1]
-        self.sum = spectrum(data=temp)
+        self.sum = spectrum(data=temp.data)
 
 
     def plot(self, ax=None, idx='all', normalized=True, vertical_increment=0, shift=0, factor=1, show_ranges=False, **kwargs):
@@ -1317,3 +1278,65 @@ class spectra():
                     plt.axvline(r[1], color='red', linewidth=1.2, zorder=10)
 
         return ax
+
+    # 
+    # Example:
+    #     Simple usage: Gets a photon event list and remove the rotation of the
+    #     detector.
+    #
+    #     >>> import brixs
+    #     >>> import matplotlib.pyplot as plt
+    #     >>> import numpy as np
+    #     >>> plt.ion()
+    #     >>> # simulating a generic spectrum
+    #     >>> I = brixs.dummy_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]])
+    #     >>> # simulating the photon_event list
+    #     >>> data = brixs.dummy_photon_events(I, noise=0.02, background=0.01, y_zero_energy=-20, angle=2)
+    #     >>> # initializing photon_events object
+    #     >>> p = brixs.photon_events(data=data)
+    #     >>> # set binning
+    #     >>> p.set_binning((10, 50))
+    #     >>> p.plot(show_bins=True)
+    #
+    #     .. image:: _figs/bins.png
+    #         :target: _static/bins.png
+    #         :width: 600
+    #         :align: center
+    #
+    #     >>> # plot columns
+    #     >>> p.plot_columns(columns='all', shift=100)
+    #
+    #     .. image:: _figs/columns.png
+    #         :target: _static/columns.png
+    #         :width: 600
+    #         :align: center
+    #
+    #     >>> # fitting offsets
+    #     >>> p.set_binning((10, 1000))
+    #     >>> p.calculate_offsets(ranges=[[0,  0.005]])
+    #     >>> p.fit_offsets()
+    #     >>> p.plot(show_offsets=True, show_offsets_fit=True)
+    #
+    #     .. image:: _figs/offsets.png
+    #         :target: _static/offsets.png
+    #         :width: 600
+    #         :align: center
+    #
+    #     .. image:: _figs/offsets_zoom.png
+    #         :target: _static/offsets_zoom.png
+    #         :width: 600
+    #         :align: center
+    #
+    #     >>> # remove offsets
+    #     >>> p.offsets_correction()
+    #     >>> p.plot()
+    #
+    #     .. image:: _figs/final.png
+    #         :target: _static/final.png
+    #         :width: 600
+    #         :align: center
+    #
+    #     .. image:: _figs/final_zoom.png
+    #         :target: _static/final_zoom.png
+    #         :width: 600
+    #         :align: center

@@ -3,6 +3,7 @@
 """Everyday use functions for array manipulation."""
 
 import numpy as np
+import copy
 from scipy.optimize import curve_fit
 from .model_functions import fwhmVoigt
 
@@ -173,11 +174,16 @@ def shift(x, y, shift, mode='hard'):
         x = np.array(x) + shift
 
     elif mode == 'roll' or mode == 'rotate':
-        y = np.roll(y, shift)
+        if shift.is_integer():
+            y = np.roll(y, int(shift))
+        else:
+            raise ValueError("shift must be an interger for mode='roll'.")
         if shift > 0:
-            y[:shift] = 0
+            y[:int(shift)] = 0
         elif shift < 0:
-            y[shift:] = 0
+            y[int(shift):] = 0
+    else:
+        raise ValueError('mode not recognized')
 
     return x, y
 
