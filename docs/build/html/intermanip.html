@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>interact &mdash; brixs 0.1 documentation</title>
   
@@ -17,7 +17,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -27,13 +30,11 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-        <script type="text/javascript" src="_static/clipboard.min.js"></script>
-        <script type="text/javascript" src="_static/copybutton.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -55,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> brixs
+            <a href="index.html" class="icon icon-home"> brixs
           
 
           
@@ -88,8 +89,8 @@
             
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brixs.html">CCD images and spectrum manipulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dummy.html">Generate dummy spectra and fake CCD images for testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brixs.html">Spectra manipulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dummy.html">Dummy RIXS spctra generation</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arraymanip.html"> Array manipulation module</a></li>
@@ -99,8 +100,8 @@
 <li class="toctree-l1"><a class="reference internal" href="model_functions.html"> Model functions module</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1</a></li>
-<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
 </ul>
 
             
@@ -141,6 +142,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -152,7 +155,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/intermanip.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -169,9 +172,9 @@
   <div class="section" id="module-brixs.intermanip">
 <span id="interact"></span><h1>interact<a class="headerlink" href="#module-brixs.intermanip" title="Permalink to this headline">¶</a></h1>
 <p>Everyday use functions for user interaction.</p>
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.intermanip.makeSound">
-<code class="sig-prename descclassname">brixs.intermanip.</code><code class="sig-name descname">makeSound</code><span class="sig-paren">(</span><em class="sig-param">duration=1</em>, <em class="sig-param">freq=440</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.makeSound" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.intermanip.</span></code><code class="sig-name descname"><span class="pre">makeSound</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">440</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.makeSound" title="Permalink to this definition">¶</a></dt>
 <dd><p>Make a sound.</p>
 <p>On linux (tested on ubuntu) it uses sox (<code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">sox</span></code>).
 On windows it uses the python package winsound (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">winsound</span></code>).</p>
@@ -185,9 +188,9 @@ On windows it uses the python package winsound (<code class="docutils literal no
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.intermanip.sayOutLoud">
-<code class="sig-prename descclassname">brixs.intermanip.</code><code class="sig-name descname">sayOutLoud</code><span class="sig-paren">(</span><em class="sig-param">message</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.sayOutLoud" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.intermanip.</span></code><code class="sig-name descname"><span class="pre">sayOutLoud</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.sayOutLoud" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate speech like sounds.</p>
 <p>On Linux (tested only on ubuntu 18.04) speech-dispatcher package is necessary
 (<code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt-get</span> <span class="pre">install</span> <span class="pre">-y</span> <span class="pre">speech-dispatcher</span></code>).</p>
@@ -198,9 +201,9 @@ On windows it uses the python package winsound (<code class="docutils literal no
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.intermanip.query_yes_no">
-<code class="sig-prename descclassname">brixs.intermanip.</code><code class="sig-name descname">query_yes_no</code><span class="sig-paren">(</span><em class="sig-param">question</em>, <em class="sig-param">default='yes'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.query_yes_no" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.intermanip.</span></code><code class="sig-name descname"><span class="pre">query_yes_no</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">question</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'yes'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.intermanip.query_yes_no" title="Permalink to this definition">¶</a></dt>
 <dd><p>Ask a yes/no question and return answer.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -227,37 +230,29 @@ On windows it uses the python package winsound (<code class="docutils literal no
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="model_functions.html" class="btn btn-neutral float-right" title="Model functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="figmanip.html" class="btn btn-neutral float-left" title="filemanip" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="model_functions.html" class="btn btn-neutral float-right" title="Model functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="figmanip.html" class="btn btn-neutral float-left" title="filemanip" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Carlos Galdino
+        &#169; Copyright 2020, Carlos Galdino.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 
