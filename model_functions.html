@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>Model functions &mdash; brixs 0.1 documentation</title>
   
@@ -17,7 +17,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -27,20 +30,19 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-        <script type="text/javascript" src="_static/clipboard.min.js"></script>
-        <script type="text/javascript" src="_static/copybutton.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Example 1" href="example1.html" />
+    <link rel="next" title="Example 1: Extract the spectrum of a dummy photon events list" href="example1.html" />
     <link rel="prev" title="interact" href="intermanip.html" /> 
 </head>
 
@@ -55,7 +57,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> brixs
+            <a href="index.html" class="icon icon-home"> brixs
           
 
           
@@ -88,8 +90,8 @@
             
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brixs.html">CCD images and spectrum manipulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dummy.html">Generate dummy spectra and fake CCD images for testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brixs.html">Spectra manipulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dummy.html">Dummy RIXS spctra generation</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arraymanip.html"> Array manipulation module</a></li>
@@ -99,8 +101,8 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#"> Model functions module</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1</a></li>
-<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
 </ul>
 
             
@@ -141,6 +143,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -152,7 +156,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/model_functions.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -169,9 +173,9 @@
   <div class="section" id="module-brixs.model_functions">
 <span id="model-functions"></span><h1>Model functions<a class="headerlink" href="#module-brixs.model_functions" title="Permalink to this headline">¶</a></h1>
 <p>Everyday use mathematical functions and distributions.</p>
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.Gauss">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">Gauss</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">sigma</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.Gauss" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">Gauss</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.Gauss" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gaussian distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \text{amp } e^{-\frac{(x-c)^2}{2 \sigma^2}}\]</div>
@@ -196,9 +200,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.areaGauss">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">areaGauss</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">A</em>, <em class="sig-param">c</em>, <em class="sig-param">sigma</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.areaGauss" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">areaGauss</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.areaGauss" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gaussian distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \frac{\text{Area}}{\sqrt{2\pi} w} e^{-\frac{(x-c)^2}{2 w^2}}\]</div>
@@ -217,9 +221,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmGauss">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmGauss</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmGauss" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmGauss</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmGauss" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gaussian distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \text{amp } e^{-\frac{4 \ln(2) (x-c)^2}{w^2}}\]</div>
@@ -241,9 +245,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmAreaGauss">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmAreaGauss</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">A</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmAreaGauss" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmAreaGauss</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmAreaGauss" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gaussian distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \frac{2 \sqrt{\ln(2)} A}{w \sqrt{\pi}}  e^{-\frac{4 \ln(2) (x-c)^2}{w^2}}\]</div>
@@ -262,9 +266,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.Lorentz">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">Lorentz</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">gamma</em>, <em class="sig-param">c</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.Lorentz" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">Lorentz</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.Lorentz" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cauchy–Lorentz distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \frac{1}{\pi \gamma} \frac{\gamma^2}{\gamma^2 + (x-c)^2}\]</div>
@@ -291,9 +295,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmLorentz">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmLorentz</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmLorentz" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmLorentz</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmLorentz" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cauchy–Lorentz distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \text{amp } \frac{w^2}{w^2 + (x-c)^2}\]</div>
@@ -315,9 +319,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmAreaLorentz">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmAreaLorentz</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">A</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmAreaLorentz" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmAreaLorentz</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmAreaLorentz" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cauchy–Lorentz distribution.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = A \frac{1}{\pi w} \frac{w^2}{w^2 + (x-c)^2}\]</div>
@@ -336,9 +340,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmVoigt">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmVoigt</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em>, <em class="sig-param">m</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmVoigt" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmVoigt</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmVoigt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Pseudo-voigt curve.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = A \left[ m  \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]\]</div>
@@ -358,9 +362,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmAreaVoigt">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmAreaVoigt</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">A</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em>, <em class="sig-param">m</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmAreaVoigt" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmAreaVoigt</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmAreaVoigt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Pseudo-voigt curve.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = A \left[ m \frac{1}{\pi w} \frac{w^2}{w^2 + 4 (x-c)^2}   + (1-m) \frac{2 \sqrt{\ln(2)}}{w \sqrt{\pi}}  e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]\]</div>
@@ -383,9 +387,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmArctan">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmArctan</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmArctan" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmArctan</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmArctan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Arctangent function.</p>
 <div class="math notranslate nohighlight">
 \[y(x) =   \frac{A}{\pi} \left[ \arctan(\frac{1}{w}(x-c)) + \frac{\pi}{2} \right]\]</div>
@@ -404,9 +408,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.square">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">square</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.square" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">square</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.square" title="Permalink to this definition">¶</a></dt>
 <dd><p>Square step function.</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}y(x) =   \begin{cases}
@@ -429,9 +433,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.model_functions.fwhmErr">
-<code class="sig-prename descclassname">brixs.model_functions.</code><code class="sig-name descname">fwhmErr</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">amp</em>, <em class="sig-param">c</em>, <em class="sig-param">w</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmErr" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.model_functions.</span></code><code class="sig-name descname"><span class="pre">fwhmErr</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.model_functions.fwhmErr" title="Permalink to this definition">¶</a></dt>
 <dd><p>Error function. Integal of gaussian function calculated by <code class="docutils literal notranslate"><span class="pre">scipy.special.erf()</span></code>.</p>
 <div class="math notranslate nohighlight">
 \[y(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2} dt\]</div>
@@ -457,37 +461,29 @@
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="example1.html" class="btn btn-neutral float-right" title="Example 1" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="intermanip.html" class="btn btn-neutral float-left" title="interact" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="example1.html" class="btn btn-neutral float-right" title="Example 1: Extract the spectrum of a dummy photon events list" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="intermanip.html" class="btn btn-neutral float-left" title="interact" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Carlos Galdino
+        &#169; Copyright 2020, Carlos Galdino.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 

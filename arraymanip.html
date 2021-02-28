@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>interact &mdash; brixs 0.1 documentation</title>
   
@@ -17,7 +17,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -27,13 +30,11 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-        <script type="text/javascript" src="_static/clipboard.min.js"></script>
-        <script type="text/javascript" src="_static/copybutton.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -55,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> brixs
+            <a href="index.html" class="icon icon-home"> brixs
           
 
           
@@ -99,8 +100,8 @@
 <li class="toctree-l1"><a class="reference internal" href="model_functions.html"> Model functions module</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1</a></li>
-<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
 </ul>
 
             
@@ -141,6 +142,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -152,7 +155,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/arraymanip.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -169,9 +172,9 @@
   <div class="section" id="module-brixs.arraymanip">
 <span id="interact"></span><h1>interact<a class="headerlink" href="#module-brixs.arraymanip" title="Permalink to this headline">¶</a></h1>
 <p>Everyday use functions for array manipulation.</p>
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.arraymanip.index">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">index</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">value</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.index" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.arraymanip.</span></code><code class="sig-name descname"><span class="pre">index</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.index" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the index of the element in array which is closest to value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -186,9 +189,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.arraymanip.extract">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">extract</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">ranges</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.extract" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.arraymanip.</span></code><code class="sig-name descname"><span class="pre">extract</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.extract" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns x and y elements that fall whithin x intervals.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -219,9 +222,9 @@ the start and stop of a data range.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.arraymanip.peak_fit">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">peak_fit</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">guess_c</em>, <em class="sig-param">guess_A</em>, <em class="sig-param">guess_w</em>, <em class="sig-param">guess_offset=0</em>, <em class="sig-param">fixed_m=False</em>, <em class="sig-param">start=None</em>, <em class="sig-param">stop=None</em>, <em class="sig-param">asymmetry=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.peak_fit" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.arraymanip.</span></code><code class="sig-name descname"><span class="pre">peak_fit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_w</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">asymmetry</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.peak_fit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit a peak with a pseudo-voigt curve.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -258,9 +261,9 @@ data is used.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.arraymanip.shift">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">shift</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">shift</em>, <em class="sig-param">mode='hard'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.shift" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.arraymanip.</span></code><code class="sig-name descname"><span class="pre">shift</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hard'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.shift" title="Permalink to this definition">¶</a></dt>
 <dd><p>Shift (x, y) data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -291,13 +294,13 @@ caused by the interpolation.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.arraymanip.movingaverage">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">movingaverage</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">window_size</em>, <em class="sig-param">remove_boundary_effects=True</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.movingaverage" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.arraymanip.</span></code><code class="sig-name descname"><span class="pre">movingaverage</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_boundary_effects</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.movingaverage" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the moving average of an array.</p>
 <p>The returned array has the same length of the original array.</p>
 <p class="rubric">Example</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
 <span class="go">[0. 1. 2. 3. 4. 5. 6. 7. 8. 9.]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">manip</span><span class="o">.</span><span class="n">movingaverage</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="mi">2</span><span class="p">))</span>
 <span class="go">[0. , 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]</span>
@@ -324,9 +327,9 @@ caused by the interpolation.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.arraymanip.derivative">
-<code class="sig-prename descclassname">brixs.arraymanip.</code><code class="sig-name descname">derivative</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">order=1</em>, <em class="sig-param">window_size=1</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.derivative" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.arraymanip.</span></code><code class="sig-name descname"><span class="pre">derivative</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.arraymanip.derivative" title="Permalink to this definition">¶</a></dt>
 <dd><p>if window_size &gt; 1, boundary effects might be</p>
 </dd></dl>
 
@@ -337,37 +340,29 @@ caused by the interpolation.</p>
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="filemanip.html" class="btn btn-neutral float-right" title="filemanip" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="dummy.html" class="btn btn-neutral float-left" title="Dummy RIXS spctra generation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="filemanip.html" class="btn btn-neutral float-right" title="filemanip" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="dummy.html" class="btn btn-neutral float-left" title="Dummy RIXS spctra generation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Carlos Galdino
+        &#169; Copyright 2020, Carlos Galdino.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 

@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>filemanip &mdash; brixs 0.1 documentation</title>
   
@@ -17,7 +17,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -27,13 +30,11 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script type="text/javascript" src="_static/language_data.js"></script>
-        <script type="text/javascript" src="_static/clipboard.min.js"></script>
-        <script type="text/javascript" src="_static/copybutton.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -55,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> brixs
+            <a href="index.html" class="icon icon-home"> brixs
           
 
           
@@ -88,8 +89,8 @@
             
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brixs.html">CCD images and spectrum manipulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dummy.html">Generate dummy spectra and fake CCD images for testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brixs.html">Spectra manipulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dummy.html">Dummy RIXS spctra generation</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="arraymanip.html"> Array manipulation module</a></li>
@@ -99,8 +100,8 @@
 <li class="toctree-l1"><a class="reference internal" href="model_functions.html"> Model functions module</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1</a></li>
-<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
 </ul>
 
             
@@ -141,6 +142,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -152,7 +155,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/figmanip.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -169,9 +172,9 @@
   <div class="section" id="module-brixs.figmanip">
 <span id="filemanip"></span><h1>filemanip<a class="headerlink" href="#module-brixs.figmanip" title="Permalink to this headline">¶</a></h1>
 <p>Everyday use functions that eases matplotlib figure manipulation.</p>
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.set_default_window_position">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">set_default_window_position</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_default_window_position" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">set_default_window_position</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_default_window_position" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the default window position for when <a class="reference internal" href="#brixs.figmanip.setWindowPosition" title="brixs.figmanip.setWindowPosition"><code class="xref py py-func docutils literal notranslate"><span class="pre">setWindowPosition()</span></code></a> is called.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -180,9 +183,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.set_onclick">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">set_onclick</code><span class="sig-paren">(</span><em class="sig-param">format='svg'</em>, <em class="sig-param">resolution=300</em>, <em class="sig-param">folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_onclick" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">set_onclick</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'svg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_onclick" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the default format for saving figures using <a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -195,9 +198,9 @@
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.onclick">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">onclick</code><span class="sig-paren">(</span><em class="sig-param">event</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.onclick" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">onclick</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.onclick" title="Permalink to this definition">¶</a></dt>
 <dd><p>This function is called everytime a mouse key is pressed whitin a figure.</p>
 <dl class="simple">
 <dt>Right click:</dt><dd><p>x value is copied to the clipboard (using xsel).</p>
@@ -221,9 +224,9 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </div>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.figure">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">figure</code><span class="sig-paren">(</span><em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.figure" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">figure</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.figure" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create figure object attached to <a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -232,9 +235,9 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.setWindowPosition">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">setWindowPosition</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowPosition" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">setWindowPosition</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowPosition" title="Permalink to this definition">¶</a></dt>
 <dd><p>Change position of a maptplotlib figure on screen.</p>
 <p>Tipically, (0, 0) is the top left corner.</p>
 <dl class="field-list simple">
@@ -244,9 +247,9 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.setWindowSize">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">setWindowSize</code><span class="sig-paren">(</span><em class="sig-param">*args</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowSize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">setWindowSize</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowSize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Change the size of the window of a matplotlib figure.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -255,15 +258,15 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.maximize">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">maximize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.maximize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">maximize</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.maximize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Maximize current fig.</p>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.getWindowPosition">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">getWindowPosition</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowPosition" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">getWindowPosition</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowPosition" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the position of a matplotlib position on the screen.</p>
 <p>Tipically, (0, 0) is the top left corner of your monitor.</p>
 <dl class="field-list simple">
@@ -273,9 +276,9 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.getWindowSize">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">getWindowSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowSize" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">getWindowSize</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowSize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the size of the window of a matplotlib figure.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -284,9 +287,9 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.zoom">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">zoom</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">stop</em>, <em class="sig-param">fig=None</em>, <em class="sig-param">marginx=5</em>, <em class="sig-param">marginy=5</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.zoom" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">zoom</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.zoom" title="Permalink to this definition">¶</a></dt>
 <dd><p>Zoom up portion of a plot from start to stop.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -301,9 +304,9 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.savefigs">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">savefigs</code><span class="sig-paren">(</span><em class="sig-param">filepath</em>, <em class="sig-param">figs='all'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.savefigs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">savefigs</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'all'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.savefigs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save multiple matplotlib figures in a pdf.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -316,9 +319,9 @@ to save all opened figures.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.cm2pt">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">cm2pt</code><span class="sig-paren">(</span><em class="sig-param">*tupl</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.cm2pt" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">cm2pt</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">tupl</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.cm2pt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert values from cm to pt.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -330,9 +333,9 @@ to save all opened figures.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.cm2px">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">cm2px</code><span class="sig-paren">(</span><em class="sig-param">*tupl</em>, <em class="sig-param">dpi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.cm2px" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">cm2px</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">tupl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dpi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.cm2px" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert values from cm to px.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -344,9 +347,9 @@ to save all opened figures.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.cm2inch">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">cm2inch</code><span class="sig-paren">(</span><em class="sig-param">*tupl</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.cm2inch" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">cm2inch</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">tupl</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.cm2inch" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert values from cm to inches.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -358,9 +361,9 @@ to save all opened figures.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.n_decimal_places">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">n_decimal_places</code><span class="sig-paren">(</span><em class="sig-param">number</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.n_decimal_places" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">n_decimal_places</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">number</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.n_decimal_places" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the number of decimal places of a number.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -369,9 +372,9 @@ to save all opened figures.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.n_digits">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">n_digits</code><span class="sig-paren">(</span><em class="sig-param">number</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.n_digits" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">n_digits</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">number</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.n_digits" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the number of digits of a number.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -380,9 +383,9 @@ to save all opened figures.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.set_ticks">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">set_ticks</code><span class="sig-paren">(</span><em class="sig-param">ax</em>, <em class="sig-param">axis='x'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_ticks" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">set_ticks</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_ticks" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set ticks of a plot.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -443,9 +446,9 @@ at tick labels.</p></td>
 </div>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.remove_ticks_edge">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">remove_ticks_edge</code><span class="sig-paren">(</span><em class="sig-param">ax</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.remove_ticks_edge" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">remove_ticks_edge</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.remove_ticks_edge" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove ticks the fall over the edges of the plot.</p>
 <p>This is useful when ticks are thicker than the plot edge lines.</p>
 <dl class="field-list simple">
@@ -455,9 +458,9 @@ at tick labels.</p></td>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.axBox2figBox">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">axBox2figBox</code><span class="sig-paren">(</span><em class="sig-param">ax</em>, <em class="sig-param">points</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.axBox2figBox" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">axBox2figBox</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.axBox2figBox" title="Permalink to this definition">¶</a></dt>
 <dd><p>Transform ‘bbox like’ axes position values to percentage fig position.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -473,9 +476,9 @@ at tick labels.</p></td>
 </dl>
 </dd></dl>
 
-<dl class="function">
+<dl class="py function">
 <dt id="brixs.figmanip.axPos2figPos">
-<code class="sig-prename descclassname">brixs.figmanip.</code><code class="sig-name descname">axPos2figPos</code><span class="sig-paren">(</span><em class="sig-param">ax</em>, <em class="sig-param">value</em>, <em class="sig-param">direction='x'</em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.axPos2figPos" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">axPos2figPos</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.axPos2figPos" title="Permalink to this definition">¶</a></dt>
 <dd><p>Transform axes position values to figure percentage position.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -499,37 +502,29 @@ at tick labels.</p></td>
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="intermanip.html" class="btn btn-neutral float-right" title="interact" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="filemanip.html" class="btn btn-neutral float-left" title="filemanip" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="intermanip.html" class="btn btn-neutral float-right" title="interact" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="filemanip.html" class="btn btn-neutral float-left" title="filemanip" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Carlos Galdino
+        &#169; Copyright 2020, Carlos Galdino.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 
