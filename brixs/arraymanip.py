@@ -8,84 +8,264 @@ from scipy.optimize import curve_fit
 from .model_functions import fwhmVoigt
 
 
-def index(array, value):
+def index(x, value):
     """Returns the index of the element in array which is closest to value.
 
     Args:
-        array (list or array): 1d array.
+        x (list or array): 1D array.
         value (float or int): value.
 
     Returns:
-        index
+        index (int)
     """
-    return np.argmin(np.abs(np.array(array)-value))
+    return np.argmin(np.abs(np.array(x)-value))
+
+
+def sort(ref, *args):
+    """Returns sorted arrays based on a reference array.
+
+    Args:
+        ref (list or array): 1D array.
+        *args: array to sort.
+
+    Returns:
+        sorted arrays."""
+    s = []
+    for x in args:
+        s.append( [x1 for (y,x1) in sorted(zip(ref,x), key=lambda pair: pair[0])])
+    return s
 
 
 def extract(x, y, ranges):
-    """Returns x and y elements that fall whithin x intervals.
+    """Returns specifc data ranges from x and y.
 
     Args:
-        x (list or array): 1d array
-        y (list or array): 1d array
-        ranges (list): a pair of x values or a list of pairs. Each pair represents
-            the start and stop of a data range.
+        x (list or array): 1D reference vector.
+        y (list or array): 1D y-coordinates or list of several data sets sharing
+            the same x-coordinates.
+        ranges (list): a pair of values or a list of pairs. Each pair represents
+            the start and stop of a data range from ref.
 
-    Notes:
-        y is reduced based on x array.
+    Returns:
+        x and y arrays.
+
 
     Examples:
-        Use::
 
-            ranges=[[2, 7], [9, 14]]
+        >>> x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        >>> y = np.array(x)**2
+        >>> ranges = ((0, 3), (7.5, 9))
+        >>> x_sliced, y_sliced = am.extract(x, y, ranges)
+        >>> print(x_sliced)
+        [0 1 2 3 8 9]
+        >>> print(y_sliced)
+        [0 1 4 9 64 81]
 
-        to extract data from 2 to 7 and 9 to 14.
-
-    Warning:
-        If data ranges intersept with each other, the returned data with have repeated elements.
-
-    Returns:
-        Reduced x and y arrays
     """
-    x_clean = []
-    y_clean = []
+    x = np.array(x)
+    y = np.array(y)
 
-    for xinit, xfinal in ranges:
-        choose_range = np.logical_and(x>xinit, x<xfinal)
-        x_clean.append(x[choose_range])
-        y_clean.append(y[choose_range])
+    try:
+        choose_range = []
+        for x_init, x_final in ranges:
+            choose_range.append(np.logical_and(x>=x_init, x<=x_final))
+        choose_range = [True if x == 1 else False for x in sum(choose_range)]
+    except TypeError:
+        choose_range = []
+        x_init, x_final = ranges
+        choose_range.append(np.logical_and(x>=x_init, x<=x_final))
+        choose_range = [True if x == 1 else False for x in sum(choose_range)]
 
-    return np.hstack(x_clean), np.hstack(y_clean)
+    if len(y.shape) > 1:
+        s = []
+        for i in range(y.shape[0]):
+            s.append(np.hstack(y[i][choose_range]))
+        return np.hstack(x[choose_range]), s
+    else:
+        return np.hstack(x[choose_range]), np.hstack(y[choose_range])
 
 
-def peak_fit(x, y, guess_c, guess_A, guess_w, guess_offset=0, fixed_m=False, start=None, stop=None, asymmetry=True):
-    """Fit a peak with a pseudo-voigt curve.
-
+def movingaverage(x, window_size):
+    """Returns the moving average of an array.
 
     Args:
-        x (list or array): 1d array
-        y (list or array): 1d array
-        guess_c (float or int): guess Center
-        guess_A (float or int): guess Amplitude
-        guess_w (float or int): guess FWHM
-        guess_offset (float or int, optional): guess Offset [0]
-        fixed_m (False or number): if false, ``m`` will be a fitting parameter. If
-            ``fixed_m=number``, ``number`` will be used for ``m``.
-        start (float or int): start x value to fit the peak. If ``None``, full
-            data is used.
-        stop (float or int): final x value to fit the peak.  If ``None``, full
-            data is used.
-        asymmetry: Bool value. If ``asymmetry=True``, peak asymmetry is taken into account by fiting first
-        half of the peak with a different FHWM and m than the second half (m is the
-        factor from 1 to 0 of the lorentzian amount).
+        x (list or array): 1D array.
+        window_size (int): number of points to average.
 
     Returns:
-        1) 2 column (x,y) array with the fitted peak.
-        2) 2 column (x,y) array with "Smoothed" fitted peak. This is just the
+        array.
+
+    Example:
+        >>> x = [0,1,2,3,4,5,6,7,8,9]
+        >>> print(am.movingaverage(x, 1))
+        [0. 1. 2. 3. 4. 5. 6. 7. 8. 9.]
+        >>> print(am.movingaverage(x, 2))
+        [0.5 1.5 2.5 3.5 4.5 5.5 6.5 7.5 8.5]
+        >>> print(am.movingaverage(x, 3))
+        [1. 2. 3. 4. 5. 6. 7. 8.]
+        >>> print(am.movingaverage(x, 4))
+        [1.5 2.5 3.5 4.5 5.5 6.5 7.5]
+
+    """
+    if window_size < 1:
+        raise ValueError('window_size must be a positive integer (> 1).')
+
+    x = np.array(x)
+    window = np.ones(int(window_size))/float(window_size)
+
+    return np.convolve(x, window, 'valid')
+
+
+def derivative(x, y, order=1):
+    """Returns the derivative of y-coordinates as a function of x-coodinates.
+
+        Args:
+            x (list or array): 1D array x-coordinates.
+            y (list or array): 1D array y-coordinates.
+            order (number, optional): derivative order.
+
+        Returns:
+            x and y arrays.
+    """
+
+    if order<0:
+        raise ValueError('order must be a positive integer.')
+
+    x = np.array(x)
+    y = np.array(y)
+
+    x_diff = np.diff(x)
+    y_diff = np.diff(y)/x_diff
+    for i in range(order-1):
+        y_diff = np.diff(y_diff)/x_diff[:len(x_diff)-(i+1)]
+
+    for i in range(order):
+        x = movingaverage(x, window_size=2)
+
+    return x, y_diff
+
+
+def shift(x, y, shift, mode='hard'):
+    """Shift (x, y) data.
+
+    Args:
+        x (list or array): 1D array.
+        y (list or array): 1D array.
+        shift (float or int): shift value.
+        mode (string, optional):
+            #. ``mode='x'`` or ``mode='hard'``
+                y is fully preserved while x is shifted.
+            #. ``mode='y'``, ``'interp'``, or ``'soft'``
+                x is preserved while y is interpolated with a shift
+            #. ``mode='roll'``,
+                x and y are preserved and y elements are just rolled along the
+                array (in this case ``shift`` value must be an integer).
+
+    Returns:
+        Shifted x and y.
+
+    Warning:
+        It is always better to use ``mode='hard'`` or ``'roll'`` since the form of y is fully
+        preserved (no interpolation). After applying a shift using the ``mode='interp'``,
+        one can apply a
+        'inverse' shift to retrieve the original data. The diference between the retrieved
+        y data and the original data will give an ideia of the information loss
+        caused by the interpolation.
+    """
+    x = copy.deepcopy(np.array(x))
+    y = copy.deepcopy(np.array(y))
+
+    if mode == 'y' or mode == 'interp' or mode=='soft':
+        y = np.interp(x, x + shift, y)
+
+    elif mode == 'x' or mode == 'hard':
+        x = np.array(x) + shift
+
+    elif mode == 'roll' or mode == 'rotate':
+        if shift.is_integer():
+            y = np.roll(y, int(shift))
+        else:
+            raise ValueError("shift must be an interger for mode='roll'.")
+        if shift > 0:
+            y[:int(shift)] = 0
+        elif shift < 0:
+            y[int(shift):] = 0
+    else:
+        raise ValueError('mode not recognized')
+
+    return x, y
+
+
+def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False):
+    r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
+
+    .. math:: y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
+
+    Args:
+        x (list or array): 1D array x-coordinates.
+        y (list or array): 1D array y-coordinates.
+        guess_c (float or int, optional): guess Center. If None, it will be guessed by the
+            position of ``guess_A``.
+        guess_A (float or int, optional): guess Amplitude. If None, it will be guessed by the
+            the maximum y-coordinate.
+        guess_w (float or int, optional): guess FWHM. If None, it will be guessed as 10% of
+            ``guess_c``
+        guess_offset (float or int, optional): guess Offset. If None, it will be guessed as zero [0].
+        fixed_m (False or number): `Factor from 1 to 0 of the lorentzian amount.
+            If False, ``m`` will be a fitting parameter. If
+            ``fixed_m=<number>``, ``<number>`` will be used for ``m``.
+        asymmetry (Boolean, , optional). If True, peak asymmetry is taken into account by fiting first
+            half of the peak with a different ``w`` and ``m`` than the second half. The optimal ``w`` parameter
+            returned will be the sum of the ``w`` of the first and second halfs.
+
+    Returns:
+        1) 2 column (x, y) array with the fitted peak.
+        2) 2 column (x, y) array with "Smoothed" fitted peak. This is just the
             fitted peak array with a linear interpolation with 100 times more data points.
         3) An array with the optimized parameters for Amplitude, Center, FWHM and offset.
+        4) One standard deviation errors on the parameters
+
+    See Also:
+        :py:func:`backpack.model_functions.fwhmVoigt`
+
+    Example:
+        >>> import matplotlib.pyplot as plt
+        >>> from backpack.model_functions import fwhmGauss
+        >>> x = np.linspace(0, 100, 1000)
+        >>> amp = 1
+        >>> w = 10
+        >>> c = 25
+        >>> y = fwhmGauss(x, amp, c, w) + np.random.normal(-0.1, 0.1, 1000)
+        >>> _, smooth, popt, err = am.peak_fit(x, y)
+        >>> print(f'A = {popt[0]} +/- {err[0]}')
+        A = 1.0187633097698565 +/- 0.015832212669397393
+        >>> print(f'c = {popt[1]} +/- {err[1]}')
+        c = 24.940397238212615 +/- 0.0674408860045828
+        >>> print(f'w = {popt[2]} +/- {err[2]}')
+        w = 9.952479117885305 +/- 0.24269432941302957
+        >>> print(f'offset = {popt[3]} +/- {err[3]}')
+        offset = -0.10529818707281721 +/- 0.032115907889677234
+        >>> print(f'm = {popt[4]} +/- {err[4]}')
+        m = 2.4612897990598044e-14 +/- 0.005287100795322343
+        >>> plt.scatter(x, y)
+        >>> plt.plot(smooth[:, 0], smooth[:, 1], color='r', lw=3)
+        >>> plt.show()
+
+        .. image:: _static/peak_fit.png
+            :width: 600
+            :align: center
     """
-    if start is None: start=x[0]
-    if stop is None: stop=x[-1]
+    start = x[0]
+    stop = x[-1]
+
+    if guess_A is None:
+        guess_A = max(y)
+
+    if guess_c is None:
+        guess_c = x[index(y, guess_A)]
+
+    if guess_w is None:
+        guess_w = 0.1*guess_c
 
     if not fixed_m or fixed_m != 0:  # variable m
         if asymmetry:
@@ -124,192 +304,23 @@ def peak_fit(x, y, guess_c, guess_A, guess_w, guess_offset=0, fixed_m=False, sta
                     [np.inf, stop,  np.inf, np.inf]]
 
     # Fit data
-    x2fit, y2fit = extract(x, y, [[start, stop],])
-    popt, pcov = curve_fit(function2fit, x2fit, y2fit, p0,  # sigma = sigma,
+    popt, pcov = curve_fit(function2fit, x, y, p0,  # sigma = sigma,
                            bounds=bounds)
+    err = np.sqrt(np.diag(pcov))  # One standard deviation errors on the parameters
 
     # smooth data
-    arr100 = np.zeros([100*len(x2fit), 2])
-    arr100[:, 0] = np.linspace(x2fit[0], x2fit[-1], 100*len(x2fit))
+    arr100 = np.zeros([100*len(x), 2])
+    arr100[:, 0] = np.linspace(x[0], x[-1], 100*len(x))
     arr100[:, 1] = function2fit(arr100[:, 0],  *popt)
 
-    if asymmetry:
-        popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1])
-    else:
-        popt_2 = (popt[0], popt[1], popt[2], popt[-1])
-
-    return function2fit(x, *popt), arr100, popt_2
-
-
-def shift(x, y, shift, mode='hard'):
-    """Shift (x, y) data.
-
-    Args:
-        x (list or array): 1D array.
-        y (list or array): 1D array.
-        shift (float or int): shift value.
-        mode (string, optional): If ``mode='x'`` or ``mode='hard'``, y is fully preserved
-            while x is shifted. If ``mode='y'``, ``'interp'``, or ``'soft'``, x is preserved
-            while y is interpolated with a shift. If ``mode='roll'``, x is also preserved
-            and y elements are rolled along the array (``shift`` value must be an integer).
-
-    Warning:
-        It is always better to use ``mode='hard'`` or ``'roll'`` since the form of y is fully
-        preserved (no interpolation). After applying a shift using the ``mode='interp'``,
-        one can apply a
-        'inverse' shift to retrieve the original data. The diference between the retrieved
-        y data and the original data will give an ideia of the information loss
-        caused by the interpolation.
-
-    Returns:
-        Shifted x and y.
-    """
-    x = copy.deepcopy(np.array(x))
-    y = copy.deepcopy(np.array(y))
-
-    if mode == 'y' or mode == 'interp' or mode=='soft':
-        y = np.interp(x, x + shift, y)
-
-    elif mode == 'x' or mode == 'hard':
-        x = np.array(x) + shift
-
-    elif mode == 'roll' or mode == 'rotate':
-        if shift.is_integer():
-            y = np.roll(y, int(shift))
+    if fixed_m:
+        if asymmetry:
+            popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1])
         else:
-            raise ValueError("shift must be an interger for mode='roll'.")
-        if shift > 0:
-            y[:int(shift)] = 0
-        elif shift < 0:
-            y[int(shift):] = 0
+            popt_2 = (popt[0], popt[1], popt[2], popt[-1])
     else:
-        raise ValueError('mode not recognized')
-
-    return x, y
-
-def movingaverage(array, window_size, remove_boundary_effects=True):
-    """Returns the moving average of an array.
-
-    The returned array has the same length of the original array.
-
-    Example:
-        >>> print(manip.movingaverage([0,1,2,3,4,5,6,7,8,9], 1))
-        [0. 1. 2. 3. 4. 5. 6. 7. 8. 9.]
-        >>> print(manip.movingaverage([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 2))
-        [0. , 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]
-        >>> print(manip.movingaverage([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 3))
-        [0.33333333 1. 2. 3. 4. 5. 6.  7. 8. 5.66666667]
-        >>> print(manip.movingaverage([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 4))
-        [0.25 0.75 1.5  2.5  3.5  4.5  5.5  6.5  7.5  6.  ]
-
-    Warning:
-        Note by the example that the resulting array contains boundary effects.
-
-    Args:
-        array (list or np.array): array.
-        window_size (int): number of points to average.
-
-    Returns:
-        array.
-    """
-    if window_size < 1:
-        raise ValueError('window_size must be a positive integer (> 1).')
-
-    array = np.array(array)
-    window = np.ones(int(window_size))/float(window_size)
-    final = np.convolve(array, window, 'same')
-
-    if remove_boundary_effects:
-        final = final[int(window_size/2):]
-    return final
-
-
-def derivative(x, y, order=1, window_size=1):
-    """ if window_size > 1, boundary effects might be """
-
-    if order<0:
-        raise ValueError('order must be a positive integer.')
-
-    x = np.array(x)
-    y = np.array(y)
-
-    x_diff = np.diff(x)
-    y_diff = np.diff(y)/x_diff
-    for i in range(order-1):
-        y_diff = np.diff(y_diff)/x_diff[:len(x_diff)-(i+1)]
-
-
-    i = int(order/2)
-    f = - int(order/2)
-    if (order % 2) != 0:
-        f -= 1
-
-    if window_size>1:
-        x = movingaverage(x, window_size=window_size)
-        y_diff = movingaverage(y_diff, window_size=window_size)
-
-    return x[i: f], y_diff
-
-
-
-
-# def increasing_monotonicity(dataX, dataY):
-#     """Returns an array sorted and monotonic.
-#
-#     The sorting is based on dataX and the monotonicity is done by averaging
-#     dataY for same dataX values.
-#
-#     If you need decreasing monotonicity just run this function and invert the
-#     returned arrays.
-#
-#     :param dataX: list of numbers
-#     :param dataY: list of numbers
-#     :return: two numpy arrays (x_monotonic, y_monotonic)
-#
-#     Example:    dataX= [1, 2, 4, 2, 1]
-#                 dataY = [5, 6, 9, 8, 9]
-#
-#                 x_return = [1, 2, 4]
-#                 y_return = [7, 7, 9]
-#     """
-#     # sort increasingly
-#     data2sort = np.array(np.transpose([dataX, dataY]))
-#     data_sorted = data2sort[data2sort[:, 0].argsort()]
-#
-#     done = False
-#     data_sorted_clean = np.copy(data_sorted)
-#     i = 0
-#
-#     while not done:
-#         val = data_sorted_clean[i, 0]
-#
-# #        print(i, val)
-#         if i == len(data_sorted_clean)-1:
-# #            print('aqui')
-#             done = True
-#             return data_sorted_clean[:, 0], data_sorted_clean[:, 1]
-#
-#         #Find how many duplicates there is
-#         number_of_duplicates = 0
-#         k = np.copy(i)
-#         while val == data_sorted_clean[k+1, 0]:
-#             k = k+1
-#             number_of_duplicates = number_of_duplicates+1
-#             if k==(len(data_sorted_clean)-1):
-#                 done = True
-#                 break
-# #        print(i, val, k, number_of_duplicates)
-#
-#         #Mean
-#         if number_of_duplicates>=1:
-#             data_sorted_clean[i, 1] = np.mean(data_sorted_clean[i:(i+number_of_duplicates+1), 1], dtype=np.float64)
-# #            print(data_sorted_clean)
-#
-#             for j in range(number_of_duplicates):
-# #                print('e')
-#                 data_sorted_clean = np.delete(data_sorted_clean, i+1, axis=0)
-# #                print(data_sorted_clean)
-#         i = i + 1
-#
-#         if done:
-#             return data_sorted_clean[:, 0], data_sorted_clean[:, 1]
+        if asymmetry:
+            popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1], popt[-2])
+        else:
+            popt_2 = (popt[0], popt[1], popt[2], popt[-1], popt[-2])
+    return function2fit(x, *popt), arr100, popt_2, err

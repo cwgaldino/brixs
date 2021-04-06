@@ -20,7 +20,7 @@ git merge <branch>
 eval "$(ssh-agent -s)"
 
 # Add your SSH private key to the ssh-agent.
-ssh-add ~/.ssh/id_rsa
+ssh-add ~/.ssh/id_ed25519
 
 # change remote URL from HTTPS to SSH
 git remote -v
