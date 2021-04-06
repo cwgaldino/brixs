@@ -251,7 +251,7 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         >>> plt.plot(smooth[:, 0], smooth[:, 1], color='r', lw=3)
         >>> plt.show()
 
-        .. image:: _static/peak_fit.png
+        .. image:: _figs/peak_fit.png
             :width: 600
             :align: center
     """
