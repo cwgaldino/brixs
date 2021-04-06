@@ -184,8 +184,97 @@
 </dd></dl>
 
 <dl class="py function">
+<dt id="brixs.figmanip.setWindowPosition">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">setWindowPosition</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowPosition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change position of a maptplotlib figure on screen.</p>
+<p>Tipically, (0, 0) is the top left corner.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>*args</strong> – A tuple like (x, y) or two separate x, y values (in px). If None,
+the default value defined by <a class="reference internal" href="#brixs.figmanip.set_default_window_position" title="brixs.figmanip.set_default_window_position"><code class="xref py py-func docutils literal notranslate"><span class="pre">set_default_window_position()</span></code></a>
+will be used. If there is no defined default value, the window’s
+position will be preserved.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.getWindowPosition" title="brixs.figmanip.getWindowPosition"><code class="xref py py-func docutils literal notranslate"><span class="pre">getWindowPosition()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.getWindowPosition">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">getWindowPosition</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowPosition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the position of a matplotlib position on the screen.</p>
+<p>Tipically, (0, 0) is the top left corner of your monitor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Tuple with the x and y position.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.setWindowPosition" title="brixs.figmanip.setWindowPosition"><code class="xref py py-func docutils literal notranslate"><span class="pre">setWindowPosition()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.setWindowSize">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">setWindowSize</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the size of the window of a matplotlib figure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>*args</strong> – A tuple like (width, height) or two separate width, height values (in px).</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.getWindowSize" title="brixs.figmanip.getWindowSize"><code class="xref py py-func docutils literal notranslate"><span class="pre">getWindowSize()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.getWindowSize">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">getWindowSize</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the size of the window of a matplotlib figure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Tuple with the width and height values.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.setWindowSize" title="brixs.figmanip.setWindowSize"><code class="xref py py-func docutils literal notranslate"><span class="pre">setWindowSize()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.maximize">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">maximize</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.maximize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximize current fig.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.figure">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">figure</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.figure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create figure object.</p>
+<p>This command is the same as <code class="docutils literal notranslate"><span class="pre">plt.figure()</span></code>, but is attaches the function
+<a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a> to the figure so everytime you click on the figure, it
+calls <a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.figure()</span></code>.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py function">
 <dt id="brixs.figmanip.set_onclick">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">set_onclick</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'svg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_onclick" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">set_onclick</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'svg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">round_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">round_y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.set_onclick" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the default format for saving figures using <a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -201,7 +290,7 @@
 <dl class="py function">
 <dt id="brixs.figmanip.onclick">
 <code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">onclick</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.onclick" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function is called everytime a mouse key is pressed whitin a figure.</p>
+<dd><p>This function is called everytime a mouse key is pressed over a figure.</p>
 <dl class="simple">
 <dt>Right click:</dt><dd><p>x value is copied to the clipboard (using xsel).</p>
 </dd>
@@ -213,7 +302,7 @@
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The matplotlib figure must be started by <a class="reference internal" href="#brixs.figmanip.figure" title="brixs.figmanip.figure"><code class="xref py py-func docutils literal notranslate"><span class="pre">figure()</span></code></a>, and not
+<p>The matplotlib figure must be started by <code class="xref py py-func docutils literal notranslate"><span class="pre">backpack.figmanip.figure()</span></code>, and not
 by the default <a class="reference external" href="https://matplotlib.org/3.3.1/api/_as_gen/matplotlib.pyplot.figure.html">matplotlib.pyplot.figure()</a> fuction.</p>
 </div>
 <div class="admonition note">
@@ -225,71 +314,8 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 </dd></dl>
 
 <dl class="py function">
-<dt id="brixs.figmanip.figure">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">figure</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.figure" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create figure object attached to <a class="reference internal" href="#brixs.figmanip.onclick" title="brixs.figmanip.onclick"><code class="xref py py-func docutils literal notranslate"><span class="pre">onclick()</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.figure()</span></code>.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.figmanip.setWindowPosition">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">setWindowPosition</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowPosition" title="Permalink to this definition">¶</a></dt>
-<dd><p>Change position of a maptplotlib figure on screen.</p>
-<p>Tipically, (0, 0) is the top left corner.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>*args</strong> – A tuple like (x, y) or two separate x, y values (in px).</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.figmanip.setWindowSize">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">setWindowSize</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.setWindowSize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Change the size of the window of a matplotlib figure.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>*args</strong> – A tuple like (width, height) or two separate width, height  values (in px).</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.figmanip.maximize">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">maximize</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.maximize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Maximize current fig.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.figmanip.getWindowPosition">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">getWindowPosition</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowPosition" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the position of a matplotlib position on the screen.</p>
-<p>Tipically, (0, 0) is the top left corner of your monitor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Tuple with the x and y position.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.figmanip.getWindowSize">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">getWindowSize</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.getWindowSize" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the size of the window of a matplotlib figure.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Tuple with the width and height values.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
 <dt id="brixs.figmanip.zoom">
-<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">zoom</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.zoom" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">zoom</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.zoom" title="Permalink to this definition">¶</a></dt>
 <dd><p>Zoom up portion of a plot from start to stop.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -297,8 +323,8 @@ machines (use <code class="docutils literal notranslate"><span class="pre">sudo<
 <li><p><strong>start</strong> (<em>float</em><em> or </em><em>int</em>) – initial x value.</p></li>
 <li><p><strong>stop</strong> (<em>float</em><em> or </em><em>int</em>) – final x value.</p></li>
 <li><p><strong>fig</strong> (<em>int</em><em>, </em><em>optional</em>) – number of the figure. If None, current figure is used.</p></li>
-<li><p><strong>marginx</strong> (<em>int</em><em>, </em><em>optional</em>) – margin value between data and the edges of plot in percentage.</p></li>
-<li><p><strong>marginy</strong> (<em>int</em><em>, </em><em>optional</em>) – margin value between data and the edges of plot in percentage.</p></li>
+<li><p><strong>marginx</strong> (<em>int</em><em>, </em><em>optional</em>) – margin value between data and the edges of plot in percentage of the x data range.</p></li>
+<li><p><strong>marginy</strong> (<em>int</em><em>, </em><em>optional</em>) – margin value between data and the edges of plot in percentage of the y data range.</p></li>
 </ul>
 </dd>
 </dl>
@@ -369,6 +395,9 @@ to save all opened figures.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>number</strong> (<em>float</em><em> or </em><em>int</em>) – number.</p>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>number of decimal places in number.</p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -379,6 +408,9 @@ to save all opened figures.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>number</strong> (<em>float</em><em> or </em><em>int</em>) – number.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>a tuple with number of digits and number of decimal places.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -392,47 +424,52 @@ to save all opened figures.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – The axes of the subplot to set ticks.</p></li>
 <li><p><strong>axis</strong> (<em>string</em><em>, </em><em>optional</em>) – possible values are ‘x’ or ‘y’.</p></li>
-<li><p><strong>**kwargs</strong> – <table class="docutils align-default">
-<colgroup>
-<col style="width: 63%" />
-<col style="width: 38%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p>min_value (float or int)</p></td>
-<td><p>start value for ticks and plot</p></td>
-</tr>
-<tr class="row-even"><td><p>max_value (float or int)</p></td>
-<td><p>stop value for ticks and plot</p></td>
-</tr>
-<tr class="row-odd"><td><p>n_ticks (int)</p></td>
-<td><p>Number of ticks. Ticks separation
+<li><p><strong>**kwargs</strong> – <ol class="arabic simple">
+<li><dl class="simple">
+<dt>min_value (float or int)</dt><dd><p>start value for ticks (not the plot edge — see <code class="docutils literal notranslate"><span class="pre">pad</span></code>)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>max_value (float or int)</dt><dd><p>stop value for ticks (not the plot edge — see <code class="docutils literal notranslate"><span class="pre">pad</span></code>)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>n_ticks (int)</dt><dd><p>Number of ticks. Ticks separation
 is calculated accordingly and
 this parameter overwrites
-ticks_sep.</p></td>
-</tr>
-<tr class="row-even"><td><p>ticks_sep (float or int)</p></td>
-<td><p>Ticks separation.</p></td>
-</tr>
-<tr class="row-odd"><td><p>n_minor_ticks (int)</p></td>
-<td><p>Number of minor ticks between
-two major ticks.</p></td>
-</tr>
-<tr class="row-even"><td><p>fontproperties (matplotlib.font_manager.FontProperties)</p></td>
-<td><p>Label ticks font.</p></td>
-</tr>
-<tr class="row-odd"><td><p>pad (float or int)</p></td>
-<td><p>Distance between plot edge and
-the first tick
-in terms of tick separation.
-Tipically, must be something
-between 0 and 1.</p></td>
-</tr>
-<tr class="row-even"><td><p>n_decimal_places (int)</p></td>
-<td><p>Number of decimal places to use
-at tick labels.</p></td>
-</tr>
-</tbody>
-</table>
+ticks_sep.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>ticks_sep (float or int)</dt><dd><p>Ticks separation.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>n_minor_ticks (int)</dt><dd><p>Number of minor ticks between two major ticks.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>fontproperties</dt><dd><p>Label ticks font. Use <code class="docutils literal notranslate"><span class="pre">matplotlib.font_manager.FontProperties</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>pad (float or int)</dt><dd><p>Distance between plot edge and the first tick in terms of tick separation.
+Tipically, must be something between 0 and 1.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>n_decimal_places (int)</dt><dd><p>Number of decimal places to use for tick labels.</p>
+</dd>
+</dl>
+</li>
+</ol>
 </p></li>
 </ul>
 </dd>
@@ -449,7 +486,7 @@ at tick labels.</p></td>
 <dl class="py function">
 <dt id="brixs.figmanip.remove_ticks_edge">
 <code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">remove_ticks_edge</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.remove_ticks_edge" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove ticks the fall over the edges of the plot.</p>
+<dd><p>Remove ticks that fall over the edges of the plot.</p>
 <p>This is useful when ticks are thicker than the plot edge lines.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -461,17 +498,16 @@ at tick labels.</p></td>
 <dl class="py function">
 <dt id="brixs.figmanip.axBox2figBox">
 <code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">axBox2figBox</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.axBox2figBox" title="Permalink to this definition">¶</a></dt>
-<dd><p>Transform ‘bbox like’ axes position values to percentage fig position.</p>
+<dd><p>Transform ‘bbox like’ axis position values to percentage fig position.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – axes instance.</p></li>
-<li><p><strong>points</strong> (<em>list</em>) – [x_init, y_init, x_final, y_final]</p></li>
+<li><p><strong>points</strong> (<em>list</em>) – list like <code class="docutils literal notranslate"><span class="pre">[x_init,</span> <span class="pre">y_init,</span> <span class="pre">x_final,</span> <span class="pre">y_final]</span></code></p></li>
 </ul>
 </dd>
-</dl>
-<dl class="simple">
-<dt>Retuns:</dt><dd><p>‘bbox like’ figure positions.</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>‘bbox like’ figure positions <code class="docutils literal notranslate"><span class="pre">[x_init,</span> <span class="pre">y_init,</span> <span class="pre">delta_x,</span> <span class="pre">delta_y]</span></code>.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -479,7 +515,7 @@ at tick labels.</p></td>
 <dl class="py function">
 <dt id="brixs.figmanip.axPos2figPos">
 <code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">axPos2figPos</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.axPos2figPos" title="Permalink to this definition">¶</a></dt>
-<dd><p>Transform axes position values to figure percentage position.</p>
+<dd><p>Transform axis position values to figure percentage position.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -488,11 +524,56 @@ at tick labels.</p></td>
 <li><p><strong>direction</strong> (<em>string</em><em>, </em><em>optional</em>) – ‘x’ or ‘y’.</p></li>
 </ul>
 </dd>
-</dl>
-<dl class="simple">
-<dt>Retuns:</dt><dd><p>Figure positions from 0 to 1.</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Figure positions from 0 to 1.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.ungroup">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">ungroup</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outfilepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.ungroup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ungroup all objects in svg files created by matplotlib.</p>
+<p>Text with latex equations are kept grouped.</p>
+<p>Ticks are cloned. The parent ticks will be at the left upper corner of the figure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>string</em><em> or </em><em>pathlib.Path</em>) – path to svg file.</p></li>
+<li><p><strong>outfilepath</strong> (<em>string</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path for svg output file.
+If None, it will use the input filepath and the file will be overwrited.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.soft_ungroup" title="brixs.figmanip.soft_ungroup"><code class="xref py py-func docutils literal notranslate"><span class="pre">soft_ungroup()</span></code></a></p>
+</div>
+<p class="rubric">Notes</p>
+<p>Use <a class="reference internal" href="#brixs.figmanip.soft_ungroup" title="brixs.figmanip.soft_ungroup"><code class="xref py py-func docutils literal notranslate"><span class="pre">soft_ungroup()</span></code></a> to better preserve the structure
+of the svg file in case <a class="reference internal" href="#brixs.figmanip.ungroup" title="brixs.figmanip.ungroup"><code class="xref py py-func docutils literal notranslate"><span class="pre">ungroup()</span></code></a> returns strange results.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.figmanip.soft_ungroup">
+<code class="sig-prename descclassname"><span class="pre">brixs.figmanip.</span></code><code class="sig-name descname"><span class="pre">soft_ungroup</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outfilepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.figmanip.soft_ungroup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ungroup objects in svg file (each object stands in a group by itself).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>string</em><em> or </em><em>pathlib.Path</em>) – path to svg file.</p></li>
+<li><p><strong>outfilepath</strong> (<em>string</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path for svg output file.
+If None, it will use the input filepath and the file will be overwrited.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#brixs.figmanip.ungroup" title="brixs.figmanip.ungroup"><code class="xref py py-func docutils literal notranslate"><span class="pre">ungroup()</span></code></a></p>
+</div>
+<p class="rubric">Notes</p>
+<p>This differs from <a class="reference internal" href="#brixs.figmanip.ungroup" title="brixs.figmanip.ungroup"><code class="xref py py-func docutils literal notranslate"><span class="pre">ungroup()</span></code></a> as it better preserves the structure
+of the svg file, but Objects are still kept in groups.</p>
 </dd></dl>
 
 </div>
