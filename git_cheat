@@ -26,3 +26,6 @@ ssh-add ~/.ssh/id_ed25519
 git remote -v
 git remote set-url origin git@github.com:cwgaldino/brixs.git
 git remote -v
+
+token?
+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
