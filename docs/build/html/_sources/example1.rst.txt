@@ -8,7 +8,6 @@ Import modules.
 
 >>> # brixs
 >>> import brixs
->>> from brixs import figmanip as figm
 >>>
 >>> # standard libraries
 >>> import matplotlib.pyplot as plt
@@ -67,7 +66,6 @@ columns.
 
 >>> # plot all columns
 >>> ax = p.plot_columns(vertical_increment=10, show_ranges=True)
->>> figm.zoom(0, 7)
 >>> ax.set_xlabel('y position (mm)')
 >>> ax.set_ylabel('intensity')
 
@@ -82,7 +80,6 @@ After correction, the columns are aligned.
 >>> p.offsets_correction()
 >>> # plot all columns after correction
 >>> ax = p.plot_columns(vertical_increment=10, show_ranges=True)
->>> figm.zoom(0, 7)
 >>> ax.set_xlabel('y position (mm)')
 >>> ax.set_ylabel('intensity')
 
@@ -98,7 +95,6 @@ y binning to 2000.
 >>> p.calculate_spectrum(y_bins=2000)
 >>> # plot final spectrum
 >>> ax = p.spectrum.plot()
->>> figm.zoom(2.5, 4.5)
 >>> ax.set_xlabel('y position (mm)')
 >>> ax.set_ylabel('intensity')
 

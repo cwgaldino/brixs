@@ -4,7 +4,7 @@
 Installation
 ==================
 
-Currently, there are two ways to install BRIXS:
+There are two recommended ways to install BRIXS:
 
 1) via 'pip install' from the GitHub repository
 
@@ -13,4 +13,4 @@ Currently, there are two ways to install BRIXS:
     pip install git+https://github.com/cwgaldino/brixs#egg=httpie
 
 
-2) Clone (or download) the GitHub repository
+2) Clone (or download) the GitHub repository.
