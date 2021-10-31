@@ -8,7 +8,6 @@ Import modules.
 
 >>> # brixs
 >>> import brixs
->>> from brixs import figmanip as figm
 >>>
 >>> # standard libraries
 >>> import numpy as np
