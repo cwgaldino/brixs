@@ -1,0 +1,31 @@
+# create gh-branches
+git checkout -b <gh-branches> (if it does not exist)
+git checkout --track origin/gh-branches (if it exists)
+same as git checkout -b branch origin/gh-branches
+
+# git workflow
+git checkout <branch> or git checkout -b <new-branch>
+do stuff=====
+git status
+git add *
+git commit -m 'message'
+git push -u origin <branch>
+git checkout main
+git merge <branch>
+
+
+
+
+# Start the ssh-agent in the background.
+eval "$(ssh-agent -s)"
+
+# Add your SSH private key to the ssh-agent.
+ssh-add ~/.ssh/id_ed25519
+
+# change remote URL from HTTPS to SSH
+git remote -v
+git remote set-url origin git@github.com:cwgaldino/brixs.git
+git remote -v
+
+token?
+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
