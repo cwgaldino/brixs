@@ -132,3 +132,4 @@ dmypy.json
 .directory
 git_cheat
 *.sh
+local/*

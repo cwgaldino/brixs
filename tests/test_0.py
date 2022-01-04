@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""DESCRIPTION"""
+"""unit test for brixs."""
 
 # standard imports
 import numpy as np
 from pathlib import Path
-import matplotlib.pyplot as plt
+
+import brixs as br
 
 # backpack
-import sys
-sys.path.append('/home/galdino/github/py-backpack')
-import backpack.filemanip as fmanip
-import backpack.figmanip as figmanip
-import importlib
-importlib.reload(figmanip)
+import unittest
 
-%matplotlib qt5
-figmanip.set_default_window_position((351, 1137))
-# figmanip.getWindowPosition()
 
-# %%
 
-import pytest
 
-def test_
+class TestSum(unittest.TestCase):
+    def test_list_int(self):
+        """
+        Test that it can sum a list of integers
+        """
+        data = [1, 2, 3]
+        result = sum(data)
+        self.assertEqual(result, 6)
+
+if __name__ == '__main__':
+    unittest.main()
