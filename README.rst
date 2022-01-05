@@ -25,12 +25,12 @@ Installation
 Requirements
 ==================
 
-- beautifulsoup4==4.10.0
-- detect_delimiter==0.1.1
-- h5py==3.6.0
-- matplotlib==3.4.3
-- numpy==1.21.2
-- scipy==1.7.1
+- numpy
+- scipy
+- h5py
+- matplotlib
+- beautifulsoup4
+- detect_delimiter
 
 
 Usage
@@ -39,6 +39,7 @@ Usage
 test
 
 .. code-block:: python
+
   import brixs as br
 
   # %% photon events with bad events
