@@ -267,13 +267,6 @@ class PhotonEvents(metaclass=Meta):
             guess_bins = self.guess_bins()
             self.bins = guess_bins
 
-        # elif 'best':
-        #     best_bins, _, _ = self.best_bins(y_bins=None, x_bins=None, deg=2, spectrum_bins=6000)
-        #     self.bins = best_bins
-        #     # self.calculate_offsets(ref=int(self.bins[0]/2))
-        #     # self.fit_offsets(deg=2)
-        #     # self.offsets_correction()
-        #     # s = self.calculate_spectrum(bins=6000)
         else:
             raise ValueError("Not a valid option ('guess', number or tuple).")
     @bins.deleter
@@ -302,7 +295,7 @@ class PhotonEvents(metaclass=Meta):
                 x_bins_size, y_bins_size = value, value
             else:
                 raise ValueError('Cannot set negative binning.')
-        if self._bins_size != np.array((x_bins_size, y_bins_size)):
+        if sum(self.bins_size != np.array((x_bins_size, y_bins_size))) > 0:
             self._bins_size = np.array((x_bins_size, y_bins_size))
             self._binning(use_bins_size=True)
     @bins_size.deleter
@@ -469,7 +462,7 @@ class PhotonEvents(metaclass=Meta):
             return temp.bins
 
 
-    def best_bins(self, prominence, y_bins=None, x_bins=None, deg=2, spectrum_bins=6000, **kwargs):
+    def best_bins(self, y_bins=None, x_bins=None, deg=2, spectrum_bins=6000, **kwargs):
 
         if y_bins is None:
             y_bins = [100, 150, 300, 400, 600, 1000, 1500, 2500, 5000, 6000, 8000, 12000, 15000]
@@ -494,7 +487,7 @@ class PhotonEvents(metaclass=Meta):
                 temp.offsets_correction()
                 s = temp.calculate_spectrum(bins=spectrum_bins)
                 try:
-                    s.guess_elastic_peak(prominence=prominence, **kwargs)
+                    s.guess_elastic_peak(**kwargs)
                     fwhm[y_bin][x_bin] = s.elastic_w
                     if s.elastic_w < best:
                         best_bins = (x_bin, y_bin)
@@ -656,39 +649,26 @@ class PhotonEvents(metaclass=Meta):
             pass
 
 
-    def best_bins_for_spectrum(self, ref_bin, ref_prominence, points=1, y_bins=None):
+    def best_bins_for_spectrum(self, y_bins=None, **kwargs):
 
         if y_bins is None:
             y_bins = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000]
-
-        try:
-            if len(ref_prominence) == len(y_bins):
-                prominence = ref_prominence
-            else:
-                raise ValueError('ref_prominence should be a number or have the same lenght as y_bins (default lenght is 12')
-        except TypeError:
-            prominence = [ref_prominence*ref_bin/y_bin for y_bin in y_bins]
-
-        try:
-            if len(points) == len(y_bins):
-                points = points
-            else:
-                raise ValueError('points should be a number or have the same lenght as y_bins (default lenght is 12')
-        except TypeError:
-            points = [1 if y_bin < 5000 else 2 for y_bin  in y_bins]
-
 
         fwhm = {y_bin: None for y_bin in y_bins}
         best = 10000
         print(f'Starting iteration...')
         for i, y_bin in enumerate(y_bins):
-            print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}. prominence={prominence[i]}. points={points[i]}')
+            print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}')
             s = self.calculate_spectrum(bins=y_bin, mode='lenght')
-            s.guess_elastic_peak(points=points[i], prominence=prominence[i])
-            fwhm[y_bin] = s.elastic_w
-            if s.elastic_w < best:
-                best_bins = (1, y_bin)
-                best = s.elastic_w
+            try:
+                s.guess_elastic_peak(**kwargs)
+                fwhm[y_bin] = s.elastic_w
+                if s.elastic_w < best:
+                    best_bins = (1, y_bin)
+                    best = s.elastic_w
+            except RuntimeError:
+                fwhm[y_bin] = -1
+
 
         return best_bins, best, fwhm
 
@@ -1104,8 +1084,25 @@ class Spectrum(metaclass=Meta):
         """
         save_data(self.data, filepath=Path(filepath), delimiter=delimiter, header=header, data_format='%.4f')
 
-    def guess_elastic_peak(self, prominence, points=1, ranges=None, asymmetry=True, side='right', mode='simple'):
+    def guess_elastic_peak(self, prominence=None, points=5, moving_average_winddow=8, ranges=None, asymmetry=True, side='right', mode='simple'):
         """
+
+        if prominence is none, prominence is 5% of the max.
+
+        1) data is smoothed until max of the smoothed data is 20 smaller than max
+        of data.
+
+        2) use find_peaks
+
+            3) if only one peak is found, fit peak
+
+            4) if more than one peak is found, get the two peak to the far right
+            (or left) sides and try to find a minimum between than.
+
+                5) if a minimum can be found. Fit peak until this minimum.
+
+                6) if it can't be found, fit until center of peak + width/2
+
         """
         right = ['right', 'r', 'RIGHT', 'R', 'max']
         left = ['left', 'l', 'LEFT', 'L', 'min']
@@ -1115,133 +1112,68 @@ class Spectrum(metaclass=Meta):
             x = self.x
             y = self.y
         else:
-            # try: ranges[0][0]
-            # except TypeError: (ranges, )
             x, y = extract(self.x, self.y, ranges=ranges)
 
+        # data smoothing
+        y2 = copy.deepcopy(y)
+        # n = 8
+        # while max(y)*0.8 < max(y2) and n < 20:
+        #     n *= 1.2
+        #     n = round(n)
+        y2 = moving_average(y, moving_average_winddow)
+        # print(n)
+        x2 = moving_average(x, moving_average_winddow)
 
-        if mode == 'simple':
-            try:
-                if side in right:
-                    i = -1
-                elif side in left:
-                    i = 0
+        if prominence is None:
+            prominence = max(y2)*0.05
+
+        # find peaks
+        try:
+            if side in right:
+                i = -1
+            elif side in left:
+                i = 0
+            else:
+                raise ValueError('side not valid. Choose "left" or "right".')
+
+            peaks, d = find_peaks(y2, prominence=prominence, width=points)
+            peaks = [index(x, x2[p]) for p in peaks]
+
+            # initial parameters for fitting
+            guess_c = x[peaks[i]]
+            guess_w = d['widths'][i]*(x[1]-x[0])
+            guess_A = d['prominences'][i]
+        except IndexError:
+            raise RuntimeError('Cannot find peaks. Try changing ``points`` and ``prominence``.')
+
+        # find peak next to elastic line
+        if len(peaks) > 1:
+            if side in right:
+                if peaks[-2]+d['widths'][-2]/2 > peaks[-1]-d['widths'][-1]/2:
+                    ranges = ((peaks[-1]-d['widths'][-1]/2, x[-1]), )
                 else:
-                    raise ValueError('side not valid. Choose "left" or "right".')
-
-                peaks, d = find_peaks(y, prominence=prominence, width=points)
-                guess_c = x[peaks[i]]
-                guess_w = d['widths'][i]*(x[1]-x[0])
-                guess_A = d['prominences'][i]
-            except IndexError:
-                raise RuntimeError('Cannot find peaks. Try changing ``points`` and ``proeminence``.')
-
-            if len(peaks) > 1:
-                if side in right:
-                    j = -2
-                    y_temp = (prominence*1.1, )
-
-                    while min(y_temp) > prominence:
-                        ranges_temp = (x[peaks[j]], x[peaks[-1]])
-                        x_temp, y_temp = extract(x, y, ranges_temp)
-                        j -= 1
-                        if -j > len(peaks):
-                            raise RuntimeError('Cannot find minimum after elastic line. Maybe fix ``proeminece`` or reduce ``points``.')
-
+                    ranges_temp = (x[peaks[-2]], x[peaks[-1]])
+                    x_temp, y_temp = extract(x, y, ranges_temp)
                     ranges = ((x_temp[np.argmin(y_temp)], x[-1]), )
+            else:
+                if peaks[1]+d['widths'][1]/2 > peaks[2]-d['widths'][2]/2:
+                    ranges = ((x[0], peaks[1]-d['widths'][1]/2), )
                 else:
-                    j = 1
-                    y_temp = (prominence*1.1, )
-
-                    while min(y_temp) > prominence:
-                        ranges_temp = (x[peaks[0]], x[peaks[j]])
-                        x_temp, y_temp = extract(x, y, ranges_temp)
-                        j += 1
-                        if j == len(peaks):
-                            raise RuntimeError('Cannot find minimum after elastic line. Maybe fix ``proeminece`` or reduce ``points``.')
-
+                    ranges_temp = (x[peaks[1]], x[peaks[2]])
+                    x_temp, y_temp = extract(x, y, ranges_temp)
                     ranges = ((x[0], x_temp[np.argmin(y_temp)]), )
 
+            x2fit, y2fit = extract(x, y, ranges)
+            _, popt, _, f = peak_fit(x2fit, y2fit, guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=0, fixed_m=False, asymmetry=asymmetry)
 
-                x2fit, y2fit = extract(x, y, ranges)
-                _, popt, _, f = peak_fit(x2fit, y2fit, guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=0, fixed_m=False, asymmetry=asymmetry)
+        else:
+            _, popt, _, f = peak_fit(x, y, guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=0, fixed_m=False, asymmetry=asymmetry)
 
-            else:
-                _, popt, _, f = peak_fit(x, y, guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=0, fixed_m=False, asymmetry=asymmetry)
-
-            self.elastic_amp    = popt[0]
-            self.elastic_c      = popt[1]
-            self.elastic_w      = popt[2]
-            self.elastic_ranges = ranges
-            self.elastic_func   = f
-
-
-
-        elif mode == 'robust':
-
-            # striping data
-            x_diff, y_diff = derivative(s.data[:, 0], s.data[:, 1])
-            y_diff = abs(y_diff)
-            plt.plot(x_diff, y_diff)
-            smooth, popt, err, f = peak_fit(x_diff, y_diff, fixed_m=False, asymmetry=True)
-            plt.plot(smooth[:, 0], smooth[:, 1])
-            c = np.argmax(smooth[:, 1])
-            x_right = smooth[c + index(smooth[c:, 1], popt[0]*0.1), 0]
-            x_left  = smooth[index(smooth[:c, 1], popt[0]*0.1), 0]
-            right = index(s.x, x_right)
-            left = index(s.x, x_left)
-            x = s.x[left:right]
-            y = s.y[left:right]
-            plt.plot(x, y)
-
-            # fiding peaks
-            plt.figure()
-            plt.plot(x, y)
-            peaks, d = find_peaks(y, height=None, threshold=None, distance=None,
-                                  prominence=(np.mean(y), None),
-                                  width=1,
-                                  wlen=None,
-                                  rel_height=0.5,
-                                  plateau_size=None)
-            # print([x[i] for i in peaks])
-
-            # fit peak
-            if elastic2right == True:
-                ranges = (x[peaks[-2]] + (x[peaks[-1]] - x[peaks[-2]])/2, x[-1])
-                c   = x[peaks[-1]]
-            else:
-                ranges = (x[0], x[peaks[0]] + (x[peaks[1]] - x[peaks[0]])/2   )
-                c   = x[peaks[0]]
-            x_p1, y_p1 = extract(x, y, ranges)
-            smooth, popt, err, f = peak_fit(x_p1, y_p1, fixed_m=False, asymmetry=True)
-            plt.plot(smooth[:, 0], smooth[:, 1])
-
-
-            c = np.argmax(smooth[:, 1])
-
-            right = index(s.x, x_right)
-            left = index(s.x, x_left)
-            x = s.x[left:right]
-            y = s.y[left:right]
-
-            # checking if there is more peaks before the supposed elastic peak
-            if elastic2right == True:
-                x_right = smooth[c + index(smooth[c:, 1], popt[0]*0.01), 0]
-                ranges = (x_right, s.x[-1])
-                c   = x[peaks[-1]]
-            else:
-                x_left  = smooth[index(smooth[:c, 1], popt[0]*0.01), 0]
-                ranges = (s.x[0], x_left   )
-                c   = x[peaks[0]]
-            x_p2, y_p2 = extract(s.x, s.y, ranges)
-
-            plt.plot(x_p2, y_p2)
-
-            smooth2, popt2, err2, f2 = peak_fit(x_p2, y_p2, fixed_m=False, asymmetry=True)
-            plt.plot(smooth2[:, 0], smooth2[:, 1])
-
-            if popt2[0] > popt[0]*0.05:
-                raise somathing
+        self.elastic_amp    = popt[0]
+        self.elastic_c      = popt[1]
+        self.elastic_w      = popt[2]
+        self.elastic_ranges = ranges
+        self.elastic_func   = f
 
     def apply_shift(self, value, mode='roll'):
         """Shift data.
@@ -1445,8 +1377,6 @@ class Spectra(metaclass=MetaIterator):
     _read_only     = ['shift_mode', 'shift_ranges', 'x', 'sum']
 
     def __init__(self, data=None):
-        self._index = 0
-
         # basic attr
         if data is None:
             self._data = []
@@ -1720,8 +1650,6 @@ class Spectra(metaclass=MetaIterator):
         elif mode == 'elastic':
             # if self.step is None:
             #     print("Warning: Step check hasn't been run yet. ``Spectra.shifts`` is not trustworth. Use ``Spectra.shifts_lenght`` instead or run  Spectra.check_step_x()")
-            if 'prominence' not in kwargs:
-                raise TypeError('missing ``prominence`` argument (used by the Spectrum.guess_elastic_peak() method).')
             s_ref = Spectrum(x=x, y=ys[:, ref])
             s_ref.guess_elastic_peak(**kwargs)
             for i in range(self.get_spectra_count()):
