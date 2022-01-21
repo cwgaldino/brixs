@@ -97,6 +97,9 @@ a time.</p>
 </tr>
 </tbody>
 </table>
+<p>IDEAS:
+- when you crop the data in Spectra, you modify the spectrum. There’s no way to
+go back (like we do with the shift and offset). Maybe figure a away to go back.</p>
 <dl class="py class">
 <dt id="brixs.brixs.PhotonEvents">
 <em class="property">class </em><code class="sig-prename descclassname">brixs.brixs.</code><code class="sig-name descname">PhotonEvents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">events</span></em>, <em class="sig-param"><span class="n">x_max</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y_max</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.PhotonEvents" title="Permalink to this definition"></a></dt>
@@ -104,8 +107,13 @@ a time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>events</strong> (<em>list</em><em> or </em><em>array</em>) – two (x, y) or three (x, y, intensity) list or array with
-photon events.</p></li>
+<li><p><strong>events</strong> (<em>list</em><em> or </em><em>array</em>) – <p>two (x, y) or three (x, y, intensity) list or array with
+photon events.
+data (list or array, optional): three column list (or array) with photon</p>
+<blockquote>
+<div><p>events. Column order should be x, y, (and intensity if applicable).</p>
+</div></blockquote>
+</p></li>
 <li><p><strong>x_max</strong> (<em>float</em><em>, </em><em>optional</em>) – maximum x value. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will be infered
 by the data.</p></li>
 <li><p><strong>y_max</strong> (<em>float</em><em>, </em><em>optional</em>) – maximum y value. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, it will be infered
@@ -116,7 +124,7 @@ by the data.</p></li>
 </dl>
 <dl class="py method">
 <dt id="brixs.brixs.PhotonEvents.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">data_format</span><span class="o">=</span><span class="default_value">'%.4f'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.PhotonEvents.save" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">fmt</span><span class="o">=</span><span class="default_value">'%.4f'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.PhotonEvents.save" title="Permalink to this definition"></a></dt>
 <dd><p>Saves photon events data to a file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -381,6 +389,84 @@ the vertical offset between each curve. Default is 0.</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.hist">
+<em class="property">property </em><code class="sig-name descname">hist</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.hist" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.offsets">
+<em class="property">property </em><code class="sig-name descname">offsets</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.offsets" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.offsets_func">
+<em class="property">property </em><code class="sig-name descname">offsets_func</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.offsets_func" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.offsets_mode">
+<em class="property">property </em><code class="sig-name descname">offsets_mode</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.offsets_mode" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.offsets_popt">
+<em class="property">property </em><code class="sig-name descname">offsets_popt</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.offsets_popt" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.offsets_ranges">
+<em class="property">property </em><code class="sig-name descname">offsets_ranges</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.offsets_ranges" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.offsets_ref">
+<em class="property">property </em><code class="sig-name descname">offsets_ref</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.offsets_ref" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.spectrum">
+<em class="property">property </em><code class="sig-name descname">spectrum</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.spectrum" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.spectrum_bins">
+<em class="property">property </em><code class="sig-name descname">spectrum_bins</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.spectrum_bins" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.x_centers">
+<em class="property">property </em><code class="sig-name descname">x_centers</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.x_centers" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.x_edges">
+<em class="property">property </em><code class="sig-name descname">x_edges</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.x_edges" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.y_centers">
+<em class="property">property </em><code class="sig-name descname">y_centers</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.y_centers" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.PhotonEvents.y_edges">
+<em class="property">property </em><code class="sig-name descname">y_edges</code><a class="headerlink" href="#brixs.brixs.PhotonEvents.y_edges" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -390,142 +476,305 @@ the vertical offset between each curve. Default is 0.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – three column list (or array) with photon
-events. Column order should be x, y, and intensity.</p></li>
+<li><p><strong>data</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – two column list (or array).</p></li>
 <li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – x values (1D list/array). Overwrites <cite>data</cite>.</p></li>
 <li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – y values (1D list/array). Overwrites <cite>data</cite>.</p></li>
 </ul>
 </dd>
 </dl>
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.data">
+<code class="sig-name descname">data</code><a class="headerlink" href="#brixs.brixs.Spectrum.data" title="Permalink to this definition"></a></dt>
+<dd><p>three column array (x, y, and intensity)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.x">
+<code class="sig-name descname">x</code><a class="headerlink" href="#brixs.brixs.Spectrum.x" title="Permalink to this definition"></a></dt>
+<dd><p>vector with x-coordinate values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.y">
+<code class="sig-name descname">y</code><a class="headerlink" href="#brixs.brixs.Spectrum.y" title="Permalink to this definition"></a></dt>
+<dd><p>vector with y-coordinate values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.step">
+<code class="sig-name descname">step</code><a class="headerlink" href="#brixs.brixs.Spectrum.step" title="Permalink to this definition"></a></dt>
+<dd><p>step size for x-coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>number, read only</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.shift">
+<code class="sig-name descname">shift</code><a class="headerlink" href="#brixs.brixs.Spectrum.shift" title="Permalink to this definition"></a></dt>
+<dd><p>shift value (value will be added to x-coordinates).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.calib">
+<code class="sig-name descname">calib</code><a class="headerlink" href="#brixs.brixs.Spectrum.calib" title="Permalink to this definition"></a></dt>
+<dd><p>calibration value (x-coordinates will be multiplied by this value).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.offset">
+<code class="sig-name descname">offset</code><a class="headerlink" href="#brixs.brixs.Spectrum.offset" title="Permalink to this definition"></a></dt>
+<dd><p>offset value (value will be added to y-coordinates).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.factor">
+<code class="sig-name descname">factor</code><a class="headerlink" href="#brixs.brixs.Spectrum.factor" title="Permalink to this definition"></a></dt>
+<dd><p>ultiplicative factor (y-coordinates will be multiplied by this value).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.peaks">
+<code class="sig-name descname">peaks</code><a class="headerlink" href="#brixs.brixs.Spectrum.peaks" title="Permalink to this definition"></a></dt>
+<dd><p>each entry represents a peak.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.fit_data">
+<code class="sig-name descname">fit_data</code><a class="headerlink" href="#brixs.brixs.Spectrum.fit_data" title="Permalink to this definition"></a></dt>
+<dd><p>fit data for each peak.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.fit_popt">
+<code class="sig-name descname">fit_popt</code><a class="headerlink" href="#brixs.brixs.Spectrum.fit_popt" title="Permalink to this definition"></a></dt>
+<dd><p>optimized parameters of the full fit (only for inspection).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.fit_func">
+<code class="sig-name descname">fit_func</code><a class="headerlink" href="#brixs.brixs.Spectrum.fit_func" title="Permalink to this definition"></a></dt>
+<dd><p>function of the fitted peaks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>function</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="brixs.brixs.Spectrum.fit_ranges">
+<code class="sig-name descname">fit_ranges</code><a class="headerlink" href="#brixs.brixs.Spectrum.fit_ranges" title="Permalink to this definition"></a></dt>
+<dd><p>data range used to fit the peaks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.set_x">
+<code class="sig-name descname">set_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.set_x" title="Permalink to this definition"></a></dt>
+<dd><p>Set x-coordinates.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.get_x">
+<code class="sig-name descname">get_x</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.get_x" title="Permalink to this definition"></a></dt>
+<dd><p>Returns x-coordinates.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.set_y">
+<code class="sig-name descname">set_y</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.set_y" title="Permalink to this definition"></a></dt>
+<dd><p>Set y-coordinates.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.get_y">
+<code class="sig-name descname">get_y</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.get_y" title="Permalink to this definition"></a></dt>
+<dd><p>Returns y-coordinates.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt id="brixs.brixs.Spectrum.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">data_format</span><span class="o">=</span><span class="default_value">'%.4f'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.save" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">fmt</span><span class="o">=</span><span class="default_value">'%.8f'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.save" title="Permalink to this definition"></a></dt>
 <dd><p>Saves spectrum to a file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filepath</strong> (<em>string</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – filepath to file.</p></li>
 <li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – The string used to separate values.
-If whitespaces are used, consecutive whitespaces act as delimiter. Use <code class="docutils literal notranslate"><span class="pre">\\t</span></code> for tab. The default is comma (,).</p></li>
-<li><p><strong>header</strong> (<em>string</em><em>, </em><em>optional</em>) – text to add at the beginning of the file. Use <code class="docutils literal notranslate"><span class="pre">\n</span></code> for new line. Comment flag (#) is added automatically.</p></li>
+If whitespaces are used, consecutive whitespaces act as delimiter.
+Use <code class="docutils literal notranslate"><span class="pre">\\t</span></code> for tab. The default is comma (’, ‘).</p></li>
+<li><p><strong>header</strong> (<em>string</em><em>, </em><em>optional</em>) – text to add at the beginning of each file.
+Use <code class="docutils literal notranslate"><span class="pre">\n</span></code> for new line. Comment flag (’# ‘) is added automatically.</p></li>
+<li><p><strong>fmt</strong> (<em>string</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – <p>format for saving data.
+If string, the value is used for x- and y-coordinates. If tuple
+of strings, the first string is used for x-coordinates and the
+second for y-coordinates.</p>
+<blockquote>
+<div><p>fmt = (%[flag]width[.precision]specifier)</p>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt><cite>flag</cite> can be:</dt><dd><ol class="arabic simple">
+<li><p>’-’ for left justify</p></li>
+<li><p>’+’, puts + or - in front of the numbers</p></li>
+<li><p>’0’ to Left pad the number with zeros instead of space (see width).</p></li>
+</ol>
+</dd>
+</dl>
+</li>
+<li><p><cite>width</cite> is the minimum number of characters to be printed.</p></li>
+<li><p><cite>precision</cite> is the number of significant digits.</p></li>
+<li><p><cite>specifier</cite> is the type of notation. Tipically, either ‘e’ for</p></li>
+</ul>
+<p>scientific notation of ‘f’ for decimal floating point.</p>
+<ul>
+<li><p>a common <cite>fmt</cite> strings is: ‘%.3f’ for 3 decimal places.</p></li>
+<li><p>for more information see <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt">np.savetxt</a> documentation:</p></li>
+</ul>
+</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>None</p>
 </dd>
 </dl>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><code class="xref py py-func docutils literal notranslate"><span class="pre">spectrum.load()</span></code>.</p>
-</div>
 </dd></dl>
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectrum.check_step_x">
-<code class="sig-name descname">check_step_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_error</span><span class="o">=</span><span class="default_value">0.001</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.check_step_x" title="Permalink to this definition"></a></dt>
-<dd><p>Check the step between data point in the x-coordinates</p>
+<code class="sig-name descname">check_step_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_error</span><span class="o">=</span><span class="default_value">0.1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.check_step_x" title="Permalink to this definition"></a></dt>
+<dd><p>Checks vector uniformity of the x-coordinates.</p>
+<p>If the step between two data points is the same through out the
+x vector, it sets <a class="reference internal" href="#id5" title="brixs.brixs.Spectrum.step"><code class="xref py py-attr docutils literal notranslate"><span class="pre">step</span></code></a> with the value of the step size.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>max_error</strong> (<em>number</em><em>, </em><em>optional</em>) – percentage (of the x step) value of the max error.</p>
 </dd>
-</dl>
-<p>Three checks are performed:</p>
-<blockquote>
-<div><ol class="arabic simple">
-<li><p>Checks if all spectra have same length.</p></li>
-<li><dl class="simple">
-<dt>Checks if the x step between two data points is the same</dt><dd><p>through out all x-axis.</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
 </dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt>checks if the step between two data points is the same between</dt><dd><p>different spectra.</p>
-</dd>
-</dl>
-</li>
-</ol>
-</div></blockquote>
-<dl class="field-list simple">
 <dt class="field-odd">Raises</dt>
-<dd class="field-odd"><p><strong>ValueError</strong> – If condition 1, 2, and 3 are not satisfied.</p>
+<dd class="field-odd"><p><strong>ValueError</strong> – If x-ccordinates are not uniform.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt id="brixs.brixs.Spectrum.guess_elastic_peak">
-<code class="sig-name descname">guess_elastic_peak</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">side</span><span class="o">=</span><span class="default_value">'right'</span></em>, <em class="sig-param"><span class="n">prominence</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">points</span><span class="o">=</span><span class="default_value">5</span></em>, <em class="sig-param"><span class="n">moving_average_winddow</span><span class="o">=</span><span class="default_value">8</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">asymmetry</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">fit_full</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">pure_gaussian</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.guess_elastic_peak" title="Permalink to this definition"></a></dt>
-<dd><p>Guess position of the elastic peak.</p>
+<dt id="brixs.brixs.Spectrum.find_peaks">
+<code class="sig-name descname">find_peaks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">prominence</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">points</span><span class="o">=</span><span class="default_value">4</span></em>, <em class="sig-param"><span class="n">moving_average_window</span><span class="o">=</span><span class="default_value">8</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.find_peaks" title="Permalink to this definition"></a></dt>
+<dd><p>Find peaks using scipy.signal.find_peaks() function.</p>
+<p>Sets <a class="reference internal" href="#id4" title="brixs.brixs.Spectrum.peaks"><code class="xref py py-attr docutils literal notranslate"><span class="pre">peaks</span></code></a> attribute (sets it to None if no peak is found).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>side</strong> (<em>string</em><em>, </em><em>optional</em>) – side to look for the elastic peak. Default
-is <code class="docutils literal notranslate"><span class="pre">'right'</span></code>. Options are <code class="docutils literal notranslate"><span class="pre">'right'</span></code> or <code class="docutils literal notranslate"><span class="pre">'left'</span></code>.</p></li>
-<li><p><strong>prominence</strong> (<em>number</em><em>, </em><em>optional</em>) – Required prominence of peaks. This
+<li><p><strong>prominence</strong> (<em>number</em><em>, </em><em>optional</em>) – minimum prominence of peaks. This
 parameter will be passed directly to the <code class="docutils literal notranslate"><span class="pre">scipy.signal.find_peaks()</span></code>
 function. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, prominence is set as 5 % of the max intensity
 value (which should be fine for most RIXS spectra).</p></li>
-<li><p><strong>points</strong> (<em>number</em><em>, </em><em>optional</em>) – Required number of peaks defining a peak
+<li><p><strong>points</strong> (<em>number</em><em>, </em><em>optional</em>) – minimum number of peaks defining a peak
 (width).</p></li>
+<li><p><strong>moving_average_window</strong> (<em>int</em><em>, </em><em>optional</em>) – window size for smoothing the data for finding peaks.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – a pair of x-coordinate values or a list of
+pairs. Each pair represents the start and stop of a data range.</p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – if points or moving_average_window have an improper value.</p>
+</dd>
 </dl>
-<p>If prominence is none, prominence is 5% of the max.</p>
-<p>1) data is smoothed until max of the smoothed data is 20 smaller than max
-of data.</p>
-<ol class="arabic" start="2">
-<li><p>use find_peaks</p>
-<blockquote>
-<div><ol class="arabic simple" start="3">
-<li><p>if only one peak is found, fit peak</p></li>
-</ol>
-<p>4) if more than one peak is found, get the two peak to the far right
-(or left) sides and try to find a minimum between than.</p>
-<blockquote>
-<div><ol class="arabic simple" start="5">
-<li><p>if a minimum can be found. Fit peak until this minimum.</p></li>
-<li><p>if it can’t be found, fit until center of peak + width/2</p></li>
-</ol>
-</div></blockquote>
-</div></blockquote>
-</li>
-</ol>
 </dd></dl>
 
 <dl class="py method">
-<dt id="brixs.brixs.Spectrum.apply_shift">
-<code class="sig-name descname">apply_shift</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'roll'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.apply_shift" title="Permalink to this definition"></a></dt>
-<dd><p>Shift data.</p>
-<dl class="field-list simple">
+<dt id="brixs.brixs.Spectrum.fit_peak">
+<code class="sig-name descname">fit_peak</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">idx</span><span class="o">=</span><span class="default_value">'all'</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">asymmetry</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">fixed_m</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">multiplicity</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">offset</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.fit_peak" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – shift value.</p></li>
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">mode='x'</span></code> or <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code>, y is fully preserved
-while x is shifted. If <code class="docutils literal notranslate"><span class="pre">mode='y'</span></code>, <code class="docutils literal notranslate"><span class="pre">'interp'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'soft'</span></code>, x is preserved
-while y is interpolated with a shift. If <code class="docutils literal notranslate"><span class="pre">mode='roll'</span></code>, x is also preserved
-and y elements are rolled along the array (<code class="docutils literal notranslate"><span class="pre">shift</span></code> value must be an integer).</p></li>
+<li><p><strong>idx</strong> (<em>number</em><em>, </em><em>list</em><em>, or </em><em>'all'</em>) – idx of the peak to fit.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – on the first and last peak to be fitted (given on <cite>idx</cite>).
+If ranges is not None, only data inside ranges is considered in
+the fitting. Also, it raises an error if any peak in idx is
+outside of ranges.</p></li>
+<li><p><strong>assymetry</strong> (<em>bool</em><em> or </em><em>list of bools</em><em>, </em><em>optional</em>) – if True, fits each half of the
+with a different width.</p></li>
+<li><p><strong>fixed_m</strong> (<em>False</em><em>, </em><em>number</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – m is the amount of lorentzian
+contribution for a peak. If False, m will be fitted for each peak.
+If a number (from 0 to 1), this will be used as the value of m
+(fixed m).</p></li>
+<li><p><strong>multiplicity</strong> (<em>int</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – use this if peaks have a shoulder
+or some spliting. The peak will be fitted with <cite>multiplicity</cite> peaks.</p></li>
+<li><p><strong>offset</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, a offset value will be fitted.</p></li>
 </ul>
 </dd>
-</dl>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>It is always better to use <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code> or <code class="docutils literal notranslate"><span class="pre">'roll'</span></code> since the form of y is fully
-preserved (no interpolation). After applying a shift using the <code class="docutils literal notranslate"><span class="pre">mode='interp'</span></code>,
-one can apply a
-‘inverse’ shift to retrieve the original data. The diference between the retrieved
-y data and the original data will give an ideia of the information loss
-caused by the interpolation.</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>None</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt id="brixs.brixs.Spectrum.calib">
-<code class="sig-name descname">calib</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.calib" title="Permalink to this definition"></a></dt>
+<dt id="brixs.brixs.Spectrum.set_calib">
+<code class="sig-name descname">set_calib</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.set_calib" title="Permalink to this definition"></a></dt>
 <dd><p>Calibrate data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -539,8 +788,40 @@ units of [energy/(unit of the x axis)].</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="brixs.brixs.Spectrum.set_shift">
+<code class="sig-name descname">set_shift</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em>, <em class="sig-param"><span class="n">mode</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.set_shift" title="Permalink to this definition"></a></dt>
+<dd><p>Shift data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – shift value.</p></li>
+<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">mode='x'</span></code> or <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code>, y is fully preserved
+while x is shifted. If <code class="docutils literal notranslate"><span class="pre">mode='y'</span></code>, <code class="docutils literal notranslate"><span class="pre">'interp'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'soft'</span></code>, x is preserved
+while y is interpolated with a shift. If <code class="docutils literal notranslate"><span class="pre">mode='roll'</span></code> (or rotate or r), x is also preserved
+and y elements are rolled along the array (<code class="docutils literal notranslate"><span class="pre">shift</span></code> value must be an integer).
+The form of y-coordinates is fully preserved, but the edge of y-coordinates are lost.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is always better to use <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code> or <code class="docutils literal notranslate"><span class="pre">'roll'</span></code> since the form of y is fully
+preserved (no interpolation). After applying a shift using the <code class="docutils literal notranslate"><span class="pre">mode='interp'</span></code>,
+one can apply a
+‘inverse’ shift to retrieve the original data. The diference between the retrieved
+y data and the original data will give an ideia of the information loss
+caused by the interpolation. Also, multiple shifts using interp may cause
+built up of data loss. It’s not drastic if data is suficiently well
+resolved, but it should be avoided.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt id="brixs.brixs.Spectrum.apply_correction">
-<code class="sig-name descname">apply_correction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">f</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.apply_correction" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">apply_correction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">f</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.apply_correction" title="Permalink to this definition"></a></dt>
 <dd><p>Changes the values of x, y based on a function.</p>
 <p class="rubric">Example</p>
 <p>f = lambda x, y: (x, y**2)</p>
@@ -553,52 +834,12 @@ position of a photon event and returns its corrected values.</p>
 <dd class="field-even"><p>None</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="brixs.brixs.Spectrum.plot">
-<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">normalized</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vertical_increment</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">shift</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">factor</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">show_elastic_range</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">show_elastic</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">kwargs_elastic</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.plot" title="Permalink to this definition"></a></dt>
-<dd><p>Plot spectrum.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
-<li><p><strong>normalized</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, spectrum is normalized by its
-maximum value.</p></li>
-<li><p><strong>vertical_increment</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – defines the vertical offset. Default is 0.</p></li>
-<li><p><strong>shift</strong> (<em>float</em><em> or </em><em>int</em>) – horizontal shift value. Default is 0.</p></li>
-<li><p><strong>factor</strong> (<em>float</em><em> or </em><em>int</em>) – multiplicative factor. Default is 1.</p></li>
-<li><p><strong>show_ranges</strong> (<em>bool</em><em>, </em><em>optional</em>) – show ranges in which offsets were calculated.</p></li>
-<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>matplotlib.axes</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="brixs.brixs.Spectrum.plot_elastic">
-<code class="sig-name descname">plot_elastic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">normalized</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vertical_increment</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">shift</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">factor</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.plot_elastic" title="Permalink to this definition"></a></dt>
-<dd><p>Plot spectrum.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
-<li><p><strong>normalized</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, spectrum is normalized by its
-maximum value.</p></li>
-<li><p><strong>vertical_increment</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – defines the vertical offset. Default is 0.</p></li>
-<li><p><strong>shift</strong> (<em>float</em><em> or </em><em>int</em>) – horizontal shift value. Default is 0.</p></li>
-<li><p><strong>factor</strong> (<em>float</em><em> or </em><em>int</em>) – multiplicative factor. Default is 1.</p></li>
-<li><p><strong>show_ranges</strong> (<em>bool</em><em>, </em><em>optional</em>) – show ranges in which offsets were calculated.</p></li>
-<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>matplotlib.axes</p>
-</dd>
-</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Spectra.calib is set to 1.
+Spectra.step is recalculated if possible.
+Fit information is lost.</p>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -625,6 +866,18 @@ the maximum x value will be used.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt id="brixs.brixs.Spectrum.compress">
+<code class="sig-name descname">compress</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ranges</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.compress" title="Permalink to this definition"></a></dt>
+<dd><p>Extract data range from full data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.crop">
+<code class="sig-name descname">crop</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.crop" title="Permalink to this definition"></a></dt>
+<dd><p>crop data.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt id="brixs.brixs.Spectrum.floor">
 <code class="sig-name descname">floor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">8</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.floor" title="Permalink to this definition"></a></dt>
 <dd><p>Sets zero value for y-coordinates (shifts data verticaly).</p>
@@ -644,6 +897,95 @@ ranges overwrites value and n.</p></li>
 <dd class="field-even"><p>None</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">offset</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">shift</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">factor</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.plot" title="Permalink to this definition"></a></dt>
+<dd><p>Plot spectrum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
+<li><p><strong>vertical_increment</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – defines the vertical offset. Default is 0.</p></li>
+<li><p><strong>shift</strong> (<em>float</em><em> or </em><em>int</em>) – horizontal shift value. Default is 0.</p></li>
+<li><p><strong>factor</strong> (<em>float</em><em> or </em><em>int</em>) – multiplicative factor. Default is 1.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – ranges.</p></li>
+<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.plot_detected_peaks">
+<code class="sig-name descname">plot_detected_peaks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">offset</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">shift</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">factor</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectrum.plot_detected_peaks" title="Permalink to this definition"></a></dt>
+<dd><p>Plut a marker where peaks were detected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
+<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.errorbar()</span></code> or <code class="docutils literal notranslate"><span class="pre">plt.scatter()</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – if <a class="reference internal" href="#id4" title="brixs.brixs.Spectrum.peaks"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum.peaks</span></code></a> is not defined.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.fit">
+<em class="property">property </em><code class="sig-name descname">fit</code><a class="headerlink" href="#brixs.brixs.Spectrum.fit" title="Permalink to this definition"></a></dt>
+<dd><p>non-removable attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id0">
+<em class="property">property </em><code class="sig-name descname">fit_data</code><a class="headerlink" href="#id0" title="Permalink to this definition"></a></dt>
+<dd><p>non-removable attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id1">
+<em class="property">property </em><code class="sig-name descname">fit_func</code><a class="headerlink" href="#id1" title="Permalink to this definition"></a></dt>
+<dd><p>non-removable attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id2">
+<em class="property">property </em><code class="sig-name descname">fit_popt</code><a class="headerlink" href="#id2" title="Permalink to this definition"></a></dt>
+<dd><p>non-removable attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id3">
+<em class="property">property </em><code class="sig-name descname">fit_ranges</code><a class="headerlink" href="#id3" title="Permalink to this definition"></a></dt>
+<dd><p>non-removable attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id4">
+<em class="property">property </em><code class="sig-name descname">peaks</code><a class="headerlink" href="#id4" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectrum.shift_mode">
+<em class="property">property </em><code class="sig-name descname">shift_mode</code><a class="headerlink" href="#brixs.brixs.Spectrum.shift_mode" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id5">
+<em class="property">property </em><code class="sig-name descname">step</code><a class="headerlink" href="#id5" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
 </dd></dl>
 
 </dd></dl>
@@ -708,22 +1050,9 @@ are the same for all spectra.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="brixs.brixs.Spectra.shifts_length">
-<code class="sig-name descname">shifts_length</code><a class="headerlink" href="#brixs.brixs.Spectra.shifts_length" title="Permalink to this definition"></a></dt>
-<dd><p>Calculated shifts. Must always have the same lenght as data.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Type</dt>
-<dd class="field-odd"><p>list of floats</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
 <dt id="brixs.brixs.Spectra.shifts">
 <code class="sig-name descname">shifts</code><a class="headerlink" href="#brixs.brixs.Spectra.shifts" title="Permalink to this definition"></a></dt>
-<dd><p>Calculated shifts as int (only calculated if
-x-coordinates for all spectra is uniform and has present the same
-step size). Must always have the same lenght as data.</p>
+<dd><p>Calculated shifts as int. Must always have the same lenght as data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>list of int</p>
@@ -751,17 +1080,17 @@ spectrum, e.g.:</p>
 <blockquote>
 <div><ul class="simple">
 <li><dl class="simple">
-<dt>if shift_mode is ‘elastic’</dt><dd><p>shift_ref_value returns the position of the elastic peak of the reference spectrum.</p>
+<dt>if shift_calc_mode is ‘peak’</dt><dd><p>shift_ref_value returns the position of the elastic peak of the reference spectrum.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt>if shift_mode is ‘cross-correlation’</dt><dd><p>shift_ref_value returns the max value of the cross-correlation of the reference spectrum with itself.</p>
+<dt>if shift_calc_mode is ‘cross-correlation’</dt><dd><p>shift_ref_value returns the max value of the cross-correlation of the reference spectrum with itself.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt>if shift_mode is ‘max’</dt><dd><p>shift_ref_value returns the position of the maximum value of the reference spectrum.</p>
+<dt>if shift_calc_mode is ‘max’</dt><dd><p>shift_ref_value returns the position of the maximum value of the reference spectrum.</p>
 </dd>
 </dl>
 </li>
@@ -775,8 +1104,8 @@ spectrum, e.g.:</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt id="brixs.brixs.Spectra.shift_mode">
-<code class="sig-name descname">shift_mode</code><a class="headerlink" href="#brixs.brixs.Spectra.shift_mode" title="Permalink to this definition"></a></dt>
+<dt id="brixs.brixs.Spectra.shift_calc_mode">
+<code class="sig-name descname">shift_calc_mode</code><a class="headerlink" href="#brixs.brixs.Spectra.shift_calc_mode" title="Permalink to this definition"></a></dt>
 <dd><p>mode used to calculate shifts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -800,7 +1129,7 @@ spectrum, e.g.:</p>
 <dt id="brixs.brixs.Spectra.disp_values">
 <code class="sig-name descname">disp_values</code><a class="headerlink" href="#brixs.brixs.Spectra.disp_values" title="Permalink to this definition"></a></dt>
 <dd><p>value of the ‘relative spectrum position’
-for each spectrum. See <a class="reference internal" href="#brixs.brixs.Spectra.shift_ref_value" title="brixs.brixs.Spectra.shift_ref_value"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shift_ref_value</span></code></a></p>
+for each spectrum. See <a class="reference internal" href="#id14" title="brixs.brixs.Spectra.shift_ref_value"><code class="xref py py-attr docutils literal notranslate"><span class="pre">shift_ref_value</span></code></a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>list, read only</p>
@@ -856,11 +1185,90 @@ disp_values vs disp_energies.</p>
 <dl class="py attribute">
 <dt id="brixs.brixs.Spectra.sum">
 <code class="sig-name descname">sum</code><a class="headerlink" href="#brixs.brixs.Spectra.sum" title="Permalink to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>spectrum resulting from the sumation of all spectra.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Type</dt>
 <dd class="field-odd"><p>number, read only</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id6">
+<em class="property">property </em><code class="sig-name descname">disp</code><a class="headerlink" href="#id6" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id7">
+<em class="property">property </em><code class="sig-name descname">disp_func</code><a class="headerlink" href="#id7" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id8">
+<em class="property">property </em><code class="sig-name descname">disp_popt</code><a class="headerlink" href="#id8" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectra.disp_shifts">
+<em class="property">property </em><code class="sig-name descname">disp_shifts</code><a class="headerlink" href="#brixs.brixs.Spectra.disp_shifts" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id9">
+<em class="property">property </em><code class="sig-name descname">disp_values</code><a class="headerlink" href="#id9" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id10">
+<em class="property">property </em><code class="sig-name descname">length</code><a class="headerlink" href="#id10" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id11">
+<em class="property">property </em><code class="sig-name descname">shift_calc_mode</code><a class="headerlink" href="#id11" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id12">
+<em class="property">property </em><code class="sig-name descname">shift_ranges</code><a class="headerlink" href="#id12" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id13">
+<em class="property">property </em><code class="sig-name descname">shift_ref</code><a class="headerlink" href="#id13" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id14">
+<em class="property">property </em><code class="sig-name descname">shift_ref_value</code><a class="headerlink" href="#id14" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id15">
+<em class="property">property </em><code class="sig-name descname">step</code><a class="headerlink" href="#id15" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id16">
+<em class="property">property </em><code class="sig-name descname">sum</code><a class="headerlink" href="#id16" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="id17">
+<em class="property">property </em><code class="sig-name descname">x</code><a class="headerlink" href="#id17" title="Permalink to this definition"></a></dt>
+<dd><p>read only attribute</p>
 </dd></dl>
 
 <dl class="py method">
@@ -871,11 +1279,16 @@ disp_values vs disp_energies.</p>
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectra.append">
-<code class="sig-name descname">append</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.append" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">append</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">y</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">data</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.append" title="Permalink to this definition"></a></dt>
 <dd><p>Add spectrum to the spectrum list.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>s</strong> (<em>spectrum obj</em>) – <a class="reference internal" href="#brixs.brixs.Spectrum" title="brixs.brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectrum</span></code></a> object to be added.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s</strong> (<em>spectrum obj</em>) – <a class="reference internal" href="#brixs.brixs.Spectrum" title="brixs.brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectrum</span></code></a> object to be added.</p></li>
+<li><p><strong>data</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – two column list (or array).</p></li>
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – x values (1D list/array). Overwrites <cite>data</cite>.</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – y values (1D list/array). Overwrites <cite>data</cite>.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>None</p>
@@ -909,7 +1322,7 @@ disp_values vs disp_energies.</p>
 <dt id="brixs.brixs.Spectra.check_length">
 <code class="sig-name descname">check_length</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.check_length" title="Permalink to this definition"></a></dt>
 <dd><p>Checks if all spectra has the same length.</p>
-<p>If all spectra have the same length, it sets <a class="reference internal" href="#brixs.brixs.Spectra.length" title="brixs.brixs.Spectra.length"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.length</span></code></a> = lenght.
+<p>If all spectra have the same length, it sets <a class="reference internal" href="#id10" title="brixs.brixs.Spectra.length"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.length</span></code></a> = lenght.
 Otherwise, it raises an error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -927,9 +1340,9 @@ Otherwise, it raises an error.</p>
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectra.check_step_x">
-<code class="sig-name descname">check_step_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_error</span><span class="o">=</span><span class="default_value">0.001</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.check_step_x" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">check_step_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_error</span><span class="o">=</span><span class="default_value">0.1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.check_step_x" title="Permalink to this definition"></a></dt>
 <dd><p>Check step between data points in the x-coordinates.</p>
-<p>If data has a well defined step size, it sets <a class="reference internal" href="#brixs.brixs.Spectra.step" title="brixs.brixs.Spectra.step"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.step</span></code></a> = step.
+<p>If data has a well defined step size, it sets <a class="reference internal" href="#id15" title="brixs.brixs.Spectra.step"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.step</span></code></a> = step.
 Otherwise, it raises an error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -953,11 +1366,6 @@ through out the x vector for each spectrum (vector uniformity).</p>
 <dd class="field-even"><p><strong>ValueError</strong> – If condition 1, 2, or 3 are not satisfied.</p>
 </dd>
 </dl>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>If <a class="reference internal" href="#brixs.brixs.Spectra.shifts_length" title="brixs.brixs.Spectra.shifts_length"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.shifts_length</span></code></a> is defined, running this Will
-also set <a class="reference internal" href="#brixs.brixs.Spectra.shifts" title="brixs.brixs.Spectra.shifts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.shifts</span></code></a>.</p>
-</div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="#brixs.brixs.Spectra.check_length" title="brixs.brixs.Spectra.check_length"><code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.check_length()</span></code></a>, <a class="reference internal" href="#brixs.brixs.Spectra.check_same_x" title="brixs.brixs.Spectra.check_same_x"><code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.check_same_x()</span></code></a>.</p>
@@ -966,9 +1374,9 @@ also set <a class="reference internal" href="#brixs.brixs.Spectra.shifts" title=
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectra.check_same_x">
-<code class="sig-name descname">check_same_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_error</span><span class="o">=</span><span class="default_value">0.001</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.check_same_x" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">check_same_x</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_error</span><span class="o">=</span><span class="default_value">0.1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.check_same_x" title="Permalink to this definition"></a></dt>
 <dd><p>Check if spectra have same x-coordinates.</p>
-<p>If data has same x-coordinates, it sets <a class="reference internal" href="#brixs.brixs.Spectra.x" title="brixs.brixs.Spectra.x"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.x</span></code></a> = x.
+<p>If data has same x-coordinates, it sets <a class="reference internal" href="#id17" title="brixs.brixs.Spectra.x"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.x</span></code></a> = x.
 Otherwise, it raises an error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -992,8 +1400,7 @@ x step) of the maximum allowed error.</p>
 <dt id="brixs.brixs.Spectra.calculate_shifts">
 <code class="sig-name descname">calculate_shifts</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'cross-correlation'</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.calculate_shifts" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate how much shifted spectra are relatively to a reference spectrum.</p>
-<p>It Sets <a class="reference internal" href="#brixs.brixs.Spectra.shifts_length" title="brixs.brixs.Spectra.shifts_length"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.shifts_length</span></code></a>.</p>
-<p>If <a class="reference internal" href="#brixs.brixs.Spectra.step" title="brixs.brixs.Spectra.step"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.step</span></code></a> is defined, it also sets <a class="reference internal" href="#brixs.brixs.Spectra.shifts" title="brixs.brixs.Spectra.shifts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.shifts</span></code></a>.</p>
+<p>If <a class="reference internal" href="#id15" title="brixs.brixs.Spectra.step"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.step</span></code></a> is defined, it also sets <a class="reference internal" href="#brixs.brixs.Spectra.shifts" title="brixs.brixs.Spectra.shifts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.shifts</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1009,7 +1416,8 @@ The current options are:</p>
 </ol>
 </p></li>
 <li><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – a pair of x values or a list of pairs. Each pair represents
-the start and stop of a data range. If None, the whole data set is used.</p></li>
+the start and stop of a data range. If None, the whole data set is used.
+If mode is peak, ranges is passed to Spectrum.fit_peak()</p></li>
 <li><p><strong>verbose</strong> (<em>bool</em><em>,</em><em>optional</em>) – turn verbose on/off.</p></li>
 <li><p><strong>**kwargs</strong> – if <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">'elastic'</span></code>, kwargs are passed to
 <code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.guess_elastic_peak()</span></code>.</p></li>
@@ -1029,13 +1437,13 @@ is checked before execution).</p>
 </div>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#brixs.brixs.Spectra.apply_shifts" title="brixs.brixs.Spectra.apply_shifts"><code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.apply_shifts()</span></code></a></p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.apply_shifts()</span></code></p>
 </div>
 </dd></dl>
 
 <dl class="py method">
-<dt id="brixs.brixs.Spectra.apply_shifts">
-<code class="sig-name descname">apply_shifts</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'roll'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.apply_shifts" title="Permalink to this definition"></a></dt>
+<dt id="brixs.brixs.Spectra.set_shifts">
+<code class="sig-name descname">set_shifts</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.set_shifts" title="Permalink to this definition"></a></dt>
 <dd><p>Shift data according to calculated shifts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1089,7 +1497,7 @@ If statiscs are good enough, interpolating the data should not be a problem.</p>
 <dt id="brixs.brixs.Spectra.calculate_sum">
 <code class="sig-name descname">calculate_sum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.calculate_sum" title="Permalink to this definition"></a></dt>
 <dd><p>Returns Spestrum object with the sum of all spectra.</p>
-<p>It also save it at <a class="reference internal" href="#brixs.brixs.Spectra.sum" title="brixs.brixs.Spectra.sum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.sum</span></code></a>.</p>
+<p>It also save it at <a class="reference internal" href="#id16" title="brixs.brixs.Spectra.sum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectra.sum</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p><a class="reference internal" href="#brixs.brixs.Spectra" title="brixs.brixs.Spectra"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></a> object.</p>
@@ -1104,7 +1512,7 @@ before summing up the spectra.</p>
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectra.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">folderpath</span><span class="o">=</span><span class="default_value">'./'</span></em>, <em class="sig-param"><span class="n">prefix</span><span class="o">=</span><span class="default_value">'spectrum_'</span></em>, <em class="sig-param"><span class="n">suffix</span><span class="o">=</span><span class="default_value">'.dat'</span></em>, <em class="sig-param"><span class="n">zfill</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">fmt</span><span class="o">=</span><span class="default_value">'%.4f'</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.save" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">folderpath</span><span class="o">=</span><span class="default_value">'./'</span></em>, <em class="sig-param"><span class="n">prefix</span><span class="o">=</span><span class="default_value">'spectrum_'</span></em>, <em class="sig-param"><span class="n">suffix</span><span class="o">=</span><span class="default_value">'.dat'</span></em>, <em class="sig-param"><span class="n">zfill</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">fmt</span><span class="o">=</span><span class="default_value">'%.8f'</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.save" title="Permalink to this definition"></a></dt>
 <dd><p>Saves all spectra in a folder.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1173,7 +1581,7 @@ units of [energy/(unit of the x axis)].</p>
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectra.interp">
-<code class="sig-name descname">interp</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">num</span><span class="o">=</span><span class="default_value">1000</span></em>, <em class="sig-param"><span class="n">step</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.interp" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">interp</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">num</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">step</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.interp" title="Permalink to this definition"></a></dt>
 <dd><p>Interpolate data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1232,29 +1640,45 @@ ranges overwrites value and n.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt id="brixs.brixs.Spectra.calculate_dispersion">
-<code class="sig-name descname">calculate_dispersion</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start_energy</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop_energy</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">energies</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.calculate_dispersion" title="Permalink to this definition"></a></dt>
-<dd><p>Calculate dispersion.</p>
-<dl class="simple">
-<dt>It calculates the shift between spectra and infer the energy dispersion</dt><dd><p>of photons the hit the detector.</p>
-</dd>
-<dt>By default, it calculates the shift between spectra by fitting the elastic</dt><dd><p>peak and assuming a symmetry peak.</p>
-</dd>
-</dl>
+<dt id="brixs.brixs.Spectra.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vertical_increment</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">shift</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">factor</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.plot" title="Permalink to this definition"></a></dt>
+<dd><p>Plot spectra.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>start_energy</strong> (<em>number</em>) – energy used for measuring the first spectrum.</p></li>
-<li><p><strong>stop_energy</strong> (<em>number</em>) – energy used for measuring the last spectrum.
-Energies are them extrapolated from start_energy to stop_energy in
-steps of one.</p></li>
-<li><p><strong>energies</strong> (<em>list</em>) – energy list. It overwrites start_energy and
-stop_energy. Must be the same lenght as data.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
+<li><p><strong>vertical_increment</strong> (<em>int</em><em>, </em><em>optional</em>) – if one spectrum is plotted, it
+adds a vertical offset to the plotted curve. If many spectra are ploted,
+<code class="docutils literal notranslate"><span class="pre">vertical_increment</span></code> defines
+the vertical offset between each curve. Default is 0.</p></li>
+<li><p><strong>shift</strong> (<em>float</em><em> or </em><em>int</em>) – horizontal shift value. Default is 0.</p></li>
+<li><p><strong>factor</strong> (<em>float</em><em> or </em><em>int</em>) – multiplicative factor. Default is 1.</p></li>
+<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="brixs.brixs.Spectra.calculate_calib">
+<code class="sig-name descname">calculate_calib</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">values</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.calculate_calib" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate calibration factor (dispersion).</p>
+<p>It calculates the shift between spectra and infer the calibration factor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>number</em>) – value used for measuring the first spectrum.</p></li>
+<li><p><strong>stop</strong> (<em>number</em>) – value used for measuring the last spectrum.</p></li>
+<li><p><strong>values</strong> (<em>list</em>) – value list. It overwrites start and
+stop. Must be the same lenght as data.</p></li>
 <li><p><strong>**kwargs</strong> – parameters to be passed to <a class="reference internal" href="#brixs.brixs.Spectra.calculate_shifts" title="brixs.brixs.Spectra.calculate_shifts"><code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.calculate_shifts()</span></code></a></p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>dispersion (number)</p>
+<dd class="field-even"><p>calibration factor (number)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1279,13 +1703,12 @@ stop_energy. Must be the same lenght as data.</p></li>
 
 <dl class="py method">
 <dt id="brixs.brixs.Spectra.plot_map">
-<code class="sig-name descname">plot_map</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">values</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vlines</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.plot_map" title="Permalink to this definition"></a></dt>
+<code class="sig-name descname">plot_map</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stop</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">values</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ranges</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vlines</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.plot_map" title="Permalink to this definition"></a></dt>
 <dd><p>Plot position of elastic peak (or data shift) as function of energy.</p>
 <p>x-coordinates must be the same for all spectra.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
 <li><p><strong>start</strong> (<em>number</em>) – value (energy or momentum) used for measuring the first spectrum.</p></li>
 <li><p><strong>stop</strong> (<em>number</em>) – value (energy or momentum) used for measuring the last spectrum.
 Energies are them extrapolated from start to stop in
@@ -1296,34 +1719,6 @@ stop. Must be the same lenght as data.</p></li>
 pairs. Each pair represents the start and stop of a data range.
 ranges overwrites value and n.</p></li>
 <li><p><strong>vlines</strong> (<em>bool</em><em>, </em><em>optional</em>) – show separation lines between spectra.</p></li>
-<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>matplotlib.axes</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="brixs.brixs.Spectra.plot">
-<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">idx</span><span class="o">=</span><span class="default_value">'all'</span></em>, <em class="sig-param"><span class="n">normalized</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vertical_increment</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">shift</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">factor</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">show_ranges</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.brixs.Spectra.plot" title="Permalink to this definition"></a></dt>
-<dd><p>Plot spectra.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
-<li><p><strong>idx</strong> (<em>string</em><em>, </em><em>number</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – index of spectra to be
-plotted. If ‘all’, all spectra will be plotted</p></li>
-<li><p><strong>normalized</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, spectrum is normalized by its
-maximum value.</p></li>
-<li><p><strong>vertical_increment</strong> (<em>int</em><em>, </em><em>optional</em>) – if one spectrum is plotted, it
-adds a vertical offset to the plotted curve. If many spectra are ploted,
-<code class="docutils literal notranslate"><span class="pre">vertical_increment</span></code> defines
-the vertical offset between each curve. Default is 0.</p></li>
-<li><p><strong>shift</strong> (<em>float</em><em> or </em><em>int</em>) – horizontal shift value. Default is 0.</p></li>
-<li><p><strong>factor</strong> (<em>float</em><em> or </em><em>int</em>) – multiplicative factor. Default is 1.</p></li>
-<li><p><strong>show_ranges</strong> (<em>bool</em><em>, </em><em>optional</em>) – show ranges in which shifts were calculated.</p></li>
 <li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
 </ul>
 </dd>

@@ -287,7 +287,7 @@ anymore (useful to read comments at the beginning of a file).</p></li>
 
 <dl class="py function">
 <dt id="brixs.backpack.filemanip.save_data">
-<code class="sig-prename descclassname">brixs.backpack.filemanip.</code><code class="sig-name descname">save_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obj</span></em>, <em class="sig-param"><span class="n">filepath</span><span class="o">=</span><span class="default_value">'./untitled.txt'</span></em>, <em class="sig-param"><span class="n">add_labels</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">data_format</span><span class="o">=</span><span class="default_value">'% .10e'</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">footer</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">comment_flag</span><span class="o">=</span><span class="default_value">'# '</span></em>, <em class="sig-param"><span class="n">newline</span><span class="o">=</span><span class="default_value">'\n'</span></em>, <em class="sig-param"><span class="n">check_overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.filemanip.save_data" title="Permalink to this definition"></a></dt>
+<code class="sig-prename descclassname">brixs.backpack.filemanip.</code><code class="sig-name descname">save_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obj</span></em>, <em class="sig-param"><span class="n">filepath</span><span class="o">=</span><span class="default_value">'./untitled.txt'</span></em>, <em class="sig-param"><span class="n">add_labels</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">fmt</span><span class="o">=</span><span class="default_value">'% .10e'</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">footer</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">', '</span></em>, <em class="sig-param"><span class="n">comment_flag</span><span class="o">=</span><span class="default_value">'# '</span></em>, <em class="sig-param"><span class="n">newline</span><span class="o">=</span><span class="default_value">'\n'</span></em>, <em class="sig-param"><span class="n">check_overwrite</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.filemanip.save_data" title="Permalink to this definition"></a></dt>
 <dd><p>Save an array or a dictionary in a txt file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -298,23 +298,31 @@ anymore (useful to read comments at the beginning of a file).</p></li>
 <li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path to save file.</p></li>
 <li><p><strong>add_labels</strong> (<em>bool</em><em>, </em><em>optional</em>) – When obj is a dictonary, <code class="docutils literal notranslate"><span class="pre">add_labels=True</span></code>
 makes the dict keys to be added to the header as label for each data column.</p></li>
-<li><p><strong>data_format</strong> (<em>string</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – <p>If obj is a list, fmt can also
-be a list where each fmt element is associated with a column. If
-obj is a dict, fmt can also be a dict with same keys of obj. Then,
-each fmt value is associated with the corresponding column.</p>
-<p>See <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt">np.savetxt</a> documentation:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span><span class="o">%</span><span class="p">[</span><span class="n">flag</span><span class="p">]</span><span class="n">width</span><span class="p">[</span><span class="o">.</span><span class="n">precision</span><span class="p">]</span><span class="n">specifier</span><span class="p">)</span>
-</pre></div>
-</div>
+<li><p><strong>fmt</strong> (<em>string</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – <p>format for saving data.
+If string, the value is used for x- and y-coordinates. If tuple
+of strings, the first string is used for x-coordinates and the
+second for y-coordinates.</p>
+<blockquote>
+<div><p>fmt = (%[flag]width[.precision]specifier)</p>
+</div></blockquote>
 <ul>
-<li><p>flag can be: ‘-’ for left justify, ‘+’, whch forces to precede</p></li>
-<li><p>result with + or -, or ‘0’ to Left pad the number with zeros
-instead of space (see width).</p></li>
-<li><p>width is the minimum number of characters to be printed.</p></li>
-<li><p>precision is tipically the number of significant digits</p></li>
-<li><p>specifier is the type of notation. Tipically, either ‘e’ for
-scientific notation of ‘f’ for decimal floating point.</p></li>
-<li><p>a common fmt strings is: ‘%.3f’ for 3 decimal places.</p></li>
+<li><dl class="simple">
+<dt><cite>flag</cite> can be:</dt><dd><ol class="arabic simple">
+<li><p>’-’ for left justify</p></li>
+<li><p>’+’, puts + or - in front of the numbers</p></li>
+<li><p>’0’ to Left pad the number with zeros instead of space (see width).</p></li>
+</ol>
+</dd>
+</dl>
+</li>
+<li><p><cite>width</cite> is the minimum number of characters to be printed.</p></li>
+<li><p><cite>precision</cite> is the number of significant digits.</p></li>
+<li><p><cite>specifier</cite> is the type of notation. Tipically, either ‘e’ for</p></li>
+</ul>
+<p>scientific notation of ‘f’ for decimal floating point.</p>
+<ul>
+<li><p>a common <cite>fmt</cite> strings is: ‘%.3f’ for 3 decimal places.</p></li>
+<li><p>for more information see <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt">np.savetxt</a> documentation:</p></li>
 </ul>
 </p></li>
 <li><p><strong>header</strong> (<em>str</em><em>, </em><em>oprional</em>) – string that will be written at the beggining of

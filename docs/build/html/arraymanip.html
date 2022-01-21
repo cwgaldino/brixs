@@ -246,7 +246,7 @@ a multicolumn array then the returned <cite>y</cite> is also multicolumn</p>
 </dl>
 </li>
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">mode='roll'</span></code>,</dt><dd><p>x and y are preserved and y elements are just rolled along the
+<dt><code class="docutils literal notranslate"><span class="pre">mode='roll'`</span> <span class="pre">or</span> <span class="pre">``r</span></code>,</dt><dd><p>x and y are preserved and y elements are just rolled along the
 array (in this case <code class="docutils literal notranslate"><span class="pre">shift</span></code> value must be an integer).</p>
 </dd>
 </dl>
@@ -291,14 +291,21 @@ the maximum y-coordinate.</p></li>
 <li><p><strong>fixed_m</strong> (<em>False</em><em> or </em><em>number</em>) – <cite>Factor from 1 to 0 of the lorentzian amount.
 If False, ``m`</cite> will be a fitting parameter. If
 <code class="docutils literal notranslate"><span class="pre">fixed_m=&lt;number&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;number&gt;</span></code> will be used for <code class="docutils literal notranslate"><span class="pre">m</span></code>.</p></li>
-<li><p><strong>asymmetry</strong> (<em>Boolean</em><em>, </em><em>, </em><em>optional</em>) – half of the peak with a different <code class="docutils literal notranslate"><span class="pre">w</span></code> and <code class="docutils literal notranslate"><span class="pre">m</span></code> than the second half. The optimal <code class="docutils literal notranslate"><span class="pre">w</span></code> parameter
+<li><p><strong>asymmetry</strong> (<em>Bool</em><em>, </em><em>optional</em>) – half of the peak with a different <code class="docutils literal notranslate"><span class="pre">w</span></code> and <code class="docutils literal notranslate"><span class="pre">m</span></code> than the second half. The optimal <code class="docutils literal notranslate"><span class="pre">w</span></code> parameter
 returned will be the sum of the <code class="docutils literal notranslate"><span class="pre">w</span></code> of the first and second halfs.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><ol class="arabic simple">
 <li><p>2 column (x, y) array with “Smoothed” fitted peak (array lenght 100 bigger than input x, y).</p></li>
-<li><p>An array with the optimized parameters</p></li>
+<li><dl class="simple">
+<dt>An array with the optimized parameters.</dt><dd><p>if assymetry=True, fixed_m=False: amp, c, fwhm, m, offset
+if assymetry=True, fixed_m=True: amp, c, fwhm, offset
+if assymetry=False, fixed_m=False: amp, c, fwhm, m, offset
+if assymetry=False, fixed_m=True: amp, c, fwhm, offset</p>
+</dd>
+</dl>
+</li>
 <li><p>One standard deviation errors on the parameters</p></li>
 <li><p>Peak function</p></li>
 </ol>

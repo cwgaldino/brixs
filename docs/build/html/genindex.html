@@ -40,11 +40,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brixs.html">Spectra manipulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fake.html">Dummy RIXS spctra generation</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fake.html">Fake RIXS spctra generation</a></li>
 </ul>
 
         </div>
@@ -95,6 +91,7 @@
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
  | <a href="#X"><strong>X</strong></a>
+ | <a href="#Y"><strong>Y</strong></a>
  | <a href="#Z"><strong>Z</strong></a>
  
 </div>
@@ -109,12 +106,8 @@
         <li><a href="brixs.html#brixs.brixs.Spectrum.apply_correction">(brixs.brixs.Spectrum method)</a>
 </li>
       </ul></li>
-      <li><a href="brixs.html#brixs.brixs.Spectrum.apply_shift">apply_shift() (brixs.brixs.Spectrum method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="brixs.html#brixs.brixs.Spectra.apply_shifts">apply_shifts() (brixs.brixs.Spectra method)</a>
-</li>
       <li><a href="model_functions.html#brixs.backpack.model_functions.arctan_fwhm">arctan_fwhm() (in module brixs.backpack.model_functions)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.ax_box2fig_box">ax_box2fig_box() (in module brixs.backpack.figmanip)</a>
@@ -188,7 +181,7 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="brixs.html#brixs.brixs.Spectra.calculate_dispersion">calculate_dispersion() (brixs.brixs.Spectra method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectra.calculate_calib">calculate_calib() (brixs.brixs.Spectra method)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.PhotonEvents.calculate_offsets">calculate_offsets() (brixs.brixs.PhotonEvents method)</a>
 </li>
@@ -198,24 +191,22 @@
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.calculate_sum">calculate_sum() (brixs.brixs.Spectra method)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.Spectra.calib">calib() (brixs.brixs.Spectra method)</a>
-
-      <ul>
-        <li><a href="brixs.html#brixs.brixs.Spectrum.calib">(brixs.brixs.Spectrum method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.calib">calib (brixs.brixs.Spectrum attribute)</a>
 </li>
-      </ul></li>
+      <li><a href="brixs.html#brixs.brixs.Spectra.calib">calib() (brixs.brixs.Spectra method)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.Spectra.check_length">check_length() (brixs.brixs.Spectra method)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.check_same_x">check_same_x() (brixs.brixs.Spectra method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.check_step_x">check_step_x() (brixs.brixs.Spectra method)</a>
 
       <ul>
         <li><a href="brixs.html#brixs.brixs.Spectrum.check_step_x">(brixs.brixs.Spectrum method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="arraymanip.html#brixs.backpack.arraymanip.choose">choose() (in module brixs.backpack.arraymanip)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.cm2inch">cm2inch() (in module brixs.backpack.figmanip)</a>
@@ -225,10 +216,16 @@
       <li><a href="figmanip.html#brixs.backpack.figmanip.cm2px">cm2px() (in module brixs.backpack.figmanip)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.compress">compress() (brixs.brixs.Spectra method)</a>
+
+      <ul>
+        <li><a href="brixs.html#brixs.brixs.Spectrum.compress">(brixs.brixs.Spectrum method)</a>
 </li>
+      </ul></li>
       <li><a href="arraymanip.html#brixs.backpack.arraymanip.compressed">compressed() (in module brixs.backpack.arraymanip)</a>
 </li>
       <li><a href="interact.html#brixs.backpack.interact.copy2clipboard">copy2clipboard() (in module brixs.backpack.interact)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.crop">crop() (brixs.brixs.Spectrum method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -237,20 +234,34 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.data">data (brixs.brixs.Spectra attribute)</a>
+
+      <ul>
+        <li><a href="brixs.html#brixs.brixs.Spectrum.data">(brixs.brixs.Spectrum attribute)</a>
 </li>
+      </ul></li>
       <li><a href="arraymanip.html#brixs.backpack.arraymanip.derivative">derivative() (in module brixs.backpack.arraymanip)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.disp">disp (brixs.brixs.Spectra attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#id6">disp() (brixs.brixs.Spectra property)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.Spectra.disp_energies">disp_energies (brixs.brixs.Spectra attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.disp_func">disp_func (brixs.brixs.Spectra attribute)</a>
+</li>
+      <li><a href="brixs.html#id7">disp_func() (brixs.brixs.Spectra property)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.disp_popt">disp_popt (brixs.brixs.Spectra attribute)</a>
 </li>
+      <li><a href="brixs.html#id8">disp_popt() (brixs.brixs.Spectra property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectra.disp_shifts">disp_shifts() (brixs.brixs.Spectra property)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.Spectra.disp_values">disp_values (brixs.brixs.Spectra attribute)</a>
+</li>
+      <li><a href="brixs.html#id9">disp_values() (brixs.brixs.Spectra property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -270,14 +281,38 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.factor">factor (brixs.brixs.Spectrum attribute)</a>
+</li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.figure">figure() (in module brixs.backpack.figmanip)</a>
 </li>
       <li><a href="filemanip.html#brixs.backpack.filemanip.filelist">filelist() (in module brixs.backpack.filemanip)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.PhotonEvents.fit_offsets">fit_offsets() (brixs.brixs.PhotonEvents method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.find_peaks">find_peaks() (brixs.brixs.Spectrum method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.fit">fit() (brixs.brixs.Spectrum property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.fit_data">fit_data (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#id0">fit_data() (brixs.brixs.Spectrum property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.fit_func">fit_func (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#id1">fit_func() (brixs.brixs.Spectrum property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.fit_offsets">fit_offsets() (brixs.brixs.PhotonEvents method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.fit_peak">fit_peak() (brixs.brixs.Spectrum method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.fit_popt">fit_popt (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#id2">fit_popt() (brixs.brixs.Spectrum property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.fit_ranges">fit_ranges (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#id3">fit_ranges() (brixs.brixs.Spectrum property)</a>
+</li>
       <li><a href="arraymanip.html#brixs.backpack.arraymanip.flattened">flattened() (in module brixs.backpack.arraymanip)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.floor">floor() (brixs.brixs.Spectra method)</a>
@@ -302,17 +337,19 @@
 </li>
       <li><a href="model_functions.html#brixs.backpack.model_functions.gaussian_fwhm">gaussian_fwhm() (in module brixs.backpack.model_functions)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.get_spectra_count">get_spectra_count() (brixs.brixs.Spectra method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="figmanip.html#brixs.backpack.figmanip.get_window_position">get_window_position() (in module brixs.backpack.figmanip)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.get_window_size">get_window_size() (in module brixs.backpack.figmanip)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.PhotonEvents.guess_bins">guess_bins() (brixs.brixs.PhotonEvents method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.get_x">get_x() (brixs.brixs.Spectrum method)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.Spectrum.guess_elastic_peak">guess_elastic_peak() (brixs.brixs.Spectrum method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.get_y">get_y() (brixs.brixs.Spectrum method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.guess_bins">guess_bins() (brixs.brixs.PhotonEvents method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -321,6 +358,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="figmanip.html#brixs.backpack.figmanip.hex2rgb">hex2rgb() (in module brixs.backpack.figmanip)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.hist">hist() (brixs.brixs.PhotonEvents property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -345,6 +386,8 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.length">length (brixs.brixs.Spectra attribute)</a>
+</li>
+      <li><a href="brixs.html#id10">length() (brixs.brixs.Spectra property)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.linear_gradient">linear_gradient() (in module brixs.backpack.figmanip)</a>
 </li>
@@ -415,10 +458,24 @@
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.offset">offset (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets">offsets() (brixs.brixs.PhotonEvents property)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets_correction">offsets_correction() (brixs.brixs.PhotonEvents method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets_func">offsets_func() (brixs.brixs.PhotonEvents property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets_mode">offsets_mode() (brixs.brixs.PhotonEvents property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets_popt">offsets_popt() (brixs.brixs.PhotonEvents property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets_ranges">offsets_ranges() (brixs.brixs.PhotonEvents property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.offsets_ref">offsets_ref() (brixs.brixs.PhotonEvents property)</a>
+</li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.onclick">onclick() (in module brixs.backpack.figmanip)</a>
 </li>
       <li><a href="interact.html#brixs.backpack.interact.operating_system">operating_system() (in module brixs.backpack.interact)</a>
@@ -435,6 +492,10 @@
 </li>
       <li><a href="arraymanip.html#brixs.backpack.arraymanip.peak_fit">peak_fit() (in module brixs.backpack.arraymanip)</a>
 </li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.peaks">peaks (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#id4">peaks() (brixs.brixs.Spectrum property)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.PhotonEvents">PhotonEvents (class in brixs.brixs)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.PhotonEvents.plot">plot() (brixs.brixs.PhotonEvents method)</a>
@@ -449,9 +510,9 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.PhotonEvents.plot_columns">plot_columns() (brixs.brixs.PhotonEvents method)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.Spectra.plot_disp">plot_disp() (brixs.brixs.Spectra method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.plot_detected_peaks">plot_detected_peaks() (brixs.brixs.Spectrum method)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.Spectrum.plot_elastic">plot_elastic() (brixs.brixs.Spectrum method)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectra.plot_disp">plot_disp() (brixs.brixs.Spectra method)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.PhotonEvents.plot_fit">plot_fit() (brixs.brixs.PhotonEvents method)</a>
 </li>
@@ -515,9 +576,15 @@
 </li>
       <li><a href="interact.html#brixs.backpack.interact.send_email">send_email() (in module brixs.backpack.interact)</a>
 </li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.set_calib">set_calib() (brixs.brixs.Spectrum method)</a>
+</li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.set_default_window_position">set_default_window_position() (in module brixs.backpack.figmanip)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.set_onclick">set_onclick() (in module brixs.backpack.figmanip)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.set_shift">set_shift() (brixs.brixs.Spectrum method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectra.set_shifts">set_shifts() (brixs.brixs.Spectra method)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.set_ticks">set_ticks() (in module brixs.backpack.figmanip)</a>
 </li>
@@ -525,21 +592,35 @@
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.set_window_size">set_window_size() (in module brixs.backpack.figmanip)</a>
 </li>
-      <li><a href="brixs.html#brixs.brixs.Spectra.shift_mode">shift_mode (brixs.brixs.Spectra attribute)</a>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.set_x">set_x() (brixs.brixs.Spectrum method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.set_y">set_y() (brixs.brixs.Spectrum method)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.shift">shift (brixs.brixs.Spectrum attribute)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectra.shift_calc_mode">shift_calc_mode (brixs.brixs.Spectra attribute)</a>
+</li>
+      <li><a href="brixs.html#id11">shift_calc_mode() (brixs.brixs.Spectra property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.shift_mode">shift_mode() (brixs.brixs.Spectrum property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.shift_ranges">shift_ranges (brixs.brixs.Spectra attribute)</a>
 </li>
+      <li><a href="brixs.html#id12">shift_ranges() (brixs.brixs.Spectra property)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.Spectra.shift_ref">shift_ref (brixs.brixs.Spectra attribute)</a>
 </li>
+      <li><a href="brixs.html#id13">shift_ref() (brixs.brixs.Spectra property)</a>
+</li>
       <li><a href="brixs.html#brixs.brixs.Spectra.shift_ref_value">shift_ref_value (brixs.brixs.Spectra attribute)</a>
+</li>
+      <li><a href="brixs.html#id14">shift_ref_value() (brixs.brixs.Spectra property)</a>
 </li>
       <li><a href="arraymanip.html#brixs.backpack.arraymanip.shifted">shifted() (in module brixs.backpack.arraymanip)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.shifts">shifts (brixs.brixs.Spectra attribute)</a>
-</li>
-      <li><a href="brixs.html#brixs.brixs.Spectra.shifts_length">shifts_length (brixs.brixs.Spectra attribute)</a>
 </li>
       <li><a href="figmanip.html#brixs.backpack.figmanip.soft_ungroup_svg">soft_ungroup_svg() (in module brixs.backpack.figmanip)</a>
 </li>
@@ -551,11 +632,27 @@
 </li>
       <li><a href="fake.html#brixs.fake.spectrum">spectrum (in module brixs.fake)</a>
 </li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.spectrum">spectrum() (brixs.brixs.PhotonEvents property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.spectrum_bins">spectrum_bins() (brixs.brixs.PhotonEvents property)</a>
+</li>
       <li><a href="model_functions.html#brixs.backpack.model_functions.square_pulse">square_pulse() (in module brixs.backpack.model_functions)</a>
 </li>
       <li><a href="brixs.html#brixs.brixs.Spectra.step">step (brixs.brixs.Spectra attribute)</a>
+
+      <ul>
+        <li><a href="brixs.html#brixs.brixs.Spectrum.step">(brixs.brixs.Spectrum attribute)</a>
 </li>
+      </ul></li>
+      <li><a href="brixs.html#id15">step() (brixs.brixs.Spectra property)</a>
+
+      <ul>
+        <li><a href="brixs.html#id5">(brixs.brixs.Spectrum property)</a>
+</li>
+      </ul></li>
       <li><a href="brixs.html#brixs.brixs.Spectra.sum">sum (brixs.brixs.Spectra attribute)</a>
+</li>
+      <li><a href="brixs.html#id16">sum() (brixs.brixs.Spectra property)</a>
 </li>
       <li><a href="interact.html#brixs.backpack.interact.svg2clipboard">svg2clipboard() (in module brixs.backpack.interact)</a>
 </li>
@@ -594,6 +691,32 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="brixs.html#brixs.brixs.Spectra.x">x (brixs.brixs.Spectra attribute)</a>
+
+      <ul>
+        <li><a href="brixs.html#brixs.brixs.Spectrum.x">(brixs.brixs.Spectrum attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#id17">x() (brixs.brixs.Spectra property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.x_centers">x_centers() (brixs.brixs.PhotonEvents property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.x_edges">x_edges() (brixs.brixs.PhotonEvents property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Y">Y</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.Spectrum.y">y (brixs.brixs.Spectrum attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.y_centers">y_centers() (brixs.brixs.PhotonEvents property)</a>
+</li>
+      <li><a href="brixs.html#brixs.brixs.PhotonEvents.y_edges">y_edges() (brixs.brixs.PhotonEvents property)</a>
 </li>
   </ul></td>
 </tr></table>

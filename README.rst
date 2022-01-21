@@ -39,8 +39,8 @@ Requirements
 - detect_delimiter
 
 
-Usage
-=================
+Usage (not an extensive description)
+====================================
 
 Package is based on three objects
 
@@ -52,7 +52,7 @@ Package is based on three objects
   s  = br.Spectrum()
   ss = br.Spectra()
 
-Spectrum manipulation.
+Spectra/Spectrum manipulation.
 
 .. code-block:: python
 

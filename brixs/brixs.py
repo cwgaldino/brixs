@@ -2091,10 +2091,7 @@ class Spectra(metaclass=_Meta):
         length (number, read only): length of x-coordinates vector.
         x (number, read only): x-coordinates (only applicable if x-coordinates
             are the same for all spectra.
-        shifts_length (list of floats): Calculated shifts. Must always have the same lenght as data.
-        shifts (list of int): Calculated shifts as int (only calculated if
-            x-coordinates for all spectra is uniform and has present the same
-            step size). Must always have the same lenght as data.
+        shifts (list of int): Calculated shifts as int. Must always have the same lenght as data.
         shift_ref (number, read only): index of the spectrum used as reference
             for shift calculation.
         shift_ref_value (number, read only): value of the shift for the reference
@@ -2334,10 +2331,6 @@ class Spectra(metaclass=_Meta):
 
             Raises:
                 ValueError: If condition 1, 2, or 3 are not satisfied.
-
-            Note:
-                If :py:attr:`Spectra.shifts_length` is defined, running this Will
-                also set :py:attr:`Spectra.shifts`.
 
             See Also:
                 :py:func:`Spectra.check_length`, :py:func:`Spectra.check_same_x`.
