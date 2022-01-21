@@ -372,7 +372,7 @@ def load_Comments(filepath, comment_flag='#', stop_flag='#'):
         return comments[:]
 
 
-def save_data(obj, filepath='./untitled.txt', add_labels=True, data_format='% .10e', header='', footer='', delimiter=', ', comment_flag='# ', newline='\n', check_overwrite=False):
+def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', header='', footer='', delimiter=', ', comment_flag='# ', newline='\n', check_overwrite=False):
     r"""Save an array or a dictionary in a txt file.
 
     Args:
@@ -381,28 +381,28 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, data_format='% .1
         filepath (str or pathlib.Path, optional): path to save file.
         add_labels (bool, optional): When obj is a dictonary, ``add_labels=True``
             makes the dict keys to be added to the header as label for each data column.
-        data_format (string, or list, optional): If obj is a list, fmt can also
-            be a list where each fmt element is associated with a column. If
-            obj is a dict, fmt can also be a dict with same keys of obj. Then,
-            each fmt value is associated with the corresponding column.
-
-            See `np.savetxt <https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt>`_ documentation::
+        fmt (string, or list, optional): format for saving data.
+            If string, the value is used for x- and y-coordinates. If tuple
+            of strings, the first string is used for x-coordinates and the
+            second for y-coordinates.
 
                 fmt = (%[flag]width[.precision]specifier)
 
-            * flag can be: '-' for left justify, '+', whch forces to precede
+            * `flag` can be:
+                1. '-' for left justify
+                2. '+', puts + or - in front of the numbers
+                3. '0' to Left pad the number with zeros instead of space (see width).
 
-            * result with + or -, or '0' to Left pad the number with zeros
-              instead of space (see width).
+            * `width` is the minimum number of characters to be printed.
 
-            * width is the minimum number of characters to be printed.
+            * `precision` is the number of significant digits.
 
-            * precision is tipically the number of significant digits
+            * `specifier` is the type of notation. Tipically, either 'e' for
+            scientific notation of 'f' for decimal floating point.
 
-            * specifier is the type of notation. Tipically, either 'e' for
-              scientific notation of 'f' for decimal floating point.
+            * a common `fmt` strings is: '%.3f' for 3 decimal places.
 
-            * a common fmt strings is: '%.3f' for 3 decimal places.
+            *  for more information see `np.savetxt <https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt>`_ documentation::
 
         header (str, oprional): string that will be written at the beggining of
             the file (comment flag is added automatically).
@@ -449,7 +449,7 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, data_format='% .1
             obj.append(obj2[key])
         obj = np.array(obj).transpose()
 
-    np.savetxt(filepath, obj, fmt=data_format, delimiter=delimiter, newline=newline, header=header, footer=footer, comments=comment_flag)
+    np.savetxt(filepath, obj, fmt=fmt, delimiter=delimiter, newline=newline, header=header, footer=footer, comments=comment_flag)
 
 
 def load_data(filepath, delimiter=None, comment_flag='#', labels=None, force_array=False):

@@ -42,152 +42,176 @@ Requirements
 Usage
 =================
 
-test
-
-
-.. code-block:: python
-
-  import brixs as br
-
-  # %% photon events with bad events
-  pe, s0, nd = br.read_ADRESS(filepath)
-  ax = pe.plot()
-  bad = br.get_bad_ADRESS(filepath)
-  bad.plot(ax, mfc='red', pointsize=2)
-
-
-
-.. code-block:: python
-
-  # %% Curvature correction (offset correction)
-  pe = br.get_pe_ADRESS(filepath)
-  pe.plot()
-  plt.ylim(820, 920)
-  plt.title('1) Raw photon events')
-  pe.bins = (10, 1000)
-  pe.plot(show_bins=(True, False))
-  plt.ylim(820, 920)
-  plt.title('2) X bins')
-  pe.calculate_offsets(ref=5)
-  pe.fit_offsets(deg=2)
-  ax1 = pe.plot_offsets()
-  pe.plot_fit(ax1)
-  plt.title('3) Offsets and fit')
-  pe.plot(show_offsets=True, show_fit=True)
-  plt.ylim(820, 920)
-  plt.title('4) Offsets and fit over the image')
-  pe.offsets_correction()
-  pe.plot()
-  plt.ylim(820, 920)
-  plt.title('5) After correction')
-
-  # %% plotting columns
-  pe = br.get_pe_ADRESS(filepath)
-  pe.bins = (10, 1000)
-  pe.plot_columns()
-  plt.title('1) before correction')
-  plt.xlim(700, 1000)
-
-  pe.plot_columns(vertical_increment=5)
-  plt.title('2) before correction (cascaded)')
-  plt.xlim(700, 1000)
-
-  pe.calculate_offsets(ref=5)
-  pe.fit_offsets(deg=2)
-  pe.offsets_correction()
-  pe.plot_columns(vertical_increment=5)
-  plt.title('2) after correction')
-  plt.xlim(700, 1000)
-
-
-Read files from ADRESS beamline at PSI
+Package is based on three objects
 
 .. code-block:: python
 
   import brixs as br
 
-  pe, s, nd = br.read_ADRESS(filepath)
+  pe = br.PhotonEvents()
+  s  = br.Spectrum()
+  ss = br.Spectra()
 
-  s   = br.get_spectrum_ADRESS(filepath)
-  pe  = br.get_pe_ADRESS(filepath)
-  bad = br.get_bad_ADRESS(filepath)
+Spectrum manipulation.
 
-  # get data from same scan (three files, one for each ccd d1, d2, d3)
-  ss, pes = br.get_scan_ADRESS(filepath, prefix, n, zfill=4)
-  ss      = br.get_scan_spectrum_ADRESS(filepath, prefix, n, zfill=4)
-  pes     = br.get_scan_pe_ADRESS(filepath, prefix, n, zfill=4)
+.. code-block:: python
 
-  # get all scans from energy calibration
-  disp, res, _, _ = dispersion_ADRESS(folderpath, prefix, start_energy, stop_energy, start_scan=None, stop_scan=None)
+  import brixs as br
+  import numpy as np
+
+  # ==============================================================================
+  # %% spectra alignment
+  filelist = br.backpack.filelist('../fixtures/calib_example')
+  ss = br.Spectra()
+  for f in filelist:
+      ss.append(data=np.loadtxt(f, delimiter=','))
+
+  plt.figure()
+  ss.plot(vertical_increment=0.1)
+  ss.calculate_shifts(ref=0, mode='cc')
+  ss.set_shifts()
+  plt.figure()
+  ss.plot(vertical_increment=0.1)
+  ss.crop(stop=600)
+  plt.figure()
+  ss.plot(vertical_increment=0.1)
+
+  # ==============================================================================
+  # %% find and fit peaks (easy)
+  filepath = '../fixtures/peak_fit/easy.dat'
+  s = br.Spectrum(data=np.loadtxt(filepath, delimiter=','))
+  s.find_peaks()
+  plt.figure()
+  s.plot()
+  s.plot_detected_peaks()
+
+  s.fit_peak(0)
+  plt.figure()
+  s.plot()
+  s.fit.plot()
+
+  s.fit_peak()
+  plt.figure()
+  s.plot()
+  s.fit.plot()
+
+  # results
+  s.fit_data[0]
+  print('elastic peak at', s.fit_data[0]['c'])
+  print('first excitation at', s.fit_data[1]['c'])
 
 
-Simulate a spectrum with two excitations with half the area of the
-elastic peak and twice its fwhm.
+  # ==============================================================================
+  # %% find and fit peaks (medium)
+  # shoulder is not detected
+  filepath = '../fixtures/peak_fit/medium.dat'
+  s = br.Spectrum(data=np.loadtxt(filepath, delimiter=','))
+  s.find_peaks()
+  plt.figure()
+  s.plot()
+  s.plot_detected_peaks()
 
-  >>> import brixs
-  >>> import matplotlib.pyplot as plt
-  >>> import numpy as np
-  >>> I = brixs.dummy_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]])
-  >>> x = np.linspace(-2, 6, 1000)
-  >>> plt.figure()
-  >>> plt.plot(x, I(x))
-  >>> plt.xlabel('Energy (eV)')
-  >>> plt.ylabel('Intensity')
-  >>> plt.show()
+  # fit is wrong
+  s.fit_peak(0)
+  plt.figure()
+  s.plot()
+  s.fit.plot()
 
-  .. image:: _figs/simulate_spectrum.png
-      :target: _static/simulate_spectrum.png
-      :width: 600
-      :align: center
+  # fit is good
+  s.fit_peak(0, multiplicity=2)
+  plt.figure()
+  s.plot()
+  s.fit.plot()
+
+  # results
+  print('elastic peak at', s.fit_data[0]['c'])
+
+  # ==============================================================================
+  # %% find and fit peaks (hard)
+  filepath = '../fixtures/peak_fit/hard.dat'
+  s = br.Spectrum(data=np.loadtxt(filepath, delimiter=','))
+  s.find_peaks()
+  plt.figure()
+  s.plot()
+  s.plot_detected_peaks()
+
+  # fit is good
+  s.fit_peak(multiplicity={0:2})
+  plt.figure()
+  s.plot()
+  s.fit.plot()
+
+  # results
+  print('elastic peak at', s.fit_data[0]['c'])
+
+  # ==============================================================================
+  # %% energy calibration (answer is 10 meV/point)
+  filelist = br.backpack.filelist('../fixtures/calib_example')
+  ss = br.Spectra()
+  for f in filelist:
+      ss.append(data=np.loadtxt(f, delimiter=','))
+
+  calib = ss.calculate_calib(start=930, stop=939)
+  print(calib*1000, ' meV/point')
+
+  plt.figure()
+  ss.plot_disp()
+
+  # ==============================================================================
+  # %% energy calibration using peak fit
+  filelist = br.backpack.filelist('../fixtures/calib_example')
+  ss = br.Spectra()
+  for f in filelist:
+      ss.append(data=np.loadtxt(f, delimiter=','))
+
+  ss.find_peaks(prominence=0.5)
+  calib = ss.calculate_calib(start=930, stop=939, mode='peak', idx=0)
+  print(calib*1000, ' meV/point')
+
+  plt.figure()
+  ss.plot(vertical_increment=0.1)
+  for i, s in enumerate(ss):
+      s.fit.plot(offset=-0.1*i, color='black')
+
+  plt.figure()
+  ss.plot_disp()
 
 
-Simulate a ``photon_event`` list of a generic spectrum. The spectrum
-will have two excitations with half the area of the
-elastic peak and twice its fwhm.
+Creating fake data for testing purposes
 
-  >>> import brixs
-  >>> import matplotlib.pyplot as plt
-  >>> import numpy as np
-  >>> # simulating a generic spectrum
-  >>> I = brixs.dummy_spectrum(0, 0.2, excitations=[[0.5, 2, 2], [0.5, 4, 2]])
-  >>> # simulating the photon_event list(where we're using energy in eV's and length in meters)
-  >>> photon_events = brixs.dummy_photon_events(I, background=0.02,
-  >>>                                                 noise=0.05,
-  >>>                                                 exposure=50e4,
-  >>>                                                 dispersion= 8.45 * (10**-3 / 10**-6),
-  >>>                                                 x_max=52.22e-3,
-  >>>                                                 y_max=25.73e-3,
-  >>>                                                 y_zero_energy=-20,
-  >>>                                                 angle=0,
-  >>>                                                 psf_fwhm=(3e-6, 1e-6))
-  >>> print(photon_events)
-      [[1.36263387e-02 2.29071963e-03 1.00000000e+00]
-       [3.19917559e-02 4.48965702e-04 1.00000000e+00]
-       [4.96047073e-02 9.76363776e-05 1.00000000e+00]
-       ...
-       [2.37889174e-04 1.50658922e-02 1.00000000e+00]
-       [1.58122734e-02 4.33273762e-03 1.00000000e+00]
-       [4.61469585e-02 2.45566831e-03 1.00000000e+00]]
-  >>> # ploting photon_events
-  >>> plt.figure()
-  >>> plt.plot(photon_events[:, 0]*10**3,
-  >>>          photon_events[:, 1]*10**3,
-  >>>          linewidth=0,
-  >>>          marker='o',
-  >>>          ms=1)
-  >>> plt.xlabel('x position (mm)')
-  >>> plt.ylabel('y position (mm)')
-  >>> plt.show()
+.. code-block:: python
 
-  .. image:: _figs/photon_events1.png
-      :target: _static/photon_events1.png
-      :width: 600
-      :align: center
+  # creating a sequence of fake spectra
+  positions = np.linspace(100, 1000, 10)
+  energies = np.linspace(930, 939, 10)
+  ss = br.Spectra()
+  for c in positions:
+      fake = br.fake(amp=1, c=c, fwhm=10)
+      s = fake.get_spectrum(0, 1500, n_points=6000, noise=3)
+      ss.append(s)
 
-  Zooming in, we can clearly see the isoenergetic lines formed by the elastic
-  peak and the other two excitations.
+  plt.figure()
+  ss.plot(vertical_increment=0.1)
 
-  .. image:: _figs/photon_events2.png
-      :target: _static/photon_events2.png
-      :width: 600
-      :align: center
+  ss.save(r'../fixtures/calib_example')
+
+  # ==============================================================================
+  # create spectrum with excitations (multiple peaks)
+  fake1 = br.fake(1, 0, 0.1, [[0.5, 3, 0.2], [0.7, 4, 0.2]])
+  s1 = fake1.get_spectrum(noise=3)
+  # big elastic peak with low energy excitation
+  fake2 = br.fake(1, 0, 0.1, [[0.5, 0.15, 0.2], [0.7, 4, 0.2]])
+  s2 = fake2.get_spectrum(noise=3)
+  # small elastic peak with intense low energy excitation
+  fake3 = br.fake(0.5, 0, 0.1, [[1, 0.15, 0.2], [0.7, 4, 0.2]])
+  s3 = fake3.get_spectrum(noise=3)
+
+  plt.figure()
+  s1.plot(label='easy')
+  s2.plot(offset=0.5, label='medium')
+  s3.plot(offset=1, label='hard')
+  plt.legend()
+
+  s1.save(r'../fixtures/peak_fit/easy.dat')
+  s2.save(r'../fixtures/peak_fit/medium.dat')
+  s3.save(r'../fixtures/peak_fit/hard.dat')

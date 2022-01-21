@@ -4,5 +4,5 @@
 Model functions
 ==================
 
-.. automodule:: brixs.model_functions
+.. automodule:: brixs.backpack.model_functions
     :members:

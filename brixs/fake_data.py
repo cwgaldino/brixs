@@ -15,20 +15,71 @@ and another one for generating dummy spectra.
 # standard libraries
 import numpy as np
 import copy
+
+# specific libraries
+from collections.abc import Iterable
+
+# backpack
 from .backpack.model_functions import gaussian_fwhm
 from .backpack.arraymanip import index
+
+# brixs
 import brixs as br
 
-class fake():
 
-    def __init__(self, amp=1, c=0, w=1, excitations=None):
+class Meta(type):
+    """Metaclass to facilitate creation of read-only attributes."""
+    def __new__(self, class_name, bases, attrs):
+
+        def lazy_read_only(_attr):
+            variable = '_' + _attr
+            if not hasattr(self, variable):
+                def getter(self):
+                    return getattr(self, variable)
+                def setter(self, value):
+                    raise AttributeError('Attribute is "read only". Cannot set attribute.')
+                def deleter(self):
+                    raise AttributeError('Attribute is "read only". Cannot delete object.')
+            return getter, setter, deleter, 'read only variable'
+
+        def lazy_non_removable(_attr):
+            variable = '_' + _attr
+            if not hasattr(self, variable):
+                def getter(self):
+                    return getattr(self, variable)
+                def setter(self, value):
+                    return setattr(self, variable, value)
+                def deleter(self):
+                    raise AttributeError('Attribute cannot be deleted.')
+            return getter, setter, deleter, 'non removable variable'
+
+        new_attrs = {}
+        for name, value in attrs.items():
+            if name == '_read_only':
+                for attr in value:
+                    _property = property(*lazy_read_only(attr))
+                    new_attrs[attr] = _property
+            elif name == '_non_removable':
+                for attr in value:
+                    _property = property(*lazy_non_removable(attr))
+                    new_attrs[attr] = _property
+            else:
+                new_attrs[name] = value
+
+        return type(class_name, bases, new_attrs)
+
+class fake(metaclass=Meta):
+
+    _read_only     = ['func', 'pe', 'spectrum']
+
+    def __init__(self, amp=1, c=0, fwhm=1, excitations=None):
         self.elastic_amp = amp
         self.elastic_c = c
-        self.elastic_w = w
+        self.elastic_fwhm = fwhm
 
-        self.func = None
-        self.pe = None
-        self.spectrum = None
+        self._func = None
+        self._pe = None
+        self._spectrum = None
 
         if excitations is not None:
             self.excitations = excitations
@@ -59,18 +110,49 @@ class fake():
         raise AttributeError('Cannot delete object.')
 
     @property
-    def elastic_w(self):
-        return self._elastic_w
-    @elastic_w.setter
-    def elastic_w(self, value):
+    def elastic_fwhm(self):
+        return self._elastic_fwhm
+    @elastic_fwhm.setter
+    def elastic_fwhm(self, value):
         if value < 0:
             raise ValueError('width (fwhm) cannot be negative.')
         else:
-            self._elastic_w = value
-    @elastic_w.deleter
-    def elastic_w(self):
+            self._elastic_fwhm = value
+    @elastic_fwhm.deleter
+    def elastic_fwhm(self):
         raise AttributeError('Cannot delete object.')
 
+    @property
+    def excitations(self):
+        return self._excitations
+    @excitations.setter
+    def excitations(self, value):
+        if isinstance(value, Iterable):
+            for v in value:
+                if isinstance(v, Iterable):  # multiple excitations
+                    if len(v) == 3:
+                        if v[0] < 0:
+                            raise ValueError(f'amp cannot be negative ({value[0]}).')
+                        if v[2] < 0:
+                            raise ValueError(f'width cannot be negative ({value[2]}).')
+                    else:
+                        raise ValueError('excitation must be a list (or a list of lists) with amp, c, and width')
+                else:
+                    if len(value) == 3:
+                        if value[0] < 0:
+                            raise ValueError(f'amp cannot be negative ({value[0]}).')
+                        if value[2] < 0:
+                            raise ValueError(f'width cannot be negative ({value[2]}).')
+                        self._excitations = [value, ]
+                        return
+                    else:
+                        raise ValueError('excitation must be a list (or a list of lists) with amp, c, and width')
+            self._excitations = value
+        else:
+            raise ValueError('excitation must be a list (or a list of lists) with amp, c, and width')
+    @excitations.deleter
+    def excitations(self):
+        raise AttributeError('Cannot delete object.')
 
     def get_function(self):
         """Returns a function I(E) of a simulated RIXS spectrum.
@@ -92,7 +174,7 @@ class fake():
 
         .. seealso:: :py:func:`get_photon_events`
         """
-        I = f'lambda energy: gaussian_fwhm(energy, {self.elastic_amp}, {self.elastic_c}, {self.elastic_w})'
+        I = f'lambda energy: gaussian_fwhm(energy, {self.elastic_amp}, {self.elastic_c}, {self.elastic_fwhm})'
 
         if self.excitations is not None:
             for excitation in self.excitations:
@@ -101,38 +183,111 @@ class fake():
                 if excitation[2] < 0:
                     raise ValueError('width (fwhm) of excitation cannot be negative.')
                 I += f'+gaussian_fwhm(energy, amp={excitation[0]}, c={excitation[1]}, w={excitation[2]})'
-        self.func = eval(I)
+        self._func = eval(I)
         return self.func
 
-    def append(self, amp, c, w):
+    def append(self, *args):
+        if len(args) == 1:
+            if isinstance(args[0], Iterable):
+                if len(args[0]) == 3:
+                    if value[0] < 0:
+                        raise ValueError(f'amp cannot be negative ({args[0][0]}).')
+                    if value[2] < 0:
+                        raise ValueError(f'width cannot be negative ({args[0][2]}).')
+                    self._excitations.append([args[0][0], args[0][1], args[0][2]])
+            else:
+                raise ValueError('excitation must be a list with amp, c, and width')
+        elif len(args) == 3:
+            if args[0] < 0:
+                raise ValueError(f'amp cannot be negative ({args[0]}).')
+            if args[2] < 0:
+                raise ValueError(f'width cannot be negative ({args[2]}).')
+            self._excitations.append([args[0], args[1], args[2]])
+        else:
+            raise ValueError('excitation must be a list (or a list of lists) with amp, c, and width')
+
         self.excitations.append([amp, c, w])
 
     def remove(self, idx):
         del self.excitation[idx]
 
-    def get_spectrum(self, energy_min=None, energy_max=None, n_points=None):
-        """returns x, y.
-        """
-        if energy_min is None:
-            if self.excitations is None:
-                energy_min = self.elastic_c-self.elastic_w*10
+    def _get_x_min(self):
+        if self.excitations is None:
+            return self.elastic_c-self.elastic_fwhm*10
+        else:
+            energy_min1 = self.elastic_c-self.elastic_fwhm*10
+            energy_min2 = min([excitation[1] - excitation[2]*10 for excitation in self.excitations])
+            if energy_min2 > energy_min1:
+                return energy_min1
             else:
-                energy_min = min([excitation[1] - excitation[2]*10 for excitation in self.excitations])
-        if energy_max is None:
-            if self.excitations is None:
-                energy_max = self.elastic_c+self.elastic_w*10
-            else:
-                energy_max = max([excitation[1] + excitation[2]*10 for excitation in self.excitations])
+                return energy_min2
 
-        if n_points is None:
-            n_points = (energy_max-energy_min)/self.elastic_w*10
+    def _get_x_max(self):
+        if self.excitations is None:
+            return self.elastic_c+self.elastic_fwhm*10
+        else:
+            energy_max1 = self.elastic_c+self.elastic_fwhm*10
+            energy_max2 = max([excitation[1] + excitation[2]*10 for excitation in self.excitations])
+            if energy_max2 < energy_max1:
+                return energy_max1
+            else:
+                return energy_max2
+
+    def _get_y_max(self):
+        if self.excitations is None:
+            return self.elastic_amp
+        else:
+            max_value1 = self.elastic_amp
+            if self.excitations != []:
+                max_value2 = max([excitation[0] for excitation in self.excitations])
+                if max_value1 > max_value2:
+                    return max_value1
+                else:
+                    return max_value2
+            else:
+                return max_value1
+
+
+    def get_spectrum(self, energy_min=None, energy_max=None, n_points=None, energies=None, noise=0):
+        """returns x, y.
+
+            Args:
+                n_points (int, optional): number of
+
+            Returns:
+                :py:class:`brixs.Spectrum` object.
+
+            Raises:
+                ValueError: noise is negative.
+        """
+        if energies is None:
+            if energy_min is None:
+                energy_min = self._get_x_min()
+            if energy_max is None:
+                energy_max = self._get_x_max()
+            if n_points is None:
+                n_points = round((energy_max-energy_min)/self.elastic_fwhm*10)
+            else:
+                n_points = round(n_points)
+            x = np.linspace(energy_min, energy_max, n_points)
+        else:
+            x = energies
+
+
+        if noise > 0:
+            noise = self._get_y_max()*noise/100
+            random_noise = np.random.default_rng().normal(-noise, noise, size=int(n_points))
+        elif noise < 0:
+            raise ValueError('noise is a percentage value and cannot be negative.')
+        else:
+            random_noise = 0
 
         if self.func is None:
             _ = self.get_function()
-        x = np.linspace(energy_min, energy_max, round(n_points))
-        y = self.func(x)
-        self.spectrum = br.Spectrum(x=x, y=y)
-        return self.spectrum
+
+        y = abs(self.func(x) + random_noise)
+        self._spectrum = br.Spectrum(x=x, y=y)
+        return self._spectrum
 
     def get_photon_events(self, dispersion, # (energy)/(detector units)
                                 x_max=None,  # in detector units (detector size, number of pixels, or number of bins)
@@ -145,10 +300,8 @@ class fake():
                                 # psf_fwhm=(0, 0)
                                 ):
 
-
         right = ['right', 'r', 'RIGHT', 'R', 'max', 'top', 't', 'above']
         left = ['left', 'l', 'LEFT', 'L', 'min', 'bottom', 'below']
-
 
         if self.excitations is None:
             max_value = self.elastic_amp
@@ -157,7 +310,7 @@ class fake():
 
         if y_max is None:
             if self.excitations is None:
-                energy_max = self.elastic_c+self.elastic_w*10
+                energy_max = self.elastic_c+self.elastic_fwhm*10
             else:
                 if elastic_side in left:
                     energy_max = max([excitation[1] + excitation[2]*10 for excitation in self.excitations])

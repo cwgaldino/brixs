@@ -12,7 +12,7 @@ BRIXS is a python package for analysis of RIXS spectra.
 
    Installation <installation>
    Spectra manipulation <brixs>
-   Dummy RIXS spctra generation <dummy>
+   Dummy RIXS spctra generation <fake>
 
 Examples
 =========================

@@ -4,5 +4,5 @@
 interact
 ==================
 
-.. automodule:: brixs.intermanip
+.. automodule:: brixs.backpack.interact
     :members:

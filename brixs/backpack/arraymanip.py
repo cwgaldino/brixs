@@ -33,13 +33,15 @@ def sort(ref, *args):
     s = []
     for x in args:
         s.append( [x1 for (y,x1) in sorted(zip(ref,x), key=lambda pair: pair[0])])
+    if len(args) == 1:
+        s = s[0]
     return s
 
 
 def choose(x, ranges):
     """Return a mask of x values inside range pairs.
 
-    Args.
+    Args:
         x (list or array): 1d array.
         ranges (list): a pair of values or a list of pairs. Each pair represents
             the start and stop of a data range from x.
@@ -140,6 +142,9 @@ def moving_average(x, n):
     """
     if n < 1:
         raise ValueError('n must be a positive integer (> 1).')
+    if isinstance(n, int) == False:
+        if n.is_integer() == False:
+            raise ValueError('n must be a positive integer (> 1).')
 
     x = np.array(x)
     window = np.ones(int(n))/float(n)
@@ -188,7 +193,7 @@ def shifted(x, y, value, mode='hard'):
                 y is fully preserved while x is shifted.
             #. ``mode='y'``, ``'interp'``, or ``'soft'``
                 x is preserved while y is interpolated with a shift
-            #. ``mode='roll'``,
+            #. ``mode='roll'` or ``r``,
                 x and y are preserved and y elements are just rolled along the
                 array (in this case ``shift`` value must be an integer).
 
@@ -212,7 +217,7 @@ def shifted(x, y, value, mode='hard'):
     elif mode == 'x' or mode == 'hard':
         x = np.array(x) + value
 
-    elif mode == 'roll' or mode == 'rotate':
+    elif mode == 'roll' or mode == 'r':
         try:
             if value.is_integer():
                 y = np.roll(y, int(value))
@@ -248,13 +253,18 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         fixed_m (False or number): `Factor from 1 to 0 of the lorentzian amount.
             If False, ``m`` will be a fitting parameter. If
             ``fixed_m=<number>``, ``<number>`` will be used for ``m``.
-        asymmetry (Boolean, , optional). If True, peak asymmetry is taken into account by fiting first
+        asymmetry (Bool, optional). If True, peak asymmetry is taken into account by fiting first
             half of the peak with a different ``w`` and ``m`` than the second half. The optimal ``w`` parameter
             returned will be the sum of the ``w`` of the first and second halfs.
 
     Returns:
         1) 2 column (x, y) array with "Smoothed" fitted peak (array lenght 100 bigger than input x, y).
-        2) An array with the optimized parameters
+        2) An array with the optimized parameters.
+            if assymetry=True, fixed_m=False: amp, c, fwhm, m, offset
+            if assymetry=True, fixed_m=True: amp, c, fwhm, offset
+            if assymetry=False, fixed_m=False: amp, c, fwhm, m, offset
+            if assymetry=False, fixed_m=True: amp, c, fwhm, offset
+
         3) One standard deviation errors on the parameters
         4) Peak function
 
@@ -283,11 +293,11 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         >>> plt.scatter(x, y)
         >>> plt.plot(smooth[:, 0], smooth[:, 1], color='r', lw=3)
         >>> plt.show()
-
-        .. image:: _static/peak_fit.png
-            :width: 600
-            :align: center
     """
+        # .. image:: _static/peak_fit.png
+        #     :width: 600
+        #     :align: center
+
     start = x[0]
     stop = x[-1]
 
@@ -300,7 +310,7 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     if guess_w is None:
         guess_w = 0.1*guess_c
 
-    if not fixed_m or fixed_m != 0:  # variable m
+    if fixed_m == False and type(fixed_m)==bool:  # variable m
         if asymmetry:
             p0 = [guess_A, guess_c, guess_w, 0.5, guess_w, 0.5, guess_offset]
             def function2fit(x, A, c, w1, m1, w2, m2, offset):
@@ -322,7 +332,7 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         elif fixed_m < 0:
             fixed_m = 0
         if asymmetry:
-            p0 = [guess_A, guess_c, guess_w, guess_w, guess_offset]
+            p0 = [guess_A, guess_c, guess_w/2, guess_w/2, guess_offset]
             def function2fit(x, A, c, w1, w2, offset):
                 f = np.heaviside(x-c, 0)*voigt_fwhm(x, A, c, w1, fixed_m) + offset +\
                     np.heaviside(c-x, 0)*voigt_fwhm(x, A, c, w2, fixed_m)
@@ -346,16 +356,18 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     arr100[:, 0] = np.linspace(x[0], x[-1], 100*len(x))
     arr100[:, 1] = function2fit(arr100[:, 0],  *popt)
 
-    if fixed_m:
-        if asymmetry:
-            popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1])
-        else:
-            popt_2 = (popt[0], popt[1], popt[2], popt[-1])
-    else:
+    if fixed_m == False and type(fixed_m)==bool:
         if asymmetry:
             popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1], popt[-2])
         else:
             popt_2 = (popt[0], popt[1], popt[2], popt[-1], popt[-2])
+    else:
+
+        if asymmetry:
+            popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1])
+        else:
+            popt_2 = (popt[0], popt[1], popt[2], popt[-1])
+
     return arr100, popt_2, err, lambda x: function2fit(x, *popt)
 
 

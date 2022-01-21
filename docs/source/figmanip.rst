@@ -4,5 +4,5 @@
 filemanip
 ==================
 
-.. automodule:: brixs.figmanip
+.. automodule:: brixs.backpack.figmanip
     :members:

@@ -4,5 +4,5 @@
 Dummy RIXS spctra generation
 ==============================
 
-.. automodule:: brixs.dummy
+.. automodule:: brixs.fake
     :members:

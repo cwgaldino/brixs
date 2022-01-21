@@ -1,71 +1,35 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
-  
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-  <title>Model functions &mdash; brixs 0.1 documentation</title>
-  
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
-
-  
-  
-
-  
-  
-
-  
-
-  
+  <title>Model functions &mdash; brixs 0.1 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
         <script src="_static/clipboard.min.js"></script>
         <script src="_static/copybutton.js"></script>
-    
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-
-    
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
-
-          
             <a href="index.html" class="icon icon-home"> brixs
-          
-
-          
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -73,139 +37,353 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brixs.html">Spectra manipulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dummy.html">Dummy RIXS spctra generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fake.html">Dummy RIXS spctra generation</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="example1.html"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
 <li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">brixs</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-        
       <li>Model functions</li>
-    
-    
       <li class="wy-breadcrumbs-aside">
-        
-          
             <a href="_sources/model_functions.rst.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <div class="section" id="model-functions">
-<h1>Model functions<a class="headerlink" href="#model-functions" title="Permalink to this headline">¶</a></h1>
-</div>
+             
+  <section id="module-brixs.backpack.model_functions">
+<span id="model-functions"></span><h1>Model functions<a class="headerlink" href="#module-brixs.backpack.model_functions" title="Permalink to this headline"></a></h1>
+<p>Mathematical functions and distributions.</p>
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.gaussian">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">gaussian</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">sigma</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.gaussian" title="Permalink to this definition"></a></dt>
+<dd><p>Gaussian distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \text{amp } e^{-\frac{(x-c)^2}{2 \sigma^2}}\]</div>
+<p>where,</p>
+<div class="math notranslate nohighlight">
+\[\text{Area }= \sqrt{2 \pi} \text{ amp } |\sigma|\]</div>
+<p>and,</p>
+<div class="math notranslate nohighlight">
+\[\text{fwhm }= 2 \sqrt{2 \ln(2)} \sigma\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>sigma</strong> – standard deviation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.gaussian_area">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">gaussian_area</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">A</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">sigma</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.gaussian_area" title="Permalink to this definition"></a></dt>
+<dd><p>Gaussian distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \frac{\text{Area}}{\sqrt{2\pi} w} e^{-\frac{(x-c)^2}{2 w^2}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>A</strong> – Area</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>sigma</strong> – standard deviation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.gaussian_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">gaussian_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.gaussian_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Gaussian distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \text{amp } e^{-\frac{4 \ln(2) (x-c)^2}{w^2}}\]</div>
+<p>where,</p>
+<div class="math notranslate nohighlight">
+\[\text{Area }= \frac{\sqrt{\pi} \text{ amp } w}{2 \sqrt{\ln(2)}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>A</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.gaussian_area_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">gaussian_area_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">A</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.gaussian_area_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Gaussian distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \frac{2 \sqrt{\ln(2)} A}{w \sqrt{\pi}}  e^{-\frac{4 \ln(2) (x-c)^2}{w^2}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>A</strong> – Area</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.lorentzian">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">lorentzian</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">gamma</span></em>, <em class="sig-param"><span class="n">c</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.lorentzian" title="Permalink to this definition"></a></dt>
+<dd><p>Cauchy–Lorentz distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \frac{1}{\pi \gamma} \frac{\gamma^2}{\gamma^2 + (x-c)^2}\]</div>
+<p>where,</p>
+<div class="math notranslate nohighlight">
+\[\text{Amplitude }= \frac{1}{\pi \gamma}\]</div>
+<p>and,</p>
+<div class="math notranslate nohighlight">
+\[\text{fwhm }= 2 \gamma\]</div>
+<p>and,</p>
+<div class="math notranslate nohighlight">
+\[\text{Area }= 1\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>gamma</strong> – Scale factor</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.lorentzian_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">lorentzian_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.lorentzian_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Cauchy–Lorentz distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \text{amp } \frac{w^2}{w^2 + (x-c)^2}\]</div>
+<p>where,</p>
+<div class="math notranslate nohighlight">
+\[\text{Area }= \text{amp } \pi w\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.lorentzian_area_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">lorentzian_area_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">A</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.lorentzian_area_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Cauchy–Lorentz distribution.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = A \frac{1}{\pi w} \frac{w^2}{w^2 + (x-c)^2}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>A</strong> – Area</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.voigt_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">voigt_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em>, <em class="sig-param"><span class="n">m</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.voigt_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Pseudo-voigt curve.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = A \left[ m  \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+<li><p><strong>m</strong> – Factor from 1 to 0 of the lorentzian amount</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.voigt_area_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">voigt_area_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">A</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em>, <em class="sig-param"><span class="n">m</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.voigt_area_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Pseudo-voigt curve.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = A \left[ m \frac{1}{\pi w} \frac{w^2}{w^2 + 4 (x-c)^2}   + (1-m) \frac{2 \sqrt{\ln(2)}}{w \sqrt{\pi}}  e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]\]</div>
+<p>where,</p>
+<div class="math notranslate nohighlight">
+\[\text{amp }= \frac{A}{w} \left[ m\frac{1}{\pi} + (1-m)\frac{2\sqrt{\ln(2)}}{\sqrt{\pi}} \right]\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>A</strong> – is the Area</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+<li><p><strong>m</strong> – Factor from 1 to 0 of the lorentzian amount</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.arctan_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">arctan_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.arctan_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Arctangent function.</p>
+<div class="math notranslate nohighlight">
+\[y(x) =   \frac{A}{\pi} \left[ \arctan(\frac{1}{w}(x-c)) + \frac{\pi}{2} \right]\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM (it will take fwhm units to go from amp/4 to (3amp)/4)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.square_pulse">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">square_pulse</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.square_pulse" title="Permalink to this definition"></a></dt>
+<dd><p>Square step function.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}y(x) =   \begin{cases}
+            0, &amp; \text{ for    $x &lt; c-w/2$}\\
+            \text{amp}, &amp; \text{ for  }  c-w/2 &lt; x &lt; c+w/2\\
+            0, &amp; \text{ for  }  x &gt; c+w/2\\
+            \end{cases}\end{split}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.err_fwhm">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">err_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.err_fwhm" title="Permalink to this definition"></a></dt>
+<dd><p>Error function. Integal of gaussian function calculated by <code class="docutils literal notranslate"><span class="pre">scipy.special.erf()</span></code>.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2} dt\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+<li><p><strong>w</strong> – FWHM (it will take roughly fwhm units to go from amp/4 to (3amp)/4)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 
 
            </div>
-           
           </div>
           <footer>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &#169; Copyright 2020, Carlos Galdino.
-
-    </p>
+    <p>&#169; Copyright 2020, Carlos Galdino.</p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

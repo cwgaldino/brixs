@@ -115,11 +115,12 @@ def get_bad_ADRESS(filepath):
 
 def get_scan_ADRESS(folderpath, prefix, n, zfill=4):
     folderpath = Path(folderpath)
-    ss  = br.Spectra()
+    filepaths = [folderpath/(prefix+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]
+    ss  = br.Spectra(3)
     pes = [0]*3
-    for filepath in [folderpath/(prefix+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]:
-        ss.append(get_spectrum_ADRESS(filepath))
-        pes.append(get_pe_ADRESS(filepath))
+    for i, filepath in enumerate(filepaths):
+        ss[i] = get_spectrum_ADRESS(filepath)
+        pes[i] = get_pe_ADRESS(filepath)
     return ss, pes
 
 def get_scan_spectrum_ADRESS(folderpath, prefix, n, zfill=4):
@@ -136,7 +137,7 @@ def get_scan_pe_ADRESS(folderpath, prefix, n, zfill=4):
         pes[i] = get_pe_ADRESS(filepath)
     return pes
 
-def dispersion_ADRESS(folderpath, prefix, start_energy=None, stop_energy=None, energies=None, start_scan=None, stop_scan=None, scans=None, verbose=False, **kwargs):
+def get_dispersion_ADRESS(folderpath, prefix, start_energy=None, stop_energy=None, energies=None, start_scan=None, stop_scan=None, scans=None, **kwargs):
 
     if energies is None:
         energies = np.arange(start_energy, stop_energy+1)
@@ -145,85 +146,32 @@ def dispersion_ADRESS(folderpath, prefix, start_energy=None, stop_energy=None, e
     if len(scans) != len(energies):
         raise ValueError(f'number of energies ({len(energies)}) do not match the number of scans ({len(scans)})')
 
-    if 'asymmetry' not in kwargs:
-        kwargs['asymmetry'] = False
+    disp = [0, 0, 0]
+    disp_bin = [0, 0, 0]
+    # fwhm = [0, 0, 0]
+    sss = [0, 0, 0]
+    for ccd in range(3):
+        ss = br.Spectra(n=len(scans))
+        y_max = None
+        y_bin = None
+        for i, scan in enumerate(scans):
+            ss_temp, pes_temp = br.get_scan_ADRESS(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
+            ss[i] = ss_temp[ccd]
+            if y_max is None:
+                y_max = pes_temp[ccd].y_max
+                y_bin = len(ss_temp[ccd].x)
+            else:
+                if y_max != pes_temp[ccd].y_max:
+                    raise ValueError('detector size is not the same for all scans.')
+                if y_bin != len(ss_temp[ccd].x):
+                    raise ValueError('binning is not the same for all scans.')
 
-    # spectra data
-    spectra_data = {i: {'spectrum': {scan: 0 for scan in scans},
-                        'pe': {scan: 0 for scan in scans},
-                       'position': {scan: 0 for scan in scans},
-                       'y_bin': {scan: 0 for scan in scans},
-                       'y_max': {scan: 0 for scan in scans},
-                       'fwhm':     {scan: 0 for scan in scans}} for i in range(3)}
+        disp_bin[ccd] = ss.calculate_dispersion(energies=energies, **kwargs)
+        disp[ccd] = disp_bin[ccd] / (y_max / y_bin)
+        sss[ccd] = ss
 
-    if verbose: print('calculating...')
-    for i, scan in enumerate(scans):
-        if verbose:  print(f'({i}/{len(scans)-1}) scan = {scan}, energy = {energies[i]}.')
-        pes = br.get_scan_pe_ADRESS(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
-        ss = br.get_scan_spectrum_ADRESS(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
-        for j in range(3):
-            spectra_data[j]['pe'][scan] = pes[j]
-            spectra_data[j]['y_max'][scan] = pes[j].y_max
+    return disp, disp_bin, sss
 
-            spectra_data[j]['spectrum'][scan] = ss[j]
-            spectra_data[j]['y_bin'][scan] = len(ss[j].x)
-            ss[j].guess_elastic_peak(**kwargs)
-            spectra_data[j]['position'][scan] = ss[j].elastic_c
-            spectra_data[j]['fwhm'][scan]     = ss[j].elastic_w
-
-
-    # fit positions
-    fit_result = {i: {'func': 0,
-                      'slope': 0,
-                      'positions': 0,
-                      'dispersion': 0,         # energy/bin
-                      'dispersion_lenght': 0,  # energy/(detector lenght)
-                      'offset': 0} for i in range(3)}
-
-    for i in range(3):
-        fit_result[i]['positions'] = [spectra_data[i]['position'][scan] for scan in scans]
-        y_max = [spectra_data[i]['y_max'][scan] for scan in scans]
-        y_bin = [spectra_data[i]['y_bin'][scan] for scan in scans]
-
-        if y_max.count(y_max[0]) == len(y_max): y_max = y_max[0]
-        else: raise ValueError('detector size is not the same for all scans.')
-        if y_bin.count(y_bin[0]) == len(y_bin): y_bin = y_bin[0]
-        else: raise ValueError('binning is not the same for all scans.')
-
-
-        popt = np.polyfit(energies, fit_result[i]['positions'], deg=1)
-        fit_result[i]['slope'] = popt[0]
-        fit_result[i]['dispersion'] = 1/popt[0]
-        fit_result[i]['dispersion_lenght'] = 1/popt[0] /(y_max / y_bin)
-        fit_result[i]['offset'] = popt[1]
-        fit_result[i]['func'] = np.poly1d(popt)
-
-
-
-    final_dispersion        = [fit_result[i]['dispersion'] for i in range(3)]
-    final_dispersion_lenght = [fit_result[i]['dispersion_lenght'] for i in range(3)]
-    final_resolution        = [np.mean([spectra_data[i]['fwhm'][scan]*final_dispersion[i] for scan in scans]) for i in range(3)]
-
-
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-        for i in range(3):
-            fwhm = round(final_resolution[i]*1000, 1)
-            disp = round(fit_result[i]['dispersion']*1000, 3)
-            disp_lenght = round(fit_result[i]['dispersion_lenght']*1000, 3)
-
-            ax.plot(energies, fit_result[i]['positions'], marker='o', lw=0, label=f'ccd {i}, {disp_lenght} meV/det.len. = {disp} mev/bin ({fwhm} meV)')
-            x = np.linspace(energies[0], energies[-1], len(energies*10))
-            y = fit_result[i]['func'](x)
-            ax.plot(x, y, color='black')
-        plt.legend()
-        plt.ylabel('elastic position (bin)')
-        plt.xlabel('energy (eV)')
-        plt.title(f'{round(np.mean(final_dispersion)*1000, 3)} meV/bin = {round(np.mean(final_dispersion_lenght)*1000, 3)} meV/det.len. ({round(np.mean(final_resolution)*1000, 1)} meV)')
-
-    return np.array(final_dispersion_lenght), np.array(final_dispersion), np.array(final_resolution), fit_result, spectra_data
 
 # %% ID32 beamline - ESRF - France =============================================
 def read_ID32(filepath):
