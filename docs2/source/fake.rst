@@ -4,5 +4,5 @@
 Fake RIXS spectra generation
 ==============================
 
-.. automodule:: brixs.fake
+.. automodule:: brixs.fake_data
     :members:

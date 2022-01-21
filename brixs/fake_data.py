@@ -1,16 +1,12 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Module for generating fake RIXS spectra.
-
-This module is based on two functions, one for generating dummy photon events lists
-and another one for generating dummy spectra.
-
-.. autosummary::
-
-    fake_spectrum
-    fake_photon_events
-
 """
+
+# .. autosummary::
+#
+#     fake_spectrum
+#     fake_photon_events
 
 # standard libraries
 import numpy as np
@@ -27,7 +23,7 @@ from .backpack.arraymanip import index
 import brixs as br
 
 
-class Meta(type):
+class _Meta(type):
     """Metaclass to facilitate creation of read-only attributes."""
     def __new__(self, class_name, bases, attrs):
 
@@ -68,7 +64,7 @@ class Meta(type):
 
         return type(class_name, bases, new_attrs)
 
-class fake(metaclass=Meta):
+class fake(metaclass=_Meta):
 
     _read_only     = ['func', 'pe', 'spectrum']
 
