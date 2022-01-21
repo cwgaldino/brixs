@@ -1,7 +1,7 @@
 
 
 
-Dummy RIXS spctra generation
+Fake RIXS spectra generation
 ==============================
 
 .. automodule:: brixs.fake
