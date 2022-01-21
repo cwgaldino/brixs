@@ -20,9 +20,7 @@
         <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Example 2: Dealing with many spectra" href="example2.html" />
-    <link rel="prev" title="Dummy RIXS spctra generation" href="fake.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,11 +41,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="brixs.html">Spectra manipulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fake.html">Dummy RIXS spctra generation</a></li>
-</ul>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#"> Example 1: Extract the spectrum of a dummy photon events list</a></li>
-<li class="toctree-l1"><a class="reference internal" href="example2.html"> Example 2: Dealing with many spectra</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fake.html">Fake RIXS spctra generation</a></li>
 </ul>
 
         </div>
@@ -109,7 +103,7 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="_static/example1_1.png"><img alt="_figs/example1_1.png" class="align-center" src="_figs/example1_1.png" style="width: 600px;" /></a>
+<a class="reference external image-reference" href="_static/example1_1.png"><img alt="_images/example1_1.png" class="align-center" src="_images/example1_1.png" style="width: 600px;" /></a>
 <p>Set binning and calculating offsets. Note that we have split the data in 10 columns
 and 1000 rows. The plot only shows the columns edges.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># set binning and calculating offsets</span>
@@ -119,8 +113,8 @@ and 1000 rows. The plot only shows the columns edges.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">show_bins</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="n">show_offsets</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">show_offsets_fit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="_static/example1_2.png"><img alt="_figs/example1_2.png" class="align-center" src="_figs/example1_2.png" style="width: 600px;" /></a>
-<a class="reference external image-reference" href="_static/example1_3.png"><img alt="_figs/example1_3.png" class="align-center" src="_figs/example1_3.png" style="width: 600px;" /></a>
+<a class="reference external image-reference" href="_static/example1_2.png"><img alt="_images/example1_2.png" class="align-center" src="_images/example1_2.png" style="width: 600px;" /></a>
+<a class="reference external image-reference" href="_static/example1_3.png"><img alt="_images/example1_3.png" class="align-center" src="_images/example1_3.png" style="width: 600px;" /></a>
 <p>By plotting each column on top of each other we can see the misalignment of the
 columns.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># plot all columns</span>
@@ -129,7 +123,7 @@ columns.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;intensity&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="_static/example1_4.png"><img alt="_figs/example1_4.png" class="align-center" src="_figs/example1_4.png" style="width: 600px;" /></a>
+<a class="reference external image-reference" href="_static/example1_4.png"><img alt="_images/example1_4.png" class="align-center" src="_images/example1_4.png" style="width: 600px;" /></a>
 <p>After correction, the columns are aligned.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># apply offset correction</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">p</span><span class="o">.</span><span class="n">offsets_correction</span><span class="p">()</span>
@@ -139,7 +133,7 @@ columns.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;intensity&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="_static/example1_5.png"><img alt="_figs/example1_5.png" class="align-center" src="_figs/example1_5.png" style="width: 600px;" /></a>
+<a class="reference external image-reference" href="_static/example1_5.png"><img alt="_images/example1_5.png" class="align-center" src="_images/example1_5.png" style="width: 600px;" /></a>
 <p>We can now calculate the final spectrum. For that, we temporarily increase the
 y binning to 2000.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># calculate spectrum</span>
@@ -150,16 +144,13 @@ y binning to 2000.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;intensity&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="_static/example1_6.png"><img alt="_figs/example1_6.png" class="align-center" src="_figs/example1_6.png" style="width: 600px;" /></a>
+<a class="reference external image-reference" href="_static/example1_6.png"><img alt="_images/example1_6.png" class="align-center" src="_images/example1_6.png" style="width: 600px;" /></a>
 </section>
 
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="fake.html" class="btn btn-neutral float-left" title="Dummy RIXS spctra generation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="example2.html" class="btn btn-neutral float-right" title="Example 2: Dealing with many spectra" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 
