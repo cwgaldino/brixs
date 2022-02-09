@@ -29,6 +29,9 @@ is_windows = operating_system() == 'windows'
 is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
 
+def bring2top():
+    figManager = get_current_fig_manager()
+    figManager.window.raise_()
 
 def set_default_window_position(*args):
     """Set the default window position for when :py:func:`setWindowPosition` is called.
@@ -284,7 +287,7 @@ def onclick(event):
                 y = round(event.ydata, onclick_round_y)
             else:
                 y = event.ydata
-            copy2clipboard(y)
+            copy2clipboard(str(y))
 
         except TypeError:
             pass
@@ -294,7 +297,7 @@ def onclick(event):
                 x = round(event.xdata, onclick_round_x)
             else:
                 x = event.xdata
-            copy2clipboard(x)
+            copy2clipboard(str(x))
         except TypeError:
             pass
     # double click (put image on clipboard)

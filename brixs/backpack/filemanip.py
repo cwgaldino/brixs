@@ -506,7 +506,7 @@ def load_data(filepath, delimiter=None, comment_flag='#', labels=None, force_arr
     header = load_Comments(filepath, comment_flag=comment_flag, stop_flag=comment_flag)
     if labels is None:
         if header is False:
-            warnings.warn('Cannot find header. Importing data as an array.')
+            # warnings.warn('Cannot find header. Importing data as an array.')
             return data
         elif force_array:
             return data
@@ -518,7 +518,7 @@ def load_data(filepath, delimiter=None, comment_flag='#', labels=None, force_arr
             if len(labels) != data.shape[1]:
                 labels = header_line.split(delimiter)
                 if len(labels) != data.shape[1]:
-                    warnings.warn('Cannot find column labels. Importing data as an array.')
+                    # warnings.warn('Cannot find column labels. Importing data as an array.')
                     return data
             # remove empty itens and trailing spaces
             labels = [item.strip() for item in labels if item != '']

@@ -123,7 +123,9 @@ def copy2clipboard(txt):
 
     on linux it uses ``xsel`` package (``sudo apt-get install -y xsel``)."""
     if is_windows:
-        cmd='echo ' + txt.strip() + ' | clip'
+        # cmd='echo ' + txt.strip() + ' | clip'
+        cmd=f'echo|set /p={txt.strip()}| clip'
+        # cmd='echo ' + txt.strip() + '| Set-Clipboard -Value {$_.Trim()}'
         subprocess.check_call(cmd, shell=True)
     elif is_linux:
         p = subprocess.Popen(['xsel','-bi'], stdin=subprocess.PIPE)

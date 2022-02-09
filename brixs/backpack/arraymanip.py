@@ -111,10 +111,13 @@ def extract(x, y, ranges):
     y = np.array(y)
 
     choose_range = choose(x, ranges)
-    temp = np.compress(choose_range, np.c_[y.transpose(), x], axis=0)
+    # temp = np.compress(choose_range, np.c_[y.transpose(), x], axis=0)
+    # print(choose_range))
+    temp = np.compress(choose_range, np.c_[y, x], axis=0)
     if len(temp[0]) > 2:
-        return temp[:, -1], temp[:, :-1].transpose()
+        return temp[:, -1], temp[:, :-1]#.transpose()
     else:
+        # print('here')
         return temp[:, -1], temp[:, 0]
 
 
@@ -226,9 +229,9 @@ def shifted(x, y, value, mode='hard'):
         except AttributeError:
             y = np.roll(y, int(value))
         if value > 0:
-            y[:int(value)] = 0
+            y[:int(value)] = y[value]
         elif value < 0:
-            y[int(value):] = 0
+            y[int(value):] = y[value-1]
     else:
         raise ValueError("mode not recognized (valid: 'y', 'x', 'roll').")
 
@@ -394,3 +397,28 @@ def compressed(x, selectors):
     compress('ABCDEF', [1,0,1,0,1,1]) --> A C E F
     """
     return [d for d, s in zip(x, selectors) if s]
+
+
+def all_equal(array):
+    if len(array) > 50:
+        return array[:-1] == array[1:]
+    else:
+        iterator = iter(array)
+        try:
+            first = next(iterator)
+        except StopIteration:
+            return True
+        return all(first == x for x in iterator)
+
+def is_integer(value):
+    if isinstance(value, int):
+        return True
+    elif isinstance(value, float):
+        return value.is_integer()
+
+def has_duplicates(array):
+    ''' Check if given list contains any duplicates '''
+    if len(array) == len(set(array)):
+        return False
+    else:
+        return True
