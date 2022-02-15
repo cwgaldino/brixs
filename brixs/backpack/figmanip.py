@@ -471,11 +471,12 @@ def n_digits(number):
         return (len(str(int(np.around(number))) ), 0)
 
 
-def set_ticks(ax, axis='x', **kwargs):
+def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
     """Set ticks of a plot.
 
     Args:
-        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks.
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
         axis (string, optional): possible values are 'x' or 'y'.
         **kwargs:
 
@@ -499,12 +500,16 @@ def set_ticks(ax, axis='x', **kwargs):
                 Tipically, must be something between 0 and 1.
             #. n_decimal_places (int)
                 Number of decimal places to use for tick labels.
+            #. direction
+                default is 'in', possible values are 'in' and 'out'
 
     Note:
         To set minor and major ticks 'manually' use `XAxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
 
             ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
     """
+    if ax is None:
+        ax = plt.gca()
     use_sep = False
 
     if axis == 'y':
@@ -518,16 +523,48 @@ def set_ticks(ax, axis='x', **kwargs):
     if 'min_value' in kwargs:
         min_value = kwargs['min_value']
         if min_value is None:
-            min_value = ticks_showing[0]
+            min_value = ticks_showing[-1]
+            for line in ax.get_lines():
+                if axis == 'x':
+                    if min_value > min(line.get_xdata()):
+                        min_value = min(line.get_xdata())
+                if axis == 'y':
+                    if min_value > min(line.get_ydata()):
+                        min_value = min(line.get_ydata())
+            # min_value = ticks_showing[0]
     else:
-        min_value = ticks_showing[0]
+        min_value = ticks_showing[-1]
+        for line in ax.get_lines():
+            if axis == 'x':
+                if min_value > min(line.get_xdata()):
+                    min_value = min(line.get_xdata())
+            if axis == 'y':
+                if min_value > min(line.get_ydata()):
+                    min_value = min(line.get_ydata())
+        # min_value = ticks_showing[0]
 
     if 'max_value' in kwargs:
         max_value = kwargs['max_value']
         if max_value is None:
-            max_value = ticks_showing[-1]
+            max_value = ticks_showing[0]
+            for line in ax.get_lines():
+                if axis == 'x':
+                    if max_value < max(line.get_xdata()):
+                        max_value = max(line.get_xdata())
+                elif axis == 'y':
+                    if max_value < max(line.get_ydata()):
+                        max_value = max(line.get_ydata())
+            # max_value = ticks_showing[-1]
     else:
-        max_value = ticks_showing[-1]
+        max_value = ticks_showing[0]
+        for line in ax.get_lines():
+            if axis == 'x':
+                if max_value < max(line.get_xdata()):
+                    max_value = max(line.get_xdata())
+            elif axis == 'y':
+                if max_value < max(line.get_ydata()):
+                    max_value = max(line.get_ydata())
+        # max_value = ticks_showing[-1]
 
     if 'n_ticks' in kwargs:
         n_ticks = kwargs['n_ticks']
@@ -540,15 +577,15 @@ def set_ticks(ax, axis='x', **kwargs):
                     use_sep = True
             else:
                 n_ticks = len(ticks_showing)
-    else:
-        if 'ticks_sep' in kwargs:
-            ticks_sep = kwargs['ticks_sep']
-            if ticks_sep is not None:
-                use_sep = True
-            else:
-                n_ticks = len(ticks_showing)
+    elif 'ticks_sep' in kwargs:
+        ticks_sep = kwargs['ticks_sep']
+        if ticks_sep is not None:
+            use_sep = True
         else:
             n_ticks = len(ticks_showing)
+    else:
+        use_sep = True
+        ticks_sep = np.mean(np.diff(ticks_showing))
 
     if 'n_minor_ticks' in kwargs:
         n_minor_ticks = kwargs['n_minor_ticks']
@@ -570,9 +607,22 @@ def set_ticks(ax, axis='x', **kwargs):
     # ticks
     if use_sep:
         ticks   = np.arange(min_value, max_value+ticks_sep*0.1, ticks_sep)
-
     else:
         ticks   = np.linspace(min_value, max_value, n_ticks)
+    # ticks shift to get better values
+    if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
+        ticks = ticks-ticks[index(ticks, 0)]
+    elif max_value-min_value > 5:
+        ticks = ticks-(ticks[0]-int(ticks[0]))
+    # ticks edges
+    # print(ticks[-1])
+    # print(ticks[-1]+np.mean(np.diff(ticks))*0.5)
+    # print(max_value)
+    if ticks[-1]+np.mean(np.diff(ticks))*0.5 < max_value:
+        # print('ff')
+        ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
+    if ticks[0]-np.mean(np.diff(ticks))*0.8 > min_value:
+        ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
 
     # limits
     try:
@@ -605,7 +655,7 @@ def set_ticks(ax, axis='x', **kwargs):
     s = '{' + f'0:.{n_decimal_places2}f' + '}'
     if axis == 'y':
         if fontproperties is None:
-            pass
+            dummy = ax.set_yticks(ticks)
         else:
             dummy = ax.set_yticks(ticks)
             dummy = ax.set_yticklabels([s.format(i) for i in ticks], fontproperties=fontproperties, visible=True)
@@ -620,7 +670,7 @@ def set_ticks(ax, axis='x', **kwargs):
 
     elif axis == 'x':
         if fontproperties is None:
-            pass
+            dummy = ax.set_xticks(ticks)
         else:
             dummy = ax.set_xticks(ticks)
             dummy = ax.set_xticklabels([s.format(i) for i in ticks], fontproperties=fontproperties, visible=True)
@@ -632,6 +682,118 @@ def set_ticks(ax, axis='x', **kwargs):
         if pad is not None:
             ax.set_xlim((min_lim, max_lim), auto=False)
 
+    # direction
+    if 'direction' in kwargs:
+        if direction is 'in':
+            direction = 'in'
+        elif direction is 'out':
+            direction = 'out'
+        else:
+            raise ValueError('invalid value for direction.\nMust be either `in` or `out`.')
+    else:
+        direction = 'in'
+
+    if axis == 'x':
+        ax.tick_params(which='major', direction=direction, bottom=True, top=True, labeltop=False)
+        ax.tick_params(which='minor', direction=direction, bottom=True, top=True, labeltop=False)
+    elif axis == 'y':
+        ax.tick_params(which='major', direction=direction, left=True, right=True, labelright=False, labeltop=False)
+        ax.tick_params(which='minor', direction=direction, left=True, right=True)
+
+
+
+    #
+    # # test ==============================
+    # if autoscale:
+    #     if axis == 'x':
+    #         string =''
+    #         string +='def on_xlim_changed(ax):\n'
+    #             # xlim = ax.get_xlim()
+    #         string +='    min_value, max_value = ax.get_xlim()\n'
+    #         string +=f'    n_ticks = {len(ticks)}\n'
+    #
+    #             # # ticks
+    #             # ticks   = np.linspace(min_value, max_value, n_ticks)
+    #
+    #         string +='    print(n_ticks)\n'
+    #
+    #             # # ticks shift to get better values
+    #             # if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
+    #             #     ticks = ticks-ticks[index(ticks, 0)]
+    #             # elif max_value-min_value > 5:
+    #             #     ticks = ticks-(ticks[0]-int(ticks[0]))
+    #             # # ticks edges
+    #             # # print(ticks[-1])
+    #             # # print(ticks[-1]+np.mean(np.diff(ticks))*0.5)
+    #             # # print(max_value)
+    #             # if ticks[-1]+np.mean(np.diff(ticks))*0.5 < max_value:
+    #             #     # print('ff')
+    #             #     ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
+    #             # if ticks[0]-np.mean(np.diff(ticks))*0.8 > min_value:
+    #             #     ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
+    #             #
+    #             # if fontproperties is None:
+    #             #     dummy = ax.set_xticks(ticks)
+    #             # else:
+    #             #     dummy = ax.set_xticks(ticks)
+    #             #     dummy = ax.set_xticklabels([s.format(i) for i in ticks], fontproperties=fontproperties, visible=True)
+    #             #
+    #             # # minor ticks
+    #             # ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+    #
+    #             # if 'n_ticks' in kwargs:
+    #             #     n_ticks = kwargs['n_ticks']
+    #             #     if n_ticks is None:
+    #             #         if 'ticks_sep' in kwargs:
+    #             #             ticks_sep = kwargs['ticks_sep']
+    #             #             if ticks_sep is None:
+    #             #                 n_ticks = len(ticks_showing)
+    #             #             else:
+    #             #                 use_sep = True
+    #             #         else:
+    #             #             n_ticks = len(ticks_showing)
+    #             # elif 'ticks_sep' in kwargs:
+    #             #     ticks_sep = kwargs['ticks_sep']
+    #             #     if ticks_sep is not None:
+    #             #         use_sep = True
+    #             #     else:
+    #             #         n_ticks = len(ticks_showing)
+    #             # else:
+    #             #     use_sep = True
+    #             #     ticks_sep = np.mean(np.diff(ticks_showing))
+    #
+    #             # for a in ax.figure.axes:
+    #             #     # shortcuts: last avoids n**2 behavior when each axis fires event
+    #             #     if a is ax or len(a.lines) == 0 or getattr(a, 'xlim', None) == xlim:
+    #             #         continue
+    #
+    #                 # ylim = np.inf, -np.inf
+    #                 # for l in a.lines:
+    #                 #     x, y = l.get_data()
+    #                 #     # faster, but assumes that x is sorted
+    #                 #     start, stop = np.searchsorted(x, xlim)
+    #                 #     yc = y[max(start-1,0):(stop+1)]
+    #                 #     ylim = min(ylim[0], np.nanmin(yc)), max(ylim[1], np.nanmax(yc))
+    #             #
+    #             #     # TODO: update limits from Patches, Texts, Collections, ...
+    #             #
+    #             #     # x axis: emit=False avoids infinite loop
+    #             #     a.set_xlim(xlim, emit=False)
+    #             #
+    #             #     # y axis: set dataLim, make sure that autoscale in 'y' is on
+    #             #     corners = (xlim[0], ylim[0]), (xlim[1], ylim[1])
+    #             #     a.dataLim.update_from_data_xy(corners, ignore=True, updatex=False)
+    #             #     a.autoscale(enable=True, axis='y')
+    #             #     # cache xlim to mark 'a' as treated
+    #             #     a.xlim = xlim
+    #         # print(string)
+    #         exec(string)
+    #         # print(on_xlim_changed)
+    #         class Test:
+    #             def __init__(self):
+    #                 exec(string, globals())
+    #                 # on_xlim_changed()
+    #                 ax.callbacks.connect('xlim_changed', on_xlim_changed)
 
 def remove_ticks_edge(ax):
     """Remove ticks that fall over the edges of the plot.

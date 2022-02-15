@@ -229,9 +229,11 @@ def shifted(x, y, value, mode='hard'):
         except AttributeError:
             y = np.roll(y, int(value))
         if value > 0:
-            y[:int(value)] = y[value]
+            y[:int(value)] = y[int(value)]
         elif value < 0:
-            y[int(value):] = y[value-1]
+            # print(y[int(value):])
+            # print( y[int(value-1)])
+            y[int(value):] = y[int(value-1)]
     else:
         raise ValueError("mode not recognized (valid: 'y', 'x', 'roll').")
 

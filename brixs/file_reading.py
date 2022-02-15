@@ -71,7 +71,7 @@ def read_ADRESS_bad(filepath):
     y_max = f['entry']['instrument']['NDAttributes']['ArraySizeY'][0]
     return br.PhotonEvents(br.image2events(f['entry/analysis/bad'][:]), x_max=x_max, y_max=y_max)
 
-def read_ADRESS(filepath):
+def read_ADRESS1(filepath):
     """Read files from ADRESS beamline at PSI and returns only the spectrum.
 
     Example:
@@ -101,11 +101,11 @@ def get_ADRESS_full(folderpath, prefix, n, zfill=4):
         ss[i], pes[i], nd[i] = read_ADRESS_full(filepath)
     return ss, pes, nd
 
-def get_ADRESS(folderpath, prefix, n, zfill=4):
+def read_ADRESS(folderpath, prefix, n, zfill=4):
     folderpath = Path(folderpath)
     ss  = br.Spectra()
-    for filepath in [folderpath/(prefix+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]:
-        ss.append(read_ADRESS(filepath))
+    for filepath in [folderpath/(prefix+'_'+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]:
+        ss.append(read_ADRESS1(filepath))
     return ss
 
 def calculate_calib_ADRESS(folderpath, prefix, start_energy=None, stop_energy=None, start_scan=None, stop_scan=None, energies=None, scans=None, **kwargs):
