@@ -283,20 +283,30 @@ def onclick(event):
 
     if event.key == 'y' or event.button == 3:
         try:
-            if onclick_round_y is not None:
-                y = round(event.ydata, onclick_round_y)
-            else:
-                y = event.ydata
+            ax = plt.gca()
+            ticks_showing = [y for y in ax.get_yticks() if y >= ax.get_ylim()[0] and y <= ax.get_ylim()[1]]
+            delta = ticks_showing[-1] - ticks_showing[0]
+            n = n_decimal_places(round_to_1(delta))*2
+            y = round(event.ydata, n)
+            # if onclick_round_y is not None:
+            #     y = round(event.ydata, onclick_round_y)
+            # else:
+            #     y = event.ydata
             copy2clipboard(str(y))
 
         except TypeError:
             pass
     else: # left
         try:
-            if onclick_round_y is not None:
-                x = round(event.xdata, onclick_round_x)
-            else:
-                x = event.xdata
+            # if onclick_round_x is not None:
+            #     x = round(event.xdata, onclick_round_x)
+            # else:
+            ax = plt.gca()
+            ticks_showing = [x for x in ax.get_xticks() if x >= ax.get_xlim()[0] and x <= ax.get_xlim()[1]]
+            delta = ticks_showing[-1] - ticks_showing[0]
+            n = n_decimal_places(round_to_1(delta))*2
+            x = round(event.xdata, n)
+            # x = event.xdata
             copy2clipboard(str(x))
         except TypeError:
             pass
@@ -442,6 +452,9 @@ def cm2inch(*tupl):
     else:
         return tuple(i/inch for i in tupl)
 
+def round_to_1(x):
+    """return the most significant digit"""
+    return round(x, -int(np.floor(np.log10(abs(x)))))
 
 def n_decimal_places(number):
     """Return the number of decimal places of a number.

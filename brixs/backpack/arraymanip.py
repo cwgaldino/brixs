@@ -183,6 +183,48 @@ def derivative(x, y, order=1):
 
     return x, y_diff
 
+def check_monotonicity(array):
+    """return 1 (-1) if increas. (decre.) monotonic or 0 if not monotonicaly."""
+    if np.all(np.diff(array) > 0) == True:
+        return 1
+    elif np.all(np.diff(array) < 0) == True:
+        return -1
+    else:
+        return 0
+
+def fix_monotinicity(x, y, mode='increasing'):
+    """return x, y where the x array is monotonically increasing or decreasing."""
+    if mode != 'increasing' and mode != 'decreasing':
+        raise ValueError('mode should be "decreasing" or "increasing".')
+
+    if mode == 'increasing':
+        if check_monotonicity(x) == 1:
+            return x, y
+        else:
+            unqa, ID, counts = np.unique(x, return_inverse=True, return_counts=True)
+            return unqa, np.bincount(ID, y)/counts
+    if mode == 'decreasing':
+        if check_monotonicity(x) == -1:
+            return x, y
+        else:
+            unqa, ID, counts = np.unique(x, return_inverse=True, return_counts=True)
+            return np.fliplr(unqa), np.fliplr(np.bincount(ID, y)/counts)
+
+
+
+    if self.monotonicity != mode:
+        temp = sort(self.x, self.x, self.y)
+        if mode == 'increasing':
+            self._x = np.array(temp[0])
+            self._y = np.array(temp[1])
+        if mode == 'decreasing':
+            self._x = np.fliplr(temp[0])
+            self._y = np.fliplr(temp[1])
+        self._calib = -self.calib
+        if self.step is not None:
+            self._step = -self.step
+
+        self.check_monotonicity()
 
 def shifted(x, y, value, mode='hard'):
     """Shift (x, y) data.
@@ -215,6 +257,8 @@ def shifted(x, y, value, mode='hard'):
     y = np.array(y)
 
     if mode == 'y' or mode == 'interp' or mode=='soft':
+        if check_monotonicity(x) != 1:
+            raise ValueError('x array must be increasingly monotonic.')
         y = np.interp(x, x + value, y)
 
     elif mode == 'x' or mode == 'hard':

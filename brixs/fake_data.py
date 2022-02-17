@@ -244,7 +244,7 @@ class fake(metaclass=_Meta):
                 return max_value1
 
 
-    def get_spectrum(self, energy_min=None, energy_max=None, n_points=None, energies=None, noise=0):
+    def get_spectrum(self, xmin=None, xmax=None, n_points=None, step=None, x=None, noise=0):
         """returns x, y.
 
             Args:
@@ -256,18 +256,24 @@ class fake(metaclass=_Meta):
             Raises:
                 ValueError: noise is negative.
         """
-        if energies is None:
-            if energy_min is None:
-                energy_min = self._get_x_min()
-            if energy_max is None:
-                energy_max = self._get_x_max()
-            if n_points is None:
+        if x is None:
+            if xmin is None:
+                xmin = self._get_x_min()
+            if xmax is None:
+                xmax = self._get_x_max()
+            if step is None and n_points is None:
                 n_points = round((energy_max-energy_min)/self.elastic_fwhm*10)
-            else:
-                n_points = round(n_points)
-            x = np.linspace(energy_min, energy_max, n_points)
+            elif step is not None:
+                if xmax-xmin < step:
+                    raise ValueError('step is too big for data')
+                x = np.arange(xmin, xmax, step)
+            elif n_points is not None:
+                if n_points < 1:
+                    raise ValueError('n_points must be higher than 1.')
+                n_points = int(round(n_points))
+                x = np.linspace(xmin, xmax, n_points)
         else:
-            x = energies
+            x = np.array(x)
 
 
         if noise > 0:

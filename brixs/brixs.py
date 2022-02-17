@@ -765,6 +765,7 @@ class _PeaksDict(MutableMapping):
                 self.append(value)
         else:
             temp = copy.deepcopy(self.store[self._check_key(key)])
+            self.store[self._check_key(key)]['c'] -= self.store[self._check_key(key)]['fwhm']/4
             temp['c']+=temp['fwhm']/4
             self.append(temp)
             # self.store[key]['amp'] = self.store[key]['amp']/2
@@ -1249,16 +1250,19 @@ class PhotonEvents(metaclass=_Meta):
         offsets = np.zeros(self.hist.shape[0])
 
         # ref
-        y_centers, columns = extract(self.y_centers, self.hist, ranges=ranges)
+        # print(self.y_centers)
+        # print(self.hist)
+
+        y_centers, columns = extract(self.y_centers, self.hist.transpose(), ranges=ranges)
 
         # calculate
         for i, _ in enumerate(offsets):
             if mode == 'cross-correlation' or mode == 'cc':
-                cross_correlation = np.correlate(columns[i], columns[ref], mode='same')
+                cross_correlation = np.correlate(columns[:, i], columns[:, ref], mode='same')
                 offsets[i]   = y_centers[np.argmax(cross_correlation)]
 
             elif mode == 'max' or mode == 'm':
-                offsets[i]   = y_centers[np.argmax(column)]
+                offsets[i]   = y_centers[np.argmax(columns[:, i])]
             elif mode == 'elastic' or mode == 'e':
                 raise NotImplementedError('Not implementeed yet.')
             elif mode == 'elastic-cross-correlation' or mode == 'ecc':
@@ -2109,7 +2113,7 @@ class Spectrum(metaclass=_Meta):
 
         self._step = np.mean(d)
 
-    def find_peaks(self, prominence=None, width=4, moving_average_window=8, ranges=None):
+    def find_peaks(self, prominence=5, width=4, moving_average_window=8, ranges=None):
         """Find peaks using scipy.signal.find_peaks() function.
 
         Sets :py:attr:`peaks` attribute (sets it to None if no peak is found).
@@ -2132,7 +2136,12 @@ class Spectrum(metaclass=_Meta):
         Raises:
             ValueError: if points or moving_average_window have an improper value.
         """
-        self.check_monotonicity()
+
+        if self.monotonicity is None:
+            self.check_monotonicity()
+        # if self.monotonicity is 'decreasing':
+        #     raise ValueError('array must be monotonicaly increasing.\nTip: use Spectrum.fix_monotinicity().')
+
 
         # check points and moving_average_window
         if width < 1:
@@ -2170,6 +2179,8 @@ class Spectrum(metaclass=_Meta):
         # parameters
         if prominence is None:
             prominence = (max(y2)-min(y2))*0.05
+        else:
+            prominence = (max(y2)-min(y2))*prominence/100
 
         # find peaks
         try:
@@ -2477,7 +2488,7 @@ class Spectrum(metaclass=_Meta):
         c     = x2fit[np.argmax(y2fit)]
         i2 = index([1 if x < amp/2+np.mean(y2fit) else 0 for x in y2fit[np.argmax(y2fit):]], 1)
         if i2 <= 0:
-            print('trouble estimating pea width')
+            print('trouble estimating width')
             width = (x2fit[np.argmax(y2fit)+4]-c)*2
         else:
             width = (x2fit[np.argmax(y2fit)+i2]-c)*2
@@ -2502,7 +2513,7 @@ class Spectrum(metaclass=_Meta):
                 bounds_max = [np.inf, np.inf, np.inf]
 
         # model ===================================
-        print(p0)
+        # print(p0)
         f, f_str, a_str = _peak_function_creator(asymmetry=asymmetry, fixed_m=fixed_m, idx=0)
         model_str = f_str + ' + '
         args_str = a_str + ', '
@@ -2595,7 +2606,8 @@ class Spectrum(metaclass=_Meta):
                 self._x = np.fliplr(temp[0])
                 self._y = np.fliplr(temp[1])
             self._calib = -self.calib
-            self._step = -self.step
+            if self.step is not None:
+                self._step = -self.step
 
             self.check_monotonicity()
 
@@ -2788,7 +2800,12 @@ class Spectrum(metaclass=_Meta):
                 self.residue.set_shift(value, mode=mode)
         elif mode in soft:
             if self.shift_interp != value:
-                if self.shift != 0:
+                if self.monotonicity is None:
+                    self.check_monotonicity()
+                if self.monotonicity != 'increasing':
+                    raise ValueError('x array must be monotonicaly increasing.\nTip: use Spectrum.fix_monotinicity()')
+
+                if self.shift_interp != 0:
                     self._x, self._y = shifted(self.x, self.y, value=-self.shift_interp, mode='interp')
                     if self.peaks is not None:
                         self.peaks.shift += -self.shift_interp
@@ -3020,7 +3037,6 @@ class Spectrum(metaclass=_Meta):
         self.x = -self.x
         # self._y = self.y[::-1]
         # self._data = np.vstack((self._x, self._y)).transpose()
-
 
 
     def plot(self, ax=None, offset=0, shift=0, factor=1, ranges=None, **kwargs):
@@ -3562,8 +3578,7 @@ class Spectra(metaclass=_Meta):
                       'calib_calculated',
                       'offset_calculated',
                       'sum']
-    _non_removable = ['fit', 'residue', 'guess',
-                      'shift', 'calib', 'offset', 'factor']
+    _non_removable = []
 
 
     def __init__(self, *args, **kwargs):
@@ -3688,6 +3703,32 @@ class Spectra(metaclass=_Meta):
         self.set_shift(value=value, mode='x')
     @shift.deleter
     def shift(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def shift_roll(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].shift_roll
+        return temp
+    @shift_roll.setter
+    def shift_roll(self, value):
+        self.set_shift(value=value, mode='roll')
+    @shift_roll.deleter
+    def shift_roll(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def shift_interp(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].shift_interp
+        return temp
+    @shift_interp.setter
+    def shift_interp(self, value):
+        self.set_shift(value=value, mode='interp')
+    @shift_interp.deleter
+    def shift_interp(self):
         raise AttributeError('Cannot delete object.')
 
     @property
@@ -3950,22 +3991,23 @@ class Spectra(metaclass=_Meta):
         monotonicity = [None]*self.get_spectra_count()
         for i in range(self.get_spectra_count()):
             try:
-                monotonicity[i] = self.data[i].check_monotonicity()
+                self[i].check_monotonicity()
+                monotonicity[i] = self.data[i].monotonicity
             except ValueError:
                 pass
-        if np.all(monotonicity == 'increasing'):
+        if all(x == 'increasing' for x in monotonicity):
             self._monotonicity = 'increasing'
-        elif np.all(monotonicity == 'decreasing'):
+        elif all(x == 'decreasing' for x in monotonicity):
             self._monotonicity = 'decreasing'
         else:
             text = ''
             for i in range(self.get_spectra_count()):
                 text += f'spectrum: {i}, motonicity: {monotonicity[i]}\n'
-            raise ValueError(f'some spectra have different monotonicity (increasing, or decreasing) or no monotonicity at all (None): \n{text}')
+            raise ValueError(f'some spectra have different monotonicity (increasing, decreasing) or no monotonicity at all (None): \n{text}')
 
     def fix_monotinicity(self, mode='increasing'):
         for s in self.data:
-            s.fix_monotinicity(mode='increasing')
+            s.fix_monotinicity(mode=mode)
 
     def check_length(self):
         """Checks if all spectra has the same length.
@@ -4147,7 +4189,7 @@ class Spectra(metaclass=_Meta):
         for s in self:
             s.fit_peak(asymmetry=asymmetry, fixed_m=fixed_m, ranges=ranges, offset=offset)
 
-    def calculate_shifts(self, ref_spectrum=0, mode='cross-correlation', ranges=None, verbose=False, idx=0, **kwargs):
+    def calculate_shifts(self, ref_spectrum=0, mode='cross-correlation', ranges=None, verbose=False, idx=0, bypass=False, **kwargs):
         """Calculate how much shifted spectra are relatively to a reference spectrum.
 
         If :py:attr:`Spectra.step` is defined, it also sets :py:attr:`Spectra.shifts`.
@@ -4201,6 +4243,18 @@ class Spectra(metaclass=_Meta):
 
         # CROSS-CORRELATION ====================================================
         if mode in cc:
+            if bypass==False:
+                # check if background is zero
+                temp = [False]*len(self)
+                for i in range(len(self)):
+                    peaks, d = find_peaks(self[i].y, prominence=(max(self[i].y)-np.mean(self[i].y))*0.05, width=1)
+                    bkg = list(self[i].y)
+                    for j in range(len(peaks)):
+                        del bkg[peaks[j]-int(d['widths'][j]*10):peaks[j]+int(d['widths'][j])*10]
+                    temp[i] = np.mean(self[i].y)>max(self[i].y)*0.1
+                if True in temp:
+                    raise ValueError(f'some spectra have a background that seems to be too big for a reliable cross-corelation.\nSpectra with big bkg: {temp}\nTip: You can try using Spectra.floor()')
+
             # x must be the same for cc
             x, ys = self._gather_ys(ranges=ranges)
             # calculate cross-correlation
@@ -4271,6 +4325,11 @@ class Spectra(metaclass=_Meta):
             for i in range(self.get_spectra_count()):
                 if verbose:  print(f'({i}/{self.get_spectra_count()-1}) calculating...')
                 shifts[i] = -(self.data[i].fit.peaks[idx]['c'] - self.data[ref].fit.peaks[idx]['c'])
+                # if abs(self.data[ref].fit.peaks[idx]['c']) > abs(self.data[i].fit.peaks[idx]['c']):
+                #     shifts[i] = -(self.data[i].fit.peaks[idx]['c'] - self.data[ref].fit.peaks[idx]['c'])
+                # else:
+                #     shifts[i] = (self.data[i].fit.peaks[idx]['c'] - self.data[ref].fit.peaks[idx]['c'])
+
                 # if self.data[i].shift != 0:  # fix shift in case there was a previous shift set
                     # if self.data[i].shift_mode in roll:
                     #     shifts[i] -= self.data[i].shift*self.data[i].step
@@ -4295,6 +4354,10 @@ class Spectra(metaclass=_Meta):
         # finish ===============================================================
         if verbose:
             print('done!')
+
+    def align(ref_spectrum=0, mode='cross-correlation', ranges=None, verbose=False, idx=0, bypass=False, **kwargs):
+        self.calculate_shifts(ref_spectrum=0, mode='cross-correlation', ranges=None, verbose=False, idx=0, bypass=False, **kwargs)
+        self.set_shift()
 
     def calculate_factors(self, ref_spectrum=0, mode='peak', idx=0):
 
@@ -4431,6 +4494,11 @@ class Spectra(metaclass=_Meta):
 
             else:
                 for i in range(len(self)):
+                    if mode in soft:
+                        if self.monotonicity is None:
+                            self.check_monotonicity()
+                        if self.monotonicity != 'increasing':
+                            raise ValueError('Arrays must be monotonicaly increasing.\nTip: use Spectra.fix_monotinicity()')
                     self[i].set_shift(value, mode=mode)
         else:
 
@@ -4494,6 +4562,11 @@ class Spectra(metaclass=_Meta):
                     value = self.shift_calculated['values'][i] + self[i].shift
                 elif mode in soft:
                     value = self.shift_calculated['values'][i] + self[i].shift_interp
+                    # check monotonicity
+                    if self.monotonicity is None:
+                        self.check_monotonicity()
+                    if self.monotonicity != 'increasing':
+                        raise ValueError('Arrays must be monotonicaly increasing.\nTip: use Spectra.fix_monotinicity()')
 
                 self.data[i].set_shift(value=value, mode=mode)
 
@@ -4910,7 +4983,11 @@ class Spectra(metaclass=_Meta):
         Returns:
             matplotlib.axes
         """
+        if self.x is None:
+            self.check_same_x()
+
         rearrange_ys = False
+
         if values is None:
             if start is None or stop is None:
                 values = np.arange(0, self.get_spectra_count())
@@ -4925,8 +5002,7 @@ class Spectra(metaclass=_Meta):
             else:
                 values, ID, counts = np.unique(values, return_inverse=True, return_counts=True)
                 rearrange_ys = True
-        if self.x is None:
-            self.check_same_x()
+
 
         x, ys = self._gather_ys(ranges=ranges)
 
@@ -4947,7 +5023,10 @@ class Spectra(metaclass=_Meta):
                 else:
                     ys2[:, id] = ys[:, i]
             n_del = sum(counts)-len(counts)
-            ys = ys2[:, 0:-n_del]
+            ys = ys2[:, 0:len(ys2)-n_del]
+            # print(n_del)
+            # print(np.shape(ys))
+            # print(len(counts))
             ys /= counts
 
 

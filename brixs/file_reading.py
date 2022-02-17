@@ -93,7 +93,7 @@ def read_ADRESS1(filepath):
 
 def get_ADRESS_full(folderpath, prefix, n, zfill=4):
     folderpath = Path(folderpath)
-    filepaths = [folderpath/(prefix+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]
+    filepaths = [folderpath/(prefix+'_'+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]
     ss  = br.Spectra(3)
     pes = [0]*3
     nd = [0]*3
