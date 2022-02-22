@@ -697,9 +697,9 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
 
     # direction
     if 'direction' in kwargs:
-        if direction is 'in':
+        if direction == 'in':
             direction = 'in'
-        elif direction is 'out':
+        elif direction == 'out':
             direction = 'out'
         else:
             raise ValueError('invalid value for direction.\nMust be either `in` or `out`.')

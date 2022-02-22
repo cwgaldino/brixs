@@ -2,13 +2,9 @@
 # -*- coding: utf-8 -*-
 """Module for analysis of RIXS spectra.
 
-This module is based on three class, one for dealing with photon events lists,
-one for dealing with single spectra, a another one to deal with many spectra at
-a time.
-
-
 .. autosummary::
 
+    Image
     PhotonEvents
     Spectrum
     Spectra
@@ -26,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # specific libraries
-from collections.abc import Iterable
+from collections.abc import Iterable, MutableMapping
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
@@ -35,9 +31,6 @@ from .backpack.filemanip import save_data, save_obj, load_obj, load_data, load_C
 from .backpack.arraymanip import index, moving_average, extract, shifted, sort, is_integer, all_equal
 from .backpack.figmanip import n_digits
 from .backpack.model_functions import gaussian_fwhm, voigt_fwhm
-
-# functionality libraries
-from collections.abc import MutableMapping
 
 # common definitions
 cc = ['cross-correlation', 'cc']
@@ -832,6 +825,9 @@ def _peak(x, amp, c, fwhm, m=0, fwhm1=None, fwhm2=None, m1=None, m2=None,):
         return lambda x: function2fit(x, amp, c, fwhm, m)
 
 
+class Image(metaclass=_Meta):
+    def __init__(self):
+        raise NotImplementedError('Image support is not implemented yet.')
 
 
 class PhotonEvents(metaclass=_Meta):
@@ -4111,7 +4107,7 @@ class Spectra(metaclass=_Meta):
             try:
                 if max(abs(s.x - self.data[idx+1].x))*100/self.step > max_error:
                     self._x = None
-                    raise ValueError(f"x axis of spectrum {idx} and {idx+1} seem to be different.")
+                    raise ValueError(f"x axis of spectrum {idx} and {idx+1} seem to be different.\nTip: use brixs.Spectra.interp() to interpolate the data and make the x axis for different spectra match.")
             except IndexError:
                 pass
         self._x = self.data[0].x
@@ -4423,14 +4419,18 @@ class Spectra(metaclass=_Meta):
                 self.fit_peak(**kwargs)
                 idx = 0
             centers = [0]*len(self)
+            fwhms = [0]*len(self)
             for i in range(len(self)):
                 centers[i] = self[i].fit.peaks[idx]['c']
+                fwhms[i] = self[i].fit.peaks[idx]['fwhm']
         elif mode in cc:
             self.calculate_shifts(mode='cc', **kwargs)
             centers = (self.shift_calculated['values'] + self.shift_calculated['ref_value'])*self.step
+            fwhms = [None]*len(self)
         elif mode == 'max':
             self.calculate_shifts(mode='max', **kwargs)
             centers = self.shift_calculated['values'] + self.shift_calculated['ref_value']
+            fwhms = [None]*len(self)
         else:
             raise ValueError('mode not valid (cross-correlation, max, peak).')
 
@@ -4442,7 +4442,7 @@ class Spectra(metaclass=_Meta):
         self._calib_calculated['value'] = 1/popt[0]
         self._calib_calculated['func'] = np.poly1d(popt)
         self._calib_calculated['ranges'] = ranges
-
+        self._calib_calculated['fwhms'] = fwhms*1/popt[0]
 
         return 1/popt[0]
 
