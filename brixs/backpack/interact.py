@@ -48,6 +48,7 @@ def make_sound(duration=1, freq=440):
 
     On linux (tested on ubuntu) it uses sox (``sudo apt install sox``).
     On windows it uses the python package winsound (``pip install winsound``).
+    On max it will raise a error (not implemented yet).
 
     Args:
         duration (int, optional): duration in seconds.
@@ -58,11 +59,11 @@ def make_sound(duration=1, freq=440):
     freq = 440  # Hz
 
     if is_windows:
-        try: winsound.Beep(freq, duration)
-        except: warnings.warn('Cannot generate sound.')
+        winsound.Beep(freq, duration)
     elif is_linux:
-        try: os.system('play -nq -t alsa synth {} sine {}'.format(duration/1000, freq))
-        except: warnings.warn('Cannot generate sound.')
+        os.system('play -nq -t alsa synth {} sine {}'.format(duration/1000, freq))
+    elif is_mac:
+        raise NotImplementedError('make_sound() not supported on mac yet.')
 
 def say(message):
     """Text-to-speech function.

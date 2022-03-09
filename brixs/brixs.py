@@ -825,6 +825,8 @@ def _peak(x, amp, c, fwhm, m=0, fwhm1=None, fwhm2=None, m1=None, m2=None,):
         return lambda x: function2fit(x, amp, c, fwhm, m)
 
 
+
+
 class Image(metaclass=_Meta):
     def __init__(self):
         raise NotImplementedError('Image support is not implemented yet.')
