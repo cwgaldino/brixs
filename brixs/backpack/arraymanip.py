@@ -6,6 +6,7 @@ import numpy as np
 import copy
 from scipy.optimize import curve_fit
 from .model_functions import voigt_fwhm
+from functools import reduce
 
 
 def index(x, value):
@@ -20,7 +21,6 @@ def index(x, value):
     """
     return np.argmin(np.abs(np.array(x)-value))
 
-
 def sort(ref, *args):
     """Returns sorted arrays based on a reference array.
 
@@ -30,13 +30,13 @@ def sort(ref, *args):
 
     Returns:
         sorted arrays."""
+
     s = []
     for x in args:
         s.append( [x1 for (y,x1) in sorted(zip(ref,x), key=lambda pair: pair[0])])
     if len(args) == 1:
         s = s[0]
     return s
-
 
 def choose(x, ranges):
     """Return a mask of x values inside range pairs.
@@ -58,7 +58,6 @@ def choose(x, ranges):
         x_init, x_final = ranges
         choose_range = np.logical_and(x>=x_init, x<=x_final)
     return choose_range
-
 
 def extract(x, y, ranges):
     """Returns specifc data ranges from x and y.
@@ -120,7 +119,6 @@ def extract(x, y, ranges):
         # print('here')
         return temp[:, -1], temp[:, 0]
 
-
 def moving_average(x, n):
     """Returns the moving average of an array.
 
@@ -153,7 +151,6 @@ def moving_average(x, n):
     window = np.ones(int(n))/float(n)
 
     return np.convolve(x, window, 'valid')
-
 
 def derivative(x, y, order=1):
     """Returns the derivative of y-coordinates as a function of x-coodinates.
@@ -283,7 +280,6 @@ def shifted(x, y, value, mode='hard'):
 
     return x, y
 
-
 def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False):
     r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
 
@@ -309,8 +305,8 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     Returns:
         1) 2 column (x, y) array with "Smoothed" fitted peak (array lenght 100 bigger than input x, y).
         2) An array with the optimized parameters.
-            if assymetry=True, fixed_m=False: amp, c, fwhm, m, offset
-            if assymetry=True, fixed_m=True: amp, c, fwhm, offset
+            if assymetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
+            if assymetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
             if assymetry=False, fixed_m=False: amp, c, fwhm, m, offset
             if assymetry=False, fixed_m=True: amp, c, fwhm, offset
 
@@ -363,17 +359,17 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         if asymmetry:
             p0 = [guess_A, guess_c, guess_w, 0.5, guess_w, 0.5, guess_offset]
             def function2fit(x, A, c, w1, m1, w2, m2, offset):
-                f = np.heaviside(x-c, 0)*voigt_fwhm(x, A, c, w1, m1) + offset +\
-                    np.heaviside(c-x, 0)*voigt_fwhm(x, A, c, w2, m2)
+                f = np.heaviside(c-x, 0)*voigt_fwhm(x, A, c, w1, m1) + offset +\
+                    np.heaviside(x-c, 0)*voigt_fwhm(x, A, c, w2, m2)
                 return f
-            bounds=[[0,      start,   0,      0, 0,      0, -np.inf],
-                    [np.inf, stop,  np.inf, 1, np.inf, 1, np.inf]]
+            bounds=[[-np.inf, start,   0,    0,   0,    0, -np.inf],
+                    [ np.inf, stop,  np.inf, 1, np.inf, 1,  np.inf]]
         else:
             p0 = [guess_A, guess_c, guess_w, 0.5, guess_offset]
             def function2fit(x, A, c, w, m, offset):
                 return voigt_fwhm(x, A, c, w, m) + offset
-            bounds=[[0,      start,   0,      0, -np.inf],
-                    [np.inf, stop,  np.inf, 1, np.inf]]
+            bounds=[[-np.inf, start,   0,    0, -np.inf],
+                    [ np.inf, stop,  np.inf, 1,  np.inf]]
 
     else:
         if fixed_m > 1:
@@ -383,17 +379,17 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         if asymmetry:
             p0 = [guess_A, guess_c, guess_w/2, guess_w/2, guess_offset]
             def function2fit(x, A, c, w1, w2, offset):
-                f = np.heaviside(x-c, 0)*voigt_fwhm(x, A, c, w1, fixed_m) + offset +\
-                    np.heaviside(c-x, 0)*voigt_fwhm(x, A, c, w2, fixed_m)
+                f = np.heaviside(c-x, 0)*voigt_fwhm(x, A, c, w1, fixed_m) + offset +\
+                    np.heaviside(x-c, 0)*voigt_fwhm(x, A, c, w2, fixed_m)
                 return f
-            bounds=[[0,      start,   0,      0,  -np.inf],
-                    [np.inf, stop,  np.inf, 1,   np.inf]]
+            bounds=[[-np.inf, start,   0,    0, -np.inf],
+                    [ np.inf, stop,  np.inf, np.inf,  np.inf]]
         else:
             p0 = [guess_A, guess_c, guess_w, guess_offset]
             def function2fit(x, A, c, w, offset):
                 return voigt_fwhm(x, A, c, w, fixed_m) + offset
-            bounds=[[0,      start,   0,      -np.inf],
-                    [np.inf, stop,  np.inf, np.inf]]
+            bounds=[[-np.inf, start,   0,   -np.inf],
+                    [ np.inf, stop,  np.inf, np.inf]]
 
     # Fit data
     popt, pcov = curve_fit(function2fit, x, y, p0,  # sigma = sigma,
@@ -405,47 +401,56 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     arr100[:, 0] = np.linspace(x[0], x[-1], 100*len(x))
     arr100[:, 1] = function2fit(arr100[:, 0],  *popt)
 
-    if fixed_m == False and type(fixed_m)==bool:
-        if asymmetry:
-            popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1], popt[-2])
-        else:
-            popt_2 = (popt[0], popt[1], popt[2], popt[-1], popt[-2])
-    else:
+    # if fixed_m == False and type(fixed_m)==bool:
+    #     if asymmetry:
+    #         popt_2 = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5])
+    #     else:
+    #         popt_2 = (popt[0], popt[1], popt[2], popt[3], popt[4])
+    # else:
+    #
+    #     if asymmetry:
+    #         popt_2 = (popt[0], popt[1], popt[2], popt[4], popt[-1])
+    #     else:
+    #         popt_2 = (popt[0], popt[1], popt[2], popt[-1])
 
-        if asymmetry:
-            popt_2 = (popt[0], popt[1], popt[2]/2+popt[4]/2, popt[-1])
-        else:
-            popt_2 = (popt[0], popt[1], popt[2], popt[-1])
+    return arr100, popt, err, lambda x: function2fit(x, *popt)
 
-    return arr100, popt_2, err, lambda x: function2fit(x, *popt)
-
-
-def flattened(x):
-    """Returns the flattened list or tuple."""
+def flatten(x):
+    """Return a copy of the array collapsed into one dimension."""
     if len(x) == 0:
         return x
-    if isinstance(x[0], list) or isinstance(x[0], tuple):
-        return flatten(x[0]) + flatten(x[1:])
-    return x[:1] + flatten(x[1:])
 
+    if type(x) == list or type(x) == tuple:
+        if isinstance(x[0], list) or isinstance(x[0], tuple):
+            return flatten(x[0]) + flatten(x[1:])
+        return x[:1] + flatten(x[1:])
+    elif type(x) == np.ndarray:
+        return x.flatten()
 
-def transposed(arr):
-    """Returns transposed lists/arrays."""
+def transpose(array):
+    """Returns transposed lists/arrays.
+
+    Differently from numpy.transpose(), this funcion also transposes 1D arrays/lists.
+    """
     try:
-        row_count, col_count = np.shape(l)
-        return [list(x) for x in list(zip(*l))]
+        row_count, col_count = np.shape(array)
+        return np.transpose(array)
     except ValueError:
-        return [[x] for x in l]
-
+        return [[x] for x in array]
 
 def compressed(x, selectors):
     """
-    compress('ABCDEF', [1,0,1,0,1,1]) --> A C E F
+    compress('ABCDEF', [1, 0, 1, 0, 1, 1]) --> A C E F
     """
     return [d for d, s in zip(x, selectors) if s]
 
+def factors(n):
+    """Return a tuple with all the factors of a number."""
+    return set(reduce(list.__add__,
+                ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))
 
 def all_equal(array):
+    """Returns True if all elements of an array are equal."""
     if len(array) > 50:
         return array[:-1] == array[1:]
     else:
@@ -456,15 +461,23 @@ def all_equal(array):
             return True
         return all(first == x for x in iterator)
 
-def is_integer(value):
-    if isinstance(value, int):
+def is_integer(n):
+    """Returns True if number is integer."""
+    if isinstance(n, int):
         return True
-    elif isinstance(value, float):
-        return value.is_integer()
+    elif isinstance(n, float):
+        return n.is_integer()
 
 def has_duplicates(array):
-    ''' Check if given list contains any duplicates '''
+    """Returns True if given array contains any duplicates."""
     if len(array) == len(set(array)):
         return False
     else:
         return True
+
+def get_attributes(object):
+    """returns a dictionary with attributes (name and value) of an object."""
+    return {name: attr for name, attr in object.__dict__.items()
+            if not name.startswith("__")
+            and not callable(attr)
+            and not type(attr) is staticmethod}

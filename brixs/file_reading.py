@@ -53,7 +53,7 @@ def read_ADRESS(*args, **kwargs):
     Returns:
         Spectrum
 
-    Last updated: 21/02/2022 by Carlos Galdino
+    Last updated: 21/03/2022 by Carlos Galdino
     """
     filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
 
@@ -110,7 +110,7 @@ def read_pe_ADRESS(*args, **kwargs):
 
     Last updated: 21/02/2022 by Carlos Galdino
     """
-    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(args, kwargs)
+    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
 
     if filepath is not None:
         return _read_pe_ADRESS1(filepath)
@@ -137,7 +137,8 @@ def _sort_args_ADRESS(*args, **kwargs):
     prefix     = None
     n          = None
     zfill      = 4
-
+    print(args)
+    print(kwargs)
     if len(args) > 0 and len(kwargs) > 0:
         raise AttributeError(f'cannot mix positional arguments with keyword arguents.\nKeyword args: {kwargs}\nPosition args: {args}')
 

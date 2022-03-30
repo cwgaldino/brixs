@@ -85,7 +85,7 @@ def set_window_position(*args):
         return
 
     figManager = get_current_fig_manager()
-    width, height = getWindowSize()
+    width, height = get_window_size()
 
     try:  # tested on tKinter backend
         figureGeometry = str(width) + 'x' + str(height) + '+' + str(x) + '+' + str(y)

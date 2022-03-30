@@ -54,14 +54,17 @@ def make_sound(duration=1, freq=440):
         duration (int, optional): duration in seconds.
         freq (int, optional): frequence of sound in Hertz
     """
-
-    duration = duration*1000  # milliseconds
-    freq = 440  # Hz
-
     if is_windows:
+        duration = duration*1000  # milliseconds
+        if type(duration) == int:
+            pass
+        else:
+            duration = int(duration)
+        if duration <= 0:
+            raise ValueError(f'Duration cannot be negative nor zero.\nduration={duration}')
         winsound.Beep(freq, duration)
     elif is_linux:
-        os.system('play -nq -t alsa synth {} sine {}'.format(duration/1000, freq))
+        os.system('play -nq -t alsa synth {} sine {}'.format(duration, freq))
     elif is_mac:
         raise NotImplementedError('make_sound() not supported on mac yet.')
 
@@ -170,7 +173,7 @@ def svg2clipboard(filepath):
 def send_email(recipient, subject, body, sender, password=None):
     """Send email.
 
-    If using a gmail sender email turn ``Allow less secure apps to ON``.
+    If using a gmail sender email turn ``Allow less secure apps`` to ON.
     Be aware that this makes it easier for others to gain access to your account.
 
     Warning:
