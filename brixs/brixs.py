@@ -8,18 +8,19 @@
     PhotonEvents
     Spectrum
     Spectra
-
-IDEAS:
-- when you crop the data in Spectra, you modify the spectrum. There's no way to
-go back (like we do with the shift and offset). Maybe figure a away to go back.
-
-
-Todo:
-    * crop() method
-    * flip() or transpose() method
-    * noise_filter() method (remove cosmic rays)
-    * save image as tiff
 """
+
+# IDEAS:
+# - when you crop the data in Spectra, you modify the spectrum. There's no way to
+# go back (like we do with the shift and offset). Maybe figure a away to go back.
+#
+#
+# Todo:
+#     * crop() method
+#     * flip() or transpose() method
+#     * noise_filter() method (remove cosmic rays)
+#     * save image as tiff
+# """
 
 # standard libraries
 import copy
