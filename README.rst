@@ -54,7 +54,7 @@ Package is based on four objects
   ss = br.Spectra()
 
 
-Refer to the folder examples on GitHub for code examples.
+Refer to the examples folder on GitHub for code examples.
 
 
 
