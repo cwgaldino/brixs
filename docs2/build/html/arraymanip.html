@@ -221,6 +221,18 @@ a multicolumn array then the returned <cite>y</cite> is also multicolumn</p>
 </dd></dl>
 
 <dl class="py function">
+<dt id="brixs.backpack.arraymanip.check_monotonicity">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">check_monotonicity</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.check_monotonicity" title="Permalink to this definition"></a></dt>
+<dd><p>return 1 (-1) if increas. (decre.) monotonic or 0 if not monotonicaly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.arraymanip.fix_monotinicity">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">fix_monotinicity</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">y</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'increasing'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.fix_monotinicity" title="Permalink to this definition"></a></dt>
+<dd><p>return x, y where the x array is monotonically increasing or decreasing.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt id="brixs.backpack.arraymanip.shifted">
 <code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">shifted</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">y</span></em>, <em class="sig-param"><span class="n">value</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'hard'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.shifted" title="Permalink to this definition"></a></dt>
 <dd><p>Shift (x, y) data.</p>
@@ -295,8 +307,8 @@ returned will be the sum of the <code class="docutils literal notranslate"><span
 <dd class="field-even"><p><ol class="arabic simple">
 <li><p>2 column (x, y) array with “Smoothed” fitted peak (array lenght 100 bigger than input x, y).</p></li>
 <li><dl class="simple">
-<dt>An array with the optimized parameters.</dt><dd><p>if assymetry=True, fixed_m=False: amp, c, fwhm, m, offset
-if assymetry=True, fixed_m=True: amp, c, fwhm, offset
+<dt>An array with the optimized parameters.</dt><dd><p>if assymetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
+if assymetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
 if assymetry=False, fixed_m=False: amp, c, fwhm, m, offset
 if assymetry=False, fixed_m=True: amp, c, fwhm, offset</p>
 </dd>
@@ -339,21 +351,52 @@ if assymetry=False, fixed_m=True: amp, c, fwhm, offset</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="brixs.backpack.arraymanip.flattened">
-<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">flattened</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.flattened" title="Permalink to this definition"></a></dt>
-<dd><p>Returns the flattened list or tuple.</p>
+<dt id="brixs.backpack.arraymanip.flatten">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">flatten</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.flatten" title="Permalink to this definition"></a></dt>
+<dd><p>Return a copy of the array collapsed into one dimension.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="brixs.backpack.arraymanip.transposed">
-<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">transposed</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">arr</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.transposed" title="Permalink to this definition"></a></dt>
+<dt id="brixs.backpack.arraymanip.transpose">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">transpose</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.transpose" title="Permalink to this definition"></a></dt>
 <dd><p>Returns transposed lists/arrays.</p>
+<p>Differently from numpy.transpose(), this funcion also transposes 1D arrays/lists.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt id="brixs.backpack.arraymanip.compressed">
 <code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">compressed</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">selectors</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.compressed" title="Permalink to this definition"></a></dt>
-<dd><p>compress(‘ABCDEF’, [1,0,1,0,1,1]) –&gt; A C E F</p>
+<dd><p>compress(‘ABCDEF’, [1, 0, 1, 0, 1, 1]) –&gt; A C E F</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.arraymanip.factors">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">factors</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.factors" title="Permalink to this definition"></a></dt>
+<dd><p>Return a tuple with all the factors of a number.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.arraymanip.all_equal">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">all_equal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.all_equal" title="Permalink to this definition"></a></dt>
+<dd><p>Returns True if all elements of an array are equal.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.arraymanip.is_integer">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">is_integer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.is_integer" title="Permalink to this definition"></a></dt>
+<dd><p>Returns True if number is integer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.arraymanip.has_duplicates">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">has_duplicates</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">array</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.has_duplicates" title="Permalink to this definition"></a></dt>
+<dd><p>Returns True if given array contains any duplicates.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.arraymanip.get_attributes">
+<code class="sig-prename descclassname">brixs.backpack.arraymanip.</code><code class="sig-name descname">get_attributes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">object</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.get_attributes" title="Permalink to this definition"></a></dt>
+<dd><p>returns a dictionary with attributes (name and value) of an object.</p>
 </dd></dl>
 
 </section>

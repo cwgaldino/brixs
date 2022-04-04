@@ -290,6 +290,12 @@ to save all opened figures.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt id="brixs.backpack.figmanip.round_to_1">
+<code class="sig-prename descclassname">brixs.backpack.figmanip.</code><code class="sig-name descname">round_to_1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.figmanip.round_to_1" title="Permalink to this definition"></a></dt>
+<dd><p>return the most significant digit</p>
+</dd></dl>
+
+<dl class="py function">
 <dt id="brixs.backpack.figmanip.n_decimal_places">
 <code class="sig-prename descclassname">brixs.backpack.figmanip.</code><code class="sig-name descname">n_decimal_places</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">number</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.figmanip.n_decimal_places" title="Permalink to this definition"></a></dt>
 <dd><p>Return the number of decimal places of a number.</p>
@@ -319,12 +325,13 @@ to save all opened figures.</p></li>
 
 <dl class="py function">
 <dt id="brixs.backpack.figmanip.set_ticks">
-<code class="sig-prename descclassname">brixs.backpack.figmanip.</code><code class="sig-name descname">set_ticks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span></em>, <em class="sig-param"><span class="n">axis</span><span class="o">=</span><span class="default_value">'x'</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.figmanip.set_ticks" title="Permalink to this definition"></a></dt>
+<code class="sig-prename descclassname">brixs.backpack.figmanip.</code><code class="sig-name descname">set_ticks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axis</span><span class="o">=</span><span class="default_value">'x'</span></em>, <em class="sig-param"><span class="n">autoscale</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.figmanip.set_ticks" title="Permalink to this definition"></a></dt>
 <dd><p>Set ticks of a plot.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – The axes of the subplot to set ticks.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – The axes of the subplot to set ticks. If None,
+last ax will be used.</p></li>
 <li><p><strong>axis</strong> (<em>string</em><em>, </em><em>optional</em>) – possible values are ‘x’ or ‘y’.</p></li>
 <li><p><strong>**kwargs</strong> – <ol class="arabic simple">
 <li><dl class="simple">
@@ -368,6 +375,11 @@ Tipically, must be something between 0 and 1.</p>
 </li>
 <li><dl class="simple">
 <dt>n_decimal_places (int)</dt><dd><p>Number of decimal places to use for tick labels.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>direction</dt><dd><p>default is ‘in’, possible values are ‘in’ and ‘out’</p>
 </dd>
 </dl>
 </li>

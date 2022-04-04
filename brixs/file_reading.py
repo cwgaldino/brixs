@@ -21,6 +21,124 @@ def image2events(data, cutoff=0):
     return np.array([event for event in np.vstack((X.ravel(), Y.ravel(), data.ravel())).transpose() if not event[2]<=cutoff])
 
 # %% ADRESS beamline - PSI - Switzerland =======================================
+def _sort_args_ADRESS(*args, **kwargs):
+    filepath   = None
+    folderpath = None
+    prefix     = None
+    n          = None
+    zfill      = 4
+    # print(args)
+    # print(kwargs)
+    if len(args) > 0 and len(kwargs) > 0:
+        raise AttributeError(f'cannot mix positional arguments with keyword arguents.\nKeyword args: {kwargs}\nPosition args: {args}')
+
+    # kwargs
+    for key in kwargs.keys():
+        if key not in ['filepath', 'folderpath', 'prefix', 'n', 'zfill']:
+            raise AttributeError(f'Cannot identify argument {key}')
+    if 'filepath' in kwargs:
+        filepath = Path(kwargs['filepath'])
+    if 'folderpath' in kwargs:
+        folderpath = Path(kwargs['folderpath'])
+    if 'prefix' in kwargs:
+        prefix = kwargs['prefix']
+    if 'n' in kwargs:
+        n = kwargs['n']
+    if 'zfill' in kwargs:
+        zfill = kwargs['zfill']
+
+    # args
+    if len(args) > 0:
+        if len(args) == 1:
+            filepath = Path(args[0])
+        elif len(args) == 3:
+            folderpath = Path(args[0])
+            prefix     = args[1]
+            n          = args[2]
+        elif len(args) == 4:
+            folderpath = Path(args[0])
+            prefix     = args[1]
+            n          = args[2]
+            zfill      = args[3]
+        else:
+            raise AttributeError(f'Cannot read positional attributes.\nAttributes = {args}')
+
+    if prefix is not None:
+        if prefix[-1] != '_':
+            prefix += '_'
+
+    return filepath, folderpath, prefix, n, zfill
+
+def read_ADRESS_pe(*args, **kwargs):
+    """Return photon event list from ADRESS beamline at PSI.
+
+    Example:
+
+        >>> import brixs as br
+        >>>
+        >>> # single file
+        >>> pe = br.read_pe_ADRESS(filepath)
+        >>>
+        >>> # data for each ccd
+        >>> pes = br.read_pe_ADRESS(folderpath, prefix, n)
+        >>>
+        >>> # One can also use keyword arguments
+        >>> pe  = br.read_pe_ADRESS(filepath=filepath)
+        >>> pes = br.read_pe_ADRESS(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
+        >>>
+        >>> # experiment parameters can be accesed by:
+        >>> print(pe.nd)
+
+    Args:
+        filepath (str or Path object): filepath to h5 file (for loading a single file).
+        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
+        prefix (str): prefix (with or without 'underscore'). Example: for
+            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
+        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
+            The number of extra zeros (0001) is defined by the argument `zfill`.
+        zfill (number, optional): number of digits to fill scan number (Default is 4).
+
+    Returns:
+        PhotonEvents object
+
+    Last updated: 21/02/2022 by Carlos Galdino
+    """
+    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
+
+    if filepath is not None:
+        return _read_ADRESS1_pe(filepath)
+    if folderpath is not None:
+        if folderpath.is_dir() == False:
+            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
+        if prefix is None:
+            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
+        if n is None:
+            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
+        filepaths = [folderpath/(prefix+'_'+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
+        pes = [0]*3
+        nd = [0]*3
+        for i, filepath in enumerate(filepaths):
+            pes[i] = _read_ADRESS1_pe(filepath)
+            pes[i].scan = n
+            pes[i].ccd = i
+        pes.scan = n
+        return pes
+
+def _read_ADRESS1_pe(filepath):
+    f = h5py.File(Path(filepath), 'r')
+
+    nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
+    x_max = nd['ArraySizeX'][0]
+    y_max = nd['ArraySizeY'][0]
+
+    pe   = br.PhotonEvents(data=f['entry']['analysis']['events'][:], shape=(y_max, x_max))
+    pe.nd = nd
+
+    return pe
+
+
+
+
 def read_ADRESS(*args, **kwargs):
     """Read files from ADRESS beamline at PSI.
 
@@ -76,108 +194,6 @@ def read_ADRESS(*args, **kwargs):
         ss.scan = n
         return ss
 
-def read_pe_ADRESS(*args, **kwargs):
-    """Return photon event list from ADRESS beamline at PSI.
-
-    Example:
-
-        >>> import brixs as br
-        >>>
-        >>> # single file
-        >>> pe = br.read_pe_ADRESS(filepath)
-        >>>
-        >>> # data for each ccd
-        >>> pes = br.read_pe_ADRESS(folderpath, prefix, n)
-        >>>
-        >>> # One can also use keyword arguments
-        >>> pe  = br.read_pe_ADRESS(filepath=filepath)
-        >>> pes = br.read_pe_ADRESS(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
-        >>>
-        >>> # experiment parameters can be accesed by:
-        >>> print(pe.nd)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file (for loading a single file).
-        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
-        prefix (str): prefix (with or without 'underscore'). Example: for
-            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
-        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
-            The number of extra zeros (0001) is defined by the argument `zfill`.
-        zfill (number, optional): number of digits to fill scan number (Default is 4).
-
-    Returns:
-        PhotonEvents object
-
-    Last updated: 21/02/2022 by Carlos Galdino
-    """
-    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
-
-    if filepath is not None:
-        return _read_pe_ADRESS1(filepath)
-    if folderpath is not None:
-        if folderpath.is_dir() == False:
-            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
-        if prefix is None:
-            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
-        if n is None:
-            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
-        filepaths = [folderpath/(prefix+'_'+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
-        pes = [0]*3
-        nd = [0]*3
-        for i, filepath in enumerate(filepaths):
-            pes[i] = _read_pe_ADRESS1(filepath)
-            pes[i].scan = n
-            pes[i].ccd = i
-        pes.scan = n
-        return pes
-
-def _sort_args_ADRESS(*args, **kwargs):
-    filepath   = None
-    folderpath = None
-    prefix     = None
-    n          = None
-    zfill      = 4
-    print(args)
-    print(kwargs)
-    if len(args) > 0 and len(kwargs) > 0:
-        raise AttributeError(f'cannot mix positional arguments with keyword arguents.\nKeyword args: {kwargs}\nPosition args: {args}')
-
-    # kwargs
-    for key in kwargs.keys():
-        if key not in ['filepath', 'folderpath', 'prefix', 'n', 'zfill']:
-            raise AttributeError(f'Cannot identify argument {key}')
-    if 'filepath' in kwargs:
-        filepath = Path(kwargs['filepath'])
-    if 'folderpath' in kwargs:
-        folderpath = Path(kwargs['folderpath'])
-    if 'prefix' in kwargs:
-        prefix = kwargs['prefix']
-    if 'n' in kwargs:
-        n = kwargs['n']
-    if 'zfill' in kwargs:
-        zfill = kwargs['zfill']
-
-    # args
-    if len(args) > 0:
-        if len(args) == 1:
-            filepath = Path(args[0])
-        elif len(args) == 3:
-            folderpath = Path(args[0])
-            prefix     = args[1]
-            n          = args[2]
-        elif len(args) == 4:
-            folderpath = Path(args[0])
-            prefix     = args[1]
-            n          = args[2]
-            zfill      = args[3]
-        else:
-            raise AttributeError(f'Cannot read positional attributes.\nAttributes = {args}')
-
-    if prefix is not None:
-        if prefix[-1] != '_':
-            prefix += '_'
-
-    return filepath, folderpath, prefix, n, zfill
 
 def _read_ADRESS1(filepath):
     f = h5py.File(filepath, 'r')
@@ -186,18 +202,6 @@ def _read_ADRESS1(filepath):
     s    = br.Spectrum(f['entry']['analysis']['spectrum'][:])
     s.nd = nd
     return s
-
-def _read_pe_ADRESS1(filepath):
-    f = h5py.File(Path(filepath), 'r')
-
-    nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
-    x_max = nd['ArraySizeX'][0]
-    y_max = nd['ArraySizeY'][0]
-
-    pe   = br.PhotonEvents(f['entry']['analysis']['events'][:], x_max=x_max, y_max=y_max)
-    pe.nd = nd
-
-    return pe
 
 def read_bad_ADRESS1(filepath):
     """Return image with bad events."""

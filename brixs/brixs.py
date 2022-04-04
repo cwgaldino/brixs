@@ -13,6 +13,12 @@ IDEAS:
 - when you crop the data in Spectra, you modify the spectrum. There's no way to
 go back (like we do with the shift and offset). Maybe figure a away to go back.
 
+
+Todo:
+    * crop() method
+    * flip() or transpose() method
+    * noise_filter() method (remove cosmic rays)
+    * save image as tiff
 """
 
 # standard libraries
@@ -826,7 +832,7 @@ def _peak(x, amp, c, fwhm, m=0, fwhm1=None, fwhm2=None, m1=None, m2=None,):
         return lambda x: function2fit(x, amp, c, fwhm, m)
 
 def _axis_interpreter(axis):
-    """Allows for more flexibility when signaling axis direction.
+    """Allows for flexibility when signaling axis direction.
 
     It follows numpy's convention. ``0`` is the vertical axis, while ``1`` is the horizontal one.
 
@@ -849,55 +855,233 @@ def _axis_interpreter(axis):
     else:
         raise ValueError("axis must be 0 ('y') or 1 ('x')")
 
+def _xaxis_interpreter(xaxis):
+    if xaxis.startswith('c'):
+        return 'centers'
+    elif xaxis.startswith('p') or xaxis.startswith('b'):
+        return 'bins'
+
+def _bins_interpreter(*args, **kwargs):
+    """Allows for flexible binning parameters.
+
+    Keyword arguments (kwargs) cannot be mixed with positional arguments. If
+    positional arguments are used, they are assumend to be the number of bins.
+    Size of bins cannot be assigned via positional arguments.
+
+    Args:
+        shape (tuple): shape of data. MUST BE PASSED AS KEYWORD argument.
+        factor_check (bool, optional): if True, it will assert that nbins or
+            bins_size are a factor of shape (divisible). MUST BE PASSED AS
+            KEYWORD argument.
+
+    kwargs:
+        nbins (int or tuple, optional): number of bins. If one value is given,
+            this is used for both vertical (number of rows) and horizontal
+            (number of columns) directions. If two values are given,
+            they are used separetely for the number of rows and number of
+            columns, respectively. If the number of pixels in the image
+            cannot be divided by the selected number of bins, it will raise an error.
+            ``bins_size`` is calculated. nbins overwrites all other arguments.
+        nrows (int, optional): number of rows.
+        ncolumns (int, optional): number of columns.
+        bins_size (int or tuple, optional): size of the bins. If one value is given,
+            this is used for both vertical (number of rows) and horizontal
+            (number of columns) directions. If two values are given,
+            they are used separetely for rows and columns size, respectively.
+            If number of pixels cannot be divided by ``bins_size``, the value of
+            ``bins_size`` will be recalculated to the closest possible value.
+            ``nbins`` is calculated.
+        rows_size (int or float, optional): size of the rows.
+        columns_size (int or float, optional): size of the columns.
+
+    Returns:
+        bins, bins_size
+    """
+    shape         = kwargs['shape']
+    factor_check  = kwargs['factor_check']
+    del kwargs['factor_check']
+    del kwargs['shape']
+
+    # initial check
+    if kwargs != {} and args != ():
+        raise AttributeError('Cannot mix keyword arguments with positional arguments.')
+
+    # initialization
+    nbins        = None
+    nrows        = None
+    ncolumns     = None
+    bins_size    = None
+    rows_size    = None
+    columns_size = None
+
+    # keyword arguments
+    if 'nbins' in kwargs:
+        nbins = kwargs['nbins']
+        if isinstance(nbins, Iterable):
+            if len(nbins) == 1:
+                nrows, ncolumns = nbins[0], nbins[0]
+            else:
+                nrows, ncolumns = nbins[0], nbins[1]
+        else:
+            nrows, ncolumns = nbins, nbins
+    else:
+        if 'nrows' in kwargs:
+            nrows = kwargs['nrows']
+        if 'ncolumns' in kwargs:
+            ncolumns = kwargs['ncolumns']
+
+    if 'bins_size' in kwargs:
+        bins_size = kwargs['bins_size']
+        if isinstance(bins_size, Iterable):
+            if len(bins_size) == 1:
+                rows_size, columns_size = bins_size[0], bins_size[0]
+            else:
+                rows_size, columns_size = bins_size[0], bins_size[1]
+        else:
+            rows_size, columns_size = bins_size, bins_size
+    else:
+        if 'rows_size' in kwargs:
+            rows_size = kwargs['rows_size']
+        if 'columns_size' in kwargs:
+            columns_size = kwargs['columns_size']
+
+    # positional arguments
+    if len(args) == 1:
+        if isinstance(args[0], Iterable):
+            if len(args[0]) == 1:
+                nrows, ncolumns = args[0][0], args[0][0]
+            elif len(args[0]) > 1:
+                nrows, ncolumns = args[0][0], args[0][1]
+            else:
+                raise AttributeError(f'Cannot understand the arguments passed to the function.\nArguments passed: {args[0]}.\nExamples:\n10\n(10)\n10, 5\n(10, 5)\n')
+        else:
+            nrows, ncolumns = args[0], args[0]
+        nbins = np.array((nrows, ncolumns))
+    elif len(args) == 2:
+        if isinstance(args[0], Iterable) or isinstance(args[1], Iterable):
+            raise AttributeError(f'Cannot understand the arguments passed to the function.\nArguments passed: {args[0]}.\nExamples:\n10\n(10)\n10, 5\n(10, 5)\n')
+        else:
+            nrows, ncolumns = args[0], args[1]
+        nbins = np.array((nrows, ncolumns))
+    elif len(args) > 2:
+        raise AttributeError(f'Cannot understand the arguments passed to the function.\nArguments passed: {args[0]}.\nExamples:\n10\n(10)\n10, 5\n(10, 5)\n')
+
+
+    # after this part, either nbins, nrows, and ncolumns are defined or bins_size, row_size, and column_size are defined
+
+    # final
+    if bins_size is None and nbins is None:
+        raise AttributeError('Number of bins or bin size must be passed as an argument.')
+    elif nbins is not None:
+        if nrows is None:    nrows    = shape[0]
+        if ncolumns is None: ncolumns = shape[1]
+        if nrows <= 0 or ncolumns <= 0 or is_integer(nrows)==False or is_integer(ncolumns)==False:
+            raise ValueError("Number of bins must be a positive integer.")
+        else:
+            if factor_check:
+                assert shape[1] % ncolumns == 0, f"The {shape[1]} pixels in a row is not evenly divisible by {ncolumns}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[1])))}"
+                assert shape[0] % nrows    == 0, f"The {shape[0]} pixels in a column is not evenly divisible by {nrows}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[0])))}"
+
+            nbins = np.array((nrows, ncolumns))
+            # bins_size = np.array((shape[0]//nbins[0], shape[1]//nbins[1]))
+            bins_size = np.array((shape[0]/nbins[0], shape[1]/nbins[1]))
+
+    else:
+        if row_size is None:    row_size =    shape[1]
+        if column_size is None: column_size = shape[0]
+        if row_size <= 0 or column_size <= 0 or is_integer(row_size)==False or is_integer(column_size)==False:
+            raise ValueError("Size of bins must be a positive integer.")
+        else:
+            if factor_check:
+                assert shape[1] % column_size == 0, f"The {shape[1]} pixels in a row is not evenly divisible by {column_size}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[1])))}"
+                assert shape[0] % row_size == 0,    f"The {shape[0]} pixels in a column is not evenly divisible by {row_size}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[0])))}"
+
+            nbins = np.array((round(shape[0]/row_size), round(shape[1]/column_size)))
+            # bins_size = np.array((shape[0]//_nbins[0], shape[1]//_nbins[1]))
+            bins_size = np.array((shape[0]/_nbins[0], shape[1]/_nbins[1]))
+
+    return nbins, bins_size
+
 
 class Image(metaclass=_Meta):
+    """Image object.
+
+    Args:
+        data (2D array, optional): Image.
+        filepath (string or path object, optional): filename or file handle.
+            If the filename ends in .gz, the file is automatically saved in
+            compressed gzip format. This is overwriten by data.
+
+    Attributes:
+        data (2D array): This is where we store the Image.
+        x, y (1D array): x and y axis values.
+        vmin, vmax (number): Minimum value in data.
+        shape (tuple): Shape of data (vertical size, horizontal size).
+        histogram (brixs.Spectrum): Data intensity histogram.
+
+        nbins (tuple): Number of bins (number of rows, number of columns).
+        bins_size (tuple): Bins size (size of rows, size of columns).
+        reduced (brixs.Image): Binned image.
+
+        calculated_shifts (brixs.Spectrum): Calculated shifts.
+        shifts_v, shifts_h (1D array): Shift values in the vertical and
+            horizontal direction.
+
+        spectrum_v, spectrum_h (brixs.Spectrum): Spectrum obtained by integrating
+            pixels in the vertical and horizontal direction.
+        columns, rows (brixs.Spectra): Spectra obtained from each pixel columns
+            or row.
+
+    Methods:
+        save()
+        load()
+        plot()
+        imshow()
+        binning()
+        calculate_histogram()
+        calculate_spectrum()
+        floor()
+        calculate_shifts()
+        set_shifts()
+        fix_curvature()
+
+
     """
-    The hierarchy for Keyword arguments is: 1) data, and 2) filepath.
-        For example, if `data` and `filepath` are passed as arguments,
-        `filepath` is ignored.
-
-    Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-    For positional arguments, if one data set is passed, it assumes it is
-        `data`. If this one argument is of type string or Pathlib.Path, it
-        assumes it is a filepath.
-    """
-
-    _read_only = ['reduced', 'x_edges', 'y_edges', 'x_centers', 'y_centers',  # nbins, bins
-                  'shape', 'vmin', 'vmax',  # data
-                  'calculated_shifts']  # shifts_v, shifts_h,
-                  # histogram, spectrum_h, spectrum_v
+    _read_only = ['shape', 'vmin', 'vmax',
+                  'reduced',
+                  'calculated_shifts']
 
     def __init__(self, *args, **kwargs):
         # argument parsing
-        data, filepath = self._args_checker(args, kwargs)
+        data, filepath = self._sort_args(args, kwargs)
 
         # besic attr
         self._data = None
         self._vmin = None
         self._vmax = None
+        self._x    = None
+        self._y    = None
         self._shape = None
 
         # binning attr
         self._nbins      = np.array((-1, -1))
         self._bins_size  = np.array((-1, -1))
         self._reduced    = None
-        self._x_edges    = None
-        self._y_edges    = None
-        self._x_centers  = None
-        self._y_centers  = None
+        # self._x_edges    = None
+        # self._y_edges    = None
+        # self._x_centers  = None
+        # self._y_centers  = None
 
         # shifts
         self._calculated_shifts = None
         self._shifts_v = None
         self._shifts_h = None
 
-        # sorting data
+        # set data
         if data is not None:
             self.data = copy.deepcopy(data)
         elif filepath is not None:
             self.load(filepath)
-
 
     @property
     def data(self):
@@ -905,23 +1089,25 @@ class Image(metaclass=_Meta):
     @data.setter
     def data(self, value):
         # basic attr
-        self._data = np.array(value)
-        self._vmin = min([min(x) for x in self.data])
-        self._vmax = max([max(x) for x in self.data])
+        self._data  = np.array(value)
+        self._vmin  = min([min(x) for x in self.data])
+        self._vmax  = max([max(x) for x in self.data])
         self._shape = (self.data.shape[0], self.data.shape[1])
+        self._x     = np.arange(0, self.data.shape[1])
+        self._y     = np.arange(0, self.data.shape[0])
 
         # binning attr
-        if self.nbins[0] > 0 and self.nbins[1] > 0:
-            try:
-                self.binning(nbins=self.nbins)
-            except:
-                self._nbins      = np.array((-1, -1))
-                self._bins_size  = np.array((-1, -1))
-                self._reduced    = None
-                self._x_edges    = None
-                self._y_edges    = None
-                self._x_centers  = None
-                self._y_centers  = None
+        # if self.nbins[0] > 0 and self.nbins[1] > 0:
+        #     try:
+        #         self.binning(nbins=self.nbins)
+        #     except:
+        self._nbins      = np.array((-1, -1))
+        self._bins_size  = np.array((-1, -1))
+        self._reduced    = None
+        # self._x_edges    = None
+        # self._y_edges    = None
+        # self._x_centers  = None
+        # self._y_centers  = None
 
         # shift attr
         self._calculated_shifts = None
@@ -930,6 +1116,42 @@ class Image(metaclass=_Meta):
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
+
+    @property
+    def x(self):
+        return self._x
+    @x.setter
+    def x(self, value):
+        if value is None:
+            self._x = np.arange(0, self.data.shape[1])
+        elif isinstance(value, Iterable):
+            if len(value) == self.shape[1]:
+                self._x = np.array(value)
+            else:
+                raise ValueError(f"Length of x must be the same as the number of pixels in the horizontal direction.\nNumber of pixels = {self.data.shape[1]}\nLength of the array = {len(value)}")
+        else:
+            raise ValueError(f"x must be None or an iterable (list, tuple, or 1D array)")
+    @x.deleter
+    def x(self):
+        self._x  = np.arange(0, self.data.shape[1])
+
+    @property
+    def y(self):
+        return self._y
+    @y.setter
+    def y(self, value):
+        if value is None:
+            self._y = np.arange(0, self.data.shape[0])
+        elif isinstance(value, Iterable):
+            if len(value) == self.shape[0]:
+                self._y = np.array(value)
+            else:
+                raise ValueError(f"Length of y must be the same as the number of pixels in the vertical direction.\nNumber of pixels = {self.data.shape[0]}\nLength of the array = {len(value)}")
+        else:
+            raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
+    @y.deleter
+    def y(self):
+        self._y  = np.arange(0, self.data.shape[0])
 
     @property
     def shifts_v(self):
@@ -960,12 +1182,11 @@ class Image(metaclass=_Meta):
             binning(self, nbins=value)
         elif value == 'guess':
             raise NotImplementedError('not implemented yet')
-
         else:
             raise ValueError("Not a valid option of `nbins`.\nValid options are: 'guess', a number, a tuple, or a list.")
     @nbins.deleter
     def nbins(self):
-            raise AttributeError('Cannot delete object.')
+        raise AttributeError('Cannot delete object.')
 
     @property
     def bins_size(self):
@@ -991,7 +1212,7 @@ class Image(metaclass=_Meta):
     def columns(self):
         ss = Spectra(n=self.shape[1])
         for i in range(self.shape[1]):
-            ss[i] = Spectrum(self.data[:, i])
+            ss[i] = Spectrum(x=self.y, y=self.data[:, i])
         return ss
     @columns.setter
     def columns(self, value):
@@ -1004,7 +1225,7 @@ class Image(metaclass=_Meta):
     def rows(self):
         ss = Spectra(n=self.shape[0])
         for i in range(self.shape[0]):
-            ss[i] = Spectrum(self.data[i, :])
+            ss[i] = Spectrum(x=self.x, y=self.data[i, :])
         return ss
     @rows.setter
     def rows(self, value):
@@ -1033,7 +1254,7 @@ class Image(metaclass=_Meta):
     def spectrum_h(self):
         raise AttributeError('Cannot delete object.')
 
-    def _args_checker(self, args, kwargs):
+    def _sort_args(self, args, kwargs):
         """checks initial arguments.
 
         Keyword arguments (kwargs) cannot be mixed with positional arguments.
@@ -1050,7 +1271,7 @@ class Image(metaclass=_Meta):
         """
         # initial check
         if kwargs != {} and args != ():
-            raise AttributeError('Cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
+            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `data`, and `filepath`.')
 
         # initialization
         data = None
@@ -1069,7 +1290,7 @@ class Image(metaclass=_Meta):
             elif isinstance(args[0], Iterable):
                 data = args[0]
         elif len(args) > 2:
-            raise AttributeError('brixs.Image() cannot figure out the data out of the arguments passed. Maybe use key word arguments (x, y, data, filepath).')
+            raise AttributeError('brixs.Image() cannot figure out the data out of the arguments passed. Maybe use keyword arguments (data, filepath).')
 
         return data, filepath
 
@@ -1079,58 +1300,83 @@ class Image(metaclass=_Meta):
         else:
             return len(self._data)
 
-    def save(self, filepath, fmt='auto', delimiter=', ', newline='\n', header='', footer='', comments='# ', only_data=False):
-        r"""Wrapper for numpy.savetxt(). Save data to a text file.
+    def save(self, filepath, only_data=False,  **kwargs):
+        r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Args:
-            filepath (string or pathlib.Path, optional): filepath to file.
+            filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
-            fmt (string, or list, optional): A single format (%10.5f), or a
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is saved to the file.
+
+        If not specified, the following parameters are passed to `numpy.savetxt()`_:
+
+        Args:
+            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
                 sequence of formats. See numpy's documentation for more information.
-                If 'auto', the number of decimal places is set automatically.
+                If not specified, best fmt is calculated based on the
+                number of decimal places of the data. Specifing fmt makes the code
+                runs a little faster (not much tough, but it might make a difference
+                if saving a lot of files).
             delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (', ').
+                Use ``\\t`` for tab. Default is comma (", ").
             newline (str, optional): String or character separating lines.
                 Default is ``\n``.
             header (bool, optional): String that will be written at the beginning of the file.
                 Note that, attributes are always saved at the beginning of the file.
             comments (str, optional): String that will be prepended to the
-                header and footer strings, to mark them as comments. Default is ``# ``.
-            only_data (bool, optional): If True, header and footer are ignored and
-                only data is saved to the file.
+                header and footer strings, to mark them as comments. Default is "# ".
 
         Returns:
             None
+
+        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
-        if only_data:
-            np.savetxt(Path(filepath), self._data, fmt=fmt, delimiter=delimiter, newline=newline)
-            return
 
-        # fix header
-        dict = get_attributes(self)
-        header += '==== Image attributes ===='  + '\n'
-        for n in dict:
-            if n not in ['_data', '_histogram', '_spectrum_h', '_spectrum_v', '_reduced', '_x_edges', '_y_edges', '_x_centers', '_y_centers', '_calculated_shifts']:
-                if isinstance(dict[n], Iterable):
-                    header += f'{n}: {list(dict[n])}'  + '\n'
-                else:
-                    header += f'{n}: {dict[n]}'  + '\n'
-
-        # pick best format
-        if fmt == 'auto':
+        # kwargs
+        if 'fmt' not in kwargs: # pick best format
             decimal = max([n_decimal_places(x) for x in flatten(self._data)])
-            fmt = f'%.{decimal}f'
+            kwargs['fmt'] = f'%.{decimal}f'
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'newline' not in kwargs:
+            kwargs['newline'] = '\n'
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
 
         # save
-        np.savetxt(Path(filepath), self._data, fmt=fmt, delimiter=delimiter, header=header, newline=newline, comments=comments, footer=footer)
+        if only_data:
+            if 'header' in kwargs:
+                del kwargs['header']
+            if 'footer' in kwargs:
+                del kwargs['footer']
+            np.savetxt(Path(filepath), self._data, **kwargs)
+        else:
+            if 'header' not in kwargs:
+                kwargs['header'] = ''
+            else:
+                kwargs['header'] += '\n'
+            dict = get_attributes(self)
+            kwargs['header'] += '==== Image attributes ===='  + '\n'
+            for n in dict:
+                if n not in ['_data', '_reduced', '_calculated_shifts', '_histogram', '_spectrum_h', '_spectrum_v',]:
+                    if isinstance(dict[n], Iterable):
+                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
+                    else:
+                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
+            np.savetxt(Path(filepath), self._data, **kwargs)
 
-    def load(self, filepath, comments='#', delimiter=', '):
-        """Wrapper for numpy.genfromtxt(). Load data from a text file.
+    def load(self, filepath, **kwargs):
+        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
-            filepath (string or pathlib.Path, optional): filepath to file.
+            filepath (string or path object, optional): filepath or file handle.
                 If the filename extension is .gz or .bz2, the file is first decompressed.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
             delimiter (str, optional): String or character separating columns.
                 Use ``\\t`` for tab. Default is comma (', ').
             comments (str, optional): The character used to indicate the start
@@ -1139,15 +1385,22 @@ class Image(metaclass=_Meta):
 
         Returns:
             None
+
+        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
         # read data
-        data = np.genfromtxt(Path(filepath), delimiter=delimiter, comments=comments)
+        data = np.genfromtxt(Path(filepath), **kwargs)
         self.data = data
 
         # read header
-        header = load_Comments(Path(filepath), comment_flag=comments, stop_flag=comments)
+        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
         attr_start = 0
-        binning_flag = True  # avoid binning multiple times
+        binning_flag = False  # check if data needs binning
 
         # find where attributes listing starts
         for i, line in enumerate(header):
@@ -1164,103 +1417,84 @@ class Image(metaclass=_Meta):
                 name = line[1:-1].split(':')[0].strip()
                 value = eval(line[1:-1].split(':')[1].strip())
 
-                # binning attrs
-                if name in ['_nbins'] and binning_flag:
+
+                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+                if name in ['_nbins']:
                     if value[0] > 0 and value[1] > 0:
-                        try:
-                            self.binning(nbins=value)
-                            binning_flag = False
-                        except:
-                            pass
-                elif name in ['_bins_size'] and binning_flag:
+                        binning_flag = True
+                elif name in ['_bins_size']:
                     if value[0] > 0 and value[1] > 0:
-                        try:
-                            self.binning(bins_size=value)
-                            binning_flag = False
-                        except:
-                            pass
-                # everyother attrs
+                        binning_flag = True
+                ### DEALING WITH OTHER ATTRIBUTES ###
                 elif name not in ['_vmin', '_vmax', '_shape']:  # except these attrs
                     try:
                         setattr(self, name, value)
                     except Exception as e:
                         print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
 
-    def plot(self, ax=None, colorbar=False, xlim=(0, None), ylim=(0, None), **kwargs):
-        """Wrapper for matplotlib.imshow(). Display data as an image.
+        ### RUN ###
+        if binning_flag:
+            try:
+                self.binning(nbins=self.nbins, bins_size=self.bins_size)
+            except:
+                pass
+
+    def plot(self, ax=None, colorbar=False, **kwargs):
+        """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
             colorbar (bool, optional): if True, colorbar is shown on the right side.
-            xlim (tuple or list, optional): x limits to show.
-            ylim (tuple or list, optional): y limits to show.
-            **kwargs: kwargs are passed to ``matplotlib.imshow()``.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
 
-        If not specified, the following parameters are passed to matplotlib.imshow():
+        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
 
+        Args:
             cmap: The Colormap instance. Default is 'jet'.
             aspect: The aspect ratio of the Axes. Default is 'auto'.
             interpolation: The interpolation method used. Default is 'none'.
-            vmin: Minimun intensity that the colormap covers. The intensity histogram is
+            origin: Place the [0, 0] index. Default is 'lower' This is necessary
+                to make image plots comparable to photon event plots.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
                 calculated and vmin is set on the position of the maximum.
             vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
-                calculated and vmax is set to the value where the integral of the
-                intensity histogram is 0.998 of the total integral after vmin.
-                THIS MIGHT CHANGE IN THE FUTURE.
+                calculated and vmax is set to the value where the :del:` integral of the
+                intensity histogram is 0.998 of the total integral after vmin.`
+                intensity drops below 0.01 % of the maximum.
+                **THIS MIGHT CHANGE IN THE FUTURE**.
 
         Returns:
-            matplotlib.image.AxesImage
+            `matplotlib.image.AxesImage`_
+
+        .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
         """
         # initialization
         if ax is None:
             ax = plt
 
-        # xlim
-        xlim = list(xlim)
-        if xlim[0] is None:
-            xlim[0] = 0
-        if xlim[1] is None:
-            xlim[1] = self.shape[1]
-
-        # ylim
-        ylim = list(ylim)
-        if ylim[0] is None:
-            ylim[0] = 0
-        if ylim[1] is None:
-            ylim[1] = self.shape[0]
-
-        assert ylim[0] >= 0 and ylim[1] >= 0, f"ylim must be positive"
-        assert xlim[0] >= 0 and xlim[1] >= 0, f"xlim must be positive"
-
-        # kwargs
-        if (xlim[0] != 0 or xlim[1] != self.shape[1]) or (ylim[0] != 0 or ylim[1] != self.shape[0]):
-            temp = Image(self.data[round(ylim[0]):round(ylim[1]), round(xlim[0]):round(xlim[1])])
-            temp.plot(ax=ax, show_colorbar=show_colorbar, xlim=(0, None), ylim=(0, None), **kwargs)
-            return
-        else:
-            if 'cmap' not in kwargs:
-                kwargs['cmap'] = 'jet'
-            if 'aspect' not in kwargs:
-                kwargs['aspect'] = 'auto'
-            if 'interpolation' not in kwargs:
-                kwargs['interpolation'] = 'none'
-            if 'vmin' not in kwargs:
-                kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
-            if 'vmax' not in kwargs:
-                i = index(self.histogram.x, kwargs['vmin'])
-                cumsum = np.cumsum(self.histogram.y[i:])
-                kwargs['vmax'] = self.histogram.x[i+index(cumsum[i:], cumsum[-1]*0.998)]
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'vmin' not in kwargs:
+            kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
+        if 'vmax' not in kwargs:
+            # vamx is set when histogram drops below 0.01% of the max
+            x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
+            y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
+            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > max(y2fit)*0.0001])  # clean zeros
+            kwargs['vmax'] = data2fit[-1, 0]
 
         # plot
-        pos = ax.imshow(self.data, **kwargs)
+        X, Y = np.meshgrid(self.x, self.y)
+        pos = plt.pcolormesh(X, Y, self.data, **kwargs)
 
         # colorbar
         if colorbar:
-            plt.colorbar(pos, aspect=50)
+            plt.colorbar(pos, aspect=50, extend='both')
 
         return pos
 
-    def binning(self, nbins=None, bins_size=None):
+    def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
 
         Args:
@@ -1269,91 +1503,71 @@ class Image(metaclass=_Meta):
                 they are used separetely for the number of rows and number of
                 columns, respectively. If the number of pixels in the image
                 cannot be divided by the selected number of bins, it will raise an error.
+                ``bins_size`` is calculated.
             bins_size (int or tuple, optional): size of the bins. This overwrites
                 the argument ``bins``. If one value is given,
                 it is used for both x and y directions. If two values are given,
                 they are used separetely for rows and columns size, respectively.
                 If number of pixels cannot be divided by ``bins_size``, the value of
                 ``bins_size`` will be recalculated to the closest possible value.
+                ``nbins`` is calculated.
+
+        Example:
+            .. code-block:: python
+
+                nbins = 10       # (10 rows, 10 columns)
+                nbins = (10)     # (10 rows, 10 columns)
+                nbins = (10, 5)  # (10 rows, 5 columns)
 
         Returns:
             None
         """
-        if bins_size is None:
-            if nbins is None:
-                raise ValueError('Number of bins or bin size must be passed as an argument.')
-            else:
-                try:
-                    if len(nbins) == 1:
-                        nrows, ncolumns = nbins[0], nbins[0]
-                    else:
-                        nrows, ncolumns = nbins[0], nbins[1]
-                except TypeError:
-                    nrows, ncolumns = nbins, nbins
-                if nrows is None:    nrows    = self.shape[0]
-                if ncolumns is None: ncolumns = self.shape[1]
-                if nrows <= 0 or ncolumns <= 0 or is_integer(nrows)==False or is_integer(ncolumns)==False:
-                    raise ValueError("Number of bins must be a positive integer.")
-                else:
-                    _nbins = np.array((nrows, ncolumns))
-
-                    assert self.shape[1] % _nbins[1] == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {_nbins[1]}\nPlease, pick one of the following numbers: {np.sort(list(factors(self.shape[1])))}"
-                    assert self.shape[0] % _nbins[0] == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {_nbins[0]}\nPlease, pick one of the following numbers: {np.sort(list(factors(self.shape[0])))}"
-
-                    _bins_size = np.array((self.shape[0]//_nbins[0], self.shape[1]//_nbins[1]))
-        else:
-            try:
-                if len(bins_size) == 1:
-                    row_size, column_size = bins_size[0], bins_size[0]
-                else:
-                    row_size, column_size = bins_size[0], bins_size[1]
-            except TypeError:
-                row_size, column_size = bins_size, bins_size
-            if row_size is None:    row_size = self.shape[1]
-            if column_size is None: column_size = self.shape[0]
-            if row_size <= 0 or column_size <= 0 or is_integer(row_size)==False or is_integer(column_size)==False:
-                raise ValueError("Size of bins must be a positive integer.")
-            else:
-                _bins_size = np.array((row_size, column_size))
-
-                assert self.shape[1] % _bins_size[1] == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {_bins_size[1]}\nPlease, pick one of the following numbers: {np.sort(list(factors(self.shape[1])))}"
-                assert self.shape[0] % _bins_size[0] == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {_bins_size[0]}\nPlease, pick one of the following numbers: {np.sort(list(factors(self.shape[0])))}"
-
-                _nbins = np.array((round(self.shape[0]/_bins_size[0]), round(self.shape[1]/_bins_size[1])))
-                _bins_size = np.array((self.shape[0]//_nbins[0], self.shape[1]//_nbins[1]))
-
+        kwargs['shape']        = self.shape
+        kwargs['factor_check'] = True
+        _nbins, _bins_size = _bins_interpreter(*args, **kwargs)
         reduced = Image(np.add.reduceat(np.add.reduceat(self._data, np.arange(0, self.shape[0], _bins_size[0]), axis=0), np.arange(0, self.shape[1], _bins_size[1]), axis=1))
+        _y_edges   = np.arange(0, self.shape[1], _bins_size[1])
+        _x_edges   = np.arange(0, self.shape[0], _bins_size[0])
+        _y_centers = moving_average(self.y_edges, n=2)
+        _x_centers = moving_average(self.x_edges, n=2)
 
         # saving
         self._nbins     = _nbins
         self._bins_size = _bins_size
         self._reduced   = reduced
-        self._x_edges   = np.arange(0, self.shape[1], _bins_size[1])
-        self._y_edges   = np.arange(0, self.shape[0], _bins_size[0])
-        self._x_centers = moving_average(self.x_edges, n=2)
-        self._y_centers = moving_average(self.y_edges, n=2)
+        self.reduced._x = _x_centers
+        self.reduced._y = _y_centers
+        # self._y_edges   = np.arange(0, self.shape[1], _bins_size[1])
+        # self._x_edges   = np.arange(0, self.shape[0], _bins_size[0])
+        # self._y_centers = moving_average(self.y_edges, n=2)
+        # self._x_centers = moving_average(self.x_edges, n=2)
 
-    def calculate_histogram(self, nbins=None):
-        """Calculate the intensity histogram.
+    def calculate_histogram(self, **kwargs):
+        """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
+
+        If not specified, the following parameters are passed to `numpy.histogram()`_:
 
         Args:
-            nbins (int or tuple, optional): number of bins. If ``None``, it will
+            bins (int or tuple, optional): number of bins. If not specified, it will
                 be set to 1000. If 1000 is too high (maximum value of the histogram
-                is less than 5 % of the total integrated intensity) nbins will be
+                is less than 5 % of the total integrated intensity) bins will be
                 reduced 10 by 10 until the criteria is satisfied.
 
         Returns
             brixs.Spectrum
+
+        .. _numpy.histogram(): https://numpy.org/doc/stable/reference/generated/numpy.histogram.html
         """
-        # print('calculating histogram')
-        if nbins is None:
-            nbins = 1000
-            hist, bin_edges = np.histogram(flatten(self._data), bins=nbins)
+        if 'bins' not in kwargs:
+            kwargs['bins'] = 1000
+            hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
             while max(hist) < self.shape[0]*self.shape[1]*0.05:
-                nbins -= 10
-                hist, bin_edges = np.histogram(flatten(self._data), bins=nbins)
-                if nbins < 50:
+                kwargs['bins'] -= 10
+                hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
+                if kwargs['bins'] < 50:
                     break
+        else:
+            hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
         x = moving_average(bin_edges, 2)
         return Spectrum(x=x, y=hist)
 
@@ -1365,14 +1579,14 @@ class Image(metaclass=_Meta):
                 By default, data is integrated in the horizontal direction.
 
         Returns:
-            brixs.Spectrum
+            :py:class:`Spectrum`.
         """
         axis = _axis_interpreter(axis)
 
         if axis == 0:
-            return Spectrum(y=np.sum(self._data, axis=0))
+            return Spectrum(x=self.y, y=np.sum(self._data, axis=0))
         elif axis == 1:
-            return Spectrum(y=np.sum(self._data, axis=1))
+            return Spectrum(x=self.x, y=np.sum(self._data, axis=1))
 
     def floor(self, x=0, y=0, n=30, nx=None, ny=None):
         """Set background intensity to zero.
@@ -1428,6 +1642,12 @@ class Image(metaclass=_Meta):
             ss = self.columns
             ss.calculate_shifts(ref=ref, mode=mode, ranges=ranges, verbose=verbose, idx=idx, bypass=bypass, **kwargs)
             self._calculated_shifts = ss.calculated_shifts
+            self._calculated_shifts.x = self.x
+        elif axis == 1:
+            ss = self.rows
+            ss.calculate_shifts(ref=ref, mode=mode, ranges=ranges, verbose=verbose, idx=idx, bypass=bypass, **kwargs)
+            self._calculated_shifts = ss.calculated_shifts
+            self._calculated_shifts.x = self.x
 
     def set_shifts(self, value, axis=0):
         """Roll array of pixels along a given axis.
@@ -1510,861 +1730,732 @@ class Image(metaclass=_Meta):
 
         assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
 
+        # calculate shifts
         temp = Image(data=self.reduced.data)
+        temp._x = self.x
+        temp._y = self.y
         temp.floor()
         temp.calculate_shifts(axis=axis)
-        p, f, sfit = temp.calculated_shifts.polyfit(deg=deg)
-        if axis == 0:
-            values = self._shifts_v+[f(x*temp.shape[1]/self.shape[1]) for x in range(self.shape[1])]
-        elif axis == 1:
-            values = self._shifts_h+[f(x*temp.shape[0]/self.shape[0]) for x in range(self.shape[0])]
-        self.set_shifts(values, axis=axis)
-        self._calculated_shifts = Spectrum(y=values)
+
+        # set shift
+        self.set_shifts(temp.calculated_shifts.y, axis=axis)
+        self._calculated_shifts = temp.calculated_shifts
 
 
 class PhotonEvents(metaclass=_Meta):
-    """Creates a ``PhotonEvents`` class type object to deal with photon events lists.
+    """Photon events object.
 
     Args:
-        events (list or array): two (x, y) or three (x, y, intensity) list or array with
+        data (list or array): two (x, y) or three (x, y, intensity) list or array with
             photon events.
-            data (list or array, optional): three column list (or array) with photon
-                events. Column order should be x, y, (and intensity if applicable).
-        x_max (float, optional): maximum x value. If ``None``, it will be infered
-            by the data.
-        y_max (float, optional): maximum y value. If ``None``, it will be infered
-            by the data.
+        filepath (string or path object, optional): filename or file handle.
+            If the filename ends in .gz, the file is automatically saved in
+            compressed gzip format. This is overwriten by data.
+        shape (tuple, optional): Shape of data (maximum vertical size, maximum horizontal size).
+        x, y, I (list or array): data columns.
 
-        bins (list): cannot be negative. It is always converted to int values
+    Attributes:
+        data (2D array): This is where we store the Image.
+        shape (tuple): Shape of data (vertical size, horizontal size).
+        x, y, I (1D array): x, y, and intensity arrays.
+
+        nbins (tuple): Number of bins (number of rows, number of columns).
+        bins_size (tuple): Bins size (size of rows, size of columns).
+        reduced (brixs.Image): Binned image.
+
+        calculated_shifts (brixs.Spectrum): Calculated shifts.
+        p (list): Polynomial coefficients of the fitted shift values.
+        f (function): Function f(x) of the fitted shift values.
+        shifts (brixs.Spectrum): Curve of the fitted shift values
+
+    Methods:
+        save()
+        load()
+        plot()
+        binning()
+        calculate_histogram()
+        calculate_spectrum()
+        floor()
+        calculate_shifts()
+        set_shifts()
+        fix_curvature()
 
     """
 
-    _read_only = ['hist', 'x_edges', 'y_edges', 'x_centers', 'y_centers',
-                  'offsets_ranges', 'offsets_mode', 'offsets_ref',
-                  'offsets_func', 'offsets', 'offsets_popt', 'spectrum', 'spectrum_bins']
+    _read_only = ['reduced', 'calculated_shifts', 'p', 'f', 'shifts']
 
-    def __init__(self, events, x_max=None, y_max=None):
+    def __init__(self, *args, **kwargs):
+        # argument parsing
+        data, filepath, shape = self._sort_args(args, kwargs)
+
         # basic attr
-        self.events     = events
-        # self.events0    = events
-        self._x_max     = None
-        # self.x_max      = x_max
-        self._y_max     = None
-        # self.y_max      = y_max
+        self._data  = None
+        self._shape = [None, None]
 
         # binning attr
-        self._bins       = np.array((-1, -1))
+        self._nbins      = np.array((-1, -1))
         self._bins_size  = np.array((-1, -1))
-        self._hist       = None
-        self._x_edges    = None
-        self._y_edges    = None
-        self._x_centers  = None
-        self._y_centers  = None
+        self._reduced    = None
 
-        # offset attr
-        self._offsets         = None
-        self._offsets_ranges  = None
-        self._offsets_mode    = None
-        self._offsets_ref     = None
+        # shifts
+        self._calculated_shifts = None
+        self._p      = None
+        self._f      = None
+        self._shifts = None
 
-        # offset fit attr
-        self._offsets_func    = None
-        self._offsets_popt    = None
-
-        # spectrum attr
-        self._spectrum_bins = np.array((-1, -1))
-        self._spectrum = None
-
-        self.x_max= x_max
-        self.y_max= y_max
-
+        # set data
+        if data is not None:
+            self.data = copy.deepcopy(data)
+        elif filepath is not None:
+            self.load(filepath)
+        if shape != (None, None):
+            self.shape = shape
 
     @property
-    def events(self):
-        return self._events
-    @events.setter
-    def events(self, value):
+    def data(self):
+        return copy.deepcopy(self._data)
+    @data.setter
+    def data(self, value):
+        # basic attr
         if value.shape[1] == 3:
-            self._events = np.array([event for event in np.array(value) if not event[2]<=0])
+            self._data = np.array([event for event in np.array(value) if not event[2]<=0])
         elif value.shape[1] == 2:
-            events = np.array(value)
-            self._events = np.c_[events, np.ones(events.shape[0])]
-        else: raise ValueError("data must have 2 or 3 columns.")
-        x_max = None
-        y_max = None
-    @events.deleter
-    def events(self):
+            data = np.array(value)
+            self._data = np.c_[data, np.ones(data.shape[0])]
+        else:
+            raise ValueError("Data must have 2 or 3 columns.")
+
+        # set shape
+        if self.shape[0] is None:
+            self._shape[0] = max(self.data[:, 1])
+        elif max(self.data[:, 1]) > self._shape[0]:
+            self._shape[0] = max(self.data[:, 1])
+        if self.shape[1] is None:
+            self._shape[0] = max(self.data[:, 0])
+        elif max(self.data[:, 0]) > self._shape[1]:
+            self._shape[1] = max(self.data[:, 0])
+
+        # binning attr
+        self._nbins      = np.array((-1, -1))
+        self._bins_size  = np.array((-1, -1))
+        self._reduced    = None
+
+        # shift attr
+        self._calculated_shifts = None
+        self._p      = None
+        self._f      = None
+        self._shifts = None
+    @data.deleter
+    def data(self):
         raise AttributeError('Cannot delete object.')
 
-
     @property
-    def x_max(self):
-        return self._x_max
-    @x_max.setter
-    def x_max(self, value):
-        if value is None:
-            _x_max = max(self.events[:, 0])
-        elif value > 0 :
-             _x_max = value
+    def shape(self):
+        return copy.deepcopy(self._shape)
+    @shape.setter
+    def shape(self, value):
+        if isinstance(value, Iterable):
+            if len(value) == 2:
+                if value[0] is None:
+                    value[0] = max(self.data[:, 1])
+                if value[1] is None:
+                    value[1] = max(self.data[:, 0])
+                if value[0] < 0 or value[1] < 0:
+                    raise ValueError('Shape cannot be negative.')
+                self._shape = value
+            else:
+                raise ValueError(f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}')
         else:
-            raise ValueError('invalid x_max value.')
-        if self.x_max != _x_max:
-            self._x_max = _x_max
-            if -1 not in self.bins:
-                self._binning()
-    @x_max.deleter
-    def x_max(self):
-        self._x_max = max(self.events[:, 0])
-
+            raise ValueError(f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}')
+    @shape.deleter
+    def shape(self):
+        raise AttributeError('Cannot delete object.')
 
     @property
-    def y_max(self):
-        return self._y_max
-    @y_max.setter
-    def y_max(self, value):
-        if value is None:
-            _y_max = max(self.events[:, 1])
-        elif value > 0 :
-             _y_max = value
-        else:
-            raise ValueError('invalid y_max value.')
-        if self.y_max != _y_max:
-            self._y_max = _y_max
-            if -1 not in self.bins:
-                self._binning()
-    @y_max.deleter
-    def y_max(self):
-        self._y_max = max(self.events[:, 1])
-
+    def x(self):
+        return copy.deepcopy(self._data[:, 0])
+    @x.setter
+    def x(self, value):
+        raise AttributeError('Cannot set object. This might change in the future.')
+    @x.deleter
+    def x(self):
+        raise AttributeError('Cannot delete object.')
 
     @property
-    def bins(self):
-        return self._bins
-    @bins.setter
-    def bins(self, value):
+    def y(self):
+        return copy.deepcopy(self._data[:, 1])
+    @y.setter
+    def y(self, value):
+        raise AttributeError('Cannot set object. This might change in the future.')
+    @y.deleter
+    def y(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def I(self):
+        return copy.deepcopy(self._data[:, 2])
+    @I.setter
+    def I(self, value):
+        raise AttributeError('Cannot set object. This might change in the future.')
+    @I.deleter
+    def I(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def nbins(self):
+        return self._nbins
+    @nbins.setter
+    def nbins(self, value):
         if type(value) != str:
-            try:
-                if len(value) == 1:
-                    if value[0] > 0:
-                        x_bins, y_bins = int(value[0]), int(value[0])
-                    else:
-                        raise ValueError('Cannot set negative binning.')
-                else:
-                    if value[0] > 0 and value[1] > 0:
-                        x_bins, y_bins = int(value[0]), int(value[1])
-                    else:
-                        raise ValueError('Cannot set negative binning.')
-            except TypeError:
-                if value > 0:
-                    x_bins, y_bins = int(value), int(value)
-                else:
-                    raise ValueError('Cannot set negative binning.')
-
-            if sum(self.bins != np.array((x_bins, y_bins))) > 0:
-                self._bins = np.array((x_bins, y_bins))
-                self._binning()
-
-        elif value == 'guess':
-            guess_bins = self.guess_bins()
-            self.bins = guess_bins
-
+            self.binning(nbins=value)
+        # elif value == 'guess':
+        #     guess_bins = self.guess_bins()
+        #     self.bins = guess_bins
         else:
-            raise ValueError("Not a valid option ('guess', number or tuple).")
-    @bins.deleter
-    def bins(self):
+            raise ValueError("Not a valid option of `nbins`.\nValid options are: a number, a tuple, or a list.")
+    @nbins.deleter
+    def nbins(self):
         raise AttributeError('Cannot delete object.')
-
 
     @property
     def bins_size(self):
         return self._bins_size
     @bins_size.setter
     def bins_size(self, value):
-        try:
-            if len(value) == 1:
-                if value[0] > 0:
-                    x_bins_size, y_bins_size = value[0], value[0]
-                else:
-                    raise ValueError('Cannot set negative binning.')
-            else:
-                if value[0] > 0 and value[1] > 0:
-                    x_bins_size, y_bins_size = value[0], value[1]
-                else:
-                    raise ValueError('Cannot set negative binning.')
-        except TypeError:
-            if value > 0:
-                x_bins_size, y_bins_size = value, value
-            else:
-                raise ValueError('Cannot set negative binning.')
-        if sum(self.bins_size != np.array((x_bins_size, y_bins_size))) > 0:
-            self._bins_size = np.array((x_bins_size, y_bins_size))
-            self._binning(use_bins_size=True)
+        self.binning(bins_size=value)
     @bins_size.deleter
     def bins_size(self):
         raise AttributeError('Cannot delete object.')
 
-    def get_bins(self):
-        return self.bins
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
+
+        Keyword arguments (kwargs) cannot be mixed with positional arguments.
+
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath.
+
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, filepath, shape
+        """
+        # initial check
+        if kwargs != {} and args != ():
+            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `x`, `y`, `I`, `shape`, `data`, and `filepath`.')
+
+        # initialization
+        data     = None
+        filepath = None
+        x        = None
+        y        = None
+        I        = None
+        shape    = (None, None)
+        error = 'brixs.PhotonEvents() cannot figure out the data out of the arguments passed.\nMaybe use keyword arguments.\nValid arguments: x, y, I, shape, data, filepath.'
+
+        # keyword arguments
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'x' in kwargs:
+            x = kwargs['x']
+        if 'y' in kwargs:
+            y = kwargs['y']
+        if 'I' in kwargs:
+            I = kwargs['I']
+        if 'shape' in kwargs:
+            shape = kwargs['shape']
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+
+        if x is not None and y is not None and data is None:
+            assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+            data = np.c_[np.array(x), np.array(y)]
+            if I is not None:
+                assert len(x) == len(I), f'x, y and I must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}\nLength of I = {len(I)}.'
+                data = np.c_[data, np.array(I)]
 
 
-    def set_bins(self, *args):
-        if len(args) == 2:
-            self.bins = (args[0], args[1])
-        elif len(args) == 1:
-            self.bins = args[0]
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = Path(args[0])
+            else:
+                data = args[0]
+        elif len(args) == 2:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = Path(args[0])
+                shape = list(args[1])
+                assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+            else:
+                if len(args[0]) == len(args[1]):
+                    x = args[0]
+                    y = args[1]
+                    assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+                    data = np.c_[np.array(x), np.array(y)]
+                else:
+                    data = args[0]
+                    shape = list(args[1])
+                    assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+        elif len(args) == 3:
+            if len(args[0]) == len(args[1]):
+                x = args[0]
+                y = args[1]
+                assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+                data = np.c_[np.array(x), np.array(y)]
+                if len(args[0]) == len(args[2]):
+                    I = args[2]
+                    data = np.c_[data, np.array(I)]
+                else:
+                    shape = args[2]
+                    assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+        elif len(args) == 4:
+            x = args[0]
+            y = args[1]
+            assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+            data = np.c_[np.array(x), np.array(y)]
+            I = args[2]
+            assert len(x) == len(I), f'x, y and I must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}\nLength of I = {len(I)}.'
+            data = np.c_[data, np.array(I)]
+            shape = args[3]
+            assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+        elif len(args) > 4:
+            raise AttributeError(error)
+
+        return data, filepath, shape
+
+    def __len__(self):
+        if self._data is None:
+            return 0
         else:
-            raise ValueError('wrong number of arguments.')
+            return len(self._data[:, 0])
 
-
-    def get_bins_size(self):
-        return self.bins_size
-
-
-    def set_bins_size(self, *args):
-        if len(args) == 2:
-            self.bins_size = (args[0], args[1])
-        elif len(args) == 1:
-            self.bins_size = args[0]
-        else:
-            raise ValueError('wrong number of arguments.')
-
-
-    def save(self, filepath, delimiter=', ', fmt='%.18e'):
-        """Saves photon events data to a file.
+    def save(self, filepath, only_data=False,  **kwargs):
+        r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Args:
-            filepath (string or pathlib.Path, optional): filepath to file.
-            delimiter (str, optional): The string used to separate values. If whitespaces are used,
-                consecutive whitespaces act as delimiter. Use ``\\t`` for tab. The default is comma (,).
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename ends in .gz, the file is automatically saved in
+                compressed gzip format.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is saved to the file.
+
+        If not specified, the following parameters are passed to `numpy.savetxt()`_:
+
+        Args:
+            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
+                sequence of formats. See numpy's documentation for more information.
+                If not specified, best fmt is calculated based on the
+                number of decimal places of the data. Specifing fmt makes the code
+                runs a little faster (not much tough, but it might make a difference
+                if saving a lot of files).
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (", ").
+            newline (str, optional): String or character separating lines.
+                Default is ``\n``.
+            header (bool, optional): String that will be written at the beginning of the file.
+                Note that, attributes are always saved at the beginning of the file.
+            comments (str, optional): String that will be prepended to the
+                header and footer strings, to mark them as comments. Default is "# ".
 
         Returns:
             None
 
-        note:
-            x_max and y_max values are saved in the header.
-
-        See Also:
-            :py:func:`photon_events.load`.
+        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
-        header  = f'x_max {self.x_max}\n'
-        header += f'y_max {self.y_max}\n'
-        header += f'x y I'
-        save_data(self.events, filepath=Path(filepath), delimiter=delimiter, header=header, fmt=fmt)
 
+        # kwargs
+        if 'fmt' not in kwargs: # pick best format
+            decimal = max([n_decimal_places(x) for x in flatten(self._data)])
+            kwargs['fmt'] = f'%.{decimal}f'
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'newline' not in kwargs:
+            kwargs['newline'] = '\n'
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
 
-    def _binning(self, use_bins_size=False):
-        if use_bins_size:
-            self._bins = np.array((int(self.x_max/self.bins_size[0]), int(self.y_max/self.bins_size[1])))
-            # print('binned from bins_size bitch')
-
+        # save
+        if only_data:
+            if 'header' in kwargs:
+                del kwargs['header']
+            if 'footer' in kwargs:
+                del kwargs['footer']
+            np.savetxt(Path(filepath), self._data, **kwargs)
         else:
-            self._bins_size = np.array((self.x_max/self.bins[0], self.y_max/self.bins[1]))
-            # print('binned from bins bitch')
+            if 'header' not in kwargs:
+                kwargs['header'] = ''
+            else:
+                kwargs['header'] += '\n'
+            dict = get_attributes(self)
+            kwargs['header'] += '==== PhotonEvents attributes ===='  + '\n'
+            for n in dict:
+                if n not in ['_data', '_x', '_y', '_I', '_reduced', '_calculated_shifts', '_f', '_shifts']:
+                    if isinstance(dict[n], Iterable):
+                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
+                    else:
+                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
+            np.savetxt(Path(filepath), self._data, **kwargs)
 
-        self._hist, self._x_edges, self._y_edges = np.histogram2d(self.events[:, 0],
-                                                                 self.events[:, 1],
-                                                                 bins=self.bins,
-                                                                 weights=self.events[:, 2],
-                                                                 range=((0, self.x_max), (0, self.y_max))
-                                                                )
-        self._x_centers = moving_average(self.x_edges, n=2)
-        self._y_centers = moving_average(self.y_edges, n=2)
+    def load(self, filepath, **kwargs):
+        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first decompressed.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (', ').
+            comments (str, optional): The character used to indicate the start
+                of a comment. Default is ``# ``. Attributes picked up
+                from the header will be loaded too.
+
+        Returns:
+            None
+
+        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
+        """
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
+        # read data
+        data = np.genfromtxt(Path(filepath), **kwargs)
+        self.data = data
+
+        # read header
+        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+        attr_start = 0
+        binning_flag = False  # check if data needs binning
+
+        # find where attributes listing starts
+        for i, line in enumerate(header):
+            if '==== PhotonEvents attributes ====' in line:
+                attr_start = i
+                break
+            attr_start = -1
+
+        # read attributes
+        if attr_start != -1:
+            for i, line in enumerate(header[attr_start+1:-1]):
+
+                # extract name and value
+                name = line[1:-1].split(':')[0].strip()
+                value = eval(line[1:-1].split(':')[1].strip())
 
 
-    def binning(self, bins=None, bins_size=None):
+                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+                if name in ['_nbins']:
+                    if value[0] > 0 and value[1] > 0:
+                        binning_flag = True
+                elif name in ['_bins_size']:
+                    if value[0] > 0 and value[1] > 0:
+                        binning_flag = True
+                ### DEALING WITH OTHER ATTRIBUTES ###
+                elif name not in []:  # except these attrs
+                    try:
+                        setattr(self, name, value)
+                    except Exception as e:
+                        print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+
+        ### RUN ###
+        if binning_flag:
+            try:
+                self.binning(nbins=self.nbins, bins_size=self.bins_size)
+            except:
+                pass
+
+    def plot(self, ax=None, **kwargs):
+        """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
+
+        The limits of the plot is also set to the size of the detector (given in
+            the attribute ``shape``.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+
+        If not specified, the following parameters are passed to `matplotlib.pyplot.scatter()`_:
+
+        Args:
+            s: The marker size in points**2. Default is 0.1.
+
+        Returns:
+            `matplotlib.image.AxesImage`_
+
+        .. _matplotlib.pyplot.scatter(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.scatter.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
+        """
+        if ax is None:
+            ax = plt
+
+        # kwargs
+        if 's' not in kwargs:
+            kwargs['s'] = 0.1
+
+        # plot
+        ax.scatter(self.data[:, 0], self.data[:, 1], **kwargs)
+
+        # set limits
+        ax.xlim(0, self.shape[1])
+        ax.ylim(0, self.shape[0])
+
+        return ax
+
+    def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
 
         Args:
-            bins (int or tuple, optional): number of bins. If one value is given,
+            nbins (int or tuple, optional): number of bins. If one value is given,
                 this is used for both x and y directions. If two values are given,
                 they are used separetely for the number of rows and number of
-                columns, respectively. ``bins_size`` is calculated automatically.
+                columns, respectively. ``bins_size`` is calculated.
             bins_size (int or tuple, optional): size of the bins. This overwrites
                 the argument ``bins``. If one value is given,
                 it is used for both x and y directions. If two values are given,
                 they are used separetely for rows and columns size, respectively.
-                If data lenght cannot be divided by ``bins_size``, the value of
-                ``bins_size`` will be recalculated to the closest possible value.
+                ``nbins`` is calculated.
 
         Example:
-            ``bins = 10``
-            ``bins = (10)``
-            ``bins = (10, 5)``
+            .. code-block:: python
+
+                nbins = 10       # (10 rows, 10 columns)
+                nbins = (10)     # (10 rows, 10 columns)
+                nbins = (10, 5)  # (10 rows, 5 columns)
 
 
         Returns:
             None
         """
-        if bins_size is None:
-            if bins is None:
-                raise ValueError('Number of bins or bin size must be passed as an argument.')
-            else:
-                try:
-                    if len(bins) == 1:
-                        x_bins, y_bins = bins[0], bins[0]
-                    else:
-                        x_bins, y_bins = bins[0], bins[1]
-                except TypeError:
-                    x_bins, y_bins = bins, bins
-                if x_bins < 0 or y_bins < 0 or is_integer(x_bins)==False or is_integer(x_bins)==False:
-                    raise ValueError("Number of bins must be a positive integer.")
-                else:
-                    _bins = np.array((x_bins, y_bins))
-                    _bins_size = np.array((self.y_max/self.bins[0], self.x_max/self.bins[1]))
-        else:
-            try:
-                if len(bins_size) == 1:
-                    x_bins_size, y_bins_size = bins_size[0], bins_size[0]
-                else:
-                    x_bins_size, y_bins_size = bins_size[0], bins_size[1]
-            except TypeError:
-                x_bins_size, y_bins_size = bins_size, bins_size
-            if x_bins < 0 or y_bins < 0:
-                raise ValueError("Size of bins must be a positive.")
-            else:
-                _bins_size = np.array((x_bins_size, y_bins_size))
-                _bins = np.array((int(self.x_max/self.bins_size[0]), int(self.y_max/self.bins_size[1])))
-                _bins_size = np.array((self.x_max/self.bins[0], self.y_max/self.bins[1]))
+        kwargs['shape']        = self.shape
+        kwargs['factor_check'] = False
+        _nbins, _bins_size = _bins_interpreter(*args, **kwargs)
 
-        self._hist, self._x_edges, self._y_edges = np.histogram2d(self.events[:, 0],
-                                                                 self.events[:, 1],
-                                                                 bins=_bins[::-1],
-                                                                 weights=self.events[:, 2],
-                                                                 range=((0, self.x_max), (0, self.y_max))
-                                                                )
-        self._x_centers = moving_average(self.x_edges, n=2)
-        self._y_centers = moving_average(self.y_edges, n=2)
-        self._bins = _bins
+        temp, _x_edges, _y_edges = np.histogram2d(self.data[:, 0],
+                                                            self.data[:, 1],
+                                                            bins=_nbins[::-1],
+                                                             weights=self.data[:, 2],
+                                                             range=((0, self.shape[1]), (0, self.shape[0]))
+                                                            )
+        self._reduced   = Image(temp.transpose())
+        self.reduced._x = moving_average(_x_edges, n=2)
+        self.reduced._y = moving_average(_y_edges, n=2)
+        # self._x_centers = moving_average(self.x_edges, n=2)
+        # self._y_centers = moving_average(self.y_edges, n=2)
+        self._nbins     = _nbins
         self._bins_size = _bins_size
 
-
-
-    def guess_bins(self, bins_initial=(9, 100), bins_step=(1, 50), max_x_iter=3, max_iter=1000, mode='cross-correlation', ranges=None):
-        """
-        Args:
-            max_x_iter (int, optional): every iteration the algorithm calculates
-                the offsets for different x_bins. Sometimes, subsequant x_bins
-                will give the same result (i.e., same number of equal offsets).
-                The algorithm will keep trying max_x_iter different x_bins until
-                finaly change to a different y_bins.
-            max_iter (int, optional): maximum number of different binnigs to try.
-        """
-        # offset parameters
-        ref = int(bins_initial[0]/2)
-
-        # inital iteration
-        # temp = PhotonEvents(self.events, x_max=self.x_max, y_max=self.y_max)
-        # temp.bins = bins_initial
-        # temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
-        diff = [0, 0]
-        diff_sum = sum(diff)
-
-        # bins_initial[0] -= 1
-        x_counter = 0
-        total_counter = 0
-        bins = (bins_initial[0], bins_initial[1])
-        while 0 in diff and total_counter < max_iter:
-            temp = PhotonEvents(self.events, x_max=self.x_max, y_max=self.y_max)
-            temp.bins = bins
-            temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
-            diff = np.diff(temp.offsets)
-
-            if x_counter < max_x_iter-1:
-                if diff_sum == sum(diff):
-                    bins = (bins[0]+bins_step[0], bins[1])
-                    x_counter += 1
-            else:
-                bins = (bins_initial[0], bins[1]+bins_step[1])
-                x_counter = 0
-
-            diff_sum = sum(diff)
-            total_counter += 1
-        if total_counter >= max_iter:
-            raise RuntimeError('cannot find solution.')
-        else:
-            return temp.bins
-
-
-    def best_bins(self, y_bins=None, x_bins=None, deg=2, spectrum_bins=6000, **kwargs):
-
-        if y_bins is None:
-            y_bins = [100, 150, 300, 400, 600, 1000, 1500, 2500, 5000, 6000, 8000, 12000, 15000]
-
-        if x_bins is None:
-            x_bins = [3, 5, 7, 9, 12, 15, 20, 30, 60]
-
-        # bins_old = self.bins
-
-        fwhm = {y_bin: {x_bin:None for x_bin in x_bins} for y_bin in y_bins}
-        best_bins = (0, 0)
-        best = 10000
-        print(f'Starting iteration...')
-        for i, y_bin in enumerate(y_bins):
-            print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}.')
-            for x_bin in x_bins:
-                temp = PhotonEvents(self.events, x_max=self.x_max, y_max=self.y_max)
-                temp.bins = (x_bin, y_bin)
-                # print(self.bins)
-                temp.calculate_offsets(ref=int(temp.bins[0]/2))
-                temp.fit_offsets(deg=deg)
-                temp.offsets_correction()
-                s = temp.calculate_spectrum(bins=spectrum_bins)
-                try:
-                    s.guess_elastic_peak(**kwargs)
-                    fwhm[y_bin][x_bin] = s.elastic_fwhm
-                    if s.elastic_fwhm < best:
-                        best_bins = (x_bin, y_bin)
-                        best = s.elastic_fwhm
-                except RuntimeError:
-                    pass
-
-
-        print(f'Done. Best bins is {best_bins}.')
-
-        return best_bins, best, fwhm
-
-
-    def calculate_offsets(self, mode='cross-correlation', ranges=None, ref=0):
-        """Calculate the offset of each column relative to a reference column.
+    def calculate_spectrum(self, nbins=None, bins_size=None, axis=1, xaxis='bins'):
+        """Integrate data in one direction (sum columns or rows).
 
         Args:
-            ref (int, optional): reference column. The offset of all other columns
-                is calculated based on the reference column. Default is 0.
-             mode (string, optional): method used to calculate the offsets.
-                The current options are: 'cross-correlation', 'max', 'elastic',
-                and 'elastic-cross-correlation'.
-            ranges (list, optional): a pair of x-coordinate values or a list of pairs. Each pair represents
-                the start and stop of a data range. If `None`, the whole data set is used.
+            nbins (int, optional): number of bins. nbins overwrites bins_size. The
+                nbins of the opposite axis is automatically set to 1.
+            bins_size (int or tuple, optional): size of the bins.
+            axis (int or string, optional): Axis along which elements are integrated.
+                By default, data is integrated in the horizontal direction.
 
         Returns:
-            None
+            :py:class:`Spectrum`.
         """
-        # check if data is binned
-        if self.hist is None:
-            raise ValueError('Data not binned yet. Use binning()')
+        axis = _axis_interpreter(axis)
 
-        # check ranges
-        if ranges is None:
-            ranges = [[0, self.y_max]]
-        else:
-            try:
-                for r in ranges:
-                    if r[0] > max(self.y_centers) or r[-1] < min(self.y_centers):
-                        raise ValueError('Selected ranges outside data range (y_centers).')
-            except TypeError:
-                if ranges[0] > max(self.y_centers) or ranges[-1] < min(self.y_centers):
-                    raise ValueError('Selected ranges outside data range (y_centers).')
-                ranges = (ranges, )
+        temp = PhotonEvents(data=self.data, shape=self.shape)
+        temp.binning(nbins=nbins, bins_size=bins_size)
+        s = temp.reduced.calculate_spectrum(axis=axis)
+        return s
 
-        # pre allocate
-        offsets = np.zeros(self.hist.shape[0])
+    def calculate_shifts(self, ref=0, axis=0, mode='cross-correlation', ranges=None, verbose=False, idx=0, bypass=False, **kwargs):
+        axis = _axis_interpreter(axis)
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
 
-        # ref
-        # print(self.y_centers)
-        # print(self.hist)
+        self.reduced.calculate_shifts(ref=0, axis=0, mode='cross-correlation', ranges=None, verbose=False, idx=0, bypass=False, **kwargs)
+        self._calculated_shifts = self.reduced.calculated_shifts
+        if axis == 0:
+            self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y*self.bins_size[0]
+        elif axis == 1:
+            self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y*self.bins_size[1]
 
-        y_centers, columns = extract(self.y_centers, self.hist.transpose(), ranges=ranges)
-
-        # calculate
-        for i, _ in enumerate(offsets):
-            if mode == 'cross-correlation' or mode == 'cc':
-                cross_correlation = np.correlate(columns[:, i], columns[:, ref], mode='same')
-                offsets[i]   = y_centers[np.argmax(cross_correlation)]
-
-            elif mode == 'max' or mode == 'm':
-                offsets[i]   = y_centers[np.argmax(columns[:, i])]
-            elif mode == 'elastic' or mode == 'e':
-                raise NotImplementedError('Not implementeed yet.')
-            elif mode == 'elastic-cross-correlation' or mode == 'ecc':
-                raise NotImplementedError('Not implementeed yet.')
-            else:
-                raise ValueError("valid mode options are: 'cross-correlation', 'max', 'elastic', and 'elastic-cross-correlation'.")
-
-        self._offsets        =  offsets - offsets[ref]
-        self._offsets_ref    = ref
-        self._offsets_ranges = ranges
-        self._offsets_mode   = mode
-
-
-
-    def fit_offsets(self, deg=2, f=None, **kwargs):
-        """Find the curve that fits the offset values.
-
-        Args:
-            deg (int, optional): degree for the polnomial fit. The default is 1.
-            f (function, optional):  a function y = f(x, a, b, ...) that returns the
-                value of y as a function of x and other parameters to be fitted.
-                This overwrites the standard polynomal fit and ``deg``
-                is ignored.
-            **kwargs: kwargs are passed to ``scipy.optimize.curve_fit()`` that
-                that optimizes the parameters of f. If f is not None, kwargs are
-                passed to ``numpy.polyfit()``.
-
-        Returns:
-            None
-        """
-        x2fit = self.x_centers
-        y2fit = self.offsets
-
-        if x2fit is None:
-            raise ValueError('Data not binned yet. Use binning()')
-        if y2fit is None:
-            raise ValueError('Offsets not defined. Use calculate_offsets().')
-
-        if f is None:
-            if deg < 0:
-                raise ValueError('deg must be a positive value or zero.')
-
-            popt = np.polyfit(x2fit, y2fit, deg=deg, **kwargs)
-            f = np.poly1d(popt)
-
-        else:
-            popt, pcov = curve_fit(f, x2fit, y2fit, **kwargs)
-            f = lambda x: f(x, *popt)
-
-        self._offsets_func = f
-        self._offsets_popt = popt
-
-    def save_popt(self, filepath='./popt.dat', comments='', check_overwrite=True):
-        d = {'popt': self.offsets_popt.tolist(), 'comments': comments}
-        save_obj(d, filepath=Path(filepath), check_overwrite=check_overwrite)
-
-    def load_popt(self, filepath='./popt.dat', f=None):
-        d = load_obj(filepath=Path(filepath))
-
-        if f is None:
-            self._offsets_func = np.poly1d(d['popt'])
-            self._offsets_popt = np.array(d['popt'])
-        else:
-            self._offsets_func = lambda x: f(x, d['popt'])
-            self._offsets_popt = np.array(d['popt'])
-
-    def offsets_correction(self, f=None):
-        """Uses the offsets fitted curve to adjust the photon events.
-
-        Args:
-            f (function, optional): f = f(x). If None, function at self.offsets_func
-            will be used.
-        """
-        if f is None:
-            f2 = lambda x, y: (x, y-self.offsets_func(x))
-        else:
-            f2 = lambda x, y: (x, y-f(x))
-
-        self.apply_correction(f=f2)
-
-
-    def apply_correction(self, f):
+    def transform(self, f):
         """Changes the values of x, y based on a function.
-
-        Example:
-            f = lambda x, y: (x, y**2)
 
         Args:
             f (function): function ``x, y = f(x, y)`` that takes as input the
                 position of a photon event and returns its corrected values.
 
+        Example:
+            f = lambda x, y: (x, y**2)
+
         Returns:
             None
         """
-        self._events[:, 0], self._events[:, 1] = f(self.events[:, 0], self.events[:, 1])
+        self._data[:, 0], self._data[:, 1] = f(self.data[:, 0], self.data[:, 1])
 
-        try:
-            self.binning(bins=self.bins)
-        except ValueError:
-            pass
-
-
-    def best_bins_for_spectrum(self, y_bins=None, **kwargs):
-
-        if y_bins is None:
-            y_bins = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000]
-
-        fwhm = {y_bin: None for y_bin in y_bins}
-        best = 10000
-        print(f'Starting iteration...')
-        for i, y_bin in enumerate(y_bins):
-            print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}')
-            s = self.calculate_spectrum(bins=y_bin, mode='length')
-            try:
-                s.guess_elastic_peak(**kwargs)
-                fwhm[y_bin] = s.elastic_fwhm
-                if s.elastic_fwhm < best:
-                    best_bins = (1, y_bin)
-                    best = s.elastic_fwhm
-            except RuntimeError:
-                fwhm[y_bin] = -1
-
-
-        return best_bins, best, fwhm
-
-
-    def calculate_spectrum(self, bins=None, bins_size=None, mode='bins'):
-        """Sum the photon events in the x direction.
-
-        Args:
-            y_bins (int, optional): number of y bins. If None, the current binning is used.
-            bins_size (int or tuple, optional): size of the y bins. This overwrites
-                the argument ``y_bins``. If None, the current binning is used.
-            mode (string, optional): Type of the x axis. If 'bins', the x axis
-                is numbered from 0 to the number of y_bins. If 'length', the
-                detector x values are used.
-
-        mode = length is usefull when comparing data with different binnings.
-
-        Returns:
-            spectrum type
+    def set_shifts(self, value=None, p=None, f=None, axis=0):
         """
-
-        temp = PhotonEvents(events=self.events, x_max=self.x_max, y_max=self.y_max)
-        if bins_size is None and bins is not None:
-            try:
-                if len(bins) == 1:
-                    y_bins = bins[0]
-                else:
-                    y_bins = bins[1]
-            except TypeError:
-                y_bins = bins
-            temp.binning(bins=(1, y_bins))
-        elif bins is None and bins_size is not None:
-            try:
-                if len(bins_size) == 1:
-                    y_bins_size = bins_size[0]
-                else:
-                    y_bins_size = bins_size[1]
-            except TypeError:
-                y_bins_size = bins_size
-            temp.binning(bins_size=(temp.x_max+1, bins_size))
-        elif self.bins[0] != -1:
-            temp.binning(bins=(1, self.bins[1]))
-        else:
-            raise ValueError('bining for spectrum calculation not defined.')
-
-        # x
-        if mode == 'bins':
-            x = np.arange(0, temp.bins[1])
-        elif mode == 'length':
-            x = temp.y_centers
-        else:
-            raise ValueError('mode can only be `bins` or `length`.')
-        self._spectrum = Spectrum(x=x, y=temp.hist[0])
-        self._spectrum_bins = temp.bins[:]
-
-        return self._spectrum
-
-
-    def plot(self, ax=None, pointsize=1, cutoff=0, show_bins=(False, False), show_offsets=False, show_fit=False, offsets_kwargs={}, bins_kwargs={}, fit_kwargs={}, **kwargs):
-        """Plot photon events.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            pointsize (int, optional): photon events point size. Default is 1.
-            show_bins (bool, optional): if True, bins edges are displayed in cyan.
-                A tuple of bools can also be used to display only x bins or y bins,
-                e. g., ``show_bins = (True, False)`` will display only x bins.
-                The default is (False, False).
-            show_offsets (bool, optional): if True, offsets are displayed over
-                its respectively bin (it is positined based on the max calue of
-                the first bin). The ranges of data used to calculate
-                the offsets are marked by green and red lines.
-            show_fit (bool, optional): if True, the fit of the curve
-                defined by the offsets values is displayed.
-                The ranges of data used to calculate
-                the offsets are marked by green and red lines.
-            bins_kwargs (dict): kwargs that are passed to ``plt.plot()`` that plots the binning lines.
-            fit_kwargs (dict): kwargs that are passed to ``plt.plot()`` that plots the binning lines.
-            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data (photon events).
-
-
-        Returns:
-            matplotlib.axes
+        value
+        p
+        f
+        axis=0 or 1
         """
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            # ax.set_facecolor('black')
+        axis = _axis_interpreter(axis)
 
-        # kwargs
-        if 'marker' not in kwargs:
-            kwargs['marker'] = 'o'
-        if 'ms' not in kwargs and 'markersize' not in kwargs:
-            kwargs['ms'] = pointsize
-        if 'mfc' not in kwargs and 'markerfacecolor' not in kwargs:
-            kwargs['mfc'] = 'black'
-            # kwargs['mfc'] = 'white'
-        if 'markeredgewidth' not in kwargs and 'mew' not in kwargs:
-            kwargs['markeredgewidth'] = 0
-        if 'linewidth' not in kwargs and 'lw' not in kwargs:
-            kwargs['linewidth'] = 0
+        if value is not None:
+            if isinstance(value, Iterable) == False:
+                value = [value]*len(self)
+            assert len(value) == len(self), f'value must have the same length as the data\nLength of the data = {len(self)}.'
 
-        # bins_kwargs
-        if 'linewidth' not in bins_kwargs and 'lw' not in bins_kwargs:
-            bins_kwargs['linewidth'] = 0.5
-        if 'color' not in bins_kwargs and 'c' not in bins_kwargs:
-            bins_kwargs['color'] = 'cyan'
-        if 'zorder' not in bins_kwargs:
-            bins_kwargs['zorder'] = 3
+            if axis == 0:
+                self._data[:, 1] = self.data[:, 1] + value
+                self._shifts = Spectrum(x=self.data[:, 0], y=value)
+            elif axis == 1:
+                self._data[:, 0] = self.data[:, 0] + value
+                self._shifts = Spectrum(x=self.data[:, 1], y=value)
+        elif p is not None:
+            if axis == 0:
+                self._data[:, 1] = self.data[:, 1] + np.polyval(p, self.data[:, 0])
+            elif axis == 1:
+                self._data[:, 0] = self.data[:, 0] + np.polyval(p, self.data[:, 1])
+            self._p = p
+        elif f is not None:
+            if axis == 0:
+                self._data[:, 1] = self.data[:, 1] + f(self.data[:, 0])
+            elif axis == 1:
+                self._data[:, 0] = self.data[:, 0] + f(self.data[:, 1])
+            self._f = f
 
-        # offsets_kwargs
-        if 'color' not in offsets_kwargs and 'c' not in offsets_kwargs:
-            offsets_kwargs['color'] = 'green'
-        if 'zorder' not in offsets_kwargs:
-            offsets_kwargs['zorder'] = 4
+    def fix_curvature(self, deg=2, axis=0):
+        axis = _axis_interpreter(axis)
 
-        # fit_kwargs
-        if 'color' not in fit_kwargs and 'c' not in fit_kwargs:
-            fit_kwargs['color'] = 'red'
-        if 'linewidth' not in fit_kwargs and 'lw' not in fit_kwargs:
-            fit_kwargs['linewidth'] = 2
-        if 'zorder' not in fit_kwargs:
-            fit_kwargs['zorder'] = 5
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
 
-        # plot
-        if cutoff != 0:
-            temp = np.array([event for event in self.events if event[2]>cutoff])
-            ax.plot(temp[:, 0], temp[:, 1], **kwargs)
-        else:
-            ax.plot(self.events[:, 0], self.events[:, 1], **kwargs)
+        self.reduced.floor()
+        self.reduced.calculate_shifts()
+        if axis == 0:
+            self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y*self.bins_size[0]
+        elif axis == 1:
+            self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y*self.bins_size[1]
 
-        # show_bins
-        try:
-            if len(show_bins) == 1:
-                show_bins = (show_bins[0], show_bins[0])
-        except TypeError:
-            show_bins = (show_bins, show_bins)
-        if show_bins != (False, False):
-            if self.x_edges is not None:
-                if show_bins[0]:
-                    plt.vlines(self.x_edges, 0, self.y_max, **bins_kwargs)
-                if show_bins[1]:
-                    plt.hlines(self.y_edges, 0, self.x_max, **bins_kwargs)
-            else:
-                raise ValueError('Data not binned yet. Cannot show bins. Use binning()')
+        p, f, sfit = self.reduced.calculated_shifts.polyfit(deg=deg)
+        self._p = p
+        self._f = f
+        self._shifts = sfit
 
+        # set shifts
+        self.set_shifts(p=p)
 
-        # show_offsets
-        if show_offsets:
-            if self.offsets is None:
-                raise ValueError('Offsets not defined. Cannot show offsets. Use calculate_offsets().')
-            else:
-                x2, y2 = extract(self.y_centers, self.hist[self.offsets_ref], ranges=self.offsets_ranges)
-                c = x2[np.argmax(y2)]
-                self.plot_offsets(ax=ax, shift=(-self.offsets[self.offsets_ref] + c), **offsets_kwargs)
-
-        # show offsets fit
-        if show_fit:
-            if self.offsets is None:
-                raise ValueError('Offsets not fitted. Use fit_offsets().')
-            else:
-                x2, y2 = extract(self.y_centers, self.hist[self.offsets_ref], ranges=self.offsets_ranges)
-                c = x2[np.argmax(y2)]
-                self.plot_fit(ax=ax,  shift=(-self.offsets[self.offsets_ref] + c), **fit_kwargs)
-
-        if show_offsets or show_fit:
-            for r in self.offsets_ranges:
-                plt.axhline(r[0], color='green', linewidth=2, zorder=10)
-                plt.axhline(r[1], color='red', linewidth=2, zorder=10)
-
-        plt.xlim(0, self.x_max)
-        plt.ylim(0, self.y_max)
-
-        return ax
-
-
-    def plot_offsets(self, ax=None, shift=0, **kwargs):
-        """Plot offsets as function of x values (center of x bins).
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            shift (int, optional): vertical shift. Default is 0.
-            **kwargs: kwargs are passed to ``plt.scatter()`` that plots the data.
-
-        Returns:
-            matplotlib.axes
-        """
-        if ax is None:
-            ax = plt
-
-        if self.offsets is None:
-            raise ValueError('Offsets not defined. Use get_offsets().')
-        else:
-            ax.scatter(self.x_centers, self.offsets+shift, **kwargs)
-        return ax
-
-
-    def plot_fit(self, ax=None,  shift=0, **kwargs):
-        """Plot the offsets fitted curve as function of x values.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            shift (int, optional): vertical shift. Default is 0.
-            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
-
-        Returns:
-            matplotlib.axes
-        """
-        if ax is None:
-            ax = plt
-
-        if self.offsets_func is None:
-            raise ValueError('Offsets not defined. Use calculate_offsets().')
-        else:
-            x = np.linspace(0, self.x_max, 200)
-            y = self.offsets_func(x)
-            ax.plot(x, y+shift, **kwargs)
-
-        return ax
-
-
-    def plot_columns(self, ax=None, columns='all', show_ranges=False, vertical_increment=0, **kwargs):
-        """Plot columns (intensity as function of y values (center of y bins).
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            columns (int, string or list, optional): number of the columns to plot.
-                It can be a single int or a list of int's. If
-                ``columns = 'all'``, all columns are ploted.
-            vertical_increment (int, optional): if one column is plotted, it
-                adds a vertical offset to the plotted curve. If many columns are ploted,
-                ``vertical_increment`` defines
-                the vertical offset between each curve. Default is 0.
-            show_ranges (bool, optional): show ranges in which offsets were calculated.
-            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
-
-        Returns:
-            matplotlib.axes
-        """
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-
-        if self.hist is not None:
-            if columns == 'all':
-                columns = np.arange(0, self.hist.shape[0])
-
-            i = 0
-            try:
-                if len(columns) == 1:
-                    ax.plot(self.y_centers, self.hist[columns[0]]+vertical_increment, label=columns[0], **kwargs)
-                else:
-                    for i in range(len(columns)):
-                        ax.plot(self.y_centers, self.hist[columns[i]]-i*vertical_increment, label=columns[i], **kwargs)
-            except TypeError:
-                    ax.plot(self.y_centers, self.hist[columns]+vertical_increment, label=columns,**kwargs)
-
-            plt.legend()
-
-            if show_ranges:
-                if self.offsets_func is None:
-                    warnings.warn('Offsets range not defined. Use get_offsets().', stacklevel=2)
-                else:
-                    for r in self.offsets_ranges:
-                        plt.axvline(r[0], color='green', linewidth=1.2, zorder=10)
-                        plt.axvline(r[1], color='red', linewidth=1.2, zorder=10)
-
-            return ax
-        else:
-            raise ValueError('data not binned yet. Please, bin data.')
+    #
+    # def guess_bins(self, bins_initial=(9, 100), bins_step=(1, 50), max_x_iter=3, max_iter=1000, mode='cross-correlation', ranges=None):
+    #     """
+    #     Args:
+    #         max_x_iter (int, optional): every iteration the algorithm calculates
+    #             the offsets for different x_bins. Sometimes, subsequant x_bins
+    #             will give the same result (i.e., same number of equal offsets).
+    #             The algorithm will keep trying max_x_iter different x_bins until
+    #             finaly change to a different y_bins.
+    #         max_iter (int, optional): maximum number of different binnigs to try.
+    #     """
+    #     # offset parameters
+    #     ref = int(bins_initial[0]/2)
+    #
+    #     # inital iteration
+    #     # temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
+    #     # temp.bins = bins_initial
+    #     # temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
+    #     diff = [0, 0]
+    #     diff_sum = sum(diff)
+    #
+    #     # bins_initial[0] -= 1
+    #     x_counter = 0
+    #     total_counter = 0
+    #     bins = (bins_initial[0], bins_initial[1])
+    #     while 0 in diff and total_counter < max_iter:
+    #         temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
+    #         temp.bins = bins
+    #         temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
+    #         diff = np.diff(temp.offsets)
+    #
+    #         if x_counter < max_x_iter-1:
+    #             if diff_sum == sum(diff):
+    #                 bins = (bins[0]+bins_step[0], bins[1])
+    #                 x_counter += 1
+    #         else:
+    #             bins = (bins_initial[0], bins[1]+bins_step[1])
+    #             x_counter = 0
+    #
+    #         diff_sum = sum(diff)
+    #         total_counter += 1
+    #     if total_counter >= max_iter:
+    #         raise RuntimeError('cannot find solution.')
+    #     else:
+    #         return temp.bins
+    #
+    # def best_bins(self, y_bins=None, x_bins=None, deg=2, spectrum_bins=6000, **kwargs):
+    #
+    #     if y_bins is None:
+    #         y_bins = [100, 150, 300, 400, 600, 1000, 1500, 2500, 5000, 6000, 8000, 12000, 15000]
+    #
+    #     if x_bins is None:
+    #         x_bins = [3, 5, 7, 9, 12, 15, 20, 30, 60]
+    #
+    #     # bins_old = self.bins
+    #
+    #     fwhm = {y_bin: {x_bin:None for x_bin in x_bins} for y_bin in y_bins}
+    #     best_bins = (0, 0)
+    #     best = 10000
+    #     print(f'Starting iteration...')
+    #     for i, y_bin in enumerate(y_bins):
+    #         print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}.')
+    #         for x_bin in x_bins:
+    #             temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
+    #             temp.bins = (x_bin, y_bin)
+    #             # print(self.bins)
+    #             temp.calculate_offsets(ref=int(temp.bins[0]/2))
+    #             temp.fit_offsets(deg=deg)
+    #             temp.offsets_correction()
+    #             s = temp.calculate_spectrum(bins=spectrum_bins)
+    #             try:
+    #                 s.guess_elastic_peak(**kwargs)
+    #                 fwhm[y_bin][x_bin] = s.elastic_fwhm
+    #                 if s.elastic_fwhm < best:
+    #                     best_bins = (x_bin, y_bin)
+    #                     best = s.elastic_fwhm
+    #             except RuntimeError:
+    #                 pass
+    #
+    #
+    #     print(f'Done. Best bins is {best_bins}.')
+    #
+    #     return best_bins, best, fwhm
+    #
+    # def best_bins_for_spectrum(self, y_bins=None, **kwargs):
+    #
+    #     if y_bins is None:
+    #         y_bins = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000]
+    #
+    #     fwhm = {y_bin: None for y_bin in y_bins}
+    #     best = 10000
+    #     print(f'Starting iteration...')
+    #     for i, y_bin in enumerate(y_bins):
+    #         print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}')
+    #         s = self.calculate_spectrum(bins=y_bin, mode='length')
+    #         try:
+    #             s.guess_elastic_peak(**kwargs)
+    #             fwhm[y_bin] = s.elastic_fwhm
+    #             if s.elastic_fwhm < best:
+    #                 best_bins = (1, y_bin)
+    #                 best = s.elastic_fwhm
+    #         except RuntimeError:
+    #             fwhm[y_bin] = -1
+    #
+    #
+    #     return best_bins, best, fwhm
 
 
 class Spectrum(metaclass=_Meta):
@@ -4264,7 +4355,7 @@ class Spectra(metaclass=_Meta):
         length (number, read only): length of x-coordinates vector.
         x (number, read only): x-coordinates (only applicable if x-coordinates
             are the same for all spectra.
-        shifts (list of int): Calculated shifts as int. Must always have the same lenght as data.
+        shifts (list of int): Calculated shifts as int. Must always have the same length as data.
         shift_ref (number, read only): index of the spectrum used as reference
             for shift calculation.
         shift_ref_value (number, read only): value of the shift for the reference
@@ -4728,7 +4819,7 @@ class Spectra(metaclass=_Meta):
     def check_length(self):
         """Checks if all spectra has the same length.
 
-        If all spectra have the same length, it sets :py:attr:`Spectra.length` = lenght.
+        If all spectra have the same length, it sets :py:attr:`Spectra.length` = length.
         Otherwise, it raises an error.
 
         Returns:
@@ -5126,7 +5217,7 @@ class Spectra(metaclass=_Meta):
             start (number): value used for measuring the first spectrum.
             stop (number): value used for measuring the last spectrum.
             values (list): value list. It overwrites start and
-                stop. Must be the same lenght as data.
+                stop. Must be the same length as data.
             **kwargs: parameters to be passed to :py:func:`Spectra.calculate_shifts()`
 
         Returns:
@@ -5697,7 +5788,7 @@ class Spectra(metaclass=_Meta):
                 Energies are them extrapolated from start to stop in
                 steps of one.
             values (list): values list. It overwrites start and
-                stop. Must be the same lenght as data.
+                stop. Must be the same length as data.
             ranges (list, optional): a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 ranges overwrites value and n.
