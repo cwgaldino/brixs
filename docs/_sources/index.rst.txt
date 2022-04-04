@@ -5,14 +5,19 @@ BRIXS
 
 BRIXS is a python package for analysis of RIXS spectra.
 
-.. The core of the BRIXS package is spectrum and image manipulation obtained in RIXS experiments.
+This package is in active development and sometimes the documentation might not
+  follow the speed of the code. We are doing our best to keep it up to date.
+
+Refer to the folder examples on GitHub for code examples.
+
 
 .. toctree::
    :maxdepth: 2
 
    Installation <installation>
-   Spectra manipulation <brixs>
-   Fake RIXS spctra generation <fake>
+   BRIXS <brixs>
+   File reading <file_reading>
+   Fake data generation for debugging and testing <fake>
 
 
 See on GitHub

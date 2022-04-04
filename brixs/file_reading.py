@@ -8,19 +8,151 @@ import matplotlib.pyplot as plt
 
 import brixs as br
 
-try:
-    import h5py
-except:
-    pass
+import h5py
 
 # %% General ===================================================================
 
-def image2events(data, cutoff=0):
+def _image2events(data, cutoff=0):
     """Return a PhotonEvents object from image."""
     X, Y = np.meshgrid(np.arange(data.shape[1]) + 0.5, np.arange(data.shape[0]) + 0.5)
     return np.array([event for event in np.vstack((X.ravel(), Y.ravel(), data.ravel())).transpose() if not event[2]<=cutoff])
 
 # %% ADRESS beamline - PSI - Switzerland =======================================
+def read_ADRESS(*args, **kwargs):
+    """Read files from ADRESS beamline at PSI.
+
+    Example:
+
+        >>> import brixs as br
+        >>>
+        >>> # single file
+        >>> s = br.read_ADRESS(filepath)
+        >>>
+        >>> # data for each ccd
+        >>> ss = br.read_ADRESS(folderpath, prefix, n)
+        >>>
+        >>> # One can also use keyword arguments
+        >>> s  = br.read_ADRESS(filepath=filepath)
+        >>> ss = br.read_ADRESS(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
+        >>>
+        >>> # experiment parameters can be accesed by:
+        >>> print(s.nd)
+
+    Args:
+        filepath (str or Path object): filepath to h5 file (for loading a single file).
+        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
+        prefix (str): prefix (with or without 'underscore'). Example: for
+            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
+        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
+            The number of extra zeros (0001) is defined by the argument `zfill`.
+        zfill (number, optional): number of digits to fill scan number (Default is 4).
+
+    Returns:
+        :py:class:`Spectrum`
+
+    Last updated: 04/04/2022 by Carlos Galdino
+    """
+    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
+
+    if filepath is not None:
+        return _read_ADRESS1(filepath)
+    if folderpath is not None:
+        if folderpath.is_dir() == False:
+            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
+        if prefix is None:
+            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
+        if n is None:
+            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
+        filepaths = [folderpath/(prefix+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
+        ss  = br.Spectra(3)
+        nd = [0]*3
+        for i, filepath in enumerate(filepaths):
+            ss[i] = _read_ADRESS1(filepath)
+            ss[i].scan = n
+            ss[i].ccd = i
+        ss.scan = n
+        return ss
+
+def read_ADRESS_pe(*args, **kwargs):
+    """Return photon event list from ADRESS beamline at PSI.
+
+    Example:
+
+        >>> import brixs as br
+        >>>
+        >>> # single file
+        >>> pe = br.read_ADRESS_pe(filepath)
+        >>>
+        >>> # data for each ccd
+        >>> pes = br.read_ADRESS_pe(folderpath, prefix, n)
+        >>>
+        >>> # One can also use keyword arguments
+        >>> pe  = br.read_ADRESS_pe(filepath=filepath)
+        >>> pes = br.read_ADRESS_pe(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
+        >>>
+        >>> # experiment parameters can be accesed by:
+        >>> print(pe.nd)
+
+    Args:
+        filepath (str or Path object): filepath to h5 file (for loading a single file).
+        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
+        prefix (str): prefix (with or without 'underscore'). Example: for
+            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
+        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
+            The number of extra zeros (0001) is defined by the argument `zfill`.
+        zfill (number, optional): number of digits to fill scan number (Default is 4).
+
+    Returns:
+        :py:class:`PhotonEvents`
+
+    Last updated: 04/04/2022 by Carlos Galdino
+    """
+    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
+
+    if filepath is not None:
+        return _read_ADRESS1_pe(filepath)
+    if folderpath is not None:
+        if folderpath.is_dir() == False:
+            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
+        if prefix is None:
+            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
+        if n is None:
+            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
+        filepaths = [folderpath/(prefix+'_'+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
+        pes = [0]*3
+        nd = [0]*3
+        for i, filepath in enumerate(filepaths):
+            pes[i] = _read_ADRESS1_pe(filepath)
+            pes[i].scan = n
+            pes[i].ccd = i
+        pes.scan = n
+        return pes
+
+def read_ADRESS_bad(filepath):
+    """Return image with bad events read from ADRESS beamline at PSI.
+
+    Example:
+
+        >>> import brixs as br
+        >>> im = br.read_ADRESS_bad(filepath)
+        >>> print(im.nd)
+
+    Args:
+        filepath (str or Path object): filepath.
+
+    Returns:
+        :py:class:`Image`
+
+    Last updated: 04/04/2022 by Carlos Galdino
+    """
+    f = h5py.File(Path(filepath), 'r')
+    nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
+
+    im = br.Image(np.array(f['entry/analysis/bad'][:]))
+    im.nd = nd
+
+    return  im
+
 def _sort_args_ADRESS(*args, **kwargs):
     filepath   = None
     folderpath = None
@@ -69,61 +201,6 @@ def _sort_args_ADRESS(*args, **kwargs):
 
     return filepath, folderpath, prefix, n, zfill
 
-def read_ADRESS_pe(*args, **kwargs):
-    """Return photon event list from ADRESS beamline at PSI.
-
-    Example:
-
-        >>> import brixs as br
-        >>>
-        >>> # single file
-        >>> pe = br.read_pe_ADRESS(filepath)
-        >>>
-        >>> # data for each ccd
-        >>> pes = br.read_pe_ADRESS(folderpath, prefix, n)
-        >>>
-        >>> # One can also use keyword arguments
-        >>> pe  = br.read_pe_ADRESS(filepath=filepath)
-        >>> pes = br.read_pe_ADRESS(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
-        >>>
-        >>> # experiment parameters can be accesed by:
-        >>> print(pe.nd)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file (for loading a single file).
-        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
-        prefix (str): prefix (with or without 'underscore'). Example: for
-            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
-        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
-            The number of extra zeros (0001) is defined by the argument `zfill`.
-        zfill (number, optional): number of digits to fill scan number (Default is 4).
-
-    Returns:
-        PhotonEvents object
-
-    Last updated: 21/02/2022 by Carlos Galdino
-    """
-    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
-
-    if filepath is not None:
-        return _read_ADRESS1_pe(filepath)
-    if folderpath is not None:
-        if folderpath.is_dir() == False:
-            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
-        if prefix is None:
-            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
-        if n is None:
-            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
-        filepaths = [folderpath/(prefix+'_'+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
-        pes = [0]*3
-        nd = [0]*3
-        for i, filepath in enumerate(filepaths):
-            pes[i] = _read_ADRESS1_pe(filepath)
-            pes[i].scan = n
-            pes[i].ccd = i
-        pes.scan = n
-        return pes
-
 def _read_ADRESS1_pe(filepath):
     f = h5py.File(Path(filepath), 'r')
 
@@ -136,65 +213,6 @@ def _read_ADRESS1_pe(filepath):
 
     return pe
 
-
-
-
-def read_ADRESS(*args, **kwargs):
-    """Read files from ADRESS beamline at PSI.
-
-    Example:
-
-        >>> import brixs as br
-        >>>
-        >>> # single file
-        >>> s = br.read_ADRESS(filepath)
-        >>>
-        >>> # data for each ccd
-        >>> ss = br.read_ADRESS(folderpath, prefix, n)
-        >>>
-        >>> # One can also use keyword arguments
-        >>> s  = br.read_ADRESS(filepath=filepath)
-        >>> ss = br.read_ADRESS(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
-        >>>
-        >>> # experiment parameters can be accesed by:
-        >>> print(s.nd)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file (for loading a single file).
-        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
-        prefix (str): prefix (with or without 'underscore'). Example: for
-            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
-        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
-            The number of extra zeros (0001) is defined by the argument `zfill`.
-        zfill (number, optional): number of digits to fill scan number (Default is 4).
-
-    Returns:
-        Spectrum
-
-    Last updated: 21/03/2022 by Carlos Galdino
-    """
-    filepath, folderpath, prefix, n, zfill = _sort_args_ADRESS(*args, **kwargs)
-
-    if filepath is not None:
-        return _read_ADRESS1(filepath)
-    if folderpath is not None:
-        if folderpath.is_dir() == False:
-            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
-        if prefix is None:
-            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
-        if n is None:
-            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
-        filepaths = [folderpath/(prefix+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
-        ss  = br.Spectra(3)
-        nd = [0]*3
-        for i, filepath in enumerate(filepaths):
-            ss[i] = _read_ADRESS1(filepath)
-            ss[i].scan = n
-            ss[i].ccd = i
-        ss.scan = n
-        return ss
-
-
 def _read_ADRESS1(filepath):
     f = h5py.File(filepath, 'r')
 
@@ -203,18 +221,7 @@ def _read_ADRESS1(filepath):
     s.nd = nd
     return s
 
-def read_bad_ADRESS1(filepath):
-    """Return image with bad events."""
-    f = h5py.File(Path(filepath), 'r')
-    nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
-    x_max = nd['ArraySizeX'][0]
-    y_max = nd['ArraySizeY'][0]
-
-    bad = np.array(f['entry/analysis/bad'][:])
-
-    return  bad
-
-def calculate_calib_ADRESS(folderpath, prefix, start_scan=None, stop_scan=None, scans=None, start_value=None, stop_value=None, values=None, verbose=False, **kwargs):
+def _calculate_calib_ADRESS(folderpath, prefix, start_scan=None, stop_scan=None, scans=None, start_value=None, stop_value=None, values=None, verbose=False, **kwargs):
     """Returns the calibration factor (dispersion) for ADRESS data.
 
     If energy values are not given, it will be read from the file.
@@ -418,7 +425,7 @@ def calculate_calib_ADRESS(folderpath, prefix, start_scan=None, stop_scan=None, 
 
 # %% PEAXIS beamline - HZB - Germany ===========================================
 import os
-def ReadAndor(fname, dimensions = (2048, 2048), byte_size=4, data_type='c'):
+def _ReadAndor(fname, dimensions = (2048, 2048), byte_size=4, data_type='c'):
     """Reads the .sif file produced by the Andor iKon-L CCD camera.
     The dimensions of the pixel array can be changed if necessary.
     """
@@ -448,40 +455,21 @@ def read_PEAXIS(filepath):
     Example:
 
         >>> import brixs as br
-        >>> pe, s, bad, nd = br.read_PEAXIS(filepath)
+        >>> im = br.read_PEAXIS(filepath)
+        >>> print(im.header)
 
     Args:
-        filepath (str or Path object): filepath to h5 file.
+        filepath (str or Path object): filepath.
 
     Returns:
-        PhotonEvents, Spectrum, PhotonEvents with bad photon counts, and dictionary
-        with instrument parameters.
+        :py:class:`Image`
 
-    Last updated: 26/12/2021 by Carlos Galdino
+    Last updated: 04/04/2022 by Carlos Galdino
     """
-    data, header = ReadAndor(filepath)
-    return br.Spectrum(np.sum(data, axis=1))
-
-def read_PEAXIS2(filepath, cutoff=0):
-    """Read files from PEAXIS beamline at HZB.
-
-    Example:
-
-        >>> import brixs as br
-        >>> pe, s, bad, nd = br.read_PEAXIS(filepath)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file.
-
-    Returns:
-        PhotonEvents, Spectrum, PhotonEvents with bad photon counts, and dictionary
-        with instrument parameters.
-
-    Last updated: 26/12/2021 by Carlos Galdino
-    """
-    data, header = ReadAndor(filepath)
-    pe = br.PhotonEvents(br.image2events(data[::-1,:], cutoff=cutoff), y_max=2048, x_max=2048)
-    return pe, header
+    data, header = _ReadAndor(filepath)
+    im = br.Image(data)
+    im.header = header
+    return im
 
 # %% ID32 beamline - ESRF - France =============================================
 def read_ID32(filepath):
