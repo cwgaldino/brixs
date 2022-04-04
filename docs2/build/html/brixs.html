@@ -943,18 +943,12 @@ axis=0 or 1</p>
 <dt id="brixs.Spectrum">
 <em class="property">class </em><code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">Spectrum</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum" title="Permalink to this definition"></a></dt>
 <dd><p>Creates a <code class="docutils literal notranslate"><span class="pre">spectrum</span></code> class type object to deal with (x, y) data types.</p>
-<dl class="simple">
-<dt>The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly</dt><dd><p>3) filepath. For example, if <cite>data</cite> and <cite>filepath</cite> are passed as
-arguments, <cite>filepath</cite> is ignored.</p>
-</dd>
-</dl>
+<p>The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly 3) filepath. For example, if <cite>data</cite> and <cite>filepath</cite> are passed as arguments, <cite>filepath</cite> is ignored.</p>
 <p>Keyword arguments (kwargs) cannot be mixed with positional arguments.</p>
-<dl class="simple">
-<dt>For positional arguments, if one data set is passed, it assumes it is</dt><dd><p><cite>data</cite>. If this one argument is of type string or Pathlib.Path, it
+<p>For positional arguments, if one data set is passed, it assumes it is
+<cite>data</cite>. If this one argument is of type string or Pathlib.Path, it
 assumes it is a filepath. If two data sets are passed, it will
 assume one is the x coordinates and the next one is the y coordinates.</p>
-</dd>
-</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
