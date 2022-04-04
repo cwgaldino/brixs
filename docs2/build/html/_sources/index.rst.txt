@@ -11,7 +11,7 @@ Refer to the folder examples on GitHub for code examples.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    Installation <installation>
    BRIXS <brixs>

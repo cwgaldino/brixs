@@ -48,7 +48,7 @@ def read_ADRESS(*args, **kwargs):
         zfill (number, optional): number of digits to fill scan number (Default is 4).
 
     Returns:
-        :py:class:`Spectrum`
+        :py:class:`brixs.Spectrum`
 
     Last updated: 04/04/2022 by Carlos Galdino
     """
@@ -103,7 +103,7 @@ def read_ADRESS_pe(*args, **kwargs):
         zfill (number, optional): number of digits to fill scan number (Default is 4).
 
     Returns:
-        :py:class:`PhotonEvents`
+        :py:class:`brixs.PhotonEvents`
 
     Last updated: 04/04/2022 by Carlos Galdino
     """
@@ -141,7 +141,7 @@ def read_ADRESS_bad(filepath):
         filepath (str or Path object): filepath.
 
     Returns:
-        :py:class:`Image`
+        :py:class:`brixs.Image`
 
     Last updated: 04/04/2022 by Carlos Galdino
     """
@@ -398,29 +398,29 @@ def _calculate_calib_ADRESS(folderpath, prefix, start_scan=None, stop_scan=None,
 #     return ss, pes, nd
 #
 # def read_ADRESS(folderpath, prefix, n, zfill=4):
-    """Read files from the three ccd's from ADRESS beamline at PSI.
-
-    Example:
-
-        >>> import brixs as br
-        >>> ss = br.read_ADRESS(folderpath, prefix, n)
-
-    Args:
-        folderpath (str or Path object): folderpath to files.
-        prefix (str): prefix (without 'underscore')
-        n (number): scan number
-        zfill (number, optional): number of digits to fill scan number.
-
-    Returns:
-        Spectra object
-
-    Last updated: 21/02/2022 by Carlos Galdino
-    """
-    folderpath = Path(folderpath)
-    ss  = br.Spectra()
-    for filepath in [folderpath/(prefix+'_'+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]:
-        ss.append(read_ADRESS1(filepath))
-    return ss
+    # """Read files from the three ccd's from ADRESS beamline at PSI.
+    #
+    # Example:
+    #
+    #     >>> import brixs as br
+    #     >>> ss = br.read_ADRESS(folderpath, prefix, n)
+    #
+    # Args:
+    #     folderpath (str or Path object): folderpath to files.
+    #     prefix (str): prefix (without 'underscore')
+    #     n (number): scan number
+    #     zfill (number, optional): number of digits to fill scan number.
+    #
+    # Returns:
+    #     Spectra object
+    #
+    # Last updated: 21/02/2022 by Carlos Galdino
+    # """
+    # folderpath = Path(folderpath)
+    # ss  = br.Spectra()
+    # for filepath in [folderpath/(prefix+'_'+str(n).zfill(4)+f'_d{i}.h5') for i in (1, 2, 3)]:
+    #     ss.append(read_ADRESS1(filepath))
+    # return ss
 
 
 # %% PEAXIS beamline - HZB - Germany ===========================================
@@ -462,7 +462,7 @@ def read_PEAXIS(filepath):
         filepath (str or Path object): filepath.
 
     Returns:
-        :py:class:`Image`
+        :py:class:`brixs.Image`
 
     Last updated: 04/04/2022 by Carlos Galdino
     """
@@ -475,17 +475,7 @@ def read_PEAXIS(filepath):
 def read_ID32(filepath):
     """Read files from ID32 beamline at ESRF.
 
-    Example:
-
-        >>> import brixs as br
-        >>> pe, s, bad, nd = br.read_ESRF(filepath)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file.
-
-    Returns:
-        PhotonEvents, Spectrum, PhotonEvents with bad photon counts, and dictionary
-        with instrument parameters.
+    NOT IMLEMENTED YET.
 
     Last updated: 26/12/2021 by Carlos Galdino
     """
@@ -495,17 +485,7 @@ def read_ID32(filepath):
 def read_IPE(filepath):
     """Read files from IPE beamline at SIRIUS.
 
-    Example:
-
-        >>> import brixs as br
-        >>> pe, s, bad, nd = br.read_IPE(filepath)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file.
-
-    Returns:
-        PhotonEvents, Spectrum, PhotonEvents with bad photon counts, and dictionary
-        with instrument parameters.
+    NOT IMLEMENTED YET.
 
     Last updated: 26/12/2021 by Carlos Galdino
     """

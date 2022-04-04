@@ -9,11 +9,11 @@ File reading for specific beamlines (active development)
 ADRESS beamline at PSI
 ------------------------
 
-.. autofunction:: read_ADRESS
+.. autofunction:: brixs.read_ADRESS
 
-.. autofunction:: read_ADRESS_pe
+.. autofunction:: brixs.read_ADRESS_pe
 
-.. autofunction:: read_ADRESS_bad
+.. autofunction:: brixs.read_ADRESS_bad
 
 
 
@@ -21,16 +21,16 @@ ADRESS beamline at PSI
 PEAXIS beamline at HZB
 ------------------------
 
-.. autofunction:: read_PEAXIS
+.. autofunction:: brixs.read_PEAXIS
 
 
 ID32 beamline at ESRF
 ------------------------
 
-.. autofunction:: read_ID32
+.. autofunction:: brixs.read_ID32
 
 
 IPE beamline at SIRIUS
 ------------------------
 
-.. autofunction:: read_IPE
+.. autofunction:: brixs.read_IPE
