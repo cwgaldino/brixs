@@ -2462,16 +2462,14 @@ class PhotonEvents(metaclass=_Meta):
 class Spectrum(metaclass=_Meta):
     """Creates a ``spectrum`` class type object to deal with (x, y) data types.
 
-    The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
-        3) filepath. For example, if `data` and `filepath` are passed as
-        arguments, `filepath` is ignored.
+    The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly 3) filepath. For example, if `data` and `filepath` are passed as arguments, `filepath` is ignored.
 
     Keyword arguments (kwargs) cannot be mixed with positional arguments.
 
     For positional arguments, if one data set is passed, it assumes it is
-        `data`. If this one argument is of type string or Pathlib.Path, it
-        assumes it is a filepath. If two data sets are passed, it will
-        assume one is the x coordinates and the next one is the y coordinates.
+    `data`. If this one argument is of type string or Pathlib.Path, it
+    assumes it is a filepath. If two data sets are passed, it will
+    assume one is the x coordinates and the next one is the y coordinates.
 
     Args:
         data (list or array, optional): two column list (or array).
