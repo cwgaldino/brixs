@@ -6,7 +6,7 @@ BRIXS
 BRIXS is a python package for analysis of RIXS spectra.
 
 This package is in active development and sometimes the documentation might not
-  follow the speed of the code. We are doing our best to keep it up to date.
+follow the speed of the code. We are doing our best to keep it up to date.
 
 Refer to the folder examples on GitHub for code examples.
 
