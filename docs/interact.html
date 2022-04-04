@@ -82,7 +82,8 @@
 <code class="sig-prename descclassname">brixs.backpack.interact.</code><code class="sig-name descname">make_sound</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">duration</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">freq</span><span class="o">=</span><span class="default_value">440</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.interact.make_sound" title="Permalink to this definition"></a></dt>
 <dd><p>Make a sound.</p>
 <p>On linux (tested on ubuntu) it uses sox (<code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">apt</span> <span class="pre">install</span> <span class="pre">sox</span></code>).
-On windows it uses the python package winsound (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">winsound</span></code>).</p>
+On windows it uses the python package winsound (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">winsound</span></code>).
+On max it will raise a error (not implemented yet).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -163,7 +164,7 @@ On windows it uses the python package winsound (<code class="docutils literal no
 <dt id="brixs.backpack.interact.send_email">
 <code class="sig-prename descclassname">brixs.backpack.interact.</code><code class="sig-name descname">send_email</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">recipient</span></em>, <em class="sig-param"><span class="n">subject</span></em>, <em class="sig-param"><span class="n">body</span></em>, <em class="sig-param"><span class="n">sender</span></em>, <em class="sig-param"><span class="n">password</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.interact.send_email" title="Permalink to this definition"></a></dt>
 <dd><p>Send email.</p>
-<p>If using a gmail sender email turn <code class="docutils literal notranslate"><span class="pre">Allow</span> <span class="pre">less</span> <span class="pre">secure</span> <span class="pre">apps</span> <span class="pre">to</span> <span class="pre">ON</span></code>.
+<p>If using a gmail sender email turn <code class="docutils literal notranslate"><span class="pre">Allow</span> <span class="pre">less</span> <span class="pre">secure</span> <span class="pre">apps</span></code> to ON.
 Be aware that this makes it easier for others to gain access to your account.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
