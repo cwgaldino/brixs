@@ -54,8 +54,7 @@ Package is based on four objects
   ss = br.Spectra()
 
 
-For example on how to deal with data from ADRESS beamline at PSI, go to the
-examples folder.
+Refer to the folder examples on GitHub for code examples.
 
 
 
