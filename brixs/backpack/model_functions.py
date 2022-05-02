@@ -213,6 +213,48 @@ def square_pulse(x, amp, c, w):
     return - np.heaviside(x-c-w/2, amp)*amp + np.heaviside(x-c+w/2, amp)*amp
 
 
+def heaviside(x, amp, c):
+    r"""Heaviside step function.
+
+    .. math::
+
+        y(x) =   \begin{cases}
+                    0, & \text{ for    $x < c$}\\
+                    \text{amp}, & \text{ for  }  $x < c$\\
+                    \end{cases}
+
+    :param x: x array
+    :param amp: Amplitude
+    :param c: Center
+    :return: :math:`y(x)`
+    """
+    return np.heaviside(x-c, amp)
+
+
+def dirac_delta(x, amp, c):
+    r"""Crude implementation of Dirac delta function.
+
+    .. math::
+
+        y(x) =   \begin{cases}
+                    \text{amp}, & \text{ for  }  $x = c$\\
+                    0, & \text{ otherwise}\\
+                    \end{cases}
+
+    :param x: x array
+    :param amp: Amplitude
+    :param c: Center
+    :return: :math:`y(x)`
+    """
+    x = list(x)
+    final = np.zeros(len(x))
+    if c in x:
+        final[x.index(c)] = amp
+        return final
+    else:
+        return final
+        
+
 def err_fwhm(x, amp, c, w):
     r"""Error function. Integal of gaussian function calculated by ``scipy.special.erf()``.
 

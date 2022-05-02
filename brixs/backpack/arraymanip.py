@@ -253,6 +253,9 @@ def shifted(x, y, value, mode='hard'):
     x = np.array(x)
     y = np.array(y)
 
+    if value == 0:
+        return x, y
+
     if mode == 'y' or mode == 'interp' or mode=='soft':
         if check_monotonicity(x) != 1:
             raise ValueError('x array must be increasingly monotonic.')
@@ -262,19 +265,23 @@ def shifted(x, y, value, mode='hard'):
         x = np.array(x) + value
 
     elif mode == 'roll' or mode == 'r':
-        try:
-            if value.is_integer():
-                y = np.roll(y, int(value))
-            else:
-                raise ValueError("value must be an interger for mode='roll'.")
-        except AttributeError:
+        if is_integer(value):
             y = np.roll(y, int(value))
-        if value > 0:
-            y[:int(value)] = y[int(value)]
-        elif value < 0:
-            # print(y[int(value):])
-            # print( y[int(value-1)])
-            y[int(value):] = y[int(value-1)]
+        else:
+            raise ValueError("value must be an interger for mode='roll'.")
+        # try:
+        #     if value.is_integer():
+        #         y = np.roll(y, int(value))
+        #     else:
+        #         raise ValueError("value must be an interger for mode='roll'.")
+        # except AttributeError:
+        #     y = np.roll(y, int(value))
+        # if value > 0:
+        #     y[:int(value)] = y[int(value)]
+        # elif value < 0:
+        #     # print(y[int(value):])
+        #     # print( y[int(value-1)])
+        #     y[int(value):] = y[int(value-1)]
     else:
         raise ValueError("mode not recognized (valid: 'y', 'x', 'roll').")
 
@@ -295,7 +302,7 @@ def peak_fit(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         guess_w (float or int, optional): guess FWHM. If None, it will be guessed as 10% of
             ``guess_c``
         guess_offset (float or int, optional): guess Offset. If None, it will be guessed as zero [0].
-        fixed_m (False or number): `Factor from 1 to 0 of the lorentzian amount.
+        fixed_m (False or number): Factor from 1 to 0 of the lorentzian amount.
             If False, ``m`` will be a fitting parameter. If
             ``fixed_m=<number>``, ``<number>`` will be used for ``m``.
         asymmetry (Bool, optional). If True, peak asymmetry is taken into account by fiting first
@@ -452,7 +459,7 @@ def factors(n):
 def all_equal(array):
     """Returns True if all elements of an array are equal."""
     if len(array) > 50:
-        return array[:-1] == array[1:]
+        return sum(array[:-1] == array[1:])+1 == len(array)
     else:
         iterator = iter(array)
         try:

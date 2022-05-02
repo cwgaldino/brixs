@@ -126,8 +126,9 @@ def filelist(dirpath='.', string='*'):
 
     Args:
         dirpath (str or pathlib.Path, optional): list with full file directory
-        paths.
-        string (str, optional): string to look for in file names.
+            paths.
+        string (str, optional): file names without this string will be ignored. 
+            Use '*' for matching anything. Default is '*'.
 
     Return:
         list
