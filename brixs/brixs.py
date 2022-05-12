@@ -104,10 +104,13 @@ def _axis_interpreter(axis):
     Returns:
         0 or 1
     """
-    if (axis < 0 or axis > 1) and type(axis)!=str:
-        raise ValueError("axis must be 0 ('y') or 1 ('x')")
-    elif axis == 1:
-        return 1
+    if type(axis)!=str:
+        if (axis != 0 and axis != 1):
+            raise ValueError("axis must be 0 ('y') or 1 ('x')")
+        elif axis == 1:
+            return 1
+        elif axis == 0:
+            return 0
     elif type(axis)==str and (axis=='x' or axis.startswith('c') or axis.startswith('h')):
         return 1
     elif axis == 0:
@@ -2612,8 +2615,12 @@ class Spectrum(metaclass=_Meta):
 
 
                 ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
-                if name in []:
-                    pass
+                if name in ['_peaks']:
+                    if value == []:
+                        self._peaks = Peaks()
+                    else:
+                        print('warning: peaks cannot be loaded yet')
+                        self._peaks = Peaks()
                 ### DEALING WITH OTHER ATTRIBUTES ###
                 elif name not in []:  # except these attrs
                     try:
@@ -2963,6 +2970,10 @@ class Spectrum(metaclass=_Meta):
         s._shift_roll   = self.shift_roll
         s._shift_interp = self.shift_interp
         s._peaks        = self.peaks
+
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                s.__setattr__(attr, self.__dict__[attr])
         return s
 
     def crop(self, start=None, stop=None):
@@ -3055,6 +3066,26 @@ class Spectrum(metaclass=_Meta):
         .. _numpy.trapz(): https://numpy.org/doc/stable/reference/generated/numpy.trapz.html
         """
         return np.trapz(y=self.y, x=self.x)
+
+    def normalize(self, value, ranges):
+        """Set a factor such as the average y between ranges is equal to value.
+
+        It uses Spectra.set_factor().
+
+        Args:
+            value (number): value.
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+
+        Returns:
+            None
+
+        See Also:
+            :py:func:`Spectra.calculate_factor`
+        """
+        s = self.extract(ranges=ranges)
+        self.set_factor(self.factor*value/np.mean(s.y))
 
     def zero(self, mode='max', peak=0):
         """Uses Spectrum.set_shift() to shift a specified position to zero.
@@ -4212,15 +4243,13 @@ class Spectra(metaclass=_Meta):
             temp = Spectra(n=len(self))
             for i, s in enumerate(self.data):
                 temp[i] = s.extract(ranges=ranges)
-            # if isinstance(ranges[0], Iterable):
-            #     for i, s in enumerate(self.data):
-            #         temp[i] = s.extract(ranges=ranges)
-            # else:
-            #     for i, s in enumerate(self.data):
-            #         s.crop(start=ranges[0], stop=ranges[0])
         else:
             raise ValueError(f'Ranges is not a valid value.\nRanges should be a pair (x_init1, x_final1) or a list of pairs like this: ((x_init1, x_final1), (x_init2, x_final2), ...)\nUse None to indicate the minimum or maximum x value of the data.')
 
+
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                temp.__setattr__(attr, self.__dict__[attr])
         return temp
 
     def crop(self, start=None, stop=None):
@@ -4330,7 +4359,7 @@ class Spectra(metaclass=_Meta):
         self.set_shift()
 
     def normalize(self, mode=None, peak=0, bkg_check=True):
-        """Uses Spectra.calculate_factor() and Spectra.set_factor() to nomalize spectra.
+        """Uses Spectra.calculate_factor() and Spectra.set_factor() to normalize spectra.
 
         Args:
             mode (string, optional): method used to calculate the shifts. If
@@ -4856,14 +4885,13 @@ class Spectra(metaclass=_Meta):
         ref = 0
 
         # common variables =====================================================
-        values = np.array([0]*len(self))
+        values = np.array([0.0]*len(self))
 
         # CALCULATION ==========================================================
         if mode == 'max':
-            if self.x is not None: # if all data has the same x, execution is much faster
-                ref_value = max(self.data[ref].y)
-                for i in range(len(self)):
-                    values[i] = ref_value/max(self.data[i].y)
+            ref_value = max(self.data[ref].y)
+            for i in range(len(self)):
+                values[i] = ref_value/max(self.data[i].y)
         elif mode == 'delta':
             ref_value = max(self.data[ref].y) - max(self.data[ref].y)
             for i in range(len(self)):
@@ -5045,7 +5073,14 @@ class Spectra(metaclass=_Meta):
         for i in range(len(self)):
             y += self.data[i].y
 
-        return Spectrum(x=self.x, y=y)
+        s = Spectrum(x=self.x, y=y)
+
+        # copy user defined attributes
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                s.__setattr__(attr, self.__dict__[attr])
+
+        return s
 
     def calculate_map(self, axis=0):
         """Return image.
@@ -5070,6 +5105,11 @@ class Spectra(metaclass=_Meta):
         im = Image(data=ys)
         im.x_centers = x
         im.y_centers = y
+
+        # copy user defined attributes
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                im.__setattr__(attr, self.__dict__[attr])
 
         return im
 
@@ -5125,6 +5165,23 @@ class Spectra(metaclass=_Meta):
         """
         if ax is None:
             ax = plt
+
+        # percentage wise increment ====================
+        if 'vi' in kwargs and 'vertical_increment' in kwargs:
+            raise SyntaxError('keyword argument repeated: vertical increment/vi')
+        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
+            if 'vi' in kwargs:
+                vi = kwargs['vi']
+                del kwargs['vi']
+            if 'vertical_increment' in kwargs:
+                vi = kwargs['vertical_increment']
+                del kwargs['vertical_increment']
+            temp = [0]*len(self)
+            for i in range(len(self)):
+                temp[i] = max(self.data[i].y) - min(self.data[i].y)
+            vi = max(temp)*factor*vi/100
+        else:
+            vi = 0
 
         # offset
         if isinstance(offset, Iterable):

@@ -127,7 +127,7 @@ def filelist(dirpath='.', string='*'):
     Args:
         dirpath (str or pathlib.Path, optional): list with full file directory
             paths.
-        string (str, optional): file names without this string will be ignored. 
+        string (str, optional): file names without this string will be ignored.
             Use '*' for matching anything. Default is '*'.
 
     Return:
@@ -207,6 +207,9 @@ def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
         check_overwrite (bool, optional): if True, it will check if file exists
             and ask if user want to overwrite file.
 
+    Returns:
+        None:
+
     See Also:
         :py:func:`load_text`
     """
@@ -255,6 +258,9 @@ def save_obj(obj, filepath='./Untitled.txt', check_overwrite=False, pretty_print
         filepath (str or pathlib.Path, optional): path to save file.
         check_overwrite (bool, optional): if True, it will check if file exists
             and ask if user want to overwrite file.
+
+    Returns:
+        None:
 
     See Also:
         :py:func:`load_obj`
@@ -414,6 +420,9 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
         newline (str, optional): string to indicate new lines.
         check_overwrite (bool, optional): if True, it will check if file exists
             and ask if user want to overwrite file.
+
+    Returns:
+        None:
 
     See Also:
         :py:func:`load_data`

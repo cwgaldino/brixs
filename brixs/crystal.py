@@ -4,36 +4,43 @@
 
 import numpy as np
 from scipy.constants import h, speed_of_light, physical_constants
+from pbcpy.base import DirectCell, ReciprocalCell
 
-try:
-    from pbcpy.base import DirectCell, ReciprocalCell
-except:
-    pass
 
 def eV2angstrom(value):
+    """Converts value from energy (eV) to photon wavelength (angstrom)."""
     return h*speed_of_light/(physical_constants['electron volt-joule relationship'][0]*value) * 10**10
 
-def momentum_transfer(energy, theta_i=None, theta_f=None, two_theta=None):
+def momentum_transfer(energy, theta, two_theta):
+    """Returns the momentum transfer q=q_f-q_i of a scattering process (in angstrom^-1).
 
+    Args:
+        energy (number): energy (in eV) of the incident beam.
+        theta (number): angle (in degress) between the incident beam and the sample surface.
+        two_theta (number): angle (in degress) between the incident and scattered beam.
+
+    Returns:
+        q, q_parallel, q_perperdicular
+    """
     # calculate wavelength
     wavelength = eV2angstrom(energy)
 
     # check angles
-    if sum(x is None for x in [theta_i, theta_f, two_theta]) > 1:
-        raise ValueError('At least two angles must be defined (theta_i, theta_f, two_theta)')
-    if theta_i is None:
-        theta_i = two_theta - theta_f
-    elif theta_f is None:
-        theta_f = two_theta - theta_i
-    elif two_theta is None:
-        two_theta = theta_i + theta_f
-    else:
-        if two_theta - (theta_i + theta_f) > two_theta*0.001 :
-            raise ValueError('theta_i + theta_f must be equal to two_theta.')
+    # if sum(x is None for x in [theta_i, theta_f, two_theta]) > 1:
+    #     raise ValueError('At least two angles must be defined (theta_i, theta_f, two_theta)')
+    # if theta_i is None:
+    #     theta_i = two_theta - theta_f
+    # elif theta_f is None:
+    #     theta_f = two_theta - theta_i
+    # elif two_theta is None:
+    #     two_theta = theta_i + theta_f
+    # else:
+    #     if two_theta - (theta_i + theta_f) > two_theta*0.001 :
+    #         raise ValueError('theta_i + theta_f must be equal to two_theta.')
 
     # degrees to radians
-    theta_i   = np.radians(theta_i)
-    theta_f   = np.radians(theta_f)
+    theta_i   = np.radians(theta)
+    theta_f   = np.radians(two_theta - theta)
     two_theta = np.radians(two_theta)
 
     # calculate total momentum transfer
@@ -49,9 +56,14 @@ def momentum_transfer(energy, theta_i=None, theta_f=None, two_theta=None):
     return q, q_parallel, q_perperdicular
 
 def lattice(a, b, c, alpha=90, beta=90, gamma=90):
-    """Returns the module of the reciprocal vectors.
+    """Returns the unit cell and the reciprocal unit cell matrix in real space.
 
-    Not fully tested.
+    Args:
+        a, b, c (number): lattice parameters in angstrom.
+        alpha, beta, gamma (number): unit cell angles.
+
+    Returns:
+        3x3 unit cell matrix, 3x3 reciprocal unit cell matrix
     """
     if alpha == 90 and beta == 90 and gamma == 90:
         a = [a, 0, 0]
@@ -75,31 +87,39 @@ def lattice(a, b, c, alpha=90, beta=90, gamma=90):
 
     return lattice, reciprocal_cell1.lattice
 
-def brillouin_zone_size(reciprocal_lattice, hkl=None, h=None, k=None, l=None):
+def brillouin_zone_size(reciprocal_lattice, h=None, k=None, l=None):
+    """Returns the size of the brillouin zone given.
+
+    Args:
+        reciprocal_lattice (matrix): 3x3 reciprocal unit cell matrix. See :py:func:`lattice`.
+        h, k, l (number): miller indices defining a direction.
+
+    Returns:
+        number
     """
-    t1 = [rlatt[i]**2 for i in range(3)]
+    inplane_vector = (h, k, l)
+
+    t1 = [reciprocal_lattice[i]**2 for i in range(3)]
     t2 = [np.sqrt(sum(x)) for x in t1]
     t3 = [t2[i]*inplane_vector[i] for i in range(3)]
     dist = np.sqrt(sum([x**2 for x in t3]))
-    print(dist)
-
-    dist = 2*np.pi*np.sqrt(inplane_vector[0]**2/a**2 + inplane_vector[1]**2/b**2 + inplane_vector[2]**2/c**2)
-    print(dist)
-    """
-
-    if hkl is not None:
-        h = hkl[0]
-        k = hkl[0]
-        l = hkl[0]
-
-    t1 = [rlatt[i]**2 for i in range(3)]
-    t2 = [np.sqrt(sum(x)) for x in t1]
-    t3 = [t2[i]*inplane_vector[i] for i in range(3)]
-    dist = np.sqrt(sum([x**2 for x in t3]))
+    # dist = 2*np.pi*np.sqrt(inplane_vector[0]**2/a**2 + inplane_vector[1]**2/b**2 + inplane_vector[2]**2/c**2)
 
     return dist
 
 def momentum2rlu(q, hkl, a, b, c, alpha=90, beta=90, gamma=90):
+    """Converts from momentum to Relative Lattice Units (RLU).
+
+    Args:
+        q (number): momentum (in angstrom^-1)
+        hkl (tuple): list or tuple with 3 elements corresponding to miller
+            indices defining a direction.
+        a, b, c (number): lattice parameters in angstrom.
+        alpha, beta, gamma (number): unit cell angles.
+
+    Returns:
+        number
+    """
     _, rlatt = lattice(a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma)
-    size = brillouin_zone_size(rlatt, hkl=hkl)
+    size = brillouin_zone_size(rlatt, h=hkl[0], k=hkl[1], l=hkl[2])
     return q/size

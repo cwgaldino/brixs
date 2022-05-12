@@ -43,6 +43,19 @@ is_windows = operating_system() == 'windows'
 is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
 
+def is_notebook():
+    """Return True if running from a ipython interactive terminal or jupyter notebook."""
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
 def make_sound(duration=1, freq=440):
     """Make a sound.
 
