@@ -993,8 +993,14 @@ class Image(metaclass=_Meta):
             # vamx is set when histogram drops below 0.01% of the max
             x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
             y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
-            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > max(y2fit)*0.0001])  # clean zeros
-            kwargs['vmax'] = data2fit[-1, 0]
+            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > abs(max(y2fit)*0.0001)])  # clean zeros
+
+            try:
+                kwargs['vmax'] = data2fit[-1, 0]
+            except IndexError:  # in case the max of y is too high
+                kwargs['vmin'] = self.vmin
+                kwargs['vmax'] = self.vmax
+
 
         # # x and y
         # assert check_monotonicity(self.x) == 1, f'x axis (Image.x) must be increasingly monotonic.\nData cannot be plotted by Image.imshow().\nPlease, use Image.plot() or set Image.x = None\nx: {self.x}'
@@ -1192,9 +1198,9 @@ class Image(metaclass=_Meta):
         axis = _axis_interpreter(axis)
 
         if axis == 0:
-            return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=0))
+            return Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
         elif axis == 1:
-            return Spectrum(x=self.x_centers, y=np.sum(self._data, axis=1))
+            return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
 
     def floor(self, x=0, y=0, n=30, nx=None, ny=None):
         """Set background intensity to zero.
@@ -3731,6 +3737,8 @@ class Spectra(metaclass=_Meta):
 
     @property
     def fit(self):
+
+        self._check_fit()
         ss = Spectra(n=len(self))
         for i in range(len(self)):
             ss[i] = self[i].fit
@@ -3744,6 +3752,7 @@ class Spectra(metaclass=_Meta):
 
     @property
     def guess(self):
+        self._check_fit()
         ss = Spectra(n=len(self))
         for i in range(len(self)):
             ss[i] = self[i].guess
@@ -3757,6 +3766,7 @@ class Spectra(metaclass=_Meta):
 
     @property
     def residue(self):
+        self._check_fit()
         ss = Spectra(n=len(self))
         for i in range(len(self)):
             ss[i] = self[i].residue
@@ -4162,7 +4172,7 @@ class Spectra(metaclass=_Meta):
 
     def _check_fit(self):
         """Check if all data has fit object. Raises an error."""
-        temp = {i: None for i in range(len(self))}
+        temp = [None for i in range(len(self))]
         for i in range(len(self)):
                 temp[i] = self[i].fit
         if None in temp:

@@ -443,16 +443,16 @@ class Peak(MutableMapping):
         if self.calib != value:
             if self.calib != 1:
                 self.store['c'] = self.store['c']*self.calib**-1
-                self.store['fwhm'] = self.store['fwhm']*self.calib**-1
+                self.store['fwhm'] = abs(self.store['fwhm']*self.calib**-1)
                 if self.asymmetry:
-                    self.store['fwhm1'] = self.store['fwhm1']*self.calib**-1
-                    self.store['fwhm2'] = self.store['fwhm2']*self.calib**-1
+                    self.store['fwhm1'] = abs(self.store['fwhm1']*self.calib**-1)
+                    self.store['fwhm2'] = abs(self.store['fwhm2']*self.calib**-1)
             if value != 1:
                 self.store['c'] = self.store['c']*value
-                self.store['fwhm'] = self.store['fwhm']*value
+                self.store['fwhm'] = abs(self.store['fwhm']*value)
                 if self.asymmetry:
-                    self.store['fwhm1'] = self.store['fwhm1']*value
-                    self.store['fwhm2'] = self.store['fwhm2']*value
+                    self.store['fwhm1'] = abs(self.store['fwhm1']*value)
+                    self.store['fwhm2'] = abs(self.store['fwhm2']*value)
             self._calib = value
 
             # fix area
@@ -618,7 +618,7 @@ class Peak(MutableMapping):
         p0         = [       self['amp'],                    self['c']]
         bounds_min = [self['amp']*amp_bounds[0], self['c']+self['fwhm']*c_bounds[0]]
         bounds_max = [self['amp']*amp_bounds[1], self['c']+self['fwhm']*c_bounds[1]]
-        assert self['fwhm'] > self['amp']*amp_bounds[0]                   and self['amp'] < self['amp']*amp_bounds[1],        f'guess amp is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
+        assert self['amp'] > self['amp']*amp_bounds[0]                   and self['amp'] < self['amp']*amp_bounds[1],        f'guess amp is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
         assert self['c'] > self['c']+self['fwhm']*c_bounds[0] and self['c'] < self['c']+self['fwhm']*c_bounds[1], f'guess c is out of bounds\nc = {p0[-1]}\nbounds = {(bounds_min[-1], bounds_max[-1])}'
 
         if fixed_m == False and type(fixed_m) == bool:  # variable m
@@ -878,6 +878,7 @@ class Peaks(MutableMapping):
         for peak in self.store:
             peak.calib = value
         self._calib = value
+        self._fix_order()
 
     def set_shift(self, value):
         """Set shift value.

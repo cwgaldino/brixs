@@ -462,27 +462,42 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
     np.savetxt(filepath, obj, fmt=fmt, delimiter=delimiter, newline=newline, header=header, footer=footer, comments=comment_flag)
 
 
-def load_data(filepath, delimiter=None, comment_flag='#', labels=None, force_array=False):
-    """Load data from text file. Data is formated in a dictionary or array.
+def load_data(filepath, labels=None, force_array=False, header_delimiter=None, **kwargs):
+    """Load data from text file. Wrapper for `numpy.genfromtxt()`_.
+
+    Data is formated in a dictionary or array.
 
     The dictionary keys are set as the label of the corresponding data columns, where
     the last comment line before data starts is assumed to have the labels of each data column.
     If column labels cannot be found, data is imported as an array. The file expects
     comments at the begining of the file (file must not have comments elsewhere).
 
+    If a column is full of NaN's, it's converted to a column full of zeros.
+
     Args:
         filepath (str or pathlib.Path): path to file
-        delimiter (str, optional): The string used to separate data values. If whitespaces are used,
-            consecutive whitespaces act as delimiter. Use ``\\t`` for tab. If None,
-            the script will read the file and try to guess the appropriate delimiter.
-            If the file has a header, and if the header has a line with the column labels, it
-            tries to guess the delimiter of this line. If it cannot, it tries
-            to use the same delimiter for the data and for the leader in the header.
-        comment_flag (str, optional): string indicating comments.
         labels (list, optional): It forces data to be loaded as a dictionary where
             each label is associated with a data column. Its lenght must have the same as the number of
             columns. To avoid importing a column, put an asterisk (*) in front of the corresponding label.
         force_array (bool, optional): If ``force_array=True``, data it will be returned in a array.
+        header_delimiter (str, optional): String or character separating column
+            labels in the header. Default is None. If None, it will be guessed.
+
+    If not specified, the following parameters are passed to `numpy.savetxt()`_:
+
+    Args:
+        delimiter (str, optional): String or character separating columns.
+            Use ``\\t`` for tab. If None,
+            the script will read the file and try to guess the appropriate delimiter.
+            If the file has a header, and if the header has a line with the column labels, it
+            tries to guess the delimiter of this line. If it cannot, it tries
+            to use the same delimiter for the data and for the leader in the header.
+            Default is None.
+        comments (str, optional): The character used to indicate the start of a comment.
+            Default is '#'.
+        skip_header (int, optional): The number of lines to skip at the beginning of the file.
+            Default is 0.
+
 
     Returns:
         Dictionary or array.
@@ -490,60 +505,74 @@ def load_data(filepath, delimiter=None, comment_flag='#', labels=None, force_arr
     See Also:
         :py:func:`save_data`.
     """
+    if 'delimiter' not in kwargs:
+        kwargs['delimiter'] = None
+    # if 'newline' not in kwargs:
+    #     kwargs['newline'] = '\n'
+    if 'comments' not in kwargs:
+        kwargs['comments'] = '# '
+    if 'skip_header' not in kwargs:
+        kwargs['skip_header'] = 0
+
     filepath = Path(filepath)
 
     # guess delimiter
-    if delimiter is None:
-        header = load_Comments(filepath, comment_flag=comment_flag, stop_flag=comment_flag)
+    if kwargs['delimiter'] is None:
+        # find header lenght
+        header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
         try: line_number = len(header)
         except TypeError: line_number = 0
+        if kwargs['skip_header'] > line_number:
+            line_number = kwargs['skip_header']
+
+        # find delimiter from the first data row
         f = open(filepath)
         for i, line in enumerate(f):
             if i == line_number:
-                delimiter = detect(line)
+                kwargs['delimiter'] = detect(line)
             elif i > line_number:
                 break
         f.close()
-        if delimiter is None:
+        if kwargs['delimiter'] is None:
             warnings.warn('Could not figure out the delimiter. Trying space.')
-    if delimiter == ' ':
-        delimiter = None
+    if kwargs['delimiter'] == ' ':
+        kwargs['delimiter'] = None
 
     # get data
-    data = np.genfromtxt(str(filepath), delimiter=delimiter, comments=comment_flag)
+    data = np.genfromtxt(str(filepath), **kwargs)
 
-    # get labels
-    header = load_Comments(filepath, comment_flag=comment_flag, stop_flag=comment_flag)
-    if labels is None:
-        if header is False:
-            # warnings.warn('Cannot find header. Importing data as an array.')
-            return data
-        elif force_array:
-            return data
-        else:
-            header_line = header[-1].replace(comment_flag, '').strip()
-            header_line = header_line.replace('\n', '')
-            header_delimiter = detect(header_line)
-            labels = header_line.split(header_delimiter)
-            if len(labels) != data.shape[1]:
-                labels = header_line.split(delimiter)
-                if len(labels) != data.shape[1]:
-                    # warnings.warn('Cannot find column labels. Importing data as an array.')
-                    return data
-            # remove empty itens and trailing spaces
-            labels = [item.strip() for item in labels if item != '']
-
-    # create dict
-    datadict = {labels[i]: data[:, i] for i in range(len(labels)) if not labels[i].startswith('*')}
-
-    # if a column returns only nan, this column is read as string
-    for key in datadict:
-        if False in [x for x in datadict[key] != datadict[key]]:  # test if the whole col is nan
+    # if a column returns only nan, this column yield 0
+    for i in range(data.shape[1]):
+        if False in [x for x in data[:, i] != data[:, i]]:  # test if the whole col is nan
             pass
         else:
             # key conversion to col number
-            col_string = labels.index(key)
-            data = np.genfromtxt(filepath, delimiter=None, comments='#', usecols=[-1], dtype='S8')
-            datadict[key] = [x.decode('utf-8') for x in data]
+            temp = np.genfromtxt(filepath, usecols=i, dtype='S8', **kwargs)
+            # data[:, i] = [x.decode('utf-8') for x in temp]
+            data[:, i] = [0 for x in temp]
 
-    return datadict
+    # get labels
+    if labels is None and force_array is False:
+        header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+        if header:
+            header_line = header[-1].replace(kwargs['comments'], '').strip()
+            header_line = header_line.replace('\n', '')
+            if header_delimiter is None:
+                header_delimiter = detect(header_line)
+            labels = header_line.split(header_delimiter)
+
+    # check labels length
+    if labels is not None:
+        if len(labels) != data.shape[1]:
+            labels = header_line.split(kwargs['delimiter'])
+            if len(labels) != data.shape[1]:
+                return data
+        # remove empty itens and trailing spaces
+        labels = [item.strip() for item in labels if item != '']
+
+    # create dict
+    if labels is not None and force_array is False:
+        datadict = {labels[i]: data[:, i] for i in range(len(labels)) if not labels[i].startswith('*')}
+        return datadict
+    else:
+        return data

@@ -519,7 +519,12 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
     Note:
         To set minor and major ticks 'manually' use `XAxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
 
-            ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
+            _ = ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
+
+        Set labels manualy by using:
+
+            _ = ax.set_yticklabels([1, 2, 3, 4, 5, 6])
+
     """
     if ax is None:
         ax = plt.gca()
