@@ -113,11 +113,15 @@ def extract(x, y, ranges):
     # temp = np.compress(choose_range, np.c_[y.transpose(), x], axis=0)
     # print(choose_range))
     temp = np.compress(choose_range, np.c_[y, x], axis=0)
-    if len(temp[0]) > 2:
-        return temp[:, -1], temp[:, :-1]#.transpose()
+    # print(temp)
+    if temp:
+        if len(temp[0]) > 2:
+            return temp[:, -1], temp[:, :-1]#.transpose()
+        else:
+            # print('here')
+            return temp[:, -1], temp[:, 0]
     else:
-        # print('here')
-        return temp[:, -1], temp[:, 0]
+        raise RuntimeError('No data points within the selected range.')
 
 def moving_average(x, n):
     """Returns the moving average of an array.
