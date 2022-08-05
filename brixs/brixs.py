@@ -2564,7 +2564,9 @@ class Spectrum(metaclass=_Meta):
             kwargs['header'] += '==== Spectrum attributes ===='  + '\n'
             for n in dict:
                 if n not in ['_x', '_y', '_data']:
-                    if isinstance(dict[n], Iterable):
+                    if n == '_fit':
+                        kwargs['header'] += f'{n}: {dict[n].data}'  + '\n'
+                    elif isinstance(dict[n], Iterable):
                         kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
                     else:
                         kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
@@ -2591,10 +2593,10 @@ class Spectrum(metaclass=_Meta):
 
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
+        # if 'delimiter' not in kwargs:
+        #     kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+            kwargs['comments'] = '#'
 
         # read data
         data = np.genfromtxt(Path(filepath), **kwargs)
@@ -2605,34 +2607,35 @@ class Spectrum(metaclass=_Meta):
         attr_start = 0
 
         # find where attributes listing starts
-        for i, line in enumerate(header):
-            if '==== Spectrum attributes ====' in line:
-                attr_start = i
-                break
-            attr_start = -1
+        if header:
+            for i, line in enumerate(header):
+                if '==== Spectrum attributes ====' in line:
+                    attr_start = i
+                    break
+                attr_start = -1
 
-        # read attributes
-        if attr_start != -1:
-            for i, line in enumerate(header[attr_start+1:-1]):
+            # read attributes
+            if attr_start != -1:
+                for i, line in enumerate(header[attr_start+1:-1]):
 
-                # extract name and value
-                name = line[1:-1].split(':')[0].strip()
-                value = eval(line[1:-1].split(':')[1].strip())
+                    # extract name and value
+                    name = line[1:-1].split(':')[0].strip()
+                    value = eval(line[1:-1].split(':')[1].strip())
 
 
-                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
-                if name in ['_peaks']:
-                    if value == []:
-                        self._peaks = Peaks()
-                    else:
-                        print('warning: peaks cannot be loaded yet')
-                        self._peaks = Peaks()
-                ### DEALING WITH OTHER ATTRIBUTES ###
-                elif name not in []:  # except these attrs
-                    try:
-                        setattr(self, name, value)
-                    except Exception as e:
-                        print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+                    ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+                    if name in ['_peaks']:
+                        if value == []:
+                            self._peaks = Peaks()
+                        else:
+                            print('warning: peaks cannot be loaded yet')
+                            self._peaks = Peaks()
+                    ### DEALING WITH OTHER ATTRIBUTES ###
+                    elif name not in []:  # except these attrs
+                        try:
+                            setattr(self, name, value)
+                        except Exception as e:
+                            print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
 
 
     def check_step_x(self, max_error=0.1):
@@ -2707,6 +2710,8 @@ class Spectrum(metaclass=_Meta):
             self._calib = -self.calib
             if self.step is not None:
                 self._step = -self.step
+            self._data = np.vstack((self.x, self.y)).transpose()
+
 
             self.check_monotonicity()
 

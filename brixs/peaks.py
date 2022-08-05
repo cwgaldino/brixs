@@ -144,9 +144,9 @@ class Peak(MutableMapping):
             then assymetry is set to True. If assymetry=True, it cannot reverse
             to False, and another object must be created from scratch.
         store (dictionary):
-        shift( number): shift value (value will be added to x-coordinates).
+        shift (number): shift value (value will be added to x-coordinates).
         calib (number): calibration value (x-coordinates will be multiplied by this value).
-        offset( number): offset value (value will be added to y-coordinates).
+        offset (number): offset value (value will be added to y-coordinates).
         factor (number): multiplicative factor (y-coordinates will be multiplied by this value).
     """
 

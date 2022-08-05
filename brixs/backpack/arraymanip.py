@@ -114,7 +114,7 @@ def extract(x, y, ranges):
     # print(choose_range))
     temp = np.compress(choose_range, np.c_[y, x], axis=0)
     # print(temp)
-    if temp:
+    if temp.any():
         if len(temp[0]) > 2:
             return temp[:, -1], temp[:, :-1]#.transpose()
         else:
