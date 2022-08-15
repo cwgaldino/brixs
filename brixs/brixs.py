@@ -737,103 +737,6 @@ class Image(metaclass=_Meta):
             except:
                 pass
 
-
-    def fastplot(self, ax=None, colorbar=False, **kwargs):
-        """Display data as an image. Wrapper for `matplotlib.pyplot.pcolorfast()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            colorbar (bool, optional): if True, colorbar is shown on the right side.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.pcolorfast()`_.
-
-        If not specified, the following parameters are passed to `matplotlib.pyplot.pcolorfast()`_:
-
-        Args:
-            cmap: The Colormap instance. Default is 'jet'.
-            vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                calculated and vmin is set on the position of the maximum.
-            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
-                calculated and vmax is set to the value where the :del:` integral of the
-                intensity histogram is 0.998 of the total integral after vmin.`
-                intensity drops below 0.01 % of the maximum.
-                **THIS MIGHT CHANGE IN THE FUTURE**.
-
-        Returns:
-            `matplotlib.image.AxesImage`_
-
-        .. _matplotlib.pyplot.pcolorfast(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.pcolorfast.html
-        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
-        """
-        # initialization
-        if ax is None:
-            ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
-                figure()
-                if  settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(settings.FIGURE_POSITION)
-                    except:
-                        pass
-
-        if 'cmap' not in kwargs:
-            kwargs['cmap'] = 'jet'
-        if 'vmin' not in kwargs:
-            kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
-        if 'vmax' not in kwargs:
-            # vamx is set when histogram drops below 0.01% of the max
-            x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
-            y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
-            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > max(y2fit)*0.0001])  # clean zeros
-            kwargs['vmax'] = data2fit[-1, 0]
-
-        # # x and y
-        # assert check_monotonicity(self.x) == 1, f'x axis (Image.x) must be increasingly monotonic.\nData cannot be plotted by Image.fastplot().\nPlease, use Image.plot() or set Image.x = None\nx: {self.x}'
-        # assert check_monotonicity(self.y) == 1, f'y axis (Image.y) must be increasingly monotonic.\nData cannot be plotted by Image.fastplot().\nPlease, use Image.plot() or set Image.y = None\ny: {self.y}'
-        # x = np.linspace(self.x[0], self.x[-1], len(self.x))
-        # y = np.linspace(self.y[0], self.y[-1], len(self.y))
-
-        # fix monotonic of labels x
-        if check_monotonicity(self.x_centers) != 1:
-            x, ordering = fix_monotinicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
-            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
-            ordering = [int(i) for i in ordering]
-            data = copy.deepcopy(self.data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data[:, i] = self.data[:, ordering[i]]
-        else:
-            x = self.x_centers
-            data = self.data
-
-        # fix monotonic of labels y
-        if check_monotonicity(self.y_centers) != 1:
-            y, ordering = fix_monotinicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
-            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
-            ordering = [int(i) for i in ordering]
-            data2 = copy.deepcopy(data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data2[i, :] = data[ordering[i], :]
-        else:
-            y = self.y_centers
-            data2 = data
-
-        # plot
-        x = np.linspace(x[0], x[-1], len(x))
-        dx  = np.mean(np.diff(x))
-        x = np.linspace(x[0]-dx/2, x[-1]+dx/2, len(x))
-
-        y = np.linspace(y[0], y[-1], len(y))
-        dy  = np.mean(np.diff(y))
-        y = np.linspace(y[0]-dy/2, y[-1]+dy/2, len(y))
-        pos = ax.pcolorfast(x, y, data2, **kwargs)
-
-        # colorbar
-        if colorbar:
-            plt.colorbar(pos, aspect=50)#, extend='both')
-
-        return pos
-
     def meshplot(self, ax=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
@@ -927,7 +830,7 @@ class Image(metaclass=_Meta):
 
         return pos
 
-    def plot(self, ax=None, colorbar=False, verbose=True, **kwargs):
+    def imshow(self, ax=None, colorbar=False, verbose=True, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
@@ -1106,6 +1009,13 @@ class Image(metaclass=_Meta):
 
         return pos
 
+    def plot(self, *args, **kwargs):
+        """Same as Image.imshow.
+
+        See:
+            :py:func:`Image.imshow` """
+        self.imshow(*args, **kwargs)
+
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
 
@@ -1249,12 +1159,14 @@ class Image(metaclass=_Meta):
         self._vmin = min([min(x) for x in self.data])
         self._vmax = max([max(x) for x in self.data])
 
-    def calculate_shift(self, axis=0, limit_size=1000):
+    def calculate_shift(self, axis=0, mode='cc', limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
 
         Args:
             axis (int or string, optional): Axis along which elements are shifted.
                 By default, data is shifted in the vertical (0) direction.
+            mode (string, optional): method used to calculate the shifts.
+                The current options are: 'cross-correlation' ('cc').
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images.
                 Default is 1000. Set to False to bypass this limit.
@@ -1904,8 +1816,8 @@ class PhotonEvents(metaclass=_Meta):
                                                              range=((0, self.shape[1]), (0, self.shape[0]))
                                                             )
         self._reduced   = Image(temp.transpose())
-        self.reduced._x = moving_average(_x_edges, n=2)
-        self.reduced._y = moving_average(_y_edges, n=2)
+        self.reduced._x_centers = moving_average(_x_edges, n=2)
+        self.reduced._y_centers = moving_average(_y_edges, n=2)
         # self._x_centers = moving_average(self.x_edges, n=2)
         # self._y_centers = moving_average(self.y_edges, n=2)
         self._nbins     = _nbins

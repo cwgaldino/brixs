@@ -16,18 +16,25 @@ import numpy as np
 filepath = Path(r'../fixtures/PEAXIS/grazingmidsample_R0004.sif')
 
 # %% importing image ============================
-im = br.read_PEAXIS(filepath)
+im = br.PEAXIS.read(filepath)
 
 # %% plot histogram ========================
 fig = br.backpack.figure()
 br.backpack.set_window_position(2048, 232)
 im.histogram.plot(color='black')
+plt.xlabel('Intensity (arb. units)')
+plt.ylabel('Number of pixels')
 
 # %% plot image ============================
 fig = br.backpack.figure()
 br.backpack.set_window_position(2048, 232)
-im.fastplot(colorbar=True)
-_ = plt.title('Original')
+im.plot(colorbar=True)
+# _ = plt.title('Original')
+
+fig = br.backpack.figure()
+br.backpack.set_window_position(2048, 232)
+plt.imshow(im.data)
+plt.colorbar()
 
 # %% plot spectrum ========================
 s_start = im.calculate_spectrum()

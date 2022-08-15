@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
 
 # %% import photonn events =====================================================
-pe = br.read_ADRESS_pe(filepath)
+pe = br.ADRESS.read_pe(filepath)
 
 # %% PhotonEvents basic attributes =============================================
 pe.shape  # size of the detector
@@ -41,7 +41,7 @@ plt.figure()
 plt.scatter(pe.x, pe.y, s=1)
 
 # %% binning ===================================================================
-pe.binning(15, 10)
+pe.binning(1000, 10)
 
 plt.figure()
 pe.reduced.plot(colorbar=True)
@@ -54,21 +54,22 @@ pe.reduced.rows.plot()
 
 plt.figure()
 pe.plot()
-plt.vlines(pe.reduced.x+pe.bins_size[1]/2, 0, pe.shape[0], color='red')
-plt.hlines(pe.reduced.y+pe.bins_size[0]/2, 0, pe.shape[1], color='red')
+plt.vlines(pe.reduced.x_centers+pe.bins_size[1]/2, 0, pe.shape[0], color='red')
+plt.hlines(pe.reduced.y_centers+pe.bins_size[0]/2, 0, pe.shape[1], color='red')
 
 # %% calculate and fit shifts ==================================================
 pe.binning(3000, 10)
-pe.calculate_shifts()
-p, f, s_fit = pe.calculated_shifts.polyfit(deg=2)
+pe.calculate_shift()
+p, f = pe.calculated_shift.polyfit(deg=2)
 
 plt.figure()
-pe.calculated_shifts.plot(marker='o', lw=0, color='black')
-s_fit.plot(color='red')
+pe.calculated_shift.plot(marker='o', lw=0, color='black')
+x = np.linspace(0, 1650, 100)
+plt.plot(x, f(x), color='red')
 
 plt.figure()
 pe.plot()
-s_fit.plot(offset=730, factor=-1, color='red')
+plt.plot(x, -f(x)+730.5, color='red')
 
 # %% set shifts ================================================================
 pe.set_shifts(p=p)
@@ -82,7 +83,22 @@ s = pe.calculate_spectrum(6000)
 plt.figure()
 s.plot()
 
-# %% fix curvature =============================================================
+# %% calibrate spectrum and centering at zero ==================================
+s = pe.calculate_spectrum(6000)
+s.factor =  12.794
+
+s.find_peaks()
+s.peaks
+s.fit_peaks()
+c = s.fit.peaks[0]['c']
+s.shift = -c
+
+plt.figure()
+s.plot()
+plt.xlabel('Energy loss (eV)')
+plt.ylabel('Intensity (arb. units)')
+
+# %% fix curvature (compact) ===================================================
 pe  = br.read_ADRESS_pe(folderpath/'Cu_0005_d1.h5')
 pe.binning(3000, 10)
 pe.fix_curvature()
