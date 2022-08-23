@@ -11,21 +11,18 @@ There are two recommended methods:
 
 1. Using pip
 
-.. code-block:: bash
-
+```python
     pip install git+https://github.com/cwgaldino/brixs
+    ```
 
 or
 
 2. Cloning (or downloading) the GitHub repository
 
-.. code-block:: python
 ```python
-{
     import sys
     sys.path.append('<path-to-brixs>')
     import brixs as br
-}
 ```
 
 ## Requirements
