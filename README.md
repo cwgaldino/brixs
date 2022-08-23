@@ -1,43 +1,45 @@
-=======
-BRIXS
-=======
-Python package for analysis of RIXS spectra.
+# BRIXS
+
+Python package for analysis of XAS/RIXS spectra.
 
 Documentation: https://cwgaldino.github.io/brixs/
 
 
-Installation
-==================
+## Installation
 
 There are two recommended methods:
 
-1) Using pip
+1. Using pip
 
 .. code-block:: bash
 
-  pip install git+https://github.com/cwgaldino/brixs
+    pip install git+https://github.com/cwgaldino/brixs
 
 or
 
-2) Cloning (or downloading) the GitHub repository
+2. Cloning (or downloading) the GitHub repository
 
 .. code-block:: python
 
-  import sys
-  sys.path.append('<path-to-brixs>')
-  import brixs as br
+    import sys
+    sys.path.append('<path-to-brixs>')
+    import brixs as br
 
 
-Requirements
+## Requirements
 ==================
 
+General:
 - numpy
 - scipy
 - matplotlib
-- beautifulsoup4
-- detect_delimiter
 
-- h5py (only for reading ADRESS data)
+Reading files:
+- detect_delimiter
+- h5py (only for reading hf5 data)
+
+Reciprocal space calculations:
+- pbcpy
 
 Usage (not an extensive description)
 ====================================
