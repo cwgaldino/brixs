@@ -13,7 +13,7 @@ There are two recommended methods:
 
 ```python
     pip install git+https://github.com/cwgaldino/brixs
-    ```
+```
 
 or
 
