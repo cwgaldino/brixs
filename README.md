@@ -20,11 +20,13 @@ or
 2. Cloning (or downloading) the GitHub repository
 
 .. code-block:: python
-
+```python
+{
     import sys
     sys.path.append('<path-to-brixs>')
     import brixs as br
-
+}
+```
 
 ## Requirements
 ==================
