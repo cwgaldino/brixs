@@ -135,9 +135,10 @@ is assigned a number based on its position. The first chunk is
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dirpath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – list with full file directory</p></li>
-<li><p><strong>paths.</strong> – </p></li>
-<li><p><strong>string</strong> (<em>str</em><em>, </em><em>optional</em>) – string to look for in file names.</p></li>
+<li><p><strong>dirpath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – list with full file directory
+paths.</p></li>
+<li><p><strong>string</strong> (<em>str</em><em>, </em><em>optional</em>) – file names without this string will be ignored.
+Use ‘*’ for matching anything. Default is ‘*’.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -190,6 +191,12 @@ is given, current working directory is used.</p></li>
 and ask if user want to overwrite file.</p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -227,6 +234,12 @@ and ask if user want to overwrite file.</p></li>
 <li><p><strong>check_overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, it will check if file exists
 and ask if user want to overwrite file.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -333,6 +346,12 @@ file (comment flag is added automatically).</p></li>
 and ask if user want to overwrite file.</p></li>
 </ul>
 </dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
@@ -342,27 +361,42 @@ and ask if user want to overwrite file.</p></li>
 
 <dl class="py function">
 <dt id="brixs.backpack.filemanip.load_data">
-<code class="sig-prename descclassname">brixs.backpack.filemanip.</code><code class="sig-name descname">load_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">delimiter</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">comment_flag</span><span class="o">=</span><span class="default_value">'#'</span></em>, <em class="sig-param"><span class="n">labels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">force_array</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.filemanip.load_data" title="Permalink to this definition"></a></dt>
-<dd><p>Load data from text file. Data is formated in a dictionary or array.</p>
+<code class="sig-prename descclassname">brixs.backpack.filemanip.</code><code class="sig-name descname">load_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">labels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">force_array</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">header_delimiter</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.filemanip.load_data" title="Permalink to this definition"></a></dt>
+<dd><p>Load data from text file. Wrapper for <a href="#id1"><span class="problematic" id="id2">`numpy.genfromtxt()`_</span></a>.</p>
+<p>Data is formated in a dictionary or array.</p>
 <p>The dictionary keys are set as the label of the corresponding data columns, where
 the last comment line before data starts is assumed to have the labels of each data column.
 If column labels cannot be found, data is imported as an array. The file expects
 comments at the begining of the file (file must not have comments elsewhere).</p>
+<p>If a column is full of NaN’s, it’s converted to a column full of zeros.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em>) – path to file</p></li>
-<li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – The string used to separate data values. If whitespaces are used,
-consecutive whitespaces act as delimiter. Use <code class="docutils literal notranslate"><span class="pre">\t</span></code> for tab. If None,
-the script will read the file and try to guess the appropriate delimiter.
-If the file has a header, and if the header has a line with the column labels, it
-tries to guess the delimiter of this line. If it cannot, it tries
-to use the same delimiter for the data and for the leader in the header.</p></li>
-<li><p><strong>comment_flag</strong> (<em>str</em><em>, </em><em>optional</em>) – string indicating comments.</p></li>
 <li><p><strong>labels</strong> (<em>list</em><em>, </em><em>optional</em>) – It forces data to be loaded as a dictionary where
 each label is associated with a data column. Its lenght must have the same as the number of
 columns. To avoid importing a column, put an asterisk (*) in front of the corresponding label.</p></li>
 <li><p><strong>force_array</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">force_array=True</span></code>, data it will be returned in a array.</p></li>
+<li><p><strong>header_delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – String or character separating column
+labels in the header. Default is None. If None, it will be guessed.</p></li>
+</ul>
+</dd>
+</dl>
+<p>If not specified, the following parameters are passed to <a href="#id3"><span class="problematic" id="id4">`numpy.savetxt()`_</span></a>:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – String or character separating columns.
+Use <code class="docutils literal notranslate"><span class="pre">\t</span></code> for tab. If None,
+the script will read the file and try to guess the appropriate delimiter.
+If the file has a header, and if the header has a line with the column labels, it
+tries to guess the delimiter of this line. If it cannot, it tries
+to use the same delimiter for the data and for the leader in the header.
+Default is None.</p></li>
+<li><p><strong>comments</strong> (<em>str</em><em>, </em><em>optional</em>) – The character used to indicate the start of a comment.
+Default is ‘#’.</p></li>
+<li><p><strong>skip_header</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of lines to skip at the beginning of the file.
+Default is 0.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>

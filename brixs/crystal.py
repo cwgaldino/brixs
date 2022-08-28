@@ -4,7 +4,11 @@
 
 import numpy as np
 from scipy.constants import h, speed_of_light, physical_constants
-from pbcpy.base import DirectCell, ReciprocalCell
+
+try:
+    from pbcpy.base import DirectCell, ReciprocalCell
+except ImportError:
+    pass
 
 
 def eV2angstrom(value):

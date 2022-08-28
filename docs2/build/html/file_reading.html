@@ -22,7 +22,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Fake RIXS spectra generation" href="fake.html" />
-    <link rel="prev" title="brixs" href="brixs.html" /> 
+    <link rel="prev" title="BRIXS" href="brixs.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -81,153 +81,15 @@
 <h1>File reading for specific beamlines (active development)<a class="headerlink" href="#file-reading-for-specific-beamlines-active-development" title="Permalink to this headline"></a></h1>
 <section id="adress-beamline-at-psi">
 <h2>ADRESS beamline at PSI<a class="headerlink" href="#adress-beamline-at-psi" title="Permalink to this headline"></a></h2>
-<dl class="py function">
-<dt id="brixs.read_ADRESS">
-<code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">read_ADRESS</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.read_ADRESS" title="Permalink to this definition"></a></dt>
-<dd><p>Read files from ADRESS beamline at PSI.</p>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">brixs</span> <span class="k">as</span> <span class="nn">br</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># single file</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># data for each ccd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># One can also use keyword arguments</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span>  <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS</span><span class="p">(</span><span class="n">filepath</span><span class="o">=</span><span class="n">filepath</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS</span><span class="p">(</span><span class="n">folderpath</span><span class="o">=</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">zfill</span><span class="o">=</span><span class="n">zfill</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># experiment parameters can be accesed by:</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">nd</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path object</em>) – filepath to h5 file (for loading a single file).</p></li>
-<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath to files (for loading a data from 3 cdd files).</p></li>
-<li><p><strong>prefix</strong> (<em>str</em>) – prefix (with or without ‘underscore’). Example: for
-‘Cu_0001_d1.h5’ the prefix is ‘Cu’ or ‘<a href="#id1"><span class="problematic" id="id2">Cu_</span></a>’.</p></li>
-<li><p><strong>n</strong> (<em>number</em>) – scan number. Eample: for ‘Cu_0001_d1.h5’ the file number is 1.
-The number of extra zeros (0001) is defined by the argument <cite>zfill</cite>.</p></li>
-<li><p><strong>zfill</strong> (<em>number</em><em>, </em><em>optional</em>) – number of digits to fill scan number (Default is 4).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><a class="reference internal" href="brixs.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Spectrum</span></code></a></p>
-</dd>
-</dl>
-<p>Last updated: 04/04/2022 by Carlos Galdino</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.read_ADRESS_pe">
-<code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">read_ADRESS_pe</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.read_ADRESS_pe" title="Permalink to this definition"></a></dt>
-<dd><p>Return photon event list from ADRESS beamline at PSI.</p>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">brixs</span> <span class="k">as</span> <span class="nn">br</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># single file</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS_pe</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># data for each ccd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pes</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS_pe</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># One can also use keyword arguments</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span>  <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS_pe</span><span class="p">(</span><span class="n">filepath</span><span class="o">=</span><span class="n">filepath</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">pes</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS_pe</span><span class="p">(</span><span class="n">folderpath</span><span class="o">=</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">zfill</span><span class="o">=</span><span class="n">zfill</span><span class="p">)</span>
-<span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># experiment parameters can be accesed by:</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">pe</span><span class="o">.</span><span class="n">nd</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path object</em>) – filepath to h5 file (for loading a single file).</p></li>
-<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath to files (for loading a data from 3 cdd files).</p></li>
-<li><p><strong>prefix</strong> (<em>str</em>) – prefix (with or without ‘underscore’). Example: for
-‘Cu_0001_d1.h5’ the prefix is ‘Cu’ or ‘<a href="#id3"><span class="problematic" id="id4">Cu_</span></a>’.</p></li>
-<li><p><strong>n</strong> (<em>number</em>) – scan number. Eample: for ‘Cu_0001_d1.h5’ the file number is 1.
-The number of extra zeros (0001) is defined by the argument <cite>zfill</cite>.</p></li>
-<li><p><strong>zfill</strong> (<em>number</em><em>, </em><em>optional</em>) – number of digits to fill scan number (Default is 4).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><a class="reference internal" href="brixs.html#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.PhotonEvents</span></code></a></p>
-</dd>
-</dl>
-<p>Last updated: 04/04/2022 by Carlos Galdino</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="brixs.read_ADRESS_bad">
-<code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">read_ADRESS_bad</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.read_ADRESS_bad" title="Permalink to this definition"></a></dt>
-<dd><p>Return image with bad events read from ADRESS beamline at PSI.</p>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">brixs</span> <span class="k">as</span> <span class="nn">br</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">im</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_ADRESS_bad</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">im</span><span class="o">.</span><span class="n">nd</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path object</em>) – filepath.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><a class="reference internal" href="brixs.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Image</span></code></a></p>
-</dd>
-</dl>
-<p>Last updated: 04/04/2022 by Carlos Galdino</p>
-</dd></dl>
-
 </section>
 <section id="peaxis-beamline-at-hzb">
 <h2>PEAXIS beamline at HZB<a class="headerlink" href="#peaxis-beamline-at-hzb" title="Permalink to this headline"></a></h2>
-<dl class="py function">
-<dt id="brixs.read_PEAXIS">
-<code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">read_PEAXIS</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.read_PEAXIS" title="Permalink to this definition"></a></dt>
-<dd><p>Read files from PEAXIS beamline at HZB.</p>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">brixs</span> <span class="k">as</span> <span class="nn">br</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">im</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">read_PEAXIS</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">im</span><span class="o">.</span><span class="n">header</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path object</em>) – filepath.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><a class="reference internal" href="brixs.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Image</span></code></a></p>
-</dd>
-</dl>
-<p>Last updated: 04/04/2022 by Carlos Galdino</p>
-</dd></dl>
-
 </section>
 <section id="id32-beamline-at-esrf">
 <h2>ID32 beamline at ESRF<a class="headerlink" href="#id32-beamline-at-esrf" title="Permalink to this headline"></a></h2>
-<dl class="py function">
-<dt id="brixs.read_ID32">
-<code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">read_ID32</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.read_ID32" title="Permalink to this definition"></a></dt>
-<dd><p>Read files from ID32 beamline at ESRF.</p>
-<p>NOT IMLEMENTED YET.</p>
-<p>Last updated: 26/12/2021 by Carlos Galdino</p>
-</dd></dl>
-
 </section>
 <section id="ipe-beamline-at-sirius">
 <h2>IPE beamline at SIRIUS<a class="headerlink" href="#ipe-beamline-at-sirius" title="Permalink to this headline"></a></h2>
-<dl class="py function">
-<dt id="brixs.read_IPE">
-<code class="sig-prename descclassname">brixs.</code><code class="sig-name descname">read_IPE</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.read_IPE" title="Permalink to this definition"></a></dt>
-<dd><p>Read files from IPE beamline at SIRIUS.</p>
-<p>NOT IMLEMENTED YET.</p>
-<p>Last updated: 26/12/2021 by Carlos Galdino</p>
-</dd></dl>
-
 </section>
 </section>
 
@@ -235,7 +97,7 @@ The number of extra zeros (0001) is defined by the argument <cite>zfill</cite>.<
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="brixs.html" class="btn btn-neutral float-left" title="brixs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="brixs.html" class="btn btn-neutral float-left" title="BRIXS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="fake.html" class="btn btn-neutral float-right" title="Fake RIXS spectra generation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

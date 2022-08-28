@@ -333,6 +333,52 @@
 </dd></dl>
 
 <dl class="py function">
+<dt id="brixs.backpack.model_functions.heaviside">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">heaviside</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.heaviside" title="Permalink to this definition"></a></dt>
+<dd><p>Heaviside step function.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}y(x) =   \begin{cases}
+            0, &amp; \text{ for    $x &lt; c$}\\
+            \text{amp}, &amp; \text{ for  }  $x &lt; c$\\
+            \end{cases}\end{split}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="brixs.backpack.model_functions.dirac_delta">
+<code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">dirac_delta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.dirac_delta" title="Permalink to this definition"></a></dt>
+<dd><p>Crude implementation of Dirac delta function.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}y(x) =   \begin{cases}
+            \text{amp}, &amp; \text{ for  }  $x = c$\\
+            0, &amp; \text{ otherwise}\\
+            \end{cases}\end{split}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x array</p></li>
+<li><p><strong>amp</strong> – Amplitude</p></li>
+<li><p><strong>c</strong> – Center</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><span class="math notranslate nohighlight">\(y(x)\)</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt id="brixs.backpack.model_functions.err_fwhm">
 <code class="sig-prename descclassname">brixs.backpack.model_functions.</code><code class="sig-name descname">err_fwhm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">amp</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.model_functions.err_fwhm" title="Permalink to this definition"></a></dt>
 <dd><p>Error function. Integal of gaussian function calculated by <code class="docutils literal notranslate"><span class="pre">scipy.special.erf()</span></code>.</p>

@@ -98,8 +98,11 @@ def _axis_interpreter(axis):
 
     It follows numpy's convention. ``0`` is the vertical axis, while ``1`` is the horizontal one.
 
-    axis = c, col, column, columns, hor, horizontal, x, ... will return 1
-    axis = r, row, rows, v, ver, vertical, y, ... will return 0
+    Args:
+        axis (int or str) = r, row, rows, hor, horizontal, x, or any
+            string that starts with 'c' or 'h', will return 1. On the other hand,
+            c, col, column, columns, v, ver, vertical, y, or any string that starts with
+            'r' or 'v', will return 0.
 
     Returns:
         0 or 1
@@ -111,11 +114,11 @@ def _axis_interpreter(axis):
             return 1
         elif axis == 0:
             return 0
-    elif type(axis)==str and (axis=='x' or axis.startswith('c') or axis.startswith('h')):
+    elif type(axis)==str and (axis=='x' or axis.startswith('r') or axis.startswith('h')):
         return 1
     elif axis == 0:
         return 0
-    elif type(axis)==str and (axis=='y' or axis.startswith('r') or axis.startswith('v')):
+    elif type(axis)==str and (axis=='y' or axis.startswith('c') or axis.startswith('v')):
         return 0
     else:
         raise ValueError("axis must be 0 ('y') or 1 ('x')")
@@ -246,18 +249,18 @@ def _bins_interpreter(*args, **kwargs):
             bins_size = np.array((shape[0]/nbins[0], shape[1]/nbins[1]))
 
     else:
-        if row_size is None:    row_size =    shape[1]
-        if column_size is None: column_size = shape[0]
-        if row_size <= 0 or column_size <= 0 or is_integer(row_size)==False or is_integer(column_size)==False:
+        if rows_size is None:    rows_size =    shape[1]
+        if columns_size is None: columns_size = shape[0]
+        if rows_size <= 0 or columns_size <= 0 or is_integer(rows_size)==False or is_integer(columns_size)==False:
             raise ValueError("Size of bins must be a positive integer.")
         else:
             if factor_check:
-                assert shape[1] % column_size == 0, f"The {shape[1]} pixels in a row is not evenly divisible by {column_size}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[1])))}"
-                assert shape[0] % row_size == 0,    f"The {shape[0]} pixels in a column is not evenly divisible by {row_size}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[0])))}"
+                assert shape[1] % columns_size == 0, f"The {shape[1]} pixels in a row is not evenly divisible by {columns_size}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[1])))}"
+                assert shape[0] % rows_size == 0,    f"The {shape[0]} pixels in a column is not evenly divisible by {rows_size}\nPlease, pick one of the following numbers: {np.sort(list(factors(shape[0])))}"
 
-            nbins = np.array((round(shape[0]/row_size), round(shape[1]/column_size)))
+            nbins = np.array((round(shape[0]/rows_size), round(shape[1]/columns_size)))
             # bins_size = np.array((shape[0]//_nbins[0], shape[1]//_nbins[1]))
-            bins_size = np.array((shape[0]/_nbins[0], shape[1]/_nbins[1]))
+            bins_size = np.array((shape[0]/nbins[0], shape[1]/nbins[1]))
 
     return nbins, bins_size
 
@@ -490,7 +493,7 @@ class Image(metaclass=_Meta):
         return self._bins_size
     @bins_size.setter
     def bins_size(self, value):
-        binning(self, bins_size=value)
+        self.binning(bins_size=value)
     @bins_size.deleter
     def bins_size(self):
         raise AttributeError('Cannot delete object.')
@@ -529,6 +532,16 @@ class Image(metaclass=_Meta):
         raise AttributeError('Attribute is "read only". Cannot set attribute.')
     @rows.deleter
     def rows(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def spectrum(self):
+        return self.spectrum_h
+    @spectrum.setter
+    def spectrum(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectrum.deleter
+    def spectrum(self):
         raise AttributeError('Cannot delete object.')
 
     @property
@@ -737,7 +750,7 @@ class Image(metaclass=_Meta):
             except:
                 pass
 
-    def meshplot(self, ax=None, colorbar=False, **kwargs):
+    def pcolormesh(self, ax=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
         Args:
@@ -786,7 +799,7 @@ class Image(metaclass=_Meta):
             data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > max(y2fit)*0.0001])  # clean zeros
             kwargs['vmax'] = data2fit[-1, 0]
 
-        # fix monotonic of labels x
+        # fix monotonicity of labels x
         if check_monotonicity(self.x_centers) != 1:
             x, ordering = fix_monotinicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
             assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
@@ -796,14 +809,14 @@ class Image(metaclass=_Meta):
                 if i != ordering[i]:
                     data[:, i] = self.data[:, ordering[i]]
         else:
-            # check if x_edges is defined
-            if self.x_edges is not None:
+                # check if x_edges is defined
+            if self.x_edges is not None and self.y_edges is not None:
                 x = self.x_edges
             else:
                 x = self.x_centers
             data = self.data
 
-        # fix monotonic of labels y
+        # fix monotonicity of labels y
         if check_monotonicity(self.y_centers) != 1:
             y, ordering = fix_monotinicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
             assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
@@ -814,7 +827,7 @@ class Image(metaclass=_Meta):
                     data2[i, :] = data[ordering[i], :]
         else:
             # check if y_edges is defined
-            if self.y_edges is not None:
+            if self.x_edges is not None and self.y_edges is not None:
                 y = self.y_edges
             else:
                 y = self.y_centers
@@ -834,7 +847,7 @@ class Image(metaclass=_Meta):
         """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
-            Pixels are always square. For irregular pixel row/columns, see Image.meshplot()
+            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
@@ -913,16 +926,6 @@ class Image(metaclass=_Meta):
         # if 'extent' not in kwargs:
         #     kwargs['extent'] = [x[0], x[-1], y[0], y[-1]]
 
-        # check irregular spacing
-        if verbose:
-            sx = Spectrum(x=self.x_centers, y=self.x_centers)
-            sy = Spectrum(x=self.y_centers, y=self.y_centers)
-            try:
-                sx.check_step_x()
-                sy.check_step_x()
-            except ValueError:
-                print('Data seems to have different irregular pixel size. Maybe plot it using Image.meshplot().\nTo turn off this warning set verbose to False.')
-
         # fix monotonic of labels x
         if check_monotonicity(self.x_centers) != 1:
             x, ordering = fix_monotinicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
@@ -968,9 +971,18 @@ class Image(metaclass=_Meta):
 
             data2 = data
 
-
         if 'extent' not in kwargs:
             kwargs['extent'] = np.append(extent_x, extent_y)
+
+        # check irregular spacing (issues a warning)
+        if verbose:
+            sx = Spectrum(x=self.x_centers, y=self.x_centers)
+            sy = Spectrum(x=self.y_centers, y=self.y_centers)
+            try:
+                sx.check_step_x()
+                sy.check_step_x()
+            except ValueError:
+                print('Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
 
         # plot
         pos = ax.imshow(data2, **kwargs)
@@ -1303,7 +1315,7 @@ class Image(metaclass=_Meta):
         self._p = p
         self._f = f
 
-        self.set_shifts(p=p, axis=axis)
+        self.set_shift(p=p, axis=axis)
         self._calculated_shift = self.reduced.calculated_shift
 
 
