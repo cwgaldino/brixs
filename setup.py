@@ -12,8 +12,6 @@ setuptools.setup(
     packages=['brixs', 'brixs.backpack', 'brixs.file_reading'],
     packages_dir={'brixs': './brixs'},
     py_modules=['brixs'],
-    # package_data={'brixs': ['./default_parameters.dat']
-    #                 },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

@@ -888,12 +888,15 @@ class Image(metaclass=_Meta):
         if ax is None:
             ax = plt
             if settings.ALWAYS_PLOT_NEW_WINDOW:
+                print('PLOT_NEW_WINDOW')
                 figure()
                 if  settings.FIGURE_POSITION is not None:
                     try:
+                        print('FIGURE_POSITION')
                         set_window_position(settings.FIGURE_POSITION)
                     except:
                         pass
+        set_window_position(settings.FIGURE_POSITION)
 
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
