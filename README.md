@@ -43,7 +43,7 @@ Reciprocal space calculations:
 
 Refer to the examples folder on GitHub for code examples.
 
-Package is based on four objects:
+BRIXS is based on four objects:
 
 ```python
     import brixs as br
