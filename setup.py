@@ -12,6 +12,7 @@ setuptools.setup(
     packages=['brixs', 'brixs.backpack', 'brixs.file_reading'],
     packages_dir={'brixs': './brixs'},
     py_modules=['brixs'],
+    install_requires=['matplotlib'>=3.4, 'numpy'>=1.15, 'scipy'>=1.7],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

@@ -6,7 +6,7 @@ import numpy as np
 from scipy.constants import h, speed_of_light, physical_constants
 
 try:
-    from pbcpy.base import DirectCell, ReciprocalCell
+    from pbcpy.base import DirectCell
 except ImportError:
     pass
 
@@ -85,8 +85,10 @@ def lattice(a, b, c, alpha=90, beta=90, gamma=90):
 
     lattice = np.array([a, b, c])
 
-
-    cell1 = DirectCell(lattice=lattice, origin=[0,0,0])
+    try:
+        cell1 = DirectCell(lattice=lattice, origin=[0,0,0])
+    except NameError:
+        raise NameError('pbcpy does not seem to be installed.\npbcpy.base.DirectCell() cannot be found.\nPlease, install pbcpy (pip install pbcpy).')
     reciprocal_cell1 = cell1.get_reciprocal()
 
     return lattice, reciprocal_cell1.lattice

@@ -27,7 +27,7 @@ or
 
 ## Requirements
 
-General (required):
+Base (required):
 - numpy
 - scipy
 - matplotlib
