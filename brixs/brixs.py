@@ -781,11 +781,16 @@ class Image(metaclass=_Meta):
             ax = plt
             if settings.ALWAYS_PLOT_NEW_WINDOW:
                 figure()
-                if  settings.FIGURE_POSITION is not None:
+                if settings.FIGURE_POSITION is not None:
                     try:
                         set_window_position(settings.FIGURE_POSITION)
                     except:
                         pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
         # kwargs
         if 'cmap' not in kwargs:
@@ -888,16 +893,19 @@ class Image(metaclass=_Meta):
         if ax is None:
             ax = plt
             if settings.ALWAYS_PLOT_NEW_WINDOW:
-                print('PLOT_NEW_WINDOW')
                 figure()
-                if  settings.FIGURE_POSITION is not None:
+                if settings.FIGURE_POSITION is not None:
                     try:
-                        print('FIGURE_POSITION')
                         set_window_position(settings.FIGURE_POSITION)
                     except:
                         pass
-        set_window_position(settings.FIGURE_POSITION)
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
+        # default arguments
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
         if 'aspect' not in kwargs:
@@ -1776,11 +1784,16 @@ class PhotonEvents(metaclass=_Meta):
             ax = plt
             if settings.ALWAYS_PLOT_NEW_WINDOW:
                 figure()
-                if  settings.FIGURE_POSITION is not None:
+                if settings.FIGURE_POSITION is not None:
                     try:
                         set_window_position(settings.FIGURE_POSITION)
                     except:
                         pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
         # kwargs
         if 's' not in kwargs:
@@ -3079,11 +3092,16 @@ class Spectrum(metaclass=_Meta):
             ax = plt
             if settings.ALWAYS_PLOT_NEW_WINDOW:
                 figure()
-                if  settings.FIGURE_POSITION is not None:
+                if settings.FIGURE_POSITION is not None:
                     try:
                         set_window_position(settings.FIGURE_POSITION)
                     except:
                         pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
         return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
 
@@ -4355,11 +4373,16 @@ class Spectra(metaclass=_Meta):
             ax = plt
             if settings.ALWAYS_PLOT_NEW_WINDOW:
                 figure()
-                if  settings.FIGURE_POSITION is not None:
+                if settings.FIGURE_POSITION is not None:
                     try:
                         set_window_position(settings.FIGURE_POSITION)
                     except:
                         pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
         # percentage wise increment ====================
         if 'vi' in kwargs and 'vertical_increment' in kwargs:
