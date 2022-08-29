@@ -9,7 +9,7 @@ setuptools.setup(
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
     url="https://github.com/cwgaldino/brixs",
-    packages=['brixs'],
+    packages=['brixs', 'brixs.backpack'],
     packages_dir={'brixs': './brixs'},
     py_modules=['brixs'],
     # package_data={'brixs': ['./default_parameters.dat']
