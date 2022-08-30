@@ -343,6 +343,40 @@ class Image(metaclass=_Meta):
         elif filepath is not None:
             self.load(filepath)
 
+    def __add__(self, im):
+        if self.shape == im.shape:
+            # return Image(data = self.data + im.data)
+            final = Image(data = self.data + im.data)
+            dict = get_attributes(self)
+            for n in dict:
+                if n not in ['_data', '_vmin', '_vmax', '_histogram', '_nbins', '_bins_size', '_shifts_v', '_shifts_h', '_p', '_f', '_reduced', '_calculated_shift', '_spectrum_h', '_spectrum_v',]:
+                    final.__setattr__(n, self.__getattribute__(n))
+            return final
+        else:
+            raise ValueError('Cannot add Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+
+    def __sub__(self, im):
+        if self.shape == im.shape:
+            return Image(data = self.data - im.data)
+        else:
+            raise ValueError(f'Cannot subtract Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+
+    def __mul__(self, im):
+        if self.shape == im.shape:
+            return Image(data = self.data * im.data)
+        else:
+            raise ValueError(f'Cannot multiply Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+
+    def __div__(self, s):
+        if self.shape == im.shape:
+            if 0 in im.data:
+                raise ZeroDivisionError(f'Cannot divide by zero.')
+            else:
+                return Image(data = self.data / im.data)
+        else:
+            raise ValueError(f'Cannot divide Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+
+
     @property
     def data(self):
         return copy.deepcopy(self._data)
@@ -2159,7 +2193,7 @@ class Spectrum(metaclass=_Meta):
         try:
             ss.check_same_x()
         except ValueError:
-            raise ValueError('Cannot subtract spectra. x axis is different.')
+            raise ValueError('Cannot multiply spectra. x axis is different.')
         return Spectrum(x=self.x, y=self.y * s.y)
 
     def __div__(self, s):
@@ -2167,7 +2201,9 @@ class Spectrum(metaclass=_Meta):
         try:
             ss.check_same_x()
         except ValueError:
-            raise ValueError('Cannot subtract spectra. x axis is different.')
+            raise ValueError('Cannot divide spectra. x axis is different.')
+        if 0 in s.y:
+            raise ZeroDivisionError(f'Cannot divide by zero.')
         return Spectrum(x=self.x, y=self.y / s.y)
 
     def _args_checker(self, args, kwargs):
