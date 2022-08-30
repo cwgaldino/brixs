@@ -1,5 +1,5 @@
 # ==============================================================================
-# %% EXAMPLE: Image ============================================= 24/08/2022 ===
+# %% EXAMPLE: Image ============================================= 30/08/2022 ===
 # ==============================================================================
 
 # %% Initial imports ===========================================================
@@ -8,14 +8,19 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+# %matplotlib qt5
+# %load_ext autoreload
+# %autoreload 2
 
-# %% initial definitions =======================================================
+# Create Image object ==========================================================
+im = br.Image(data=[[0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0]])
+im = br.Image('<path-to-Image>')  # must be a txt with the pixel matrix
+
+
+# data reading functions are defined for some beamlines ========================
 # filepath = Path(r'../fixtures/PEAXIS/elastic_0001.sif')
 # filepath = Path(r'../fixtures/PEAXIS/elastic_0002.sif')
 filepath = Path(r'../fixtures/PEAXIS/sample_0001.sif')
-
-
-# %% importing image ===========================================================
 im = br.PEAXIS.read(filepath)
 
 
@@ -59,6 +64,26 @@ im2 = br.Image(r'test.txt')
 
 # parameters are saved
 print(im2.temperature)
+
+# %% Images can be operated on =================================================
+im_B = br.Image(data=[[0, 1], [1, 0]])
+im_C = br.Image(data=[[1, 1], [1, 1]])
+
+im_A = im_B + im_C
+im_A = im_B - im_C
+im_A = im_B * im_C
+im_A = im_B / im_C  # im_C cannot contain zero pixels
+im_A = im_B + 2
+im_A = im_B - 2
+im_A = im_B * 2
+im_A = im_B / 2
+
+# parameters from the first term are transfered
+im_B.temperature = 10
+im_A = im_B + im_C
+print(im_A.temperature)
+im_A = im_C + im_B
+print(im_A.temperature)  # ERROR
 
 
 # %% Histogram =================================================================
@@ -224,6 +249,8 @@ s = im.calculate_spectrum()
 fig = br.backpack.figure()
 s.plot()
 
+# %% ===========================================================================
+im = im1.crop(0, 1, 0, 1)
 
 # %% ===========================================================================
 plt.close('all')

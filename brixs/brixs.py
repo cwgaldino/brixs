@@ -316,21 +316,21 @@ class Image(metaclass=_Meta):
         data, filepath = self._sort_args(args, kwargs)
 
         # besic attr
-        self._data = None
-        self._vmin = None
-        self._vmax = None
+        self._data      = None
+        self._vmin      = None
+        self._vmax      = None
+        self._shape     = None
         self._x_centers = None
         self._y_centers = None
-        self._x_edges = None
-        self._y_edges = None
-        self._shape = None
+        self._x_edges   = None
+        self._y_edges   = None
 
         # binning attr
         self._nbins      = np.array((-1, -1))
         self._bins_size  = np.array((-1, -1))
         self._reduced    = None
 
-        # shifts
+        # shift attr
         self._calculated_shift = None
         self._shifts_v = None
         self._shifts_h = None
@@ -343,38 +343,148 @@ class Image(metaclass=_Meta):
         elif filepath is not None:
             self.load(filepath)
 
-    def __add__(self, im):
-        if self.shape == im.shape:
-            # return Image(data = self.data + im.data)
-            final = Image(data = self.data + im.data)
-            dict = get_attributes(self)
-            for n in dict:
-                if n not in ['_data', '_vmin', '_vmax', '_histogram', '_nbins', '_bins_size', '_shifts_v', '_shifts_h', '_p', '_f', '_reduced', '_calculated_shift', '_spectrum_h', '_spectrum_v',]:
-                    final.__setattr__(n, self.__getattribute__(n))
-            return final
-        else:
-            raise ValueError('Cannot add Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
 
-    def __sub__(self, im):
-        if self.shape == im.shape:
-            return Image(data = self.data - im.data)
-        else:
-            raise ValueError(f'Cannot subtract Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        Keyword arguments (kwargs) cannot be mixed with positional arguments.
 
-    def __mul__(self, im):
-        if self.shape == im.shape:
-            return Image(data = self.data * im.data)
-        else:
-            raise ValueError(f'Cannot multiply Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath.
 
-    def __div__(self, s):
-        if self.shape == im.shape:
-            if 0 in im.data:
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, filepath
+        """
+        # initial check
+        if kwargs != {} and args != ():
+            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `data`, and `filepath`.')
+
+        # initialization
+        data = None
+        filepath = None
+
+        # keyword arguments
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = args[0]
+            elif isinstance(args[0], Iterable):
+                data = args[0]
+        elif len(args) > 2:
+            raise AttributeError('brixs.Image() cannot figure out the data out of the arguments passed. Maybe use keyword arguments (data, filepath).')
+
+        return data, filepath
+
+    def _transfer_attributes(self, object, type='Image'):
+        """Select attributes that will be copyed to different output objects."""
+        dict = get_attributes(self)
+
+        # list of attributes not to transfer based on the type
+        do_not_transfer = {'Image':        ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift'],
+                           'PhotonEvents': ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
+                           'Spectrum':     ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
+                           'Spectra':      ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges']}
+
+        # uncomment to check attributes (for testing only)
+        # for n in dict:
+            # print(n)
+
+        for n in dict:
+            if n not in do_not_transfer[type]:
+                object.__setattr__(n, self.__getattribute__(n))
+        return object
+
+
+    def __len__(self):
+        if self._data is None:
+            return 0
+        else:
+            return len(self._data)
+
+    def __add__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                final = Image(data = self.data + object.data)
+                return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            final = Image(data = self.data + object)
+            return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+
+    def __sub__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                final = Image(data = self.data - object.data)
+                return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            final = Image(data = self.data - object)
+            return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+
+    def __mul__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                final = Image(data = self.data * object.data)
+                return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            final = Image(data = self.data * object)
+            return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+
+    def __div__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                if 0 in object.data:
+                    raise ZeroDivisionError(f'Cannot divide by zero.')
+                else:
+                    final = Image(data = self.data / object.data)
+                    return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            if 0 in object:
                 raise ZeroDivisionError(f'Cannot divide by zero.')
             else:
-                return Image(data = self.data / im.data)
+                final = Image(data = self.data / object)
+                return self._transfer_attributes(final)
         else:
-            raise ValueError(f'Cannot divide Images. Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+
+    def __truediv__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                if 0 in object.data:
+                    raise ZeroDivisionError(f'Cannot divide by zero.')
+                else:
+                    final = Image(data = self.data / object.data)
+                    return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            if 0 in object:
+                raise ZeroDivisionError(f'Cannot divide by zero.')
+            else:
+                final = Image(data = self.data / object)
+                return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with type Image')
 
 
     @property
@@ -598,51 +708,6 @@ class Image(metaclass=_Meta):
     def spectrum_h(self):
         raise AttributeError('Cannot delete object.')
 
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, filepath
-        """
-        # initial check
-        if kwargs != {} and args != ():
-            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `data`, and `filepath`.')
-
-        # initialization
-        data = None
-        filepath = None
-
-        # keyword arguments
-        if 'data' in kwargs:
-            data = kwargs['data']
-        if 'filepath' in kwargs:
-            filepath = kwargs['filepath']
-
-        # positional arguments
-        if len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = args[0]
-            elif isinstance(args[0], Iterable):
-                data = args[0]
-        elif len(args) > 2:
-            raise AttributeError('brixs.Image() cannot figure out the data out of the arguments passed. Maybe use keyword arguments (data, filepath).')
-
-        return data, filepath
-
-    def __len__(self):
-        if self._data is None:
-            return 0
-        else:
-            return len(self._data)
 
     def save(self, filepath, only_data=False,  **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
@@ -783,6 +848,7 @@ class Image(metaclass=_Meta):
                 self.binning(nbins=self.nbins, bins_size=self.bins_size)
             except:
                 pass
+
 
     def pcolormesh(self, ax=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
@@ -1073,6 +1139,7 @@ class Image(metaclass=_Meta):
             :py:func:`Image.imshow` """
         self.imshow(*args, **kwargs)
 
+
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
 
@@ -1168,53 +1235,6 @@ class Image(metaclass=_Meta):
             return Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
         elif axis == 1:
             return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
-
-    def floor(self, x=0, y=0, n=30, nx=None, ny=None):
-        """Set background intensity to zero.
-
-        Args:
-            x, y (int, optional): x and y position to average background intensity.
-            n, nx, ny (int, optional): size of the pixel window around x, y.
-
-        Returns:
-            None
-        """
-        assert x >= 0 and is_integer(x) and x<self.shape[1], f'x must be a positive integer smaller than {self.shape[1]}.'
-        assert y >= 0 and is_integer(y) and y<self.shape[0], f'y must be a positive integer smaller than {self.shape[0]}.'
-
-        # sorting n
-        if nx is None: nx = n
-        if ny is None: ny = n
-
-        # check if x falls inside the image
-        if x-nx/2 >= 0 and x+nx/2 < self.shape[1]:
-            x_start = x-nx/2
-            x_stop  = x+nx/2
-        elif x-nx/2 < 0:
-            x_start = 0
-            x_stop = x+nx/2-(x-nx/2)
-        elif x+n/2 >= self.shape[1]:
-            x_start = x-nx/2-(x+nx/2-self.shape[1])
-            x_stop  = self.shape[1]-1
-        else:
-            raise ValueError('Averaging range falls outside of the image. Please, change x or n.')
-
-        # check if y falls inside the image
-        if y-ny/2 >= 0 and y+ny/2 < self.shape[0]:
-            y_start = y-ny/2
-            y_stop  = y+ny/2
-        elif y-nx/2 < 0:
-            y_start = 0
-            y_stop = y+ny/2-(y-ny/2)
-        elif y+n/2 >= self.shape[0]:
-            y_start = y-ny/2-(y+ny/2-self.shape[0])
-            y_stop  = self.shape[0]-1
-        else:
-            raise ValueError('Averaging range falls outside of the image. Please, change y or n.')
-
-        self._data -= np.mean(self._data[int(x_start):int(x_stop), int(y_start):int(y_stop)])
-        self._vmin = min([min(x) for x in self.data])
-        self._vmax = max([max(x) for x in self.data])
 
     def calculate_shift(self, axis=0, mode='cc', limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
@@ -1362,6 +1382,75 @@ class Image(metaclass=_Meta):
 
         self.set_shift(p=p, axis=axis)
         self._calculated_shift = self.reduced.calculated_shift
+
+
+
+    def floor(self, x=0, y=0, n=30, nx=None, ny=None):
+        """Set background intensity to zero.
+
+        Args:
+            x, y (int, optional): x and y position to sample background intensity.
+            n, nx, ny (int, optional): size of the pixel window around x, y.
+
+        Returns:
+            None
+        """
+        assert x >= 0 and is_integer(x) and x<self.shape[1], f'x must be a positive integer smaller than {self.shape[1]}.'
+        assert y >= 0 and is_integer(y) and y<self.shape[0], f'y must be a positive integer smaller than {self.shape[0]}.'
+
+        # sorting n
+        if nx is None: nx = n
+        if ny is None: ny = n
+
+        # check if x falls inside the image
+        if x-nx/2 >= 0 and x+nx/2 < self.shape[1]:
+            x_start = x-nx/2
+            x_stop  = x+nx/2
+        elif x-nx/2 < 0:
+            x_start = 0
+            x_stop = x+nx/2-(x-nx/2)
+        elif x+n/2 >= self.shape[1]:
+            x_start = x-nx/2-(x+nx/2-self.shape[1])
+            x_stop  = self.shape[1]-1
+        else:
+            raise ValueError('Averaging range falls outside of the image. Please, change x or n.')
+
+        # check if y falls inside the image
+        if y-ny/2 >= 0 and y+ny/2 < self.shape[0]:
+            y_start = y-ny/2
+            y_stop  = y+ny/2
+        elif y-nx/2 < 0:
+            y_start = 0
+            y_stop = y+ny/2-(y-ny/2)
+        elif y+n/2 >= self.shape[0]:
+            y_start = y-ny/2-(y+ny/2-self.shape[0])
+            y_stop  = self.shape[0]-1
+        else:
+            raise ValueError('Averaging range falls outside of the image. Please, change y or n.')
+
+        self._data -= np.mean(self._data[int(x_start):int(x_stop), int(y_start):int(y_stop)])
+        self._vmin = min([min(x) for x in self.data])
+        self._vmax = max([max(x) for x in self.data])
+
+    def crop(self, x_start, x_stop, y_start, y_stop):
+        """Crop Image.
+
+        Args:
+            x_start, x_stop, y_start, y_stop (int): pixel range. start is
+                inclusive and stop is exclusive.
+
+        Returns:
+            croped image
+        """
+        assert x_start >= 0 and is_integer(x_start) and x_start<self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
+        assert x_stop  >= 0 and is_integer(x_stop)  and x_stop<self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
+        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        assert y_start >= 0 and is_integer(y_start) and y_start<self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
+        assert y_stop  >= 0 and is_integer(y_stop)  and y_stop<self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
+        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
+
+        final = Image(data=self.data[int(x_start):int(x_stop), int(y_start):int(y_stop)])
+        return self._transfer_attributes(final)
 
 
 class PhotonEvents(metaclass=_Meta):

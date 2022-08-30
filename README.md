@@ -54,45 +54,46 @@ BRIXS is based on four objects:
     ss = br.Spectra()
 ```
 
-
-
 ### Image attributes and methods
 
 ```python
     # basic
-    im.data              # np.array type
-    im.vmin              # float type
-    im.vmax              # float type
-    im.shape             # tuple type
-    im.histogram         # br.Spectrum type
-    im.x_centers         # np.array type
-    im.y_centers         # np.array type
-    im.x_edges           # np.array type
-    im.y_edges           # np.array type
+    im.data              # np.array
+    im.vmin              # float (read only)
+    im.vmax              # float (read only)
+    im.shape             # tuple (read only)
+    im.x_centers         # np.array
+    im.y_centers         # np.array
+    im.x_edges           # np.array
+    im.y_edges           # np.array
 
     # binning
-    im.nbins             # np.array type
-    im.bins_size         # np.array type
-    im.reduced           # br.Image type
+    im.nbins             # np.array [runs Image.binning()]
+    im.bins_size         # np.array [runs Image.binning()]
+    im.reduced           # br.Image (read only)
 
     # shifts
-    im.shifts_v          # np.array type
-    im.shifts_h          # np.array type
-    im.p                 # np.array type
-    im.f                 # function f(x)
-    im.calculated_shift  # br.Spectrum type
+    im.shifts_v          # np.array
+    im.shifts_h          # np.array
+    im.p                 # np.array      (read only)
+    im.f                 # function f(x) (read only)
+    im.calculated_shift  # br.Spectrum   (read only)
 
-    # spectrum
-    im.spectrum          # br.Spectrum type
-    im.spectrum_v        # br.Spectrum type
-    im.spectrum_h        # br.Spectrum type
-    im.columns           # br.Spectra type
-    im.rows              # br.Spectra type
+    # spectrum (All Computed Attributes)
+    im.histogram         # br.Spectrum
+    im.spectrum          # br.Spectrum
+    im.spectrum_v        # br.Spectrum
+    im.spectrum_h        # br.Spectrum
+    im.columns           # br.Spectra
+    im.rows              # br.Spectra
 
     # methods
     im.save()
     im.load()
 
+    im.floor()
+    im.crop()
+    
     im.pcolormesh()
     im.imshow()
     im.plot()
@@ -100,7 +101,6 @@ BRIXS is based on four objects:
     im.binning()
     im.calculate_histogram()
     im.calculate_spectrum()
-    im.floor()
     im.calculate_shift()
     im.set_shift()
     im.fix_curvature()
