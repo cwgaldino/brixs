@@ -5,7 +5,10 @@
 from pathlib import Path
 import numpy as np
 import os
-import h5py
+try:
+    import h5py
+except ModuleNotFoundError:
+    pass
 
 import brixs as br
 

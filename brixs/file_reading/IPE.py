@@ -8,7 +8,7 @@ import os
 
 import brixs as br
 
-import h5py
+# import h5py
 
 
 # %% IPE beamline - SIRIUS - Brazil ============================================

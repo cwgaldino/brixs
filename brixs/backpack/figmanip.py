@@ -12,7 +12,10 @@ import warnings
 from subprocess import Popen, PIPE
 import decimal
 from collections import OrderedDict
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except ModuleNotFoundError:
+    pass
 
 # matplotlib libraries
 from matplotlib.pyplot import get_current_fig_manager

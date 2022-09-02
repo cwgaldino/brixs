@@ -275,39 +275,46 @@ class Image(metaclass=_Meta):
             compressed gzip format. This is overwriten by data.
 
     Attributes:
-        data (2D array): This is where we store the Image.
-        x, y (1D array): x and y axis values.
-        vmin, vmax (number): Minimum value in data.
-        shape (tuple): Shape of data (vertical size, horizontal size).
+        data (2D np.array): This is where we store the Image.
+        vmin, vmax (float, read only): Minimum value in data.
+        shape (tuple, read only): Shape of data (vertical size, horizontal size).
+        x_centers, y_centers (np.array): pixel center labels.
+        x_edges, y_edges (np.array): pixel edges labels.
         histogram (brixs.Spectrum): Data intensity histogram.
 
         nbins (tuple): Number of bins (number of rows, number of columns).
         bins_size (tuple): Bins size (size of rows, size of columns).
-        reduced (brixs.Image): Binned image.
+        reduced (brixs.Image, read only): Binned image.
 
-        calculated_shift (brixs.Spectrum): Calculated shifts.
-        shifts_v, shifts_h (1D array): Shift values in the vertical and
+        shifts_v, shifts_h (np.array): Shift values in the vertical and
             horizontal direction.
+        p (np.array, read only): polynomial values returned by calculated_shift().
+        f (function, read only): funcion returned by calculated_shift().
+        calculated_shift (brixs.Spectrum): Calculated shifts.
 
         spectrum_v, spectrum_h (brixs.Spectrum): Spectrum obtained by integrating
             pixels in the vertical and horizontal direction.
+        spectrum (brixs.Spectrum): same as spectrum_h.
         columns, rows (brixs.Spectra): Spectra obtained from each pixel columns
             or row.
 
     Methods:
         save()
         load()
-        plot()
+
+        floor()
+        crop()
+
+        pcolormesh()
         imshow()
+        plot()
+
         binning()
         calculate_histogram()
         calculate_spectrum()
-        floor()
         calculate_shift()
-        set_shifts()
+        set_shift()
         fix_curvature()
-
-
     """
     _read_only = ['shape', 'vmin', 'vmax', 'reduced', 'calculated_shift', 'p', 'f']
 
@@ -387,8 +394,8 @@ class Image(metaclass=_Meta):
         """Select attributes that will be copyed to different output objects."""
         dict = get_attributes(self)
 
-        # list of attributes not to transfer based on the type
-        do_not_transfer = {'Image':        ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift'],
+        # list of attributes NOT to transfer based on the type
+        do_not_transfer = {'Image':        ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
                            'PhotonEvents': ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
                            'Spectrum':     ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
                            'Spectra':      ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shift', '_x_centers', '_y_centers', '_x_edges', '_y_edges']}
@@ -459,7 +466,7 @@ class Image(metaclass=_Meta):
             else:
                 raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
         elif isinstance(object, (np.floating, float, int)):
-            if 0 in object:
+            if object == 0:
                 raise ZeroDivisionError(f'Cannot divide by zero.')
             else:
                 final = Image(data = self.data / object)
@@ -478,7 +485,7 @@ class Image(metaclass=_Meta):
             else:
                 raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
         elif isinstance(object, (np.floating, float, int)):
-            if 0 in object:
+            if object == 0:
                 raise ZeroDivisionError(f'Cannot divide by zero.')
             else:
                 final = Image(data = self.data / object)
@@ -1166,7 +1173,7 @@ class Image(metaclass=_Meta):
                 nbins = (10, 5)  # (10 rows, 5 columns)
 
         Returns:
-            None
+            binned image
         """
         kwargs['shape']        = self.shape
         kwargs['factor_check'] = True
@@ -1188,6 +1195,8 @@ class Image(metaclass=_Meta):
         # self.reduced._y_centers = _y_centers
         self.reduced.x_edges   = _x_edges
         self.reduced.y_edges   = _y_edges
+
+        return self.reduced
 
     def calculate_histogram(self, **kwargs):
         """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
@@ -1428,7 +1437,7 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError('Averaging range falls outside of the image. Please, change y or n.')
 
-        self._data -= np.mean(self._data[int(x_start):int(x_stop), int(y_start):int(y_stop)])
+        self._data -= np.mean(self._data[int(y_start):int(y_stop), int(x_start):int(x_stop)]).astype(self.data.dtype)
         self._vmin = min([min(x) for x in self.data])
         self._vmax = max([max(x) for x in self.data])
 
@@ -1437,19 +1446,28 @@ class Image(metaclass=_Meta):
 
         Args:
             x_start, x_stop, y_start, y_stop (int): pixel range. start is
-                inclusive and stop is exclusive.
+                inclusive and stop is exclusive. Use None to to indicate the
+                edge of the image.
 
         Returns:
             croped image
         """
-        assert x_start >= 0 and is_integer(x_start) and x_start<self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
-        assert x_stop  >= 0 and is_integer(x_stop)  and x_stop<self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
+        # check if None
+        if x_start is None: x_start = 0
+        if x_stop is None:  x_stop = self.shape[1]
+        if y_start is None: y_start = 0
+        if y_stop is None:  y_stop = self.shape[0]
+
+        # verification
+        assert x_start >= 0 and is_integer(x_start) and x_start<=self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
+        assert x_stop  >= 0 and is_integer(x_stop)  and x_stop<=self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
         assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_start >= 0 and is_integer(y_start) and y_start<self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
-        assert y_stop  >= 0 and is_integer(y_stop)  and y_stop<self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
+        assert y_start >= 0 and is_integer(y_start) and y_start<=self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
+        assert y_stop  >= 0 and is_integer(y_stop)  and y_stop<=self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
         assert y_stop > y_start, f'y_start must be smaller than y_stop.'
 
-        final = Image(data=self.data[int(x_start):int(x_stop), int(y_start):int(y_stop)])
+        # crop
+        final = Image(data=self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)])
         return self._transfer_attributes(final)
 
 

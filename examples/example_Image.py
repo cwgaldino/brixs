@@ -8,16 +8,16 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-# %matplotlib qt5
-# %load_ext autoreload
-# %autoreload 2
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
 
-# Create Image object ==========================================================
+# %% Create Image object =======================================================
 im = br.Image(data=[[0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0]])
-im = br.Image('<path-to-Image>')  # must be a txt with the pixel matrix
+# im = br.Image('<path-to-Image>')  # must be a txt with the pixel matrix
 
 
-# data reading functions are defined for some beamlines ========================
+# %% data reading functions are defined for some beamlines =====================
 # filepath = Path(r'../fixtures/PEAXIS/elastic_0001.sif')
 # filepath = Path(r'../fixtures/PEAXIS/elastic_0002.sif')
 filepath = Path(r'../fixtures/PEAXIS/sample_0001.sif')
@@ -73,7 +73,7 @@ im_A = im_B + im_C
 im_A = im_B - im_C
 im_A = im_B * im_C
 im_A = im_B / im_C  # im_C cannot contain zero pixels
-im_A = im_B + 2
+im_A = im_B + 2.2
 im_A = im_B - 2
 im_A = im_B * 2
 im_A = im_B / 2
@@ -84,7 +84,6 @@ im_A = im_B + im_C
 print(im_A.temperature)
 im_A = im_C + im_B
 print(im_A.temperature)  # ERROR
-
 
 # %% Histogram =================================================================
 h = im.histogram
@@ -135,27 +134,28 @@ im.nbins = (16, 8)  # 16 rows and 8 columns
 im.nbins = (None, 8)  # 2048 rows and 8 columns
 im.nbins = (8)      # same as (8, 8)
 im.nbins = 8        # same as (8, 8)
-im.binning(nbins=(16, 8))
-im.binning(nbins=(8))
-im.binning(nbins=8)
-
-# many ways to define the binning (defining bin size)
 im.bins_size = (128, 256)
 im.bins_size = (None, 256)  # row size 1, column size 256
 im.bins_size = (256)
 im.bins_size = 256
-im.binning(bins_size=(128, 256))
-im.binning(bins_size=(256))
-im.binning(bins_size=256)
 
-# binned data is another image
+# binned data is saved in another image
 im2 = im.reduced
+
+# also works calling the binning function
+im2 = im.binning(nbins=(16, 8))
+im2 = im.binning(nbins=(8))
+im2 = im.binning(nbins=8)
+im2 = im.binning(bins_size=(128, 256))
+im2 = im.binning(bins_size=(256))
+im2 = im.binning(bins_size=256)
 
 # plot
 fig = br.backpack.figure()
 im2.plot(colorbar=True)
 
 # %% labeling rows and columns =================================================
+im2 = im.binning(nbins=(16, 8))
 
 # change x labels (monotonic regular step size)
 im2.x_centers = [0, 2, 4, 6, 8, 10, 12, 14]
@@ -197,11 +197,11 @@ im2.x_centers = [0, 0, 4, 6, 8, 10, 12, 16]
 
 # # imshow will yield an error
 fig = br.backpack.figure()
-im2.imshow(colorbar=True)
+im2.imshow(colorbar=True)  # ERROR
 
 # # pcolormesh will yield an error
 fig = br.backpack.figure()
-im2.pcolormesh(colorbar=True)
+im2.pcolormesh(colorbar=True)  # ERROR
 
 
 
@@ -249,8 +249,18 @@ s = im.calculate_spectrum()
 fig = br.backpack.figure()
 s.plot()
 
-# %% ===========================================================================
-im = im1.crop(0, 1, 0, 1)
+# %% image manipulations =======================================================
+# intensity flooring
+im = br.Image(data=[[10, 11, 11, 10], [10, 11, 11, 10], [10, 11, 11, 10], [10, 11, 11, 10]])
+print(im.data)
+im.floor()
+print(im.data)
+
+# cropping
+print(im.shape)
+im2 = im.crop(0, None, 0, 2)
+print(im2.shape)
+print(im2.data)
 
 # %% ===========================================================================
 plt.close('all')

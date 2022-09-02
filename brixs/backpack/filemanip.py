@@ -11,7 +11,10 @@ from copy import deepcopy
 import collections
 from .interact import query
 import json
-from detect_delimiter import detect
+try:
+    from detect_delimiter import detect
+except ModuleNotFoundError:
+    pass
 # %%
 import warnings
 import re
