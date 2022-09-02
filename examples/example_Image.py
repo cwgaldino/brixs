@@ -12,7 +12,7 @@ import numpy as np
 %load_ext autoreload
 %autoreload 2
 
-# %% Create Image object =======================================================
+# %% Create object ============++++++===========================================
 im = br.Image(data=[[0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0]])
 # im = br.Image('<path-to-Image>')  # must be a txt with the pixel matrix
 

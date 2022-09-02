@@ -2373,6 +2373,7 @@ class Spectrum(metaclass=_Meta):
     @data.setter
     def data(self, value):
         try:
+            value = np.array(value)
             if value.shape[1] != 2:
                 raise ValueError('Data must have two columns (x, y).')
             elif value is None:

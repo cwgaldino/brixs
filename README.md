@@ -93,7 +93,7 @@ BRIXS is based on four objects:
 
     im.floor()
     im.crop()
-    
+
     im.pcolormesh()
     im.imshow()
     im.plot()
@@ -104,4 +104,56 @@ BRIXS is based on four objects:
     im.calculate_shift()
     im.set_shift()
     im.fix_curvature()
+```
+
+### Spectrum attributes and methods
+
+```python
+    # basic
+    s.data              # np.array
+    s.vmin              # float (read only)
+    s.vmax              # float (read only)
+    s.shape             # tuple (read only)
+    s.x_centers         # np.array
+    s.y_centers         # np.array
+    s.x_edges           # np.array
+    s.y_edges           # np.array
+
+    # binning
+    s.nbins             # np.array [runs Image.binning()]
+    s.bins_size         # np.array [runs Image.binning()]
+    s.reduced           # br.Image (read only)
+
+    # shifts
+    s.shifts_v          # np.array
+    s.shifts_h          # np.array
+    s.p                 # np.array      (read only)
+    s.f                 # function f(x) (read only)
+    s.calculated_shift  # br.Spectrum   (read only)
+
+    # spectrum (All Computed Attributes)
+    s.histogram         # br.Spectrum
+    s.spectrum          # br.Spectrum
+    s.spectrum_v        # br.Spectrum
+    s.spectrum_h        # br.Spectrum
+    s.columns           # br.Spectra
+    s.rows              # br.Spectra
+
+    # methods
+    s.save()
+    s.load()
+
+    s.floor()
+    s.crop()
+
+    s.pcolormesh()
+    s.imshow()
+    s.plot()
+
+    s.binning()
+    s.calculate_histogram()
+    s.calculate_spectrum()
+    s.calculate_shift()
+    s.set_shift()
+    s.fix_curvature()
 ```

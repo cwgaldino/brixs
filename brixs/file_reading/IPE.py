@@ -15,7 +15,7 @@ import brixs as br
 def read_IPE(filepath):
     """Read files from IPE beamline at SIRIUS.
 
-    NOT IMLEMENTED YET.
+    NOT IMPLEMENTED YET.
 
     Last updated: 26/12/2021 by Carlos Galdino
     """
