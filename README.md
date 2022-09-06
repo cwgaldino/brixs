@@ -4,6 +4,7 @@ Python package for analysis of XAS/RIXS spectra.
 
 Documentation: https://cwgaldino.github.io/brixs/
 
+WARNING: The code has been in active development this past few days and some documentation might not be up to date.
 
 ## Installation
 

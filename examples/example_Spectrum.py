@@ -225,6 +225,11 @@ _ = s.fit.plot(color='red')
 
 s.save('test.txt')
 
+
+
+
+
+
 # %% finding peaks =============================================================
 s.find_peaks()
 print(s.peaks)
