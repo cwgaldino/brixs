@@ -79,7 +79,7 @@ BRIXS is based on four objects:
     im.f                 # function f(x) (read only)
     im.calculated_shift  # br.Spectrum   (read only)
 
-    # spectrum (All Computed Attributes)
+    # spectrum (Computed Attributes)
     im.histogram         # br.Spectrum
     im.spectrum          # br.Spectrum
     im.spectrum_v        # br.Spectrum
@@ -111,49 +111,69 @@ BRIXS is based on four objects:
 ```python
     # basic
     s.data              # np.array
-    s.vmin              # float (read only)
-    s.vmax              # float (read only)
-    s.shape             # tuple (read only)
-    s.x_centers         # np.array
-    s.y_centers         # np.array
-    s.x_edges           # np.array
-    s.y_edges           # np.array
+    s.x                 # np.array
+    s.y                 # np.array
+    s.area              # float (computed attribute)
 
-    # binning
-    s.nbins             # np.array [runs Image.binning()]
-    s.bins_size         # np.array [runs Image.binning()]
-    s.reduced           # br.Image (read only)
+    # modifiers
+    s.offset        # float
+    s.factor        # float
+    s.calib         # float
+    s.shift         # float
+    s.shift_roll    # int
+    s.shift_interp  # float
 
-    # shifts
-    s.shifts_v          # np.array
-    s.shifts_h          # np.array
-    s.p                 # np.array      (read only)
-    s.f                 # function f(x) (read only)
-    s.calculated_shift  # br.Spectrum   (read only)
+    # check
+    s.step          # float
+    s.monotonicity  # string
 
-    # spectrum (All Computed Attributes)
-    s.histogram         # br.Spectrum
-    s.spectrum          # br.Spectrum
-    s.spectrum_v        # br.Spectrum
-    s.spectrum_h        # br.Spectrum
-    s.columns           # br.Spectra
-    s.rows              # br.Spectra
+    # fit
+    s.fit     # br.Spectrum
+    s.residue # br.Spectrum
+    s.guess   # br.Spectrum
+    s.R2      # float
+
+    # peaks
+    s.peaks   # br.peaks
 
     # methods
     s.save()
     s.load()
 
-    s.floor()
-    s.crop()
-
-    s.pcolormesh()
-    s.imshow()
     s.plot()
 
-    s.binning()
-    s.calculate_histogram()
-    s.calculate_spectrum()
-    s.calculate_shift()
+    s.check_step_x()
+    s.check_monotonicity()
+    s.fix_monotonicity()
+
+    s.set_calib()
     s.set_shift()
-    s.fix_curvature()
+    s.set_factor()
+    s.set_offset()
+
+    s.interp()
+    s.extract()
+    s.crop()
+    s.floor()
+    s.flip()
+    s.normalize()
+    s.zero()
+    s.calculate_area()
+
+    s.find_peaks()
+    s.fit_peak()
+    s.fit_peaks()
+    s.polyfit()
+    s.apply_correction()
 ```
+
+
+## Information for developers
+
+I will list here some practices that I have been trying to follow while developing brixs. This should facilitate the maintenance and expansion of the package.
+
+- the metaclass `_Meta()` helps other classes creating read-only and non-removable attributes. The variables `_read_only = []` and `_non_removable = []` should be defined at the beginning of a class before __init__(). Attributes will be created based on the names listed inside these lists.
+- __init__() methods should initialize *ALL* attributes, except for computed attributes.
+- __init__() should call _sort_args().
+- _sort_args() should sort the arguments and return a data type or a filepath to __init__(), and nothing else
+- f

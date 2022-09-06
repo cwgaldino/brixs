@@ -193,7 +193,7 @@ def check_monotonicity(array):
     else:
         return 0
 
-def fix_monotinicity(x, y, mode='increasing'):
+def fix_monotonicity(x, y, mode='increasing'):
     """return x, y where the x array is monotonically increasing or decreasing."""
     if mode != 'increasing' and mode != 'decreasing':
         raise ValueError('mode should be "decreasing" or "increasing".')

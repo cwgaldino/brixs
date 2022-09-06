@@ -12,9 +12,12 @@ import numpy as np
 %load_ext autoreload
 %autoreload 2
 
-# %% Create object ============++++++===========================================
-im = br.Image(data=[[0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0]])
-# im = br.Image('<path-to-Image>')  # must be a txt with the pixel matrix
+# %% Many ways to create an br.Image object ====================================
+arr = [[0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 1, 0]]
+im = br.Image(data=arr)
+
+# filepath must point to a txt file with the pixel matrix
+# im = br.Image('<filepath>')
 
 
 # %% data reading functions are defined for some beamlines =====================
