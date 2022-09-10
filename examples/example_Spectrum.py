@@ -30,6 +30,7 @@ s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 
 
 # %% data reading functions are defined for some beamlines =====================
 filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
+# filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
 s = br.ADRESS.read(filepath)
 
 
@@ -215,37 +216,47 @@ plt.legend()
 
 
 # %% fit peak ==================================================================
+filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
+s = br.ADRESS.read(filepath)
+
 fig = br.backpack.figure()
 _ = s.plot(color='black', marker='o', lw=0)
+
 s.fit_peak()
 print(s.peaks)
 print(s.fit.peaks)
 print('fit R2: ' + str(s.R2))
 _ = s.fit.plot(color='red')
-
+s.peaks[0].plot()
 s.save('test.txt')
 
-
+# s2 = br.Spectrum('test.txt')
 
 
 
 
 # %% finding peaks =============================================================
+filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
+s = br.ADRESS.read(filepath)
+
+fig = br.backpack.figure()
+_ = s.plot(color='black')
 s.find_peaks()
-print(s.peaks)
 _ = s.peaks.plot()
+print(s.peaks)
 
 # reduced prominence
 fig = br.backpack.figure()
 br.backpack.set_window_position(2048, 232)
-s.plot()
+_ = s.plot(color='black')
 s.find_peaks(prominence=2)
 _ = s.peaks.plot()
+print(s.peaks)
 
 # add peak by hand
 fig = br.backpack.figure()
 br.backpack.set_window_position(2048, 232)
-s.plot()
+_ = s.plot(color='black')
 s.find_peaks()
 s.peaks.append({'amp':7.75, 'fwhm':200, 'c':3543})
 _ = s.peaks.plot()
@@ -253,15 +264,27 @@ _ = s.peaks.plot()
 # split peak
 fig = br.backpack.figure()
 br.backpack.set_window_position(2048, 232)
-s.plot()
-s.find_peaks()
+_ = s.plot(color='black')
+s.find_peaks(prominence=2)
 s.peaks.split(0)
 _ = s.peaks.plot()
 
 
 
 # %% fitting peaks =============================================================
-s = br.read_ADRESS(filepath)
+
+import brixs as br
+from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
+import copy
+
+%matplotlib qt5
+%load_ext autoreload
+%autoreload 2
+
+filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
+s = br.ADRESS.read(filepath)
 
 # find peaks
 s.find_peaks()
@@ -270,16 +293,30 @@ s.peaks.split(1)
 
 # plot
 fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
 s.plot(color='black')
 _ = s.peaks.plot(color='green')
 
+# set bounds
+s.peaks[1].bounds['c'] = (3861.62, 3931)
+s.peaks[2].bounds['c'] = (3871.95, 3931)
+s.peaks[2].bounds['amp'] = (0, 500)
+
 # fit
 s.fit_peaks()
+
+# plot
+fig = br.backpack.figure()
+s.plot(color='black')
 s.fit.plot(color='red')
 
 # fitted peaks parameters
 print(s.fit.peaks)
+
+# error, covariance matrix, and r squared
+print(s.fit.peaks[0].error)
+print(s.fit.peaks[1].error)
+print(s.fit.pcov)
+print(s.R2)
 
 # if main data is modified via a modifier, peaks and fit are modified too
 s.shift  = 100
@@ -288,28 +325,27 @@ s.calib  = 100
 s.factor = 100
 
 fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
 s.plot(color='black')
 _ = s.peaks.plot(color='green')
 s.fit.plot(color='red')
 
-# %% residue and initial guess =================================================
+# residue and initial guess
 fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
-s.plot(color='black')
+s.plot(color='black', label='data')
 s.fit.plot(color='red', label='fit')
 s.guess.plot(color='blue', label='guess')
 s.residue.plot(color='green', label='residue')
 plt.title(f'R2: {s.R2}')
+plt.legend()
 
-# %% if data is negative bound must be adjusted ================================
-s = br.read_ADRESS(filepath)
-s.offset = -300
-
+# plot peak contributions
 fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
 s.plot(color='black')
-s.find_peaks()
-_ = s.peaks.plot(color='green')
-s.fit_peaks(amp_bounds=(3, -3), verbose=True)
-s.fit.plot(color='red')
+s.fit.peaks[-2].spectrum.plot(color='red')
+
+# subtract peak contribution
+fig = br.backpack.figure()
+s.plot(color='black')
+s_elastic = s.fit.peaks[-1].calculate_spectrum(x=s.x)
+s_final = s-s_elastic
+s_final.plot(color='red')

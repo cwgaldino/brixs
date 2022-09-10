@@ -37,7 +37,7 @@ from .backpack.filemanip import load_Comments, filelist
 from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes
 from .backpack.arraymanip import is_integer, all_equal, factors, flatten, peak_fit, check_monotonicity, fix_monotonicity
 from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
-from .peaks import Peak, Peaks, _peak_function_creator
+from .peaks import Peak, Peaks
 from .backpack.model_functions import voigt_fwhm, dirac_delta
 
 # common definitions ===========================================================
@@ -2719,12 +2719,13 @@ class Spectrum(metaclass=_Meta):
             dict = get_attributes(self)
             kwargs['header'] += '==== Spectrum attributes ===='  + '\n'
             for n in dict:
-                if n not in ['_x', '_y', '_data']:
-                    if n in ['_fit', '_guess', '_residue']:
-                        if dict[n] is None:
-                            kwargs['header'] += f'{n}: None'  + '\n'
-                        else:
-                            kwargs['header'] += f'{n}: {dict[n].data}'  + '\n'
+                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue']:
+                    if dict[n] is None:
+                        kwargs['header'] += f'{n}: None'  + '\n'
+                        # else:
+                        #     kwargs['header'] += f'{n}: {dict[n].data}'  + '\n'
+                    elif isinstance(dict[n], str):
+                        kwargs['header'] += f'{n}: \"{str(dict[n])}\"'  + '\n'
                     elif isinstance(dict[n], Iterable):
                         kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
                     else:
@@ -3348,7 +3349,7 @@ class Spectrum(metaclass=_Meta):
         return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
 
 
-    def fit_peak(self, asymmetry=False, fixed_m=0, offset=True, amp_bounds=(None, None), c_bounds=(None, None), fwhm_bounds=(0, None), verbose=False):
+    def fit_peak(self, asymmetry=False, fixed_m=0, offset=True, verbose=False):
         """Fits one peak. Initial guess is based on the maximum y value.
 
         Args:
@@ -3379,7 +3380,7 @@ class Spectrum(metaclass=_Meta):
         self.peaks = {'c':c, 'amp':amp, 'fwhm':fwhm}
 
         # fit
-        self.fit_peaks(asymmetry=asymmetry, fixed_m=fixed_m, offset=offset, amp_bounds=amp_bounds, c_bounds=c_bounds, fwhm_bounds=fwhm_bounds, verbose=verbose)
+        self.fit_peaks(asymmetry=asymmetry, fixed_m=fixed_m, offset=offset, verbose=verbose)
 
     def find_peaks(self, prominence=5, width=4, moving_average_window=8):
         """Find peaks. Wrapper for `scipy.signal.find_peaks()`_.
@@ -3447,7 +3448,7 @@ class Spectrum(metaclass=_Meta):
         except IndexError:
             self._peaks = Peaks({}, shift=self.shift, offset=self.offset, calib=self.calib, factor=self.factor)
 
-    def fit_peaks(self, asymmetry=False, fixed_m=0, offset=True, amp_bounds=(0, 3), c_bounds=(-2, 2), fwhm_bounds=(0, 2), verbose=False):
+    def fit_peaks(self, offset=False, verbose=False):
         """Fit peaks. Wrapper for `scipy.optimize.curve_fit()`_.
 
         Args:
@@ -3458,16 +3459,6 @@ class Spectrum(metaclass=_Meta):
                 If a number (from 0 to 1), this will be used as the value of m
                 (fixed m).
             offset (bool, optional): if True, a offset value will be fitted.
-            amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
-                maximum multiplication factor for boundary values. For amp, the
-                bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
-                For c, bounds are set c+fwhm*c_bound[0] and c+fwhm*c_bound[1].
-                Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
-                and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
-                less than zero, the minimum fwhm boundary is set to zero as it
-                cannot be negative. If None, the data max and min limits will be
-                used.
-
 
         Returns:
             None
@@ -3476,99 +3467,18 @@ class Spectrum(metaclass=_Meta):
         """
         self.check_monotonicity()
 
-        # check if peaks is defined ============================================
+        # check if peaks is defined
         if len(self.peaks) == 0:
-            raise ValueError('No peaks to fit. Run Spectrum.find_peaks().')
+            raise ValueError('No peaks to fit.\nRun Spectrum.find_peaks().')
 
-        # check asymmetry ======================================================
-        if isinstance(asymmetry, dict):
-            for i in range(len(self.peaks)):
-                if i not in asymmetry:
-                    asymmetry[i] = False
-                else:
-                    if type(asymmetry[i]) != bool:
-                        raise ValueError(f'the asymmetry must be bool (True or False) for all peaks.\nasymmetry = {asymmetry}')
-            for i in asymmetry:
-                if i not in range(len(self.peaks)):
-                    raise ValueError(f'Peak {i} not in peaks.\nDefined peaks: {self.peak}\nasymmetry = {asymmetry}).')
-        else:
-            if isinstance(asymmetry, Iterable):
-                raise ValueError('asymmetry must be a number or dictionary.')
-            asymmetry = {i: asymmetry for i in range(len(self.peaks))}
+        # build model
+        p0, bounds_min, bounds_max, decode = self.peaks.build_guess()
+        model = self.peaks.build_model()
 
-        # check fixed_m ========================================================
-        if isinstance(fixed_m, dict):
-            for i in range(len(self.peaks)):
-                if i not in fixed_m:
-                    fixed_m[i] = 0
-                else:
-                    if (isinstance(fixed_m[i], bool) and fixed_m[i] == True) or (fixed_m[i] < 0 or fixed_m[i] > 1):
-                        raise ValueError(f'fixed_m must be False or a number from 0 to 1 for all peaks.\nfixed_m = {fixed_m}')
-            for i in fixed_m:
-                if i not in range(len(self.peaks)):
-                    raise ValueError(f'Peak {i} not in peaks.\nDefined peaks: {self.peak}\nfixed_m = {fixed_m}).')
-        else:
-            if isinstance(fixed_m, Iterable):
-                raise ValueError('fixed_m must be a number from 0 to 1, False, or dictionary.')
-            fixed_m = {i: fixed_m for i in range(len(self.peaks))}
-
-        # check bounds =========================================================
-        if amp_bounds is None:
-            amp_bounds = (min(self.y), max(self.y))
-        else:
-            if amp_bounds[0] is None:
-                amp_bounds = (min(self.y), amp_bounds[1])
-            if amp_bounds[1] is None:
-                amp_bounds = (amp_bounds[0], max(self.y))
-
-        if c_bounds is None:
-            c_bounds = (min(self.x), max(self.x))
-        else:
-            if c_bounds[0] is None:
-                c_bounds = (min(self.x), c_bounds[1])
-            if c_bounds[1] is None:
-                c_bounds = (c_bounds[0], max(self.x))
-
-        if fwhm_bounds is None:
-            fwhm_bounds = (0, max(self.x)-min(self.x))
-        else:
-            if fwhm_bounds[0] is None:
-                fwhm_bounds = (0, fwhm_bounds[1])
-            if fwhm_bounds[1] is None:
-                fwhm_bounds = (fwhm_bounds[0], max(self.x)-min(self.x))
-
-        # build model ==========================================================
-        model_str = ''
-        args_str = ''
-        bounds_min = []
-        bounds_max = []
-        p0 = []
-        peaks_reconstruction = {}
-
-        if verbose: print('Building model...')
-        for i in range(len(self.peaks)):
-            if verbose: print(f'Peak {i}')
-            f, f_str, a_str = _peak_function_creator(asymmetry=asymmetry[i], fixed_m=fixed_m[i], idx=i)
-            p, bmin, bmax = self.peaks[i].build_guess(asymmetry=asymmetry[i], fixed_m=fixed_m[i], amp_bounds=amp_bounds, c_bounds=c_bounds, fwhm_bounds=fwhm_bounds)
-            p0.extend(p)
-            bounds_min.extend(bmin)
-            bounds_max.extend(bmax)
-            model_str += f_str + ' + '
-            args_str += a_str + ', '
-            peaks_reconstruction[i] = {'asymmetry':asymmetry[i], 'fixed_m':fixed_m[i], '_func':f, 'n_args':len(p)}
-
-        if offset == True and type(offset) == bool:
-            if verbose: print(f'Offfset')
-            model_str = f'lambda x, {args_str}offset: {model_str}offset'
-            p0 = np.append(p0, min(self.y))
-            bounds_min = np.append(bounds_min, -np.inf)
-            bounds_max = np.append(bounds_max, np.inf)
-        elif offset == False and type(offset) == bool:
-            model_str = f'lambda x, {args_str[:-2]}: {model_str[:-3]}'
-        else:
-            if verbose: print(f'Fixed offfset')
-            model_str = f'lambda x, {args_str}: {model_str}{offset}'
-        model = eval(model_str)
+        # fitting
+        if verbose: print(f'Fitting data...')
+        popt, pcov = curve_fit(model, self.x, self.y, p0=p0, bounds=(bounds_min, bounds_max))
+        if verbose: print(f'Done!')
 
         # guess ================================================================
         self._guess = Spectrum(x=self.x, y=model(self.x, *p0))
@@ -3580,13 +3490,12 @@ class Spectrum(metaclass=_Meta):
         self.guess._shift_interp = self.shift_interp
         self.guess.peaks         = copy.deepcopy(self.peaks)
 
-        # curve_fit ============================================================
-        if verbose: print(f'Fitting data...')
-        popt, pcov = curve_fit(model, self.x, self.y, p0=p0, bounds=(bounds_min, bounds_max))
-        if verbose: print(f'Done!')
+        # save fitted peaks parameters =========================================
+        psigma = np.sqrt(np.diag(pcov))
+        peaks   = decode(popt, psigma)
 
         # fit ==================================================================
-        x_temp = np.linspace(self.x[0], self.x[-1], len(self.x)*2)
+        x_temp = peaks._find_suitable_x()
         self._fit = Spectrum(x=x_temp, y=model(x_temp, *popt))
         self.fit._offset       = self.offset
         self.fit._factor       = self.factor
@@ -3594,7 +3503,8 @@ class Spectrum(metaclass=_Meta):
         self.fit._shift        = self.shift
         self.fit._shift_roll   = self.shift_roll
         self.fit._shift_interp = self.shift_interp
-        self.fit.peaks = Peaks()
+        self.fit.peaks = peaks
+        self.fit.pcov  = pcov
 
         # residue ==============================================================
         if offset:
@@ -3611,33 +3521,6 @@ class Spectrum(metaclass=_Meta):
         # R2 ===================================================================
         self._R2 =  1- (sum((self.y-model(self.x, *popt))**2)/sum((self.y-np.mean(self.y))**2))
 
-        # save fitted peaks parameters =========================================
-        stop = 0
-        for i in range(len(self.peaks)):
-            peak = {}
-            start = stop
-            stop  = start + peaks_reconstruction[i]['n_args']
-            peak['amp'] = popt[start]
-            peak['c'] = popt[start+1]
-            if peaks_reconstruction[i]['fixed_m'] == False and type(peaks_reconstruction[i]['fixed_m']) == bool:  # variable m
-                if peaks_reconstruction[i]['asymmetry']:
-                    peak['fwhm1'] = popt[start+2]
-                    peak['fwhm2'] = popt[start+4]
-                    peak['m1'] = popt[start+3]
-                    peak['m2'] = popt[start+5]
-                else:
-                    peak['fwhm'] = popt[start+2]
-                    peak['m'] = popt[start+3]
-            else:
-                if peaks_reconstruction[i]['asymmetry']:
-                    peak['fwhm1'] = popt[start+2]
-                    peak['fwhm2'] = popt[start+3]
-                else:
-                    peak['fwhm'] = popt[start+2]
-                peak['m'] = peaks_reconstruction[i]['fixed_m']
-            self.fit.peaks.append(peak)
-            if offset:
-                self.fit.peaks.offset = popt[-1]
 
     def polyfit(self, deg=2):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.

@@ -12,20 +12,21 @@ import matplotlib.pyplot as plt
 from collections.abc import Iterable, MutableMapping
 
 # backpack
-from .backpack.arraymanip import  sort
+from .backpack.arraymanip import sort
 from .backpack.model_functions import voigt_fwhm, dirac_delta
 
 # BRIXS
 from . import brixs as br
 
-
+# common definitions ===========================================================
+from .config import settings
 
 # %% suport functions ==========================================================
 def _peak_function_creator(asymmetry, fixed_m, idx=0):
     """Returns instructions for building peak functions.
 
     Args:
-        assymetry (bool): if True, the returned peak function will require two
+        asymmetry (bool): if True, the returned peak function will require two
             fwhm values, one for each half of the peak.
         fixed_m (False or number): m is the amount of lorentzian
             contribution for a peak. If False, m will be a required as an input
@@ -123,7 +124,7 @@ class Peak(MutableMapping):
         fwhm1 (number, optional): fwhm of the first half of the peak (for
             assimetric peaks).
         fwhm2(number, optional): fwhm of the second half of the peak (for
-            assimetric peaks).
+            asimetric peaks).
         m (number, optional): factor from 0 to 1 of the lorentzian amount.
             Default is 0 (fully gaussian peak). If peak is assymetric (m1 and m2
             are defined), m will be set the average m value.
@@ -131,17 +132,17 @@ class Peak(MutableMapping):
             assimetric peaks). Default is 0.
         m2 (number, optional): m of the second half of the peak (for
             assimetric peaks). Default is 0.
-        shift (number): initial shift value (does not have initial effect over the data).
-        calib (number): initial calibration value (does not have initial effect over the data).
-        offset( number): initial offset value (does not have initial effect over the data).
-        factor (number): initial multiplicative factor (does not have initial effect over the data).
+        shift (number): initial shift value (does not affect the data).
+        calib (number): initial calibration value (does not affect the data).
+        offset( number): initial offset value (does not affect the data).
+        factor (number): initial multiplicative factor (does not affect the data).
 
 
     Attributes:
         area (number): peak area.
-        assymetry (bool): True if peak is assymetric. This is defined when the
-            object is created. If assymetry=False, and fhwm1 (or fwhm2) is set,
-            then assymetry is set to True. If assymetry=True, it cannot reverse
+        asymmetry (bool): True if peak is assymetric. This is defined when the
+            object is created. If asymmetry=False, and fhwm1 (or fwhm2) is set,
+            then asymmetry is set to True. If asymmetry=True, it cannot reverse
             to False, and another object must be created from scratch.
         store (dictionary):
         shift (number): shift value (value will be added to x-coordinates).
@@ -151,7 +152,8 @@ class Peak(MutableMapping):
     """
 
     def __init__(self, *args, **kwargs):
-        self.store = {'amp':None,
+        # core
+        self._store = {'amp':None,
                       'area':None,
                       'c':None,
                       'fwhm':None,
@@ -161,7 +163,37 @@ class Peak(MutableMapping):
                       'm1':None,
                       'm2':None,
                       }
-        self._asymmetry = False
+        self.bounds = {'amp': (-np.inf, np.inf),
+                      'c':    (-np.inf, np.inf),
+                      'fwhm': (0, np.inf),
+                      'fwhm1':(0, np.inf),
+                      'fwhm2':(0, np.inf),
+                      'm':    (0, 1),
+                      'm1':   (0, 1),
+                      'm2':   (0, 1),
+                      }
+        self.error = {'amp':  0,
+                      'area': 0,
+                      'c':    0,
+                      'fwhm': 0,
+                      'fwhm1':0,
+                      'fwhm2':0,
+                      'm':    0,
+                      'm1':   0,
+                      'm2':   0,
+                      }
+
+        # fit instructions
+        if 'asymmetry' in kwargs:
+            self._asymmetry = kwargs.pop('asymmetry')
+        else:
+            self._asymmetry = False
+        if 'fixed' in kwargs:
+            self._fixed = kwargs.pop('fixed')
+        else:
+            self._fixed = ['m']
+
+        # modifiers
         if 'shift' in kwargs:
             self._shift = kwargs.pop('shift')
         else:
@@ -180,12 +212,12 @@ class Peak(MutableMapping):
             self._factor = 1
 
         # check keys
-        if any([item not in self.store for item in kwargs.keys()]):
+        if any([item not in self._store for item in kwargs.keys()]):
             for key in kwargs:
-                if key not in self.store:
+                if key not in self._store:
                     raise AttributeError(f'{key} is not a valid attribute.')
 
-        # minimum requirements to initialize peak
+        # check kwargs
         if 'amp' not in kwargs:
             raise ValueError("Cannot initialize peak without 'amp'.")
         else:
@@ -208,17 +240,26 @@ class Peak(MutableMapping):
             if 'fwhm1' in kwargs or 'fwhm2' in kwargs:
                 raise ValueError("Cannot initialize peak with 'fwhm', ('fwhm1' and 'fhwm2').\nUse either 'fwhm' or (fwhm1 and fwhm2).")
             self._check_fwhm(kwargs['fwhm'])
+            if self.asymmetry:
+                kwargs['fwhm1'] = kwargs['fwhm']/2
+                kwargs['fwhm2'] = kwargs['fwhm']/2
         if self.asymmetry:
             if 'm1' not in kwargs:
                 kwargs['m1'] = 0
+            else:
+                self._check_m(kwargs['m1'])
             if 'm2' not in kwargs:
                 kwargs['m2'] = 0
+            else:
+                self._check_m(kwargs['m1'])
             kwargs['m'] = (kwargs['m1']+kwargs['m2'])/2
         else:
             if 'm' not in kwargs:
                 kwargs['m'] = 0
+            else:
+                self._check_m(kwargs['m'])
 
-        # fix area
+        # calculate area
         if self.asymmetry:
             c1 = kwargs['m1']/np.pi + (1-kwargs['m1'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
             c2 = kwargs['m2']/np.pi + (1-kwargs['m2'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
@@ -226,7 +267,151 @@ class Peak(MutableMapping):
         else:
             c = kwargs['m']/np.pi + (1-kwargs['m'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
             kwargs['area'] = kwargs['amp']*kwargs['fwhm']*c
-        self.store.update(dict(**kwargs))
+
+        # save kwargs
+        self._store.update(dict(**kwargs))
+
+
+    def __str__(self):
+        # return str({name:self._store[name] for name in self._store if self._store[name] is not None})[1:-1].replace(', ', '\n')
+        # return str({name:self._store[name] for name in self._store if self._store[name] is not None})[1:-1].replace(', ', '\n')
+        return str(self._store)[1:-1].replace(', ', '\n')
+        # return str(self._store).replace('}, ', '\n ')
+
+    def __repr__(self):
+        return str({name:self._store[name] for name in self._store if self._store[name] is not None})
+        # return str(self._store)[1:-1].replace(', ', '\n')
+        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+        # return str(self._store).replace('}, ', '\n ')
+
+    def __getitem__(self, name):
+        return self._store[self._check_name(name)]
+
+    def __setitem__(self, name, value):
+        if name not in self._store:
+            raise KeyError(f'{name} is not defined as a peak parameter and cannot be created.')
+        if name == 'amp':
+            self._check_amp(value)
+            self._store['amp'] = value
+        if name == 'c':
+            self._store['c'] = value
+        if name == 'area':
+            raise ValueError('Area is read-only parameter. Change amp instead.')
+        if name == 'fwhm':
+            if self.asymmetry:
+                raise ValueError('Cannot change fwhm value when asymmetry = True.\nChange fwhm1 and fhwm2 instead.\nOr change asymmetry to False.')
+            else:
+                self._check_fwhm(value)
+                self._store['fwhm'] = value
+        if name == 'fwhm1':
+            if self.asymmetry:
+                if value is None:
+                    print('Peak asymmetry set to False.')
+                    self.asymmetry = False
+                else:
+                    self._check_fwhm(value)
+                    self._store['fwhm1'] = value
+                    self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+            else:
+                if value is None:
+                    self._store['fwhm1'] = None
+                else:
+                    print('Peak asymmetry set to True.')
+                    self.asymmetry = True
+
+                    self._check_fwhm(value)
+                    self._store['fwhm1'] = value
+                    if self._store['fwhm']-self._store['fwhm1'] >= 0:
+                        self._store['fwhm2'] = self._store['fwhm']-self._store['fwhm1']
+                    else:
+                        self._store['fwhm2'] = 0
+                        self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+        if name == 'fwhm2':
+            if self.asymmetry:
+                if value is None:
+                    print('Peak asymmetry set to False.')
+                    self.asymmetry = False
+                else:
+                    self._check_fwhm(value)
+                    self._store['fwhm2'] = value
+                    self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+            else:
+                if value is None:
+                    self._store['fwhm2'] = None
+                else:
+                    print('Peak asymmetry set to True.')
+                    self._asymmetry = True
+
+                    self._check_fwhm(value)
+                    self._store['fwhm2'] = value
+                    if self._store['fwhm']-self._store['fwhm2'] >= 0:
+                        self._store['fwhm1'] = self._store['fwhm']-self._store['fwhm2']
+                    else:
+                        self._store['fwhm1'] = 0
+                        self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+        if name == 'm':
+            if self.asymmetry:
+                raise ValueError('cannot change m value when asymmetry = True.\nChange m1 and m2 instead.\nOr change asymmetry to False.')
+            else:
+                self._check_m(value)
+                self._store['m'] = value
+        if name == 'm2':
+            if self.asymmetry:
+                self._check_m(value)
+                self._store['m2'] = value
+                self._store['m'] = (self._store['m1']+self._store['m2'])/2
+            else:
+                raise ValueError('Cannot set m2 because asymmetry is False.')
+        if name == 'm1':
+            if self.asymmetry:
+                self._check_m(value)
+                self._store['m1'] = value
+                self._store['m'] = (self._store['m1']+self._store['m2'])/2
+            else:
+                raise ValueError('Cannot set m1 because asymmetry is False.')
+
+        # fix area
+        self.calculate_area()
+
+    def __delitem__(self, key):
+        raise AttributeError('itens cannot be deleted')
+
+    def __iter__(self):
+        return iter(self._store)
+
+    def __len__(self):
+        # return len(self._store)
+        return len({name:self._store[name] for name in self._store if self._store[name] is not None})
+
+
+    def _check_name(self, name):
+        if name not in self._store:
+            raise KeyError(f'{name} is not a valid peak parameter.')
+        return name
+
+    def _check_amp(self, value):
+        pass
+        # if value <= 0:
+        #     raise ValueError('amp must be a number higher than 0.')
+
+    def _check_area(self, value):
+        pass
+        # if value <= 0:
+        #     raise ValueError('area must be a number higher than 0.')
+
+    def _check_fwhm(self, value):
+
+        if value <= 0:
+            raise ValueError(f'fwhm must be a number higher than 0.\nInvalid fwhm:{value}')
+
+    def _check_m(self, value):
+        if value < 0 or value > 1:
+            raise ValueError(f'm must be a number between 0 and 1.\nInvalid m:{value}')
+
+    def _check_fixed(self, value):
+        for key in value:
+            if key not in ['amp', 'c', 'fwhm', 'm']:
+                raise ValueError('parameter "' + str(key) + '" not valid.\nValid keys: "amp", "c", "fwhm", "m". ')
 
 
     @property
@@ -274,9 +459,34 @@ class Peak(MutableMapping):
         return self._asymmetry
     @asymmetry.setter
     def asymmetry(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+        if isinstance(value, bool):
+            self._asymmetry = value
+        else:
+            raise TypeError('value must be bool (True or False).')
+        if self._asymmetry:
+            self._store['fwhm1'] = self._store['fwhm']/2
+            self._store['fwhm2'] = self._store['fwhm']/2
+            self._store['m1']    = self._store['m']
+            self._store['m2']    = self._store['m']
+        else:
+            self._store['fwhm1'] = None
+            self._store['fwhm2'] = None
+            self._store['m1']    = None
+            self._store['m2']    = None
+        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
     @asymmetry.deleter
     def asymmetry(self):
+            raise AttributeError('Cannot delete object.')
+
+    @property
+    def fixed(self):
+        return self._fixed
+    @fixed.setter
+    def fixed(self, value):
+        self._check_fixed(value)
+        self._fixed = value
+    @fixed.deleter
+    def fixed(self):
             raise AttributeError('Cannot delete object.')
 
     @property
@@ -288,146 +498,6 @@ class Peak(MutableMapping):
     @spectrum.deleter
     def spectrum(self):
             raise AttributeError('Cannot delete object.')
-
-    def __str__(self):
-        # return str({name:self.store[name] for name in self.store if self.store[name] is not None})[1:-1].replace(', ', '\n')
-        # return str({name:self.store[name] for name in self.store if self.store[name] is not None})[1:-1].replace(', ', '\n')
-        return str(self.store)[1:-1].replace(', ', '\n')
-        # return str(self.store).replace('}, ', '\n ')
-
-    def __repr__(self):
-        return str({name:self.store[name] for name in self.store if self.store[name] is not None})
-        # return str(self.store)[1:-1].replace(', ', '\n')
-        # return str({i:val for i, val in enumerate(self.store)})[1:-1].replace('}, ', '}\n')
-        # return str(self.store).replace('}, ', '\n ')
-
-    def __getitem__(self, name):
-        return self.store[self._check_name(name)]
-
-    def __setitem__(self, name, value):
-        if name not in self.store:
-            raise KeyError(f'{name} is not defined and cannot be created.')
-        if name == 'amp':
-            self._check_amp(value)
-            self.store['amp'] = value
-        if name == 'c':
-            self.store['c'] = value
-        if name == 'area':
-            raise ValueError('Area is read-only parameter. Change amp instead.')
-        if name == 'fwhm':
-            if self.asymmetry:
-                raise ValueError('Cannot change fwhm value when asymmetry = True.\nChange fwhm1 and fhwm2 instead.')
-            else:
-                self.store['fwhm'] = value
-        if name == 'fwhm1':
-            if self.asymmetry:
-                if value is None:
-                    print('Setting asymmetry of the peak to False. Done!')
-                    self.store['fwhm1'] = None
-                    self.store['fwhm2'] = None
-                    self.store['m1'] = self.store['m']
-                    self.store['m2'] = self.store['m']
-                else:
-                    self._check_fwhm(value)
-                    self.store['fwhm1'] = value
-                    self.store['fwhm'] = self.store['fwhm1']+self.store['fwhm2']
-            else:
-                if value is None:
-                    pass
-                else:
-                    self._check_fwhm(value)
-                    print('Setting asymmetry of the peak to True. Done!')
-                    self._asymmetry = True
-                    self.store['fwhm1'] = value
-                    if self.store['fwhm']-self.store['fwhm1'] >= 0:
-                        self.store['fwhm2'] = self.store['fwhm']-self.store['fwhm1']
-                    else:
-                        self.store['fwhm2'] = 0
-                        self.store['fwhm'] = self.store['fwhm1']+self.store['fwhm2']
-                    self.store['m1'] = self.store['m']
-                    self.store['m2'] = self.store['m']
-        if name == 'fwhm2':
-            if self.asymmetry:
-                if value is None:
-                    print('Setting asymmetry of the peak to False. Done!')
-                    self.store['fwhm1'] = None
-                    self.store['fwhm2'] = None
-                    self.store['m1'] = None
-                    self.store['m2'] = None
-                else:
-                    self._check_fwhm(value)
-                    self.store['fwhm2'] = value
-                    self.store['fwhm'] = self.store['fwhm1']+self.store['fwhm2']
-            else:
-                if value is None:
-                    pass
-                else:
-                    self._check_fwhm(value)
-                    print('Setting asymmetry of the peak to True. Done!')
-                    self._asymmetry = True
-                    self.store['fwhm2'] = value
-                    if self.store['fwhm']-self.store['fwhm2'] >= 0:
-                        self.store['fwhm1'] = self.store['fwhm']-self.store['fwhm2']
-                    else:
-                        self.store['fwhm1'] = 0
-                        self.store['fwhm'] = self.store['fwhm1']+self.store['fwhm2']
-                    self.store['m1'] = 0
-                    self.store['m2'] = 0
-        if name == 'm':
-            if self.asymmetry:
-                raise ValueError('cannot change m value when asymmetry = True.\nChange m1 and m2 instead.')
-            else:
-                self.store['m'] = value
-        if name == 'm2':
-            if self.asymmetry:
-                self.store['m2'] = value
-                self.store['m'] = (self.store['m1']+self.store['m2'])/2
-            else:
-                raise ValueError('cannot set m2 because asymmetry is False.\nChange asymmetry to True first.\nTo change asymmetry just define fwhm1 or fwhm2.')
-        if name == 'm1':
-            if self.asymmetry:
-                self.store['m1'] = value
-                self.store['m'] = (self.store['m1']+self.store['m2'])/2
-            else:
-                raise ValueError('cannot set m1 because asymmetry is False.\nChange asymmetry to True first.\nTo change asymmetry just define fwhm1 or fwhm2.')
-
-        # fix area
-        self.calculate_area()
-
-    def __delitem__(self, key):
-        raise AttributeError('itens cannot be deleted')
-
-    def __iter__(self):
-        return iter(self.store)
-
-    def __len__(self):
-        # return len(self.store)
-        return len({name:self.store[name] for name in self.store if self.store[name] is not None})
-
-
-    def _check_name(self, name):
-        if name not in self.store:
-            raise KeyError(f'{name} is not a valid peak parameter.')
-        return name
-
-    def _check_amp(self, value):
-        pass
-        # if value <= 0:
-        #     raise ValueError('amp must be a number higher than 0.')
-
-    def _check_area(self, value):
-        pass
-        # if value <= 0:
-        #     raise ValueError('area must be a number higher than 0.')
-
-    def _check_fwhm(self, value):
-
-        if value <= 0:
-            raise ValueError(f'fwhm must be a number higher than 0.\nInvalid fwhm:{value}')
-
-    def _check_m(self, value):
-        if value < 0 or value > 1:
-            raise ValueError(f'm must be a number between 0 and 1.\nInvalid m:{value}')
 
 
     def set_calib(self, value):
@@ -442,17 +512,17 @@ class Peak(MutableMapping):
         """
         if self.calib != value:
             if self.calib != 1:
-                self.store['c'] = self.store['c']*self.calib**-1
-                self.store['fwhm'] = abs(self.store['fwhm']*self.calib**-1)
+                self._store['c'] = self._store['c']*self.calib**-1
+                self._store['fwhm'] = abs(self._store['fwhm']*self.calib**-1)
                 if self.asymmetry:
-                    self.store['fwhm1'] = abs(self.store['fwhm1']*self.calib**-1)
-                    self.store['fwhm2'] = abs(self.store['fwhm2']*self.calib**-1)
+                    self._store['fwhm1'] = abs(self._store['fwhm1']*self.calib**-1)
+                    self._store['fwhm2'] = abs(self._store['fwhm2']*self.calib**-1)
             if value != 1:
-                self.store['c'] = self.store['c']*value
-                self.store['fwhm'] = abs(self.store['fwhm']*value)
+                self._store['c'] = self._store['c']*value
+                self._store['fwhm'] = abs(self._store['fwhm']*value)
                 if self.asymmetry:
-                    self.store['fwhm1'] = abs(self.store['fwhm1']*value)
-                    self.store['fwhm2'] = abs(self.store['fwhm2']*value)
+                    self._store['fwhm1'] = abs(self._store['fwhm1']*value)
+                    self._store['fwhm2'] = abs(self._store['fwhm2']*value)
             self._calib = value
 
             # fix area
@@ -469,9 +539,9 @@ class Peak(MutableMapping):
         """
         if self.shift != value:
             if self.shift != 0:
-                self.store['c'] = self.store['c']-self.shift
+                self._store['c'] = self._store['c']-self.shift
             if value != 0:
-                self.store['c'] = self.store['c']+value
+                self._store['c'] = self._store['c']+value
             self._shift = value
 
     def set_offset(self, value):
@@ -485,9 +555,9 @@ class Peak(MutableMapping):
         """
         if self.offset != value:
             if self.offset != 0:
-                self.store['amp'] = self.store['amp']-self.offset
+                self._store['amp'] = self._store['amp']-self.offset
             if value != 0:
-                self.store['amp'] = self.store['amp']+value
+                self._store['amp'] = self._store['amp']+value
             self._offset = value
 
     def set_factor(self, value):
@@ -502,9 +572,9 @@ class Peak(MutableMapping):
         """
         if self.factor != value:
             if self.factor != 1:
-                self.store['amp'] = self.store['amp']*self.factor**-1
+                self._store['amp'] = self._store['amp']*self.factor**-1
             if value != 1:
-                self.store['amp'] = self.store['amp']*value
+                self._store['amp'] = self._store['amp']*value
             self._factor = value
 
             # fix area
@@ -518,27 +588,30 @@ class Peak(MutableMapping):
             None
         """
         if self.asymmetry:
-            c1 = self.store['m1']/np.pi + (1-self.store['m1'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            c2 = self.store['m2']/np.pi + (1-self.store['m2'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            self.store['area'] = (self.store['amp']*self.store['fwhm1']*c1 + self.store['amp']*self.store['fwhm2']*c2)/2
+            c1 = self._store['m1']/np.pi + (1-self._store['m1'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            c2 = self._store['m2']/np.pi + (1-self._store['m2'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            self._store['area'] = (self._store['amp']*self._store['fwhm1']*c1 + self._store['amp']*self._store['fwhm2']*c2)/2
         else:
-            c = self.store['m']/np.pi + (1-self.store['m'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            self.store['area'] = self.store['amp']*self.store['fwhm']*c
+            c = self._store['m']/np.pi + (1-self._store['m'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            self._store['area'] = self._store['amp']*self._store['fwhm']*c
+
+
+    def _find_suitable_x(self):
+        return np.arange(self['c']-10*self['fwhm'], self['c']+10*self['fwhm'], self['fwhm']/20)
 
     def calculate_spectrum(self, x=None):
         """Return peak curve.
 
         Args:
             x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x will be constructed.
+                If None, a suitable x, with at least 20 points within the peak,
+                will be constructed.
 
         Returns:
             :py:class:`Spectrum`.
         """
         if x is None:
-            x = np.arange(self['c']-10*self['fwhm'], self['c']+10*self['fwhm'], self['fwhm']/20)
-        # non_none = {name:self.store[name] for name in self.store if self.store[name] is not None}
-        # f = peak_function(**non_none)
+            x = self._find_suitable_x()
         f = peak_function(amp=self['amp'], c=self['c'],  fwhm=self['fwhm'], m=self['m'], fwhm1=self['fwhm1'], fwhm2=self['fwhm2'], m1=self['m1'], m2=self['m2'])
         s = br.Spectrum(x=x, y=f(x))
         s._shift  = self.shift
@@ -568,6 +641,18 @@ class Peak(MutableMapping):
         """
         if ax is None:
             ax = plt
+            if settings.ALWAYS_PLOT_NEW_WINDOW:
+                figure()
+                if settings.FIGURE_POSITION is not None:
+                    try:
+                        set_window_position(settings.FIGURE_POSITION)
+                    except:
+                        pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
         # data
         c = self['c']
@@ -585,92 +670,321 @@ class Peak(MutableMapping):
 
         return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
 
-    def build_guess(self, asymmetry, fixed_m, amp_bounds=(0, 3), c_bounds=(-2, 2), fwhm_bounds=(0, 2)):
-        """Returns initial guess parameter for fitting.
+
+    def build_model_str(self, asymmetry=None, fixed=None, idx=0):
+        """Returns instructions for building peak functions.
 
         Args:
-            assymetry (bool): if True, the returned peak function will require two
+            asymmetry (bool): if True, the returned peak function will require two
                 fwhm values, one for each half of the peak.
             fixed_m (False or number): m is the amount of lorentzian
                 contribution for a peak. If False, m will be a required as an input
                 argument on the returned peak function.
-            amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
-                maximum multiplication factor for boundary values. For amp, the
-                bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
-                For c, bounds are set c+fwhm*c_bound[0] and c+fwhm*c_bound[1].
-                Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
-                and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
-                less than zero, the minimum fwhm boundary is set to zero as it
-                cannot be negative.
+            idx (int, optional): number to be inprinted in the string
+
+        Returns:
+            function f(x), function f(x) as string, argument list as string
+        """
+        if asymmetry is None:
+            asymmetry = self.asymmetry
+
+        if fixed is None:
+            fixed = self.fixed
+        self._check_fixed(fixed)
+
+        # function string
+        if asymmetry:
+            f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
+        else:
+            f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, m_{idx})'
+
+        # args string
+        args_str = ''
+        if 'amp' in fixed:
+            f_str = f_str.replace(f'amp_{idx}', str(self['amp']))
+        else:
+            args_str += f'amp_{idx}, '
+        if 'c' in fixed:
+            f_str = f_str.replace(f'c_{idx}', str(self['c']))
+        else:
+            args_str += f'c_{idx}, '
+        if asymmetry:
+            if 'w1' in fixed:
+                f_str = f_str.replace(f'w1_{idx}', str(self['w1']))
+            else:
+                args_str += f'w1_{idx}, '
+            if 'm1' in fixed:
+                f_str = f_str.replace(f'm1_{idx}', str(self['m1']))
+            else:
+                args_str += f'm1_{idx}, '
+            if 'w2' in fixed:
+                f_str = f_str.replace(f'w2_{idx}', str(self['w2']))
+            else:
+                args_str += f'w2_{idx}, '
+            if 'm2' in fixed:
+                f_str = f_str.replace(f'm2_{idx}', str(self['m2']))
+            else:
+                args_str += f'm2_{idx}, '
+        else:
+            if 'w' in fixed:
+                f_str = f_str.replace(f'w_{idx}', str(self['w']))
+            else:
+                args_str += f'w_{idx}, '
+            if 'm' in fixed:
+                f_str = f_str.replace(f'm_{idx}', str(self['m']))
+            else:
+                args_str += f'm_{idx}, '
+
+        return f_str, args_str[:-2]
+
+    def set_bounds(self, amp=None, c=None, fwhm=None, m=None, fwhm1=None, fwhm2=None, m1=None, m2=None):
+        """Set percentage wise bounds.
+
+        Args:
+
+
+        Return:
+            None
+        """
+        if amp is None:
+            self.bounds['amp'] = (-np.inf, np.inf)
+        elif isinstance(amp, Iterable):
+            self.bounds['amp'] = (self['amp']-self['amp']*amp[0], self['amp']+self['amp']*amp[-1])
+
+            assert self['amp'] >= self.bounds['amp'][0] and self['amp'] <= self.bounds['amp'][1], f'amp value ('+ str(self['amp']) +') is out of bounds.\nbounds = '+ str(self.bounds['amp'])
+        else:
+            assert amp > 0, 'amp cannot be negative or zero.'
+            self.bounds['amp'] = (self['amp']-self['amp']*amp, self['amp']+self['amp']*amp)
+
+        if c is None:
+            self.bounds['c'] = (-np.inf, np.inf)
+        elif isinstance(c, Iterable):
+            self.bounds['c'] = (self['c']-self['c']*c[0], self['c']+self['c']*c[-1])
+            assert self['c'] >= self.bounds['c'][0] and self['c'] <= self.bounds['c'][1], f'c value ('+ str(self['c']) +') is out of bounds.\nbounds = '+ str(self.bounds['c'])
+        else:
+            assert c > 0, 'c cannot be negative or zero.'
+            self.bounds['c'] = (self['c']-self['c']*c, self['c']+self['c']*c)
+
+        if fwhm is None:
+            self.bounds['fwhm'] = (0, np.inf)
+        elif isinstance(fwhm, Iterable):
+            self.bounds['fwhm'] = (self['fwhm']-self['fwhm']*fwhm[0], self['fwhm']+self['fwhm']*fwhm[-1])
+            if self.bounds['fwhm'][0] < 0: self.bounds['fwhm'][0] = 0
+            assert self['fwhm'] >= self.bounds['fwhm'][0] and self['fwhm'] <= self.bounds['fwhm'][1], f'fwhm value ('+ str(self['fwhm']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm'])
+        else:
+            assert fwhm > 0, 'fwhm cannot be negative or zero.'
+            self.bounds['fwhm'] = (self['fwhm']-self['fwhm']*fwhm, self['fwhm']+self['fwhm']*fwhm)
+            if self.bounds['fwhm'][0] < 0: self.bounds['fwhm'][0] = 0
+
+        if fwhm1 is None:
+            self.bounds['fwhm1'] = (0, np.inf)
+        elif isinstance(fwhm1, Iterable):
+            self.bounds['fwhm1'] = (self['fwhm1']-self['fwhm1']*fwhm1[0], self['fwhm1']+self['fwhm1']*fwhm1[-1])
+            if self.bounds['fwhm1'][0] < 0: self.bounds['fwhm1'][0] = 0
+            assert self['fwhm1'] >= self.bounds['fwhm1'][0] and self['fwhm1'] <= self.bounds['fwhm1'][1], f'fwhm1 value ('+ str(self['fwhm1']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm1'])
+        else:
+            assert fwhm1 > 0, 'fwhm1 cannot be negative or zero.'
+            self.bounds['fwhm1'] = (self['fwhm1']-self['fwhm1']*fwhm1, self['fwhm1']+self['fwhm1']*fwhm1)
+            if self.bounds['fwhm1'][0] < 0: self.bounds['fwhm1'][0] = 0
+
+        if fwhm2 is None:
+            self.bounds['fwhm2'] = (0, np.inf)
+        elif isinstance(fwhm2, Iterable):
+            self.bounds['fwhm2'] = (self['fwhm2']-self['fwhm2']*fwhm2[0], self['fwhm2']+self['fwhm2']*fwhm2[-1])
+            if self.bounds['fwhm2'][0] < 0: self.bounds['fwhm2'][0] = 0
+            assert self['fwhm2'] >= self.bounds['fwhm2'][0] and self['fwhm2'] <= self.bounds['fwhm2'][1], f'fwhm2 value ('+ str(self['fwhm2']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm2'])
+        else:
+            assert fwhm2 > 0, 'fwhm2 cannot be negative or zero.'
+            self.bounds['fwhm2'] = (self['fwhm2']-self['fwhm2']*fwhm2, self['fwhm2']+self['fwhm2']*fwhm2)
+            if self.bounds['fwhm2'][0] < 0: self.bounds['fwhm2'][0] = 0
+
+        if m is None:
+            self.bounds['m'] = (0, 1)
+        elif isinstance(m, Iterable):
+            self.bounds['m'] = (self['m']-self['m']*m[0], self['m']+self['m']*m[-1])
+            if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
+            if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
+            assert self['m'] >= self.bounds['m'][0] and self['m'] <= self.bounds['m'][1], f'm value ('+ str(self['m']) +') is out of bounds.\nbounds = '+ str(self.bounds['m'])
+        else:
+            assert m > 0, 'm cannot be negative or zero.'
+            self.bounds['m'] = (self['m']-self['m']*m, self['m']+self['m']*m)
+            if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
+            if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
+
+        if m1 is None:
+            self.bounds['m1'] = (0, 1)
+        elif isinstance(m1, Iterable):
+            self.bounds['m1'] = (self['m1']-self['m1']*m1[0], self['m1']+self['m1']*m1[-1])
+            if self.bounds['m1'][0] < 0: self.bounds['m1'][0] = 0
+            if self.bounds['m1'][1] > 1: self.bounds['m1'][1] = 1
+            assert self['m1'] >= self.bounds['m1'][0] and self['m1'] <= self.bounds['m1'][1], f'm1 value ('+ str(self['m1']) +') is out of bounds.\nbounds = '+ str(self.bounds['m1'])
+        else:
+            assert m1 > 0, 'm1 cannot be negative or zero.'
+            self.bounds['m1'] = (self['m1']-self['m1']*m1, self['m1']+self['m1']*m1)
+            if self.bounds['m1'][0] < 0: self.bounds['m1'][0] = 0
+            if self.bounds['m1'][1] > 1: self.bounds['m1'][1] = 1
+
+
+        if m2 is None:
+            self.bounds['m2'] = (0, 1)
+        elif isinstance(m2, Iterable):
+            self.bounds['m2'] = (self['m2']-self['m2']*m2[0], self['m2']+self['m2']*m2[-1])
+            if self.bounds['m2'][0] < 0: self.bounds['m2'][0] = 0
+            if self.bounds['m2'][1] > 1: self.bounds['m2'][1] = 1
+            assert self['m2'] >= self.bounds['m2'][0] and self['m2'] <= self.bounds['m2'][1], f'm2 value ('+ str(self['m2']) +') is out of bounds.\nbounds = '+ str(self.bounds['m2'])
+        else:
+            assert m2 > 0, 'm2 cannot be negative or zero.'
+            self.bounds['m2'] = (self['m2']-self['m2']*m2, self['m2']+self['m2']*m2)
+            if self.bounds['m2'][0] < 0: self.bounds['m2'][0] = 0
+            if self.bounds['m2'][1] > 1: self.bounds['m2'][1] = 1
+
+
+        # amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
+        #     maximum multiplication factor for boundary values. For amp, the
+        #     bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
+        #     For c, bounds are set c-fwhm*c_bound[0] and c+fwhm*c_bound[1].
+        #     Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
+        #     and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
+        #     less than zero, the minimum fwhm boundary is set to zero as it
+        #     cannot be negative.
+
+    def build_guess(self, asymmetry=None, fixed=None):
+        """Returns initial guess parameter for fitting.
+
+        Args:
+            asymmetry (bool, optional): Overwrites the Peak.asymmetry parameter.
+                If True, the returned peak function will require two
+                fwhm values, one for each half of the peak.
+            fixed (bool, optional): Overwrites the Peak.fixed_m parameter.
+                If False, m will be a required as an input
+                argument on the returned peak function. Default is fixed m with
+                value 0.
 
         Returns:
             three lists: p0, bounds_min, bounds_max
         """
-        # check values
-        # assert amp_bounds[1]  > amp_bounds[0],  f'Minimum amp boundary cannot be bigger than the maximum.\namp_bounds = {amp_bounds}'
-        # assert c_bounds[1]    > c_bounds[0],    f'Minimum c boundary cannot be bigger than the maximum.\nc_bounds = {c_bounds}'
-        # assert fwhm_bounds[1] > fwhm_bounds[0], f'Minimum fwhm boundary cannot be bigger than the maximum.\nfwhm_bounds = {fwhm_bounds}'
-        assert amp_bounds[1]  != amp_bounds[0],  f'Minimum amp boundary cannot be equal to the maximum.\namp_bounds = {amp_bounds}'
-        assert c_bounds[1]    != c_bounds[0],    f'Minimum c boundary cannot be equal to the maximum.\nc_bounds = {c_bounds}'
-        assert fwhm_bounds[1] != fwhm_bounds[0], f'Minimum fwhm boundary cannot be equal to the maximum.\nfwhm_bounds = {fwhm_bounds}'
+        p0           = []
+        bounds_min   = []
+        bounds_max   = []
 
+        decode_fixed = {}
+        decode_free  = []
 
-        p0         = [       self['amp'],                    self['c']]
-        bounds_min = [self['amp']*amp_bounds[0], self['c']+self['fwhm']*c_bounds[0]]
-        bounds_max = [self['amp']*amp_bounds[1], self['c']+self['fwhm']*c_bounds[1]]
-        assert self['amp'] > self['amp']*amp_bounds[0]                   and self['amp'] < self['amp']*amp_bounds[1],        f'guess amp is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
-        assert self['c'] > self['c']+self['fwhm']*c_bounds[0] and self['c'] < self['c']+self['fwhm']*c_bounds[1], f'guess c is out of bounds\nc = {p0[-1]}\nbounds = {(bounds_min[-1], bounds_max[-1])}'
+        if asymmetry is None:
+            asymmetry = self.asymmetry
 
-        if fixed_m == False and type(fixed_m) == bool:  # variable m
-            if asymmetry:
-                if self['fwhm1'] is not None:
-                    p0.extend(        [      self['fwhm1'],       0.5,       self['fwhm2'],         0.5])
-                    bounds_min.extend([self['fwhm1']*fwhm_bounds[0], 0, self['fwhm2']*fwhm_bounds[0], 0])
-                    bounds_max.extend([self['fwhm1']*fwhm_bounds[1], 1, self['fwhm2']*fwhm_bounds[1], 1])
-                    assert self['fwhm1'] > self['fwhm1']*fwhm_bounds[0] and self['fwhm1'] < self['fwhm1']*fwhm_bounds[1], f'guess fwhm1 is out of bounds\namp = {p0[-4]}\nbounds = {(bounds_min[-4], bounds_max[-4])}'
-                    assert self['fwhm2'] > self['fwhm2']*fwhm_bounds[0] and self['fwhm2'] < self['fwhm2']*fwhm_bounds[1], f'guess fwhm2 is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
-                else:
-                    p0.extend(        [      self['fwhm'],       0.5,       self['fwhm'],         0.5])
-                    bounds_min.extend([self['fwhm']*fwhm_bounds[0], 0, self['fwhm']*fwhm_bounds[0], 0])
-                    bounds_max.extend([self['fwhm']*fwhm_bounds[1], 1, self['fwhm']*fwhm_bounds[1], 1])
-                    assert self['fwhm'] > self['fwhm']*fwhm_bounds[0] and self['fwhm'] < self['fwhm']*fwhm_bounds[1], f'guess fwhm is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
-                if bounds_min[-2] < 0:
-                    bounds_min[-2] = 0
-                if bounds_min[-4] < 0:
-                    bounds_min[-4] = 0
+        if fixed is None:
+            fixed = self.fixed
+        self._check_fixed(fixed)
+
+        for parameter in ['amp', 'c']:
+            if parameter not in fixed:
+                assert self.bounds[parameter][1] != self.bounds[parameter][0], 'Minimum boundary cannot be equal to the maximum.\namp_bounds = ' + str(self.bounds[parameter])
+                assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'Parameter ({parameter}) value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
+
+                p0.append(self[parameter])
+                bounds_min.append(self.bounds[parameter][0])
+                bounds_max.append(self.bounds[parameter][1])
+                decode_free.append(parameter)
             else:
-                p0.extend(        [       self['fwhm'],       0.5])
-                bounds_min.extend([self['fwhm']*fwhm_bounds[0], 0])
-                bounds_max.extend([self['fwhm']*fwhm_bounds[1], 1])
-                assert self['fwhm'] > self['fwhm']*fwhm_bounds[0] and self['fwhm'] < self['fwhm']*fwhm_bounds[1], f'guess fwhm is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
-                if bounds_min[-2] < 0:
-                    bounds_min[-2] = 0
+                decode_fixed[parameter] = self[parameter]
+
+        if asymmetry:
+            if 'fwhm' not in fixed:
+                for parameter in ['fwhm1', 'fwhm2']:
+                    assert self.bounds[parameter][1] != self.bounds[parameter][0], 'Minimum boundary cannot be equal to the maximum.\namp_bounds = ' + str(self.bounds[parameter])
+                    assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'Parameter ({parameter}) value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
+
+                if 'm' not in fixed:
+                    for parameter in ['m1', 'm2']:
+                        if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
+                        if self.bounds[parameter][1] > 1: self.bounds[parameter][1] = 1
+                        assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'Parameter ({parameter}) value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
+
+                    for parameter in ['fwhm1', 'm1', 'fwhm2', 'm2']:
+                        p0.append(self[parameter])
+                        bounds_min.append(self.bounds[parameter][0])
+                        bounds_max.append(self.bounds[parameter][1])
+                        decode_free.append(parameter)
+                else:
+                    for parameter in ['fwhm1', 'fwhm2']:
+                        p0.append(self[parameter])
+                        bounds_min.append(self.bounds[parameter][0])
+                        bounds_max.append(self.bounds[parameter][1])
+                        decode_free.append(parameter)
+                    for parameter in ['m1', 'm2']:
+                        decode_fixed[parameter] = self[parameter]
+            else:
+                if 'm' not in fixed:
+                    for parameter in ['m1', 'm2']:
+                        p0.append(self[parameter])
+                        bounds_min.append(self.bounds[parameter][0])
+                        bounds_max.append(self.bounds[parameter][1])
+                        decode_free.append(parameter)
+                    for parameter in ['fwhm1', 'fwhm2']:
+                        decode_fixed[parameter] = self[parameter]
+                else:
+                    for parameter in ['fwhm1', 'm1', 'fwhm2', 'm2']:
+                        decode_fixed[parameter] = self[parameter]
         else:
-            if asymmetry:
-                if self['fwhm1'] is not None:
-                    p0.extend(        [        self['fwhm1'],              self['fwhm2']         ])
-                    bounds_min.extend([self['fwhm1']*fwhm_bounds[0], self['fwhm2']*fwhm_bounds[0]])
-                    bounds_max.extend([self['fwhm1']*fwhm_bounds[1], self['fwhm2']*fwhm_bounds[1]])
-                    assert self['fwhm1'] > self['fwhm1']*fwhm_bounds[0] and self['fwhm1'] < self['fwhm1']*fwhm_bounds[1], f'guess fwhm1 is out of bounds\namp = {p0[-2]}\nbounds = {(bounds_min[-2], bounds_max[-2])}'
-                    assert self['fwhm2'] > self['fwhm2']*fwhm_bounds[0] and self['fwhm2'] < self['fwhm2']*fwhm_bounds[1], f'guess fwhm2 is out of bounds\namp = {p0[-1]}\nbounds = {(bounds_min[-1], bounds_max[-1])}'
-                else:
-                    p0.extend(        [        self['fwhm'],              self['fwhm']         ])
-                    bounds_min.extend([self['fwhm']*fwhm_bounds[0], self['fwhm']*fwhm_bounds[0]])
-                    bounds_max.extend([self['fwhm']*fwhm_bounds[1], self['fwhm']*fwhm_bounds[1]])
-                assert self['fwhm'] > self['fwhm']*fwhm_bounds[0] and self['fwhm'] < self['fwhm']*fwhm_bounds[1], f'guess fwhm is out of bounds\namp = {p0[-1]}\nbounds = {(bounds_min[-1], bounds_max[-1])}'
-                if bounds_min[-1] < 0:
-                    bounds_min[-1] = 0
-                if bounds_min[-2] < 0:
-                    bounds_min[-2] = 0
-            else:
-                p0.extend(        [       self['fwhm']        ])
-                bounds_min.extend([self['fwhm']*fwhm_bounds[0]])
-                bounds_max.extend([self['fwhm']*fwhm_bounds[1]])
-                assert self['fwhm'] > self['fwhm']*fwhm_bounds[0] and self['fwhm'] < self['fwhm']*fwhm_bounds[1], f'guess fwhm is out of bounds\namp = {p0[-1]}\nbounds = {(bounds_min[-1], bounds_max[-1])}'
-                if bounds_min[-1] < 0:
-                    bounds_min[-1] = 0
+            if 'fwhm' not in fixed:
+                if self.bounds['fwhm'][0] < 0: self.bounds['fwhm'][0] = 0
+                assert self['fwhm'] >= self.bounds['fwhm'][0] and self['fwhm'] <= self.bounds['fwhm'][1], f'fwhm value ('+ str(self['fwhm']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm'])
 
-        return p0, bounds_min, bounds_max
+                if 'm' not in fixed:
+                    if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
+                    if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
+                    assert self['m'] >= self.bounds['m'][0] and self['m'] <= self.bounds['m'][1], f'm value ('+ str(self['m']) +') is out of bounds.\nbounds = '+ str(self.bounds['m'])
+
+                    for parameter in ['fwhm', 'm']:
+                        p0.append(self[parameter])
+                        bounds_min.append(self.bounds[parameter][0])
+                        bounds_max.append(self.bounds[parameter][1])
+                        decode_free.append(parameter)
+                else:
+                    p0.append(self['fwhm'])
+                    bounds_min.append(self.bounds['fwhm'][0])
+                    bounds_max.append(self.bounds['fwhm'][1])
+                    decode_free.append('fwhm')
+                    decode_fixed['m'] = self['m']
+            else:
+                if 'm' not in fixed:
+                    if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
+                    if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
+                    assert self['m'] >= self.bounds['m'][0] and self['m'] <= self.bounds['m'][1], f'm value ('+ str(self['m']) +') is out of bounds.\nbounds = '+ str(self.bounds['m'])
+
+                    p0.append(self['m'])
+                    bounds_min.append(self.bounds['m'][0])
+                    bounds_max.append(self.bounds['m'][1])
+                    decode_free.append('m')
+                else:
+                    for parameter in ['fwhm', 'm']:
+                        decode_fixed[parameter] = self[parameter]
+
+        # decode function
+        def decode(popt, psigma=None):
+            peak  = {}
+            peak.update(decode_fixed)
+
+            # set initial error to zero
+            if psigma is not None:
+                error = {}
+                for parameter in peak:
+                    error[parameter] = 0
+
+            for i, parameter in enumerate(decode_free):
+                peak[parameter]  = popt[decode_free.index(parameter)]
+                if psigma is not None:
+                    error[parameter] = psigma[decode_free.index(parameter)]
+
+            peak = Peak(**peak)
+            if psigma is not None:
+                peak.error.update(error)
+            peak.asymmetry = copy.copy(self.asymmetry)
+            peak.fixed = copy.copy(self.fixed)
+            return peak
+
+        return p0, bounds_min, bounds_max, decode
 
 class Peaks(MutableMapping):
     """A special dictionary for saving peaks.
@@ -698,7 +1012,10 @@ class Peaks(MutableMapping):
     """
 
     def __init__(self, *args, **kwargs):
-        self.store = []
+        # core
+        self._store = []
+
+        # modifiers
         if 'shift' in kwargs:
             self._shift = kwargs.pop('shift')
         else:
@@ -715,6 +1032,8 @@ class Peaks(MutableMapping):
             self._factor = kwargs.pop('factor')
         else:
             self._factor = 1
+
+        # data
         if 'data' in kwargs:
             if isinstance(kwargs['data'], dict) or isinstance(kwargs['data'], Peak):#(id(Peak) == id(kwargs['data'].__class__)):#
                 self.append(kwargs['data'])
@@ -735,6 +1054,54 @@ class Peaks(MutableMapping):
             elif len(args) > 1:
                 for p in args:
                     self.append(p)
+
+    def __str__(self):
+        return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+
+    def __repr__(self):
+        return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+
+    def __getitem__(self, key):
+        return self._store[self._check_key(key)]
+
+    def __setitem__(self, key, value):
+
+        if isinstance(value, Peak):
+            self._store[self._check_key(key)] = value
+        elif isinstance(value, dict):
+            self._store[self._check_key(key)] = Peak(**value)
+        else:
+            raise ValueError('valuea must be a dict or a peak object')
+        self._fix_order()
+
+    def __delitem__(self, key):
+        del self._store[self._check_key(key)]
+        self._fix_order()
+
+    def __iter__(self):
+        return iter(self._store)
+
+    def __len__(self):
+        return len(self._store)
+
+
+    def _check_key(self, key):
+        """Check if key exists. Allows for minus (-) assignment."""
+        if key > len(self)-1 or key < -len(self):
+            raise KeyError('key out of range of defined peaks.\n')
+        return key
+
+    def _fix_order(self):
+        """Returns another PeakDict where peak number is numbered according to its position c."""
+        if self == []:
+            return
+        else:
+            l = len(self)
+            c = [0]*l
+            for i, peak in enumerate(self):
+                c[i] = peak['c']
+            if sum(1 for test in np.diff(c) if test < 0) > 0:
+                self._store = sort(c, self._store)
 
 
     @property
@@ -777,54 +1144,26 @@ class Peaks(MutableMapping):
     def factor(self):
             raise AttributeError('Cannot delete object.')
 
+    @property
+    def spectrum(self):
+        return self.calculate_spectrum()
+    @spectrum.setter
+    def spectrum(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectrum.deleter
+    def spectrum(self):
+            raise AttributeError('Cannot delete object.')
 
-    def __str__(self):
-        return str({i:val for i, val in enumerate(self.store)})[1:-1].replace('}, ', '}\n')
+    @property
+    def spectra(self):
+        return self.calculate_spectra()
+    @spectra.setter
+    def spectra(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectra.deleter
+    def spectra(self):
+            raise AttributeError('Cannot delete object.')
 
-    def __repr__(self):
-        return str({i:val for i, val in enumerate(self.store)})[1:-1].replace('}, ', '}\n')
-
-    def __getitem__(self, key):
-        return self.store[self._check_key(key)]
-
-    def __setitem__(self, key, value):
-
-        if isinstance(value, Peak):
-            self.store[self._check_key(key)] = value
-        elif isinstance(value, dict):
-            self.store[self._check_key(key)] = Peak(**value)
-        else:
-            raise ValueError('valueaaaaa must be a dict or a peak object')
-        self._fix_order()
-
-    def __delitem__(self, key):
-        del self.store[self._check_key(key)]
-        self._fix_order()
-
-    def __iter__(self):
-        return iter(self.store)
-
-    def __len__(self):
-        return len(self.store)
-
-
-    def _check_key(self, key):
-        """Check if key exists. Allows for minus (-) assignment."""
-        if key > len(self)-1 or key < -len(self):
-            raise KeyError('key out of range of defined peaks.\n')
-        return key
-
-    def _fix_order(self):
-        """Returns another PeakDict where peak number is numbered according to its position c."""
-        if self == []:
-            return
-        else:
-            l = len(self)
-            c = [0]*l
-            for i, peak in enumerate(self):
-                c[i] = peak['c']
-            if sum(1 for test in np.diff(c) if test < 0) > 0:
-                self.store = sort(c, self.store)
 
 
     def append(self, value):
@@ -838,9 +1177,9 @@ class Peaks(MutableMapping):
         """
         if isinstance(value, Peak):
         # if id(Peak) == id(value.__class__):
-            self.store.append(value)
+            self._store.append(value)
         elif isinstance(value, dict):
-            self.store.append(Peak(**value))
+            self._store.append(Peak(**value))
         else:
             raise ValueError('value must be a dict or a peak object')
         self._fix_order()
@@ -860,9 +1199,9 @@ class Peaks(MutableMapping):
             if has_duplicates(key):
                 raise ValueError('list has duplicated peaks')
             for k in key:
-                del self.store[k]
+                del self._store[k]
         else:
-            del self.store[key]
+            del self._store[key]
 
 
     def set_calib(self, value):
@@ -875,7 +1214,7 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        for peak in self.store:
+        for peak in self._store:
             peak.calib = value
         self._calib = value
         self._fix_order()
@@ -889,7 +1228,7 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        for peak in self.store:
+        for peak in self._store:
             peak.shift = value
         self._shift = value
 
@@ -902,7 +1241,7 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        for peak in self.store:
+        for peak in self._store:
             peak.offset = value
         self._offset = value
 
@@ -916,7 +1255,7 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        for peak in self.store:
+        for peak in self._store:
             peak.factor = value
         self._factor = value
 
@@ -943,7 +1282,6 @@ class Peaks(MutableMapping):
         for c in cs:
             self.append(Peak(amp=amp, fwhm=fwhm, c=c, m=m))
 
-
     def add_near(self, key):
         """Appends an extra peak 1/4 of the fwhm away from a peak.
 
@@ -956,66 +1294,137 @@ class Peaks(MutableMapping):
         """
         if isinstance(key, Iterable):
             temp = []
-            for i in range(len(self.store)):
+            for i in range(len(self._store)):
                 count = len([k2 for k2 in key if k2 == i])   # counts same key
                 if count > 0:
                     for n in range(count):
-                        temp = copy.deepcopy(self.store[self._check_key(key)])
+                        temp = copy.deepcopy(self._store[self._check_key(key)])
                         temp['c']+=temp['fwhm']/4
                         self.append(temp)
             for value in temp:
                 self.append(value)
         else:
-            temp = copy.deepcopy(self.store[self._check_key(key)])
-            self.store[self._check_key(key)]['c'] -= self.store[self._check_key(key)]['fwhm']/4
+            temp = copy.deepcopy(self._store[self._check_key(key)])
+            self._store[self._check_key(key)]['c'] -= self._store[self._check_key(key)]['fwhm']/4
             temp['c'] += temp['fwhm']/4
             self.append(temp)
 
 
-    def calculate_spectrum(self, x=None):
-        """Return the spectrum with all peaks.
+    def _find_suitable_x(self):
+        # find minimum value
+        vmin = self[0]['c']-10*self[0]['fwhm']
+        for i in range(len(self)):
+            v = self[i]['c']-10*self[i]['fwhm']
+            if v < vmin:
+                vmin = v
+
+        # find maximum value
+        vmax = self[-1]['c']+10*self[-1]['fwhm']
+        for i in range(len(self)):
+            v = self[i]['c']+10*self[i]['fwhm']
+            if v > vmax:
+                vmax = v
+
+        # find smallest fwhm
+        fwhm_min = self[0]['fwhm']
+        for i in range(len(self)):
+            fwhm = self[i]['fwhm']
+            if fwhm < fwhm_min:
+                fwhm_min = fwhm
+
+        return np.arange(vmin, vmax, fwhm_min/20)
+
+    def calculate_spectra(self, x=None):
+        """Return each peak spectrum separetely.
 
         Args:
             x (list, optional): x values to which the curve will be calculated.
                 If None, a suitable x will be constructed.
 
         Returns:
-            :py:class:`Spectrum`, :py:class:`Spectra`.
+            :py:class:`Spectra`.
         """
         if len(self) > 0:
             if x is None:
-                # find minimum value
-                vmin = self[0]['c']-10*self[0]['fwhm']
-                for i in range(len(self)):
-                    v = self[i]['c']-10*self[i]['fwhm']
-                    if v < vmin:
-                        vmin = v
-                # find maximum value
-                vmax = self[-1]['c']+10*self[-1]['fwhm']
-                for i in range(len(self)):
-                    v = self[i]['c']+10*self[i]['fwhm']
-                    if v > vmax:
-                        vmax = v
-                # find smallest fwhm
-                fwhm_min = self[0]['fwhm']
-                for i in range(len(self)):
-                    fwhm = self[i]['fwhm']
-                    if fwhm < fwhm_min:
-                        fwhm_min = fwhm
-
-                x = np.arange(vmin, vmax, fwhm_min/20)
+                x = self._find_suitable_x()
 
             ss = br.Spectra(n=len(self))
             for i in range(len(self)):
                 ss[i] = self[i].calculate_spectrum(x=x)
-
-            s = br.Spectrum(x=x, y=np.zeros(len(x)))
-            for s1 in ss:
-                s += s1
-
-            return s, ss
+            return ss
         else:
             raise ValueError('No peaks defined.')
+
+    def calculate_spectrum(self, x=None):
+        """Return the spectrum with all peaks summed up.
+
+        Args:
+            x (list, optional): x values to which the curve will be calculated.
+                If None, a suitable x will be constructed.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        ss = self.calculate_spectra(x=x)
+        s = br.Spectrum(x=ss[0].x, y=np.zeros(len(ss[0].x)))
+        for s1 in ss:
+            s += s1
+        return s
+
+
+    def build_guess(self):
+        p0         = []
+        bounds_min = []
+        bounds_max = []
+
+        decode_func = []
+        decode_len  = []
+
+        for p in self:
+            p0_temp, bounds_min_temp, bounds_max_temp, decode_temp = p.build_guess()
+            p0         = p0 + p0_temp
+            bounds_min = bounds_min + bounds_min_temp
+            bounds_max = bounds_max + bounds_max_temp
+            decode_len.append(len(p0_temp))
+            decode_func.append(decode_temp)
+
+
+        def decode(popt, psigma=None):
+            peaks = Peaks()
+
+            cumulative_len_list = [sum(decode_len[0:x:1]) for x in range(0, len(decode_len)+1)]
+            popt = [popt[cumulative_len_list[i]:cumulative_len_list[i+1]] for i in range(0, len(cumulative_len_list)-1)]
+            if psigma is not None:
+                psigma = [psigma[cumulative_len_list[i]:cumulative_len_list[i+1]] for i in range(0, len(cumulative_len_list)-1)]
+
+            for i in range(len(decode_func)):
+                if psigma is not None:
+                    peaks.append(decode_func[i](popt[i], psigma[i]))
+                else:
+                    peaks.append(decode_func[i](popt[i]))
+
+            return peaks
+
+        return p0, bounds_min, bounds_max, decode
+
+    def build_model_str(self):
+        f_str = ''
+        args_str = ''
+
+        for idx, p in enumerate(self):
+            f_str_temp, args_str_temp = p.build_model_str(idx=idx)
+            f_str = f_str + f_str_temp + ' + '
+            args_str  = args_str  + args_str_temp  + ', '
+
+        return f_str[:-3], args_str[:-2]
+
+    def build_model(self):
+        f_str, args_str = self.build_model_str()
+
+        model_str = f'lambda x, {args_str}: {f_str}'
+        return eval(model_str)
+
+
 
 
     def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
@@ -1039,9 +1448,21 @@ class Peaks(MutableMapping):
         """
         if ax is None:
             ax = plt
+            if settings.ALWAYS_PLOT_NEW_WINDOW:
+                figure()
+                if settings.FIGURE_POSITION is not None:
+                    try:
+                        set_window_position(settings.FIGURE_POSITION)
+                    except:
+                        pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
 
         r = {}
         for i in range(len(self)):
             r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
-
+            plt.text(self[i]['c'], self[i]['amp'], i, fontsize=14)
         return r
