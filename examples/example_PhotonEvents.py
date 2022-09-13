@@ -12,111 +12,91 @@ import matplotlib.pyplot as plt
 %load_ext autoreload
 %autoreload 2
 
-# %% initial definitions =======================================================
+# %% photonn events ============================================================
 filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
-
-# %% import photonn events =====================================================
 pe = br.ADRESS.read_pe(filepath)
 
 # %% PhotonEvents basic attributes =============================================
-pe.shape  # size of the detector
-pe.data
-pe.x
-pe.y
-pe.I
-len(pe)  # number of photon events
+print(pe.shape)  # size of the detector
+print(pe.data)
+print(pe.x)
+print(pe.y)
+print(pe.I)
+print(len(pe))  # number of photon events
+print(pe.nd)  # (exclusive of ADRESS data)
 
-# %% detector data (exclusive of ADRESS data) ==================================
-pe.nd
+# %% plotting functions ========================================================
+fig = br.backpack.figure()
+_ = pe.plot()
 
 # %% setting new parameters ====================================================
 pe.temperature = 10
 print(pe.temperature)
 
-# %% plot ======================================================================
-plt.figure()
-pe.plot()
+# %% save and load =============================================================
+# save
+pe.save(r'test.txt')
 
-plt.figure()
-plt.scatter(pe.x, pe.y, s=1)
+# load
+pe2 = br.PhotonEvents(r'test.txt')
+
+# parameters are saved
+print(pe2.temperature)
+
 
 # %% binning ===================================================================
-pe.binning(1000, 10)
+im = pe.binning(100, 10)
 
-plt.figure()
-pe.reduced.plot(colorbar=True)
+fig = br.backpack.figure()
+_ = im.plot(colorbar=True)
 
-plt.figure()
-pe.reduced.columns.plot()
+fig = br.backpack.figure()
+_ = im.columns.plot()
 
-plt.figure()
-pe.reduced.rows.plot()
-
-plt.figure()
-pe.plot()
+# plot bins
+fig = br.backpack.figure()
+_ = pe.plot()
 plt.vlines(pe.reduced.x_centers+pe.bins_size[1]/2, 0, pe.shape[0], color='red')
 plt.hlines(pe.reduced.y_centers+pe.bins_size[0]/2, 0, pe.shape[1], color='red')
 
-# %% calculate and fit shifts ==================================================
-pe.binning(3000, 10)
+# %% calculate, fit, and set shifts ==================================================
+pe.nbins = (3000, 10)
+
+fig = br.backpack.figure()
+_ = pe.reduced.columns.plot()
+
 pe.calculate_shift()
 p, f = pe.calculated_shift.polyfit(deg=2)
 
-plt.figure()
+fig = br.backpack.figure()
 pe.calculated_shift.plot(marker='o', lw=0, color='black')
 x = np.linspace(0, 1650, 100)
 plt.plot(x, f(x), color='red')
 
-plt.figure()
-pe.plot()
+fig = br.backpack.figure()
+_ = pe.plot()
 plt.plot(x, -f(x)+730.5, color='red')
 
-# %% set shifts ================================================================
+# set shifts
 pe.set_shifts(p=p)
 
-plt.figure()
+fig = br.backpack.figure()
 pe.plot()
 
 # %% spectrum ==================================================================
 s = pe.calculate_spectrum(6000)
 
-plt.figure()
+fig = br.backpack.figure()
 s.plot()
 
-# %% calibrate spectrum and centering at zero ==================================
-s = pe.calculate_spectrum(6000)
-s.factor =  12.794
-
-s.find_peaks()
-s.peaks
-s.fit_peaks()
-c = s.fit.peaks[0]['c']
-s.shift = -c
-
-plt.figure()
-s.plot()
-plt.xlabel('Energy loss (eV)')
-plt.ylabel('Intensity (arb. units)')
 
 # %% fix curvature (compact) ===================================================
-pe  = br.read_ADRESS_pe(folderpath/'Cu_0005_d1.h5')
+pe = br.ADRESS.read_pe(filepath)
 pe.binning(3000, 10)
 pe.fix_curvature()
 
-plt.figure()
+fig = br.backpack.figure()
 pe.plot()
 
-pe.p  # this can be used to apply the same correction in other files
-pe.f
-pe.shifts
-
-# %% save and load data ========================================================
-pe.save(r'test.txt')
-pe.temperature = 10
-
-pe2 = br.PhotonEvents()
-pe2.load(r'test.txt')
-pe2.temperature
-
-# %%
-plt.close('all')
+print(pe.p)  # this can be used to apply the same correction in other files
+print(pe.f)

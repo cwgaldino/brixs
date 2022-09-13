@@ -55,6 +55,17 @@ BRIXS is based on four objects:
     ss = brixs.Spectra()
 ```
 
+Also two support objects:
+
+```python
+    import brixs as br
+
+    p  = br.Peak()
+    ps = br.Peaks()
+```
+
+
+
 ### Image attributes and methods
 
 ```python
@@ -88,6 +99,7 @@ BRIXS is based on four objects:
     im.columns           # brixs.Spectra
     im.rows              # brixs.Spectra
 
+
     # methods
     im.save()
     im.load()
@@ -105,6 +117,49 @@ BRIXS is based on four objects:
     im.calculate_shift()
     im.set_shift()
     im.fix_curvature()
+```
+
+
+### PhotonEvents attributes and methods
+
+```python
+    # basic
+    pe.data              # np.array
+    pe.x              # float (read only)
+    pe.y              # float (read only)
+    pe.I             # tuple (read only)
+    pe.shape         # np.array
+
+    # binning
+    pe.nbins             # np.array [runs Image.binning()]
+    pe.bins_size         # np.array [runs Image.binning()]
+    pe.reduced           # br.Image (read only)
+
+    # shifts
+    pe.shifts_v          # np.array
+    pe.shifts_h          # np.array
+    pe.p                 # np.array      (read only)
+    pe.f                 # function f(x) (read only)
+    pe.calculated_shift  # brixs.Spectrum (read only)
+
+
+    # methods
+    pe.save()
+    pe.load()
+
+    pe.floor()
+    pe.crop()
+
+    pe.pcolormesh()
+    pe.imshow()
+    pe.plot()
+
+    pe.binning()
+    pe.calculate_histogram()
+    pe.calculate_spectrum()
+    pe.calculate_shift()
+    pe.set_shift()
+    pe.fix_curvature()
 ```
 
 ### Spectrum attributes and methods
@@ -137,6 +192,7 @@ BRIXS is based on four objects:
 
     # peaks
     s.peaks   # brixs.peaks
+
 
     # methods
     s.save()
@@ -202,7 +258,6 @@ BRIXS is based on four objects:
     ss.residue # brixs.Spectrum
     ss.guess   # brixs.Spectrum
     ss.R2      # float
-    ss.pcov    # np.array
 
     # peaks
     ss.peaks   # list  [runs Spectra.get_peaks()]
@@ -210,6 +265,7 @@ BRIXS is based on four objects:
 
     # map
     ss.map     # brixs.Image (computed attribute)
+
 
     # methods
     ss.save()

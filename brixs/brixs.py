@@ -1127,7 +1127,7 @@ class Image(metaclass=_Meta):
 
         See:
             :py:func:`Image.imshow` """
-        self.imshow(*args, **kwargs)
+        return self.imshow(*args, **kwargs)
 
 
     def binning(self, *args, **kwargs):
@@ -1924,13 +1924,13 @@ class PhotonEvents(metaclass=_Meta):
             kwargs['s'] = 0.1
 
         # plot
-        ax.scatter(self.data[:, 0], self.data[:, 1], **kwargs)
+        pos = ax.scatter(self.data[:, 0], self.data[:, 1], **kwargs)
 
         # set limits
         ax.xlim(0, self.shape[1])
         ax.ylim(0, self.shape[0])
 
-        return ax
+        return pos
 
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
@@ -1975,6 +1975,8 @@ class PhotonEvents(metaclass=_Meta):
         self._nbins     = _nbins
         self._bins_size = _bins_size
 
+        return self.reduced
+
     def calculate_spectrum(self, nbins=None, bins_size=None, axis=1, xaxis='bins'):
         """Integrate data in one direction (sum columns or rows).
 
@@ -1999,7 +2001,7 @@ class PhotonEvents(metaclass=_Meta):
         """For now, the only mode tested is cc"""
         axis = _axis_interpreter(axis)
         mode = 'cc'
-        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use PhotonEvents.binning()'
 
         self.reduced.calculate_shift(axis=axis, mode=mode)
 
@@ -3530,7 +3532,7 @@ class Spectrum(metaclass=_Meta):
         self.fit._shift_roll   = self.shift_roll
         self.fit._shift_interp = self.shift_interp
         self.fit.peaks = Peaks()
-        self.fit._R2 =  1- (sum((self.y-model(self.x, *popt))**2)/sum((self.y-np.mean(self.y))**2))
+        self.fit._R2 =  1- (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
 
         # guess ================================================================
         self._guess = None
@@ -3638,20 +3640,6 @@ class Spectra(metaclass=_Meta):
         # basic
         self._data = None
 
-        # # check
-        # self._step         = None
-        # self._monotonicity = None
-        #
-        # # fit
-        # self._fit     = None
-        # self._residue = None
-        # self._guess   = None
-        # self._R2      = None
-        # self._pcov    = None
-        #
-        # # peaks
-        # self._peaks = Peaks()
-
         # argument parsing
         data, dirpath, n = self._args_checker(args, kwargs)
 
@@ -3691,7 +3679,13 @@ class Spectra(metaclass=_Meta):
         raise StopIteration
 
     def __getitem__(self, item):
-         return self.data[item]
+        if isinstance(item, int):
+            return self.data[item]
+        elif isinstance(item, slice):
+            return Spectra(self.data[item])
+        else:
+            raise TypeError('Index must be int, not {}'.format(type(key).__name__))
+
 
     def __setitem__(self, item, value):
         if isinstance(value, Spectrum) == False:
