@@ -40,44 +40,34 @@ print(p['fwhm'])
 p.asymmetry = False
 print(p)
 
-# %% Peak methods for fitting purposes =========================================
 
-# bounds
-p.set_bounds()
-p.bounds['amp'] = (0.5, 2)
-print(p.bounds)
+# save and load
+p = br.Peak(amp=1, c=0, fwhm=0.2)
+p.save()
 
-# build guess
-guess, bounds_min, bounds_max, decode = p.build_guess()
-print(guess)
-print(bounds_min)
-print(bounds_max)
-
-# fix parameters
-p.fixed  = ['m']
-guess, bounds_min, bounds_max = p.build_guess()
-print(guess)
-
-print(p)
-print(p.fixed)
-print(p.asymmetry)
-f_str, args_str = p.build_model_str()
-print(f_str)
-print(args_str)
+p2 = br.Peak(amp=0, c=0, fwhm=1)
+p2.load('Untitled.txt')
+print(p2)
 
 # %% Peaks object is just a modified list ======================================
-
-# Many ways to creat a Peaks object
 p1 = br.Peak(amp=1, c=0, fwhm=0.2)
 p2 = br.Peak(amp=2, c=1, fwhm=0.4)
-
 ps = br.Peaks(p1, p2)
+
+p1 = br.Peak(amp=1, c=0, fwhm=0.2)
+p2 = br.Peak(amp=2, c=1, fwhm=0.4)
 ps = br.Peaks([p1, p2])
 
+p1 = br.Peak(amp=1, c=0, fwhm=0.2)
+p2 = br.Peak(amp=2, c=1, fwhm=0.4)
 ps = br.Peaks()
 ps.append(p1)
 ps.append(p2)
 
+temp = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
+ps = br.Peaks(temp)
+
+# print
 print(ps)
 
 # enumeration
@@ -110,7 +100,58 @@ ps.add_near(0)
 print(ps)
 
 
+# save and load
+temp = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
+ps = br.Peaks(temp)
+ps.save()
+
+p2 = br.Peak(amp=0, c=0, fwhm=1)
+p2.load('Untitled.txt')
+print(p2)
+
+
+
+
+
+# %% Advanced ==================================================================
+
+# %% Peak methods for fitting purposes =========================================
+p = br.Peak(amp=1, c=0, fwhm=0.2)
+
+# bounds
+print(p.bounds['c'])
+p.set_bounds(c=0.1, type='additive')
+print(p.bounds['c'])
+
+print(p.bounds['amp'])
+p.bounds['amp'] = (0.5, 2)
+print(p.bounds['amp'])
+
+print(p.bounds)
+
+# build guess
+guess, bounds_min, bounds_max, decode = p.build_guess()
+print(guess)
+print(bounds_min)
+print(bounds_max)
+
+# fix parameters
+p.fixed  = ['m']
+guess, bounds_min, bounds_max, decode = p.build_guess()
+print(guess)
+
+print(p)
+print(p.fixed)
+print(p.asymmetry)
+f_str, args_str = p.build_model_str()
+print(f_str)
+print(args_str)
+
+model = p.build_model()
+model
 # %% Peaks methods for fitting purposes ========================================
+p = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
+ps = br.Peaks(p)
 
 p0, bounds_min, bounds_max, decode = ps.build_guess()
 print(p0)

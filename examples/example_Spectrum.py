@@ -211,28 +211,19 @@ s3.plot(label='zero')
 plt.legend()
 
 
-
-
-
-
 # %% fit peak ==================================================================
 filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
 s = br.ADRESS.read(filepath)
-
-fig = br.backpack.figure()
-_ = s.plot(color='black', marker='o', lw=0)
 
 s.fit_peak()
 print(s.peaks)
 print(s.fit.peaks)
 print('fit R2: ' + str(s.R2))
+
+fig = br.backpack.figure()
+_ = s.plot(color='black', marker='o', lw=0)
 _ = s.fit.plot(color='red')
 s.peaks[0].plot()
-s.save('test.txt')
-
-# s2 = br.Spectrum('test.txt')
-
-
 
 
 # %% finding peaks =============================================================
@@ -272,17 +263,6 @@ _ = s.peaks.plot()
 
 
 # %% fitting peaks =============================================================
-
-import brixs as br
-from pathlib import Path
-import numpy as np
-import matplotlib.pyplot as plt
-import copy
-
-%matplotlib qt5
-%load_ext autoreload
-%autoreload 2
-
 filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
 s = br.ADRESS.read(filepath)
 
@@ -318,6 +298,28 @@ print(s.fit.peaks[1].error)
 print(s.fit.pcov)
 print(s.R2)
 
+# residue and initial guess
+fig = br.backpack.figure()
+s.plot(color='black', label='data')
+s.fit.plot(color='red', label='fit')
+s.guess.plot(color='blue', label='guess')
+s.residue.plot(color='green', label='residue')
+plt.title(f'R2: {s.fit.R2}')
+plt.legend()
+
+# plot peak contributions
+fig = br.backpack.figure()
+s.plot(color='black')
+for peak in s.fit.peaks:
+    peak.spectrum.plot(color='red', lw=1)
+
+# subtract peak contribution
+fig = br.backpack.figure()
+s.plot(color='black')
+s_elastic = s.fit.peaks[-1].calculate_spectrum(x=s.x)
+s_final = s-s_elastic
+s_final.plot(color='red')
+
 # if main data is modified via a modifier, peaks and fit are modified too
 s.shift  = 100
 s.offset = 100
@@ -328,24 +330,3 @@ fig = br.backpack.figure()
 s.plot(color='black')
 _ = s.peaks.plot(color='green')
 s.fit.plot(color='red')
-
-# residue and initial guess
-fig = br.backpack.figure()
-s.plot(color='black', label='data')
-s.fit.plot(color='red', label='fit')
-s.guess.plot(color='blue', label='guess')
-s.residue.plot(color='green', label='residue')
-plt.title(f'R2: {s.R2}')
-plt.legend()
-
-# plot peak contributions
-fig = br.backpack.figure()
-s.plot(color='black')
-s.fit.peaks[-2].spectrum.plot(color='red')
-
-# subtract peak contribution
-fig = br.backpack.figure()
-s.plot(color='black')
-s_elastic = s.fit.peaks[-1].calculate_spectrum(x=s.x)
-s_final = s-s_elastic
-s_final.plot(color='red')

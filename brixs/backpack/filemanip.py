@@ -513,7 +513,7 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
     # if 'newline' not in kwargs:
     #     kwargs['newline'] = '\n'
     if 'comments' not in kwargs:
-        kwargs['comments'] = '# '
+        kwargs['comments'] = '#'
     if 'skip_header' not in kwargs:
         kwargs['skip_header'] = 0
 

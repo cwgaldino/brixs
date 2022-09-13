@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 # specific libraries
 from collections.abc import Iterable, MutableMapping
+import json
 
 # backpack
 from .backpack.arraymanip import sort
@@ -22,7 +23,7 @@ from . import brixs as br
 from .config import settings
 
 # %% suport functions ==========================================================
-def _peak_function_creator(asymmetry, fixed_m, idx=0):
+def build_model_str(**kwargs):
     """Returns instructions for building peak functions.
 
     Args:
@@ -36,43 +37,80 @@ def _peak_function_creator(asymmetry, fixed_m, idx=0):
     Returns:
         function f(x), function f(x) as string, argument list as string
     """
-    if fixed_m == False and type(fixed_m) == bool:  # variable m
-        if asymmetry:
-            def function2fit(x, amp, c, w1, m1, w2, m2):
-                f = np.heaviside(x-c, 0)*voigt_fwhm(x, amp, c, w1, m1) +\
-                    np.heaviside(c-x, 0)*voigt_fwhm(x, amp, c, w2, m2) +\
-                    dirac_delta(x, amp, c)
-                return f
-            f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx})'
-            args_str = f'amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}, w2_{idx}, m2_{idx}'
-        else:
-            def function2fit(x, amp, c, w, m):
-                return voigt_fwhm(x, amp, c, w, m)
-            f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, m_{idx})'
-            args_str = f'amp_{idx}, c_{idx}, w_{idx}, m_{idx}'
+    if 'asymmetry' in kwargs:
+        asymmetry = kwargs.pop('asymmetry')
     else:
-        if fixed_m > 1:
-            m = 1
-        elif fixed_m < 0:
-            m = 0
-        else:
-            m = fixed_m
-        if asymmetry:
-            def function2fit(x, A, c, w1, w2):
-                f = np.heaviside(x-c, 0)*voigt_fwhm(x, A, c, w1, fixed_m) +\
-                    np.heaviside(c-x, 0)*voigt_fwhm(x, A, c, w2, fixed_m) +\
-                    dirac_delta(x, amp, c)
-                return f
-            f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, {m}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, {m})'
-            args_str = f'amp_{idx}, c_{idx}, w1_{idx}, w2_{idx}'
-        else:
-            def function2fit(x, A, c, w):
-                return voigt_fwhm(x, A, c, w, fixed_m)
-            f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, {m})'
-            args_str = f'amp_{idx}, c_{idx}, w_{idx}'
-    return function2fit, f_str, args_str
+        asymmetry = False
+    if 'idx' in kwargs:
+        idx = kwargs.pop('idx')
+    else:
+        idx = 0
 
-def peak_function(amp, c, fwhm, m=0, fwhm1=None, fwhm2=None, m1=None, m2=None,):
+    # check kwargs
+    delete = []
+    for key in list(kwargs.keys()):
+        if key not in ['amp', 'c', 'fwhm', 'm', 'fwhm1', 'm1', 'fwhm2', 'm2']:
+            raise ValueError('Fixed parameter "' + str(key) + '" not valid.\nValid keys: "amp", "c", "fwhm", "m", "fwhm1", "m1", "fwhm2", "m2". ')
+        else:
+            if kwargs[key] is None:
+                del kwargs[key]
+
+    # check asymmetry
+    if 'fwhm1' in kwargs or 'fwhm2' in kwargs:
+        if 'fwhm2' in kwargs and 'fwhm2' in kwargs:
+            asymmetry = True
+        else:
+            raise ValueError('If fwhm1 or fwhm2 are defined, both must be defined.')
+    else:
+        asymmetry = False
+
+
+    # function string
+    if asymmetry:
+        f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
+    else:
+        f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, m_{idx})'
+
+    # args string
+    args_str = ''
+    if 'amp' in kwargs:
+        f_str = f_str.replace(f'amp_{idx}', str(kwargs['amp']))
+    else:
+        args_str += f'amp_{idx}, '
+    if 'c' in kwargs:
+        f_str = f_str.replace(f'c_{idx}', str(kwargs['c']))
+    else:
+        args_str += f'c_{idx}, '
+    if asymmetry:
+        if 'fwhm1' in kwargs:
+            f_str = f_str.replace(f'w1_{idx}', str(kwargs['fwhm1']))
+        else:
+            args_str += f'w1_{idx}, '
+        if 'm1' in kwargs:
+            f_str = f_str.replace(f'm1_{idx}', str(kwargs['m1']))
+        else:
+            args_str += f'm1_{idx}, '
+        if 'fwhm2' in kwargs:
+            f_str = f_str.replace(f'w2_{idx}', str(kwargs['fwhm2']))
+        else:
+            args_str += f'w2_{idx}, '
+        if 'm2' in kwargs:
+            f_str = f_str.replace(f'm2_{idx}', str(kwargs['m2']))
+        else:
+            args_str += f'm2_{idx}, '
+    else:
+        if 'fwhm' in kwargs:
+            f_str = f_str.replace(f'w_{idx}', str(kwargs['fwhm']))
+        else:
+            args_str += f'w_{idx}, '
+        if 'm' in kwargs:
+            f_str = f_str.replace(f'm_{idx}', str(kwargs['m']))
+        else:
+            args_str += f'm_{idx}, '
+
+    return f_str, args_str[:-2]
+
+def build_model(**kwargs):
     """Returns a function f(x) of a peak.
 
     Args:
@@ -95,20 +133,11 @@ def peak_function(amp, c, fwhm, m=0, fwhm1=None, fwhm2=None, m1=None, m2=None,):
     Returns:
         function f(x)
     """
-    if fwhm1 is not None or fwhm2 is not None:
-        if fwhm2 is None or fwhm2 is None:
-            raise ValueError('fwhm1 and fwhm2 must be defined.')
-        else:
-            asymmetry = True
-    else:
-        asymmetry = False
+    f_str, args_str = build_model_str(**kwargs)
 
-    function2fit, _, _ = _peak_function_creator(asymmetry, fixed_m=False, idx=0)
+    model_str = f'lambda x, {args_str}: {f_str}'
+    return eval(model_str)
 
-    if asymmetry:
-        return lambda x: function2fit(x, amp, c, fwhm1, m1, fwhm2, m2)
-    else:
-        return lambda x: function2fit(x, amp, c, fwhm, m)
 
 # %% Peaks =====================================================================
 class Peak(MutableMapping):
@@ -163,14 +192,14 @@ class Peak(MutableMapping):
                       'm1':None,
                       'm2':None,
                       }
-        self.bounds = {'amp': (-np.inf, np.inf),
-                      'c':    (-np.inf, np.inf),
-                      'fwhm': (0, np.inf),
-                      'fwhm1':(0, np.inf),
-                      'fwhm2':(0, np.inf),
-                      'm':    (0, 1),
-                      'm1':   (0, 1),
-                      'm2':   (0, 1),
+        self.bounds = {'amp': [-np.inf, np.inf],
+                      'c':    [-np.inf, np.inf],
+                      'fwhm': [0, np.inf],
+                      'fwhm1':[0, np.inf],
+                      'fwhm2':[0, np.inf],
+                      'm':    [0, 1],
+                      'm1':   [0, 1],
+                      'm2':   [0, 1],
                       }
         self.error = {'amp':  0,
                       'area': 0,
@@ -500,6 +529,93 @@ class Peak(MutableMapping):
             raise AttributeError('Cannot delete object.')
 
 
+    def _string2save(self):
+        """String used for saving peak to a file."""
+        temp = {'_store': self._store,
+                'error': self.error,
+                'bounds': self.bounds,
+                'asymmetry': self.asymmetry,
+                'fixed': self.fixed,
+                '_shift': self._shift,
+                '_calib': self._calib,
+                '_offset': self._offset,
+                '_factor': self._factor}
+        return json.dumps(temp, indent=4, sort_keys=False)
+
+    def save(self, filepath='./Untitled.txt', check_overwrite=False):
+        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user want to overwrite file.
+
+        Returns:
+            None
+
+        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
+        """
+        filepath = Path(filepath)
+
+        # check overwrite
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                        pass
+                    else:
+                        warnings.warn('File not saved because user did not allow overwriting.')
+                        return
+                else:
+                    warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
+                    filepath = filepath/'Untitled.txt'
+
+        with open(str(filepath), 'w') as file:
+            file.write(self._string2save())
+
+    def _obj_decode(self, obj):
+        obj['_store'].pop('area')
+
+        if obj['asymmetry']:
+            obj['_store'].pop('fwhm')
+            obj['_store'].pop('m')
+        else:
+            obj['_store'].pop('fwhm1')
+            obj['_store'].pop('fwhm2')
+            obj['_store'].pop('m1')
+            obj['_store'].pop('m2')
+
+        self.asymmetry = obj['asymmetry']
+        for parameter in obj['_store']:
+            # print(parameter)
+            self[parameter] = obj['_store'][parameter]
+        self.error = obj['error']
+        self.bounds = obj['bounds']
+        self.fixed = obj['fixed']
+        self._shift = obj['_shift']
+        self._calib = obj['_calib']
+        self._offset = obj['_offset']
+        self._factor = obj['_factor']
+
+    def load(self, filepath):
+        """Load peak from a text file. Wrapper for `json.load()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first decompressed.
+
+        Returns:
+            None
+
+        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
+        """
+        filepath = Path(filepath)
+
+        with open(str(filepath), 'r') as file:
+            obj = json.load(file)
+        self._obj_decode(obj)
+
+
     def set_calib(self, value):
         """Set calibration value.
 
@@ -612,7 +728,7 @@ class Peak(MutableMapping):
         """
         if x is None:
             x = self._find_suitable_x()
-        f = peak_function(amp=self['amp'], c=self['c'],  fwhm=self['fwhm'], m=self['m'], fwhm1=self['fwhm1'], fwhm2=self['fwhm2'], m1=self['m1'], m2=self['m2'])
+        f = build_model(amp=self['amp'], c=self['c'],  fwhm=self['fwhm'], m=self['m'], fwhm1=self['fwhm1'], fwhm2=self['fwhm2'], m1=self['m1'], m2=self['m2'])
         s = br.Spectrum(x=x, y=f(x))
         s._shift  = self.shift
         s._factor = self.factor
@@ -671,73 +787,7 @@ class Peak(MutableMapping):
         return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
 
 
-    def build_model_str(self, asymmetry=None, fixed=None, idx=0):
-        """Returns instructions for building peak functions.
-
-        Args:
-            asymmetry (bool): if True, the returned peak function will require two
-                fwhm values, one for each half of the peak.
-            fixed_m (False or number): m is the amount of lorentzian
-                contribution for a peak. If False, m will be a required as an input
-                argument on the returned peak function.
-            idx (int, optional): number to be inprinted in the string
-
-        Returns:
-            function f(x), function f(x) as string, argument list as string
-        """
-        if asymmetry is None:
-            asymmetry = self.asymmetry
-
-        if fixed is None:
-            fixed = self.fixed
-        self._check_fixed(fixed)
-
-        # function string
-        if asymmetry:
-            f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
-        else:
-            f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, m_{idx})'
-
-        # args string
-        args_str = ''
-        if 'amp' in fixed:
-            f_str = f_str.replace(f'amp_{idx}', str(self['amp']))
-        else:
-            args_str += f'amp_{idx}, '
-        if 'c' in fixed:
-            f_str = f_str.replace(f'c_{idx}', str(self['c']))
-        else:
-            args_str += f'c_{idx}, '
-        if asymmetry:
-            if 'w1' in fixed:
-                f_str = f_str.replace(f'w1_{idx}', str(self['w1']))
-            else:
-                args_str += f'w1_{idx}, '
-            if 'm1' in fixed:
-                f_str = f_str.replace(f'm1_{idx}', str(self['m1']))
-            else:
-                args_str += f'm1_{idx}, '
-            if 'w2' in fixed:
-                f_str = f_str.replace(f'w2_{idx}', str(self['w2']))
-            else:
-                args_str += f'w2_{idx}, '
-            if 'm2' in fixed:
-                f_str = f_str.replace(f'm2_{idx}', str(self['m2']))
-            else:
-                args_str += f'm2_{idx}, '
-        else:
-            if 'w' in fixed:
-                f_str = f_str.replace(f'w_{idx}', str(self['w']))
-            else:
-                args_str += f'w_{idx}, '
-            if 'm' in fixed:
-                f_str = f_str.replace(f'm_{idx}', str(self['m']))
-            else:
-                args_str += f'm_{idx}, '
-
-        return f_str, args_str[:-2]
-
-    def set_bounds(self, amp=None, c=None, fwhm=None, m=None, fwhm1=None, fwhm2=None, m1=None, m2=None):
+    def set_bounds(self, **kwargs):
         """Set percentage wise bounds.
 
         Args:
@@ -746,97 +796,73 @@ class Peak(MutableMapping):
         Return:
             None
         """
-        if amp is None:
-            self.bounds['amp'] = (-np.inf, np.inf)
-        elif isinstance(amp, Iterable):
-            self.bounds['amp'] = (self['amp']-self['amp']*amp[0], self['amp']+self['amp']*amp[-1])
+        if 'type' in kwargs:
+            type = kwargs.pop('type')
+            if type.startswith('a'):
+                type = 'additive'
+            elif type.startswith('m'):
+                type = 'multiplicative'
+            else:
+                raise ValueError(f'type={type} not valid.\nValid types are: additive and multiplicative')
 
-            assert self['amp'] >= self.bounds['amp'][0] and self['amp'] <= self.bounds['amp'][1], f'amp value ('+ str(self['amp']) +') is out of bounds.\nbounds = '+ str(self.bounds['amp'])
-        else:
-            assert amp > 0, 'amp cannot be negative or zero.'
-            self.bounds['amp'] = (self['amp']-self['amp']*amp, self['amp']+self['amp']*amp)
+        if any([item not in self._store for item in kwargs.keys()]):
+            for key in kwargs:
+                if key not in self._store:
+                    raise AttributeError(f'{key} is not a valid attribute.')
 
-        if c is None:
-            self.bounds['c'] = (-np.inf, np.inf)
-        elif isinstance(c, Iterable):
-            self.bounds['c'] = (self['c']-self['c']*c[0], self['c']+self['c']*c[-1])
-            assert self['c'] >= self.bounds['c'][0] and self['c'] <= self.bounds['c'][1], f'c value ('+ str(self['c']) +') is out of bounds.\nbounds = '+ str(self.bounds['c'])
-        else:
-            assert c > 0, 'c cannot be negative or zero.'
-            self.bounds['c'] = (self['c']-self['c']*c, self['c']+self['c']*c)
+        for parameter in ['amp', 'c']:
+            if parameter in kwargs:
+                if kwargs[parameter] is None:
+                    self.bounds[parameter] = [-np.inf, np.inf]
+                elif isinstance(kwargs[parameter], Iterable):
+                    if type == 'additive':
+                        self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
+                    else:
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0], self[parameter]+self[parameter]*kwargs[parameter][-1]]
+                    assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
+                else:
+                    assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
+                    if type == 'additive':
+                        self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
+                    else:
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter], self[parameter]+self[parameter]*kwargs[parameter]]
 
-        if fwhm is None:
-            self.bounds['fwhm'] = (0, np.inf)
-        elif isinstance(fwhm, Iterable):
-            self.bounds['fwhm'] = (self['fwhm']-self['fwhm']*fwhm[0], self['fwhm']+self['fwhm']*fwhm[-1])
-            if self.bounds['fwhm'][0] < 0: self.bounds['fwhm'][0] = 0
-            assert self['fwhm'] >= self.bounds['fwhm'][0] and self['fwhm'] <= self.bounds['fwhm'][1], f'fwhm value ('+ str(self['fwhm']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm'])
-        else:
-            assert fwhm > 0, 'fwhm cannot be negative or zero.'
-            self.bounds['fwhm'] = (self['fwhm']-self['fwhm']*fwhm, self['fwhm']+self['fwhm']*fwhm)
-            if self.bounds['fwhm'][0] < 0: self.bounds['fwhm'][0] = 0
+        for parameter in ['fwhm', 'fwhm1', 'fwhm2']:
+            if parameter in kwargs:
+                if kwargs[parameter] is None:
+                    self.bounds[parameter] = [0, np.inf]
+                elif isinstance(kwargs[parameter], Iterable):
+                    if type == 'additive':
+                        self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
+                    else:
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0], self[parameter]+self[parameter]*kwargs[parameter][-1]]
+                    assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
+                else:
+                    assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
+                    if type == 'additive':
+                        self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
+                    else:
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter], self[parameter]+self[parameter]*kwargs[parameter]]
+                if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
 
-        if fwhm1 is None:
-            self.bounds['fwhm1'] = (0, np.inf)
-        elif isinstance(fwhm1, Iterable):
-            self.bounds['fwhm1'] = (self['fwhm1']-self['fwhm1']*fwhm1[0], self['fwhm1']+self['fwhm1']*fwhm1[-1])
-            if self.bounds['fwhm1'][0] < 0: self.bounds['fwhm1'][0] = 0
-            assert self['fwhm1'] >= self.bounds['fwhm1'][0] and self['fwhm1'] <= self.bounds['fwhm1'][1], f'fwhm1 value ('+ str(self['fwhm1']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm1'])
-        else:
-            assert fwhm1 > 0, 'fwhm1 cannot be negative or zero.'
-            self.bounds['fwhm1'] = (self['fwhm1']-self['fwhm1']*fwhm1, self['fwhm1']+self['fwhm1']*fwhm1)
-            if self.bounds['fwhm1'][0] < 0: self.bounds['fwhm1'][0] = 0
-
-        if fwhm2 is None:
-            self.bounds['fwhm2'] = (0, np.inf)
-        elif isinstance(fwhm2, Iterable):
-            self.bounds['fwhm2'] = (self['fwhm2']-self['fwhm2']*fwhm2[0], self['fwhm2']+self['fwhm2']*fwhm2[-1])
-            if self.bounds['fwhm2'][0] < 0: self.bounds['fwhm2'][0] = 0
-            assert self['fwhm2'] >= self.bounds['fwhm2'][0] and self['fwhm2'] <= self.bounds['fwhm2'][1], f'fwhm2 value ('+ str(self['fwhm2']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm2'])
-        else:
-            assert fwhm2 > 0, 'fwhm2 cannot be negative or zero.'
-            self.bounds['fwhm2'] = (self['fwhm2']-self['fwhm2']*fwhm2, self['fwhm2']+self['fwhm2']*fwhm2)
-            if self.bounds['fwhm2'][0] < 0: self.bounds['fwhm2'][0] = 0
-
-        if m is None:
-            self.bounds['m'] = (0, 1)
-        elif isinstance(m, Iterable):
-            self.bounds['m'] = (self['m']-self['m']*m[0], self['m']+self['m']*m[-1])
-            if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
-            if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
-            assert self['m'] >= self.bounds['m'][0] and self['m'] <= self.bounds['m'][1], f'm value ('+ str(self['m']) +') is out of bounds.\nbounds = '+ str(self.bounds['m'])
-        else:
-            assert m > 0, 'm cannot be negative or zero.'
-            self.bounds['m'] = (self['m']-self['m']*m, self['m']+self['m']*m)
-            if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
-            if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
-
-        if m1 is None:
-            self.bounds['m1'] = (0, 1)
-        elif isinstance(m1, Iterable):
-            self.bounds['m1'] = (self['m1']-self['m1']*m1[0], self['m1']+self['m1']*m1[-1])
-            if self.bounds['m1'][0] < 0: self.bounds['m1'][0] = 0
-            if self.bounds['m1'][1] > 1: self.bounds['m1'][1] = 1
-            assert self['m1'] >= self.bounds['m1'][0] and self['m1'] <= self.bounds['m1'][1], f'm1 value ('+ str(self['m1']) +') is out of bounds.\nbounds = '+ str(self.bounds['m1'])
-        else:
-            assert m1 > 0, 'm1 cannot be negative or zero.'
-            self.bounds['m1'] = (self['m1']-self['m1']*m1, self['m1']+self['m1']*m1)
-            if self.bounds['m1'][0] < 0: self.bounds['m1'][0] = 0
-            if self.bounds['m1'][1] > 1: self.bounds['m1'][1] = 1
-
-
-        if m2 is None:
-            self.bounds['m2'] = (0, 1)
-        elif isinstance(m2, Iterable):
-            self.bounds['m2'] = (self['m2']-self['m2']*m2[0], self['m2']+self['m2']*m2[-1])
-            if self.bounds['m2'][0] < 0: self.bounds['m2'][0] = 0
-            if self.bounds['m2'][1] > 1: self.bounds['m2'][1] = 1
-            assert self['m2'] >= self.bounds['m2'][0] and self['m2'] <= self.bounds['m2'][1], f'm2 value ('+ str(self['m2']) +') is out of bounds.\nbounds = '+ str(self.bounds['m2'])
-        else:
-            assert m2 > 0, 'm2 cannot be negative or zero.'
-            self.bounds['m2'] = (self['m2']-self['m2']*m2, self['m2']+self['m2']*m2)
-            if self.bounds['m2'][0] < 0: self.bounds['m2'][0] = 0
-            if self.bounds['m2'][1] > 1: self.bounds['m2'][1] = 1
+        for parameter in ['m', 'm1', 'm2']:
+            if parameter in kwargs:
+                if kwargs[parameter] is None:
+                    self.bounds[parameter] = [0, 1]
+                elif isinstance(kwargs[parameter], Iterable):
+                    if type == 'additive':
+                        self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
+                    else:
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0], self[parameter]+self[parameter]*kwargs[parameter][-1]]
+                    assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
+                else:
+                    assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
+                    if type == 'additive':
+                        self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
+                    else:
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter], self[parameter]+self[parameter]*kwargs[parameter]]
+                if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
+                if self.bounds[parameter][1] > 1: self.bounds[parameter][1] = 1
 
 
         # amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
@@ -985,6 +1011,40 @@ class Peak(MutableMapping):
             return peak
 
         return p0, bounds_min, bounds_max, decode
+
+
+    def build_model_str(self, fixed=None, idx=0):
+        """Returns instructions for building peak functions.
+
+        Args:
+            asymmetry (bool): if True, the returned peak function will require two
+                fwhm values, one for each half of the peak.
+            fixed_m (False or number): m is the amount of lorentzian
+                contribution for a peak. If False, m will be a required as an input
+                argument on the returned peak function.
+            idx (int, optional): number to be inprinted in the string
+
+        Returns:
+            function f(x), function f(x) as string, argument list as string
+        """
+        if fixed is None:
+            fixed = self.fixed
+
+        temp = {key:self[key] for key in fixed}
+        temp['idx'] = idx
+        temp['asymmetry'] = self.asymmetry
+        f_str, args_str = build_model_str(**temp)
+
+        return f_str, args_str
+
+    def build_model(self, fixed=None, idx=0):
+        if fixed is None:
+            fixed = self.fixed
+
+        temp = {key:self[key] for key in fixed}
+        temp['idx'] = idx
+        temp['asymmetry'] = self.asymmetry
+        return build_model(**temp)
 
 class Peaks(MutableMapping):
     """A special dictionary for saving peaks.
@@ -1164,6 +1224,74 @@ class Peaks(MutableMapping):
     def spectra(self):
             raise AttributeError('Cannot delete object.')
 
+
+    def save(self, filepath='./Untitled.txt', check_overwrite=False):
+        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user want to overwrite file.
+
+        Returns:
+            None
+
+        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
+        """
+        filepath = Path(filepath)
+
+        # check overwrite
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                        pass
+                    else:
+                        warnings.warn('File not saved because user did not allow overwriting.')
+                        return
+                else:
+                    warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
+                    filepath = filepath/'Untitled.txt'
+
+        string2save = ''
+        for peak in self:
+            string2save += peak._string2save()
+            string2save += '\nend_of_peak\n'
+
+        with open(str(filepath), 'w') as file:
+            file.write(string2save)
+
+    def load(self, filepath):
+        """Load peak from a text file. Wrapper for `json.load()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first decompressed.
+
+        Returns:
+            None
+
+        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
+        """
+        filepath = Path(filepath)
+
+        # remove all peaks
+        for i in range(len(self)):
+            self.remove(0)
+
+        with open(str(filepath), 'r') as file:
+            try:
+                peaks_str = file.read().split('end_of_peak')
+                for peak_str in peaks_str:
+                    temp = br.Peak(amp=0, c=0, fwhm=1)
+                    obj = json.loads(peak_str)
+                    temp._obj_decode(obj)
+                    self.append(temp)
+            except json.JSONDecodeError as e:
+                if peak_str == '\n':
+                    pass
+                else:
+                    raise e
 
 
     def append(self, value):
@@ -1425,8 +1553,6 @@ class Peaks(MutableMapping):
         return eval(model_str)
 
 
-
-
     def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
         """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
 
@@ -1464,5 +1590,5 @@ class Peaks(MutableMapping):
         r = {}
         for i in range(len(self)):
             r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
-            plt.text(self[i]['c'], self[i]['amp'], i, fontsize=14)
+            plt.text(self[i]['c']*calib+shift, self[i]['amp']*factor+offset, i, fontsize=14)
         return r

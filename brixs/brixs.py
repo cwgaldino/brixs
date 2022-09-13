@@ -758,7 +758,7 @@ class Image(metaclass=_Meta):
             else:
                 kwargs['header'] += '\n'
             dict = get_attributes(self)
-            kwargs['header'] += '==== Image attributes ===='  + '\n'
+            kwargs['header'] += '==== brixs Image ===='  + '\n'
             for n in dict:
                 if n not in ['_data', '_reduced', '_calculated_shift', '_histogram', '_spectrum_h', '_spectrum_v',]:
                     if isinstance(dict[n], Iterable):
@@ -804,7 +804,7 @@ class Image(metaclass=_Meta):
 
         # find where attributes listing starts
         for i, line in enumerate(header):
-            if '==== Image attributes ====' in line:
+            if '==== brixs Image ====' in line:
                 attr_start = i
                 break
             attr_start = -1
@@ -1803,7 +1803,7 @@ class PhotonEvents(metaclass=_Meta):
             else:
                 kwargs['header'] += '\n'
             dict = get_attributes(self)
-            kwargs['header'] += '==== PhotonEvents attributes ===='  + '\n'
+            kwargs['header'] += '==== brixs PhotonEvents ===='  + '\n'
             for n in dict:
                 if n not in ['_data', '_x', '_y', '_I', '_reduced', '_calculated_shift', '_f', '_shifts']:
                     if isinstance(dict[n], Iterable):
@@ -1849,7 +1849,7 @@ class PhotonEvents(metaclass=_Meta):
 
         # find where attributes listing starts
         for i, line in enumerate(header):
-            if '==== PhotonEvents attributes ====' in line:
+            if '==== brixs PhotonEvents ====' in line:
                 attr_start = i
                 break
             attr_start = -1
@@ -2217,7 +2217,7 @@ class Spectrum(metaclass=_Meta):
     Note, peaks can be copyed around without need of deepcopy.
     """
     # read only and non-removable arguments
-    _read_only = ['step', 'monotonicity',  'R2', 'fit', 'residue', 'guess']
+    _read_only = ['step', 'monotonicity',  'R2', 'fit', 'residue', 'guess', 'pcov']
     _non_removable = []
 
     def __init__(self, *args, **kwargs):
@@ -2244,6 +2244,7 @@ class Spectrum(metaclass=_Meta):
         self._residue = None
         self._guess   = None
         self._R2      = None
+        self._pcov    = None
 
         # peaks
         self._peaks = Peaks()
@@ -2594,7 +2595,7 @@ class Spectrum(metaclass=_Meta):
         elif isinstance(value, dict):
             self._peaks = Peaks(value)
         else:
-            raise ValueError(f'Peaks must be a dictionary.')
+            raise ValueError(f'Peaks must be a dictionary or brixs.Peaks.')
     @peaks.deleter
     def peaks(self):
         raise AttributeError('Cannot delete object.')
@@ -2609,25 +2610,6 @@ class Spectrum(metaclass=_Meta):
     def area(self):
         raise AttributeError('Cannot delete object.')
 
-
-    # def _restart_attr(self):
-    #     """Set relevant attributes to initial value."""
-    #     self._step = None
-    #     self._monotonicity = None
-    #
-    #     self._calib = 1
-    #     self._shift = 0
-    #     self._shift_roll = 0
-    #     self._shift_interp = 0
-    #     self._offset = 0
-    #     self._factor = 1
-    #
-    #     self._fit = None
-    #     self._residue = None
-    #     self._guess = None
-    #     self._R2 = None
-    #
-    #     self._peaks = Peaks()
 
     def _check_ranges(self, ranges):
         """check if ranges is the right format.
@@ -2717,9 +2699,9 @@ class Spectrum(metaclass=_Meta):
             else:
                 kwargs['header'] += '\n'
             dict = get_attributes(self)
-            kwargs['header'] += '==== Spectrum attributes ===='  + '\n'
+            kwargs['header'] += '==== brixs Spectrum ===='  + '\n'
             for n in dict:
-                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue']:
+                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov']:
                     if dict[n] is None:
                         kwargs['header'] += f'{n}: None'  + '\n'
                         # else:
@@ -2728,6 +2710,8 @@ class Spectrum(metaclass=_Meta):
                         kwargs['header'] += f'{n}: \"{str(dict[n])}\"'  + '\n'
                     elif isinstance(dict[n], Iterable):
                         kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
+                        # if n == '_peaks':
+                        #     kwargs['header'] += f'{'_peaks.error'}: {list(dict[n])}'  + '\n'
                     else:
                         kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
             np.savetxt(Path(filepath), self._data, **kwargs)
@@ -2769,7 +2753,7 @@ class Spectrum(metaclass=_Meta):
         # find where attributes listing starts
         if header:
             for i, line in enumerate(header):
-                if '==== Spectrum attributes ====' in line:
+                if '==== brixs Spectrum ====' in line:
                     attr_start = i
                     break
                 attr_start = -1
@@ -2780,7 +2764,7 @@ class Spectrum(metaclass=_Meta):
 
                     # extract name and value
                     name = line[1:-1].split(':')[0].strip()
-                    value = eval(line[1:-1].split(':')[1].strip())
+                    value = eval(str(line[1:-1].split(':')[1:]).strip())
 
 
                     ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
@@ -2788,8 +2772,10 @@ class Spectrum(metaclass=_Meta):
                         if value == []:
                             self._peaks = Peaks()
                         else:
-                            print('warning: peaks cannot be loaded yet')
-                            self._peaks = Peaks()
+                            temp = eval(':'.join(value))
+                            for t in temp:
+                                t.pop('area')
+                            self._peaks = Peaks(temp)
                     ### DEALING WITH OTHER ATTRIBUTES ###
                     elif name not in []:  # except these attrs
                         try:
@@ -3349,7 +3335,7 @@ class Spectrum(metaclass=_Meta):
         return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
 
 
-    def fit_peak(self, asymmetry=False, fixed_m=0, offset=True, verbose=False):
+    def fit_peak(self, offset=True, verbose=False):
         """Fits one peak. Initial guess is based on the maximum y value.
 
         Args:
@@ -3380,7 +3366,7 @@ class Spectrum(metaclass=_Meta):
         self.peaks = {'c':c, 'amp':amp, 'fwhm':fwhm}
 
         # fit
-        self.fit_peaks(asymmetry=asymmetry, fixed_m=fixed_m, offset=offset, verbose=verbose)
+        self.fit_peaks(offset=offset, verbose=verbose)
 
     def find_peaks(self, prominence=5, width=4, moving_average_window=8):
         """Find peaks. Wrapper for `scipy.signal.find_peaks()`_.
@@ -3504,7 +3490,8 @@ class Spectrum(metaclass=_Meta):
         self.fit._shift_roll   = self.shift_roll
         self.fit._shift_interp = self.shift_interp
         self.fit.peaks = peaks
-        self.fit.pcov  = pcov
+        self.fit._pcov = pcov
+        self.fit._R2 =  1- (sum((self.y-model(self.x, *popt))**2)/sum((self.y-np.mean(self.y))**2))
 
         # residue ==============================================================
         if offset:
@@ -3517,10 +3504,6 @@ class Spectrum(metaclass=_Meta):
         self.residue._shift        = self.shift
         self.residue._shift_roll   = self.shift_roll
         self.residue._shift_interp = self.shift_interp
-
-        # R2 ===================================================================
-        self._R2 =  1- (sum((self.y-model(self.x, *popt))**2)/sum((self.y-np.mean(self.y))**2))
-
 
     def polyfit(self, deg=2):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.
@@ -3538,7 +3521,7 @@ class Spectrum(metaclass=_Meta):
         model = lambda x: np.polyval(popt, x)
 
         # fit ==================================================================
-        x_temp = np.linspace(self.x[0], self.x[-1], len(self.x)*2)
+        x_temp = np.linspace(self.x[0], self.x[-1], len(self.x)*4)
         self._fit = Spectrum(x=x_temp, y=model(x_temp))
         self.fit._offset       = self.offset
         self.fit._factor       = self.factor
@@ -3547,6 +3530,7 @@ class Spectrum(metaclass=_Meta):
         self.fit._shift_roll   = self.shift_roll
         self.fit._shift_interp = self.shift_interp
         self.fit.peaks = Peaks()
+        self.fit._R2 =  1- (sum((self.y-model(self.x, *popt))**2)/sum((self.y-np.mean(self.y))**2))
 
         # guess ================================================================
         self._guess = None
@@ -3651,6 +3635,23 @@ class Spectra(metaclass=_Meta):
 
 
     def __init__(self, *args, **kwargs):
+        # basic
+        self._data = None
+
+        # # check
+        # self._step         = None
+        # self._monotonicity = None
+        #
+        # # fit
+        # self._fit     = None
+        # self._residue = None
+        # self._guess   = None
+        # self._R2      = None
+        # self._pcov    = None
+        #
+        # # peaks
+        # self._peaks = Peaks()
+
         # argument parsing
         data, dirpath, n = self._args_checker(args, kwargs)
 
@@ -3775,7 +3776,8 @@ class Spectra(metaclass=_Meta):
                 for i, s in enumerate(value):
                     if isinstance(s, Spectrum) == False:
                         raise ValueError(f'All entries must be of type brixs.spectrum.\nEntry {i} is of type {type(s)}')
-                self._data = copy.deepcopy(value)
+                # self._data = copy.deepcopy(value)
+                self._data = value
             else:
                 raise ValueError('data must be a list.')
         self._restart_check_attr()
@@ -3785,6 +3787,19 @@ class Spectra(metaclass=_Meta):
         self._calculated_offset = None
     @data.deleter
     def data(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def area(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].area
+        return temp
+    @area.setter
+    def area(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @area.deleter
+    def area(self):
         raise AttributeError('Cannot delete object.')
 
     @property
@@ -3944,6 +3959,16 @@ class Spectra(metaclass=_Meta):
         raise AttributeError('Attribute cannot be deleted.')
 
     @property
+    def errors(self):
+        return self.get_errors()
+    @errors.setter
+    def errors(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @errors.deleter
+    def errors(self):
+        raise AttributeError('Attribute cannot be deleted.')
+
+    @property
     def map(self):
         return self.calculate_map()
     @map.setter
@@ -3978,11 +4003,13 @@ class Spectra(metaclass=_Meta):
                 for i, temp in enumerate(s):
                     if isinstance(temp, Spectrum) == False:
                         raise ValueError(f'All entries must be of type brixs.spectrum.\nEntry {i} is of type {type(temp)}')
-                self._data += copy.deepcopy(s)
+                # self._data += copy.deepcopy(s)
+                self._data += s
             else:
                 if isinstance(s, Spectrum) == False:
                     raise ValueError('Spectrum must be of type brixs.Spectrum.')
-                self._data += [copy.deepcopy(s)]
+                # self._data += [copy.deepcopy(s)]
+                self._data += [s]
         else:
             raise ValueError('No data to append.')
         self._restart_check_attr()
@@ -4221,7 +4248,7 @@ class Spectra(metaclass=_Meta):
                 pass
         self._length = len(self.data[0].x)
 
-    def check_step_x(self, max_error=0.1):
+    def check_step_x(self, max_error=None):
         """Check step between data points in the x-coordinates.
 
             If data has a well defined step size, it sets :py:attr:`Spectra.step` = step.
@@ -4247,9 +4274,21 @@ class Spectra(metaclass=_Meta):
             See Also:
                 :py:func:`Spectra.check_length`, :py:func:`Spectra.check_same_x`.
         """
+        if max_error is None:
+            max_error = settings.MAX_ERROR_STEP_X
+
         if self.x is None:
             try:
                 self.check_same_x(max_error=max_error)
+
+                # check step uniformity
+                temp = Spectrum(x=self.x, y=self.x)
+                try:
+                    temp.check_step_x(max_error=max_error)
+                except ValueError:
+                    raise ValueError(f"Step in the x-coordinate of spectrum {idx} seems not to be uniform.")
+                self._step = temp.step
+                return
             except ValueError:
                 # 1) check step uniformity
                 steps = np.zeros(len(self))
@@ -4278,7 +4317,7 @@ class Spectra(metaclass=_Meta):
             self._step = temp.step
             return
 
-    def check_same_x(self, max_error=0.1):
+    def check_same_x(self, max_error=None):
         """Check if spectra have same x-coordinates.
 
         If data has same x-coordinates, it sets :py:attr:`Spectra.x` = x.
@@ -4297,8 +4336,8 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_length`, :py:func:`Spectra.check_step_x`.
         """
-        # if self.step is None:  # calculate step if it hasn't yet
-        #     self.check_step_x(max_error=max_error)
+        if max_error is None:
+            max_error = settings.MAX_ERROR_STEP_X
 
         # average step
         if self.step is None:
@@ -4387,7 +4426,7 @@ class Spectra(metaclass=_Meta):
                 else:
                     return
 
-        for s in self.data:
+        for s in self:
             s.interp(x=x, start=start, stop=stop, num=num, step=step)
         self._restart_check_attr()
 
@@ -4567,7 +4606,7 @@ class Spectra(metaclass=_Meta):
 
 
         Returns:
-            `Line2D`_ list, offsets list
+            `Line2D`_ list, offsets list, shifts list
 
         .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
         .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
@@ -4587,9 +4626,9 @@ class Spectra(metaclass=_Meta):
                 except:
                     pass
 
-        # percentage wise increment ====================
+        # percentage wise vertical increment ====================
         if 'vi' in kwargs and 'vertical_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: vertical increment/vi')
+            raise SyntaxError('keyword argument repeated: vertical increment and vi')
         elif 'vi' in kwargs or 'vertical_increment' in kwargs:
             if 'vi' in kwargs:
                 vi = kwargs['vi']
@@ -4603,6 +4642,23 @@ class Spectra(metaclass=_Meta):
             vi = max(temp)*factor*vi/100
         else:
             vi = 0
+
+        # percentage wise horizontal increment ====================
+        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
+            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
+        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
+            if 'hi' in kwargs:
+                hi = kwargs['hi']
+                del kwargs['hi']
+            if 'horizontal_increment' in kwargs:
+                hi = kwargs['horizontal_increment']
+                del kwargs['horizontal_increment']
+            temp = [0]*len(self)
+            for i in range(len(self)):
+                temp[i] = max(self.data[i].x) - min(self.data[i].x)
+            hi = max(temp)*factor*hi/100
+        else:
+            hi = 0
 
         # offset
         if isinstance(offset, Iterable):
@@ -4619,6 +4675,8 @@ class Spectra(metaclass=_Meta):
                 raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
         else:
             shift = [shift]*len(self)
+            for i in range(len(self)):
+                shift[i] = shift[i]+(hi*i)
 
         # calib
         if isinstance(calib, Iterable):
@@ -4639,7 +4697,7 @@ class Spectra(metaclass=_Meta):
         for i in range(len(self)):
             temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
 
-        return temp, offset
+        return temp, offset, shift
 
 
     def set_shift(self, value=None, mode=None, type='relative'):
@@ -5282,6 +5340,19 @@ class Spectra(metaclass=_Meta):
         return im
 
 
+    def get_errors(self):
+        """Return a list with peak errors data from all spectra.
+
+        Returns:
+            list
+        """
+        peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
+        n_peaks = max([len(s.peaks) for s in self])
+        if n_peaks == 0:
+            return {}
+        return [{k: [s.peaks[peak].error[k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
+
+
     def get_peaks(self, key='peak'):
         """Return a list with peak data from all spectra.
 
@@ -5291,15 +5362,9 @@ class Spectra(metaclass=_Meta):
                 indices.
 
         Returns:
-            dictionary
+            list
         """
         if key.startswith('p'):
-            # peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2']
-            # n_peaks = max([len(s.peaks) for s in self])
-            # if n_peaks == 0:
-            #     return {}
-            # return {peak: {k: [s.peaks[peak][k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)}
-
             peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
             n_peaks = max([len(s.peaks) for s in self])
             if n_peaks == 0:
@@ -5351,6 +5416,23 @@ class Spectra(metaclass=_Meta):
         else:
             vi = 0
 
+        # percentage wise horizontal increment ====================
+        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
+            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
+        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
+            if 'hi' in kwargs:
+                hi = kwargs['hi']
+                del kwargs['hi']
+            if 'horizontal_increment' in kwargs:
+                hi = kwargs['horizontal_increment']
+                del kwargs['horizontal_increment']
+            temp = [0]*len(self)
+            for i in range(len(self)):
+                temp[i] = max(self.data[i].x) - min(self.data[i].x)
+            hi = max(temp)*factor*hi/100
+        else:
+            hi = 0
+
         # offset
         if isinstance(offset, Iterable):
             if len(offset) != len(self):
@@ -5366,6 +5448,8 @@ class Spectra(metaclass=_Meta):
                 raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
         else:
             shift = [shift]*len(self)
+            for i in range(len(self)):
+                shift[i] = shift[i]+(hi*i)
 
         # calib
         if isinstance(calib, Iterable):
@@ -5408,7 +5492,15 @@ class Spectra(metaclass=_Meta):
         for s in self.data:
             s.find_peaks(prominence=prominence, width=width, moving_average_window=moving_average_window)
 
-    def fit_peaks(self, asymmetry=False, fixed_m=0, offset=True, amp_bounds=(0, 3), c_bounds=(-2, 2), fwhm_bounds=(0, 2), verbose=False):
+    def fit_peak(self, offset=False, verbose=False):
+        if verbose: print('Fitting...\n')
+        for i in range(len(self)):
+            if verbose: print(f'spectrum {i} ===============================')
+            self[i].fit_peak(offset=offset, verbose=verbose)
+            if verbose: print('='*20)
+            if verbose: print('\n')
+
+    def fit_peaks(self, offset=False, verbose=False):
         """Fit peaks recursively. Wrapper for `scipy.optimize.curve_fit()`_.
 
         Args:
@@ -5437,10 +5529,9 @@ class Spectra(metaclass=_Meta):
         if verbose: print('Fitting...\n')
         for i in range(len(self)):
             if verbose: print(f'spectrum {i} ===============================')
-            self[i].fit_peaks(asymmetry=asymmetry, fixed_m=fixed_m, offset=offset, amp_bounds=amp_bounds, c_bounds=c_bounds, fwhm_bounds=fwhm_bounds, verbose=verbose)
+            self[i].fit_peaks(offset=offset, verbose=verbose)
             if verbose: print('='*20)
             if verbose: print('\n')
-
 
     def polyfit(self, deg=2):
         """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.

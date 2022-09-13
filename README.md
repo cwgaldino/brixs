@@ -51,8 +51,8 @@ BRIXS is based on four objects:
 
     im = br.Image()
     pe = br.PhotonEvents()
-    s  = br.Spectrum()
-    ss = br.Spectra()
+    s  = brixs.Spectrum()
+    ss = brixs.Spectra()
 ```
 
 ### Image attributes and methods
@@ -78,15 +78,15 @@ BRIXS is based on four objects:
     im.shifts_h          # np.array
     im.p                 # np.array      (read only)
     im.f                 # function f(x) (read only)
-    im.calculated_shift  # br.Spectrum   (read only)
+    im.calculated_shift  # brixs.Spectrum (read only)
 
     # spectrum (Computed Attributes)
-    im.histogram         # br.Spectrum
-    im.spectrum          # br.Spectrum
-    im.spectrum_v        # br.Spectrum
-    im.spectrum_h        # br.Spectrum
-    im.columns           # br.Spectra
-    im.rows              # br.Spectra
+    im.histogram         # brixs.Spectrum
+    im.spectrum          # brixs.Spectrum
+    im.spectrum_v        # brixs.Spectrum
+    im.spectrum_h        # brixs.Spectrum
+    im.columns           # brixs.Spectra
+    im.rows              # brixs.Spectra
 
     # methods
     im.save()
@@ -117,25 +117,26 @@ BRIXS is based on four objects:
     s.area              # float (computed attribute)
 
     # modifiers
-    s.offset        # float
-    s.factor        # float
-    s.calib         # float
-    s.shift         # float
-    s.shift_roll    # int
-    s.shift_interp  # float
+    s.offset        # float [runs Spectrum.set_offset()]
+    s.factor        # float [runs Spectrum.set_factor()]
+    s.calib         # float [runs Spectrum.set_calib()]
+    s.shift         # float [runs Spectrum.set_shift()]
+    s.shift_roll    # int   [runs Spectrum.set_shift()]
+    s.shift_interp  # float [runs Spectrum.set_shift()]
 
     # check
     s.step          # float
     s.monotonicity  # string
 
     # fit
-    s.fit     # br.Spectrum
-    s.residue # br.Spectrum
-    s.guess   # br.Spectrum
+    s.fit     # brixs.Spectrum
+    s.residue # brixs.Spectrum
+    s.guess   # brixs.Spectrum
     s.R2      # float
+    s.pcov    # np.array
 
     # peaks
-    s.peaks   # br.peaks
+    s.peaks   # brixs.peaks
 
     # methods
     s.save()
@@ -169,6 +170,93 @@ BRIXS is based on four objects:
 ```
 
 
+### Spectra attributes and methods
+
+```python
+    # basic
+    ss.data         # list of brixs.Spectrum
+    ss.area         # list (computed attribute)
+
+    # modifiers
+    ss.offset        # list (computed attribute)
+    ss.factor        # list (computed attribute)
+    ss.calib         # list (computed attribute)
+    ss.shift         # list (computed attribute)
+    ss.shift_roll    # list (computed attribute)
+    ss.shift_interp  # list (computed attribute)
+
+    # calculated modifiers
+    ss.calculated_offset  # brixs.Spectrum
+    ss.calculated_factor  # brixs.Spectrum
+    ss.calculated_calib   # brixs.Spectrum
+    ss.calculated_shift   # brixs.Spectrum
+
+    # check
+    ss.step          # float
+    ss.length        # float
+    ss.x             # list
+    ss.monotonicity  # string
+
+    # fit
+    ss.fit     # brixs.Spectrum
+    ss.residue # brixs.Spectrum
+    ss.guess   # brixs.Spectrum
+    ss.R2      # float
+    ss.pcov    # np.array
+
+    # peaks
+    ss.peaks   # list  [runs Spectra.get_peaks()]
+    ss.error   # list  [runs Spectra.get_errors()]
+
+    # map
+    ss.map     # brixs.Image (computed attribute)
+
+    # methods
+    ss.save()
+    ss.load()
+
+    ss.plot()
+
+    ss.check_length()
+    ss.check_step_x()
+    ss.check_same_x()
+    ss.check_monotonicity()
+    ss.fix_monotonicity()
+
+    ss.set_calib()
+    ss.set_shift()
+    ss.set_factor()
+    ss.set_offset()
+
+    ss.interp()
+    ss.extract()
+    ss.crop()
+    ss.floor()
+    ss.flip()
+    ss.concatenate()
+    ss.align()
+    ss.normalize()
+
+    ss.calculate_shift()
+    ss.calculate_factor()
+    ss.calculate_offset()
+    ss.calculate_calib()
+
+    ss.calculate_sum()
+    ss.calculate_map()
+
+    ss.get_peaks()
+    ss.plot_peaks()
+    ss.find_peaks()
+    ss.fit_peak()
+    ss.fit_peaks()
+    ss.polyfit()
+```
+
+
+
+
+
 ## Information for developers
 
 I will list here some practices that I have been trying to follow while developing brixs. This should facilitate the maintenance and expansion of the package.
@@ -177,4 +265,5 @@ I will list here some practices that I have been trying to follow while developi
 - __init__() methods should initialize *ALL* attributes, except for computed attributes.
 - __init__() should call _sort_args().
 - _sort_args() should sort the arguments and return a data type or a filepath to __init__(), and nothing else
-- f
+- every time a new attribute is added to an object, one has to worry about if and how it is going to be saved/loaded from a file, if it should be reseted when other attributes change, and if it should be passed to child objects.
+- every time an attribute is changed inside an object, one has to worry about which "check attributes" must be reseted.
