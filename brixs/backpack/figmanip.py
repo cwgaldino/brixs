@@ -16,6 +16,10 @@ try:
     from bs4 import BeautifulSoup
 except ModuleNotFoundError:
     pass
+try:
+    import brixs as br
+except:
+    pass
 
 # matplotlib libraries
 from matplotlib.pyplot import get_current_fig_manager
@@ -78,8 +82,9 @@ def set_window_position(*args):
         y = int(args[0][1])
     elif len(args) == 0:
         try:
-            global p
-            setWindowPosition(p)
+            # global p
+            # print('g')
+            set_window_position(br.settings.FIGURE_POSITION)
             return
         except:
             pass
@@ -211,7 +216,7 @@ def figure(**kwargs):
     fig = plt.figure(**kwargs)
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     try:
-        setWindowPosition()
+        set_window_position()
     except NameError:
         pass
 

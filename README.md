@@ -70,14 +70,14 @@ Also two support objects:
 
 ```python
     # basic
-    im.data              # np.array
+    im.data              # np.array (float)
     im.vmin              # float (read only)
     im.vmax              # float (read only)
     im.shape             # tuple (read only)
-    im.x_centers         # np.array
-    im.y_centers         # np.array
-    im.x_edges           # np.array
-    im.y_edges           # np.array
+    im.x_centers         # np.array (float)
+    im.y_centers         # np.array (float)
+    im.x_edges           # np.array (float)
+    im.y_edges           # np.array (float)
 
     # binning
     im.nbins             # np.array [runs Image.binning()]
@@ -89,7 +89,7 @@ Also two support objects:
     im.shifts_h          # np.array
     im.p                 # np.array      (read only)
     im.f                 # function f(x) (read only)
-    im.calculated_shift  # brixs.Spectrum (read only)
+    im.calculated_shifts  # brixs.Spectrum (read only)
 
     # spectrum (Computed Attributes)
     im.histogram         # brixs.Spectrum
@@ -114,8 +114,8 @@ Also two support objects:
     im.binning()
     im.calculate_histogram()
     im.calculate_spectrum()
-    im.calculate_shift()
-    im.set_shift()
+    im.calculate_shifts()
+    im.set_shifts()
     im.fix_curvature()
 ```
 
@@ -124,9 +124,9 @@ Also two support objects:
 
 ```python
     # basic
-    pe.data              # np.array
-    pe.x              # float (read only)
-    pe.y              # float (read only)
+    pe.data          # np.array
+    pe.x             # float (read only)
+    pe.y             # float (read only)
     pe.I             # tuple (read only)
     pe.shape         # np.array
 
@@ -166,9 +166,9 @@ Also two support objects:
 
 ```python
     # basic
-    s.data              # np.array
-    s.x                 # np.array
-    s.y                 # np.array
+    s.data              # np.array (float)
+    s.x                 # np.array (float)
+    s.y                 # np.array (float)
     s.area              # float (computed attribute)
 
     # modifiers

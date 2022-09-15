@@ -56,13 +56,13 @@ def build_model_str(**kwargs):
                 del kwargs[key]
 
     # check asymmetry
-    if 'fwhm1' in kwargs or 'fwhm2' in kwargs:
-        if 'fwhm2' in kwargs and 'fwhm2' in kwargs:
-            asymmetry = True
-        else:
-            raise ValueError('If fwhm1 or fwhm2 are defined, both must be defined.')
-    else:
-        asymmetry = False
+    # if 'fwhm1' in kwargs or 'fwhm2' in kwargs:
+    #     if 'fwhm2' in kwargs and 'fwhm2' in kwargs:
+    #         asymmetry = True
+    #     else:
+    #         raise ValueError('If fwhm1 or fwhm2 are defined, both must be defined.')
+    # else:
+    #     asymmetry = False
 
 
     # function string

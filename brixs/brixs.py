@@ -421,41 +421,65 @@ class Image(metaclass=_Meta):
     def __add__(self, object):
         if isinstance(object, Image):
             if self.shape == object.shape:
-                final = Image(data = self.data + object.data)
+                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
+                    dtype = 'int'
+                else:
+                    dtype = 'float'
+                final = Image(data=np.add(self.data, object.data, dtype=dtype))
                 return self._transfer_attributes(final)
             else:
                 raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
         elif isinstance(object, (np.floating, float, int)):
-            final = Image(data = self.data + object)
+            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+            final = Image(data=np.add(self.data, object, dtype=dtype))
             return self._transfer_attributes(final)
         else:
-            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+            raise ValueError(f'Cannot operate type {type(object)} with Image')
 
     def __sub__(self, object):
         if isinstance(object, Image):
             if self.shape == object.shape:
-                final = Image(data = self.data - object.data)
+                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
+                    dtype = 'int'
+                else:
+                    dtype = 'float'
+                final = Image(data=np.subtract(self.data, object.data, dtype=dtype))
                 return self._transfer_attributes(final)
             else:
                 raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
         elif isinstance(object, (np.floating, float, int)):
-            final = Image(data = self.data - object)
+            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+            final = Image(data=np.subtract(self.data, object, dtype=dtype))
             return self._transfer_attributes(final)
         else:
-            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+            raise ValueError(f'Cannot operate type {type(object)} with Image')
 
     def __mul__(self, object):
         if isinstance(object, Image):
             if self.shape == object.shape:
-                final = Image(data = self.data * object.data)
+                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
+                    dtype = 'int'
+                else:
+                    dtype = 'float'
+                final = Image(data=np.multiply(self.data, object.data, dtype=dtype))
                 return self._transfer_attributes(final)
             else:
                 raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
         elif isinstance(object, (np.floating, float, int)):
-            final = Image(data = self.data * object)
+            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+            final = Image(data=np.multiply(self.data, object, dtype=dtype))
             return self._transfer_attributes(final)
         else:
-            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+            raise ValueError(f'Cannot operate type {type(object)} with Image')
 
     def __div__(self, object):
         if isinstance(object, Image):
@@ -463,7 +487,9 @@ class Image(metaclass=_Meta):
                 if 0 in object.data:
                     raise ZeroDivisionError(f'Image contain zeros. Cannot divide by zero.')
                 else:
-                    final = Image(data = self.data / object.data)
+                    dtype = 'float'
+                    final = Image(data=np.divide(self.data, object.data, dtype=dtype))
+                    # final = Image(data = self.data / object.data)
                     return self._transfer_attributes(final)
             else:
                 raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
@@ -471,7 +497,8 @@ class Image(metaclass=_Meta):
             if object == 0:
                 raise ZeroDivisionError(f'Cannot divide by zero.')
             else:
-                final = Image(data = self.data / object)
+                dtype = 'float'
+                final = Image(data=np.divide(self.data, object, dtype=dtype))
                 return self._transfer_attributes(final)
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Image')
@@ -485,7 +512,7 @@ class Image(metaclass=_Meta):
     @data.setter
     def data(self, value):
         # basic attr
-        self._data  = np.array(value)
+        self._data  = np.array(value, dtype='float')
         self._vmin  = min([min(x) for x in self.data])
         self._vmax  = max([max(x) for x in self.data])
         self._shape = (self.data.shape[0], self.data.shape[1])
@@ -518,7 +545,7 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f"x must be None or an iterable (list, tuple, or 1D array)")
         # self._x_centers = Spectrum(x=value, y=np.zeros(len(value)))
-        self._x_centers = np.array(value)
+        self._x_centers = np.array(value, dtype='float')
         self._x_edges = None
     @x_centers.deleter
     def x_centers(self):
@@ -537,7 +564,7 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
         # self._y_centers = Spectrum(x=value, y=np.zeros(len(value)))
-        self._y_centers = np.array(value)
+        self._y_centers = np.array(value, dtype='float')
         self._y_edges = None
     @y_centers.deleter
     def y_centers(self):
@@ -557,10 +584,10 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f"x_edges must be None or an iterable (list, tuple, or 1D array)")
         # self._x_edges   = Spectrum(x=value, y=np.zeros(len(value)))
-        self._x_edges   = np.array(value)
+        self._x_edges   = np.array(value, dtype='float')
         centers = moving_average(value, n=2)
         # self._x_centers = Spectrum(x=centers, y=np.zeros(len(centers)))
-        self._x_centers = np.array(centers)
+        self._x_centers = np.array(centers, dtype='float')
     @x_edges.deleter
     def x_edges(self):
         self._x_edges = None
@@ -579,10 +606,10 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
         # self._y_edges   = Spectrum(x=value, y=np.zeros(len(value)))
-        self._y_edges   = np.array(value)
+        self._y_edges   = np.array(value, dtype='float')
         centers = moving_average(value, n=2)
         # self._y_centers = Spectrum(x=centers, y=np.zeros(len(centers)))
-        self._y_centers = np.array(centers)
+        self._y_centers = np.array(centers, dtype='float')
     @y_centers.deleter
     def y_centers(self):
         self._y_edges  = None
@@ -1228,7 +1255,7 @@ class Image(metaclass=_Meta):
         elif axis == 1:
             return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
 
-    def calculate_shift(self, axis=0, mode='cc', limit_size=1000):
+    def calculate_shift(self, axis=0, limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
 
         Args:
@@ -1245,6 +1272,8 @@ class Image(metaclass=_Meta):
         """
         axis = _axis_interpreter(axis)
 
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
+
         mode = 'cross-correlation'
         peak = 0
         bkg_check = True
@@ -1252,23 +1281,27 @@ class Image(metaclass=_Meta):
         # select axis
         if axis == 0:
             if limit_size:
-                if len(self.x_centers) > limit_size:
+                if len(self.reduced.x_centers) > limit_size:
                     raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-            ss = self.columns
-            centers = self.x_centers
+            ss = self.reduced.columns
+            centers = self.reduced.x_centers
         elif axis == 1:
             if limit_size:
-                if len(self.rows) > limit_size:
+                if len(self.reduced.rows) > limit_size:
                     raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
-            ss = self.rows
-            centers = self.y_centers
+            ss = self.reduced.rows
+            centers = self.reduced.y_centers
 
         # calculate
         ss.calculate_shift(mode=mode, peak=peak, bkg_check=bkg_check)
-        self._calculated_shift = ss.calculated_shift
+        if mode in cc:
+            self._calculated_shift = ss.calculated_shift
+            self.calculated_shift.factor = ss.step
+        else:
+            self._calculated_shift = ss.calculated_shift
         self._calculated_shift.x = centers
 
-    def set_shift(self, value=None, p=None, f=None, axis=0):
+    def set_shift(self, value=None, p=None, f=None, axis=0, type='absolute'):
         """Roll array of pixels along a given axis.
 
         Elements that roll beyond the edge are NOT re-introduced at the first.
@@ -1301,7 +1334,13 @@ class Image(metaclass=_Meta):
             elif axis == 1:
                 value = f(self.y_centers)
 
-        # OLD... shift is absolute!!!!!!!!! Works ==============================
+        if type in relative:
+            if axis == 0:
+                value = self.shifts_v + value
+            elif axis == 1:
+                value = self.shifts_h + value
+
+        # shift is absolute!!!!!!!!! Works ==============================
         if axis == 0:
             if isinstance(value, Iterable):
                 assert len(value) == self.shape[1], f'Number of values must be the same as the number of columns ({self.shape[1]})'
@@ -1347,8 +1386,9 @@ class Image(metaclass=_Meta):
                     self._data[i, :] = temp.y
                     self._shifts_h[i] = h
 
-        if self.reduced is not None:
-            self.binning(nbins=self.nbins)
+        # if self.reduced is not None:
+        #     self.binning(nbins=self.nbins)
+        self._reduced = None
 
     def fix_curvature(self, deg=2, axis=0):
         """Fix curvature.
@@ -1366,16 +1406,14 @@ class Image(metaclass=_Meta):
 
         # calculate shifts
         self.reduced.floor()
-        self.reduced.calculate_shift(axis=axis)
+        self.calculate_shift(axis=axis)
 
-        p, f = self.reduced.calculated_shift.polyfit(deg=deg)
+        p, f = self.calculated_shift.polyfit(deg=deg)
         self._p = p
         self._f = f
 
         self.set_shift(p=p, axis=axis)
-        self._calculated_shift = self.reduced.calculated_shift
-
-
+                
 
     def floor(self, x=0, y=0, n=30, nx=None, ny=None):
         """Set background intensity to zero.
@@ -1424,7 +1462,7 @@ class Image(metaclass=_Meta):
         self._vmin = min([min(x) for x in self.data])
         self._vmax = max([max(x) for x in self.data])
 
-    def crop(self, x_start, x_stop, y_start, y_stop):
+    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
         """Crop Image.
 
         Args:
@@ -1442,11 +1480,16 @@ class Image(metaclass=_Meta):
         if y_stop is None:  y_stop = self.shape[0]
 
         # verification
-        assert x_start >= 0 and is_integer(x_start) and x_start<=self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
-        assert x_stop  >= 0 and is_integer(x_stop)  and x_stop<=self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
+        assert x_start >= 0 and x_start<=self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
+        assert is_integer(x_start), f'x_start must be a positive integer.'
+        assert x_stop  >= 0 and x_stop<=self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
+        assert is_integer(x_stop),  f'x_stop must be a positive integer.'
         assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_start >= 0 and is_integer(y_start) and y_start<=self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
-        assert y_stop  >= 0 and is_integer(y_stop)  and y_stop<=self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
+
+        assert y_start >= 0 and y_start<=self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
+        assert is_integer(y_start), f'y_start must be a positive integer.'
+        assert y_stop  >= 0 and y_stop<=self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
+        assert is_integer(y_stop), f'y_stop must be a positive integer.'
         assert y_stop > y_start, f'y_start must be smaller than y_stop.'
 
         # crop
@@ -1529,9 +1572,9 @@ class PhotonEvents(metaclass=_Meta):
     def data(self, value):
         # basic attr
         if value.shape[1] == 3:
-            self._data = np.array([event for event in np.array(value) if not event[2]<=0])
+            self._data = np.array([event for event in np.array(value, dtype='float') if not event[2]<=0])
         elif value.shape[1] == 2:
-            data = np.array(value)
+            data = np.array(value, dtype='float')
             self._data = np.c_[data, np.ones(data.shape[0])]
         else:
             raise ValueError("Data must have 2 or 3 columns.")
@@ -2439,13 +2482,13 @@ class Spectrum(metaclass=_Meta):
     @data.setter
     def data(self, value):
         try:
-            value = np.array(value)
+            value = np.array(value, dtype='float')
             if value.shape[1] != 2:
                 value = value.transpose()
                 if value.shape[1] != 2:
                     raise ValueError('Data must have two columns (x, y).')
                 else:
-                    self._data = np.array(value)
+                    self._data = np.array(value, dtype='float')
                     self._x = self.data[:, 0]
                     self._y = self.data[:, 1]
                     self._step = None
@@ -2454,22 +2497,22 @@ class Spectrum(metaclass=_Meta):
             elif value is None:
                 raise ValueError('No data to load.')
             elif value.shape[1] == 1:   # one column data (list)
-                self._x = np.arange(0, len(value))
-                self._y = np.array(value)
+                self._x = np.arange(0, len(value), dtype='float')
+                self._y = np.array(value, dtype='float')
                 self._data = np.vstack((self.x, self.y)).transpose()
                 self._step = 1
                 self._monotonicity = 'increasing'
                 # self._restart_attr()
             else:
-                self._data = np.array(value)
+                self._data = np.array(value, dtype='float')
                 self._x = self.data[:, 0]
                 self._y = self.data[:, 1]
                 self._step = None
                 self._monotonicity = None
                 # self._restart_attr()
         except IndexError:  # one column data (list)
-            self._x = np.arange(0, len(value))
-            self._y = np.array(value)
+            self._x = np.arange(0, len(value), dtype='float')
+            self._y = np.array(value, dtype='float')
             self._data = np.vstack((self.x, self.y)).transpose()
             self._step = 1
             self._monotonicity = 'increasing'
@@ -2486,8 +2529,8 @@ class Spectrum(metaclass=_Meta):
         if len(value) != len(self.x):
             raise ValueError('length of x you are trying to set is not compatible with length of y.')
         else:
-            self._x = np.array(value)
-            self._data[:, 0] = np.array(value)
+            self._x = np.array(value, dtype='float')
+            self._data[:, 0] = np.array(value, dtype='float')
             self._step = None
             self._monotonicity = None
             # self._restart_attr()
@@ -2507,8 +2550,8 @@ class Spectrum(metaclass=_Meta):
         if len(value) != len(self.y):
             raise ValueError('length of y you are trying to set is not compatible with length of x.')
         else:
-            self._y = np.array(value)
-            self._data[:, 1] = np.array(value)
+            self._y = np.array(value, dtype='float')
+            self._data[:, 1] = np.array(value, dtype='float')
             # self._restart_attr()
     @y.deleter
     def y(self):
@@ -2947,13 +2990,15 @@ class Spectrum(metaclass=_Meta):
                 value = self.shift_roll + value
 
             if self.shift_roll != value:
+                # print('here')
                 if self.shift_roll != 0:  # undo last shift
                     self._x, self._y = shifted(self.x, self.y, value=-self.shift_roll, mode='roll')
-
                     if self.peaks is not None:
                         self.peaks.shift += self.step*-self.shift_roll
                 if value != 0:
+                    # print(value)
                     self._x, self._y = shifted(self.x, self.y, value=value, mode=mode)
+                    # print(self._y)
                     if self.peaks is not None:
                         self.peaks.shift += self.step*value
                 self._shift_roll = value
@@ -3337,7 +3382,7 @@ class Spectrum(metaclass=_Meta):
         return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
 
 
-    def fit_peak(self, offset=True, verbose=False):
+    def fit_peak(self, offset=True, asymmetry=None, fixed=None, verbose=False):
         """Fits one peak. Initial guess is based on the maximum y value.
 
         Args:
@@ -3366,6 +3411,10 @@ class Spectrum(metaclass=_Meta):
         c = self.x[np.argmax(self.y)]
         fwhm = 0.1*(max(self.x)-min(self.x))
         self.peaks = {'c':c, 'amp':amp, 'fwhm':fwhm}
+        if fixed is not None:
+            self.peaks[0].fixed = fixed
+        if asymmetry is not None:
+            self.peaks[0].asymmetry = asymmetry
 
         # fit
         self.fit_peaks(offset=offset, verbose=verbose)

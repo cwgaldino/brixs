@@ -7,6 +7,7 @@ from .file_reading import PEAXIS
 from .file_reading import ADRESS
 from .file_reading import ID32
 from .file_reading import IPE
+from .file_reading import I21
 
 from .crystal import *
 from .fake_data import fake
