@@ -34,7 +34,7 @@ from scipy.optimize import curve_fit
 
 # backpack
 from .backpack.filemanip import load_Comments, filelist
-from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes
+from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes, derivative
 from .backpack.arraymanip import is_integer, all_equal, factors, flatten, peak_fit, check_monotonicity, fix_monotonicity
 from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
 from .peaks import Peak, Peaks
@@ -643,6 +643,8 @@ class Image(metaclass=_Meta):
             self.binning(nbins=value)
         elif value == 'guess':
             raise NotImplementedError('not implemented yet')
+        elif value == 'possible':
+            print(f"The {self.shape[1]} pixels in a row is evenly divisible by: {np.sort(list(factors(self.shape[1])))}\nThe {self.shape[0]} pixels in a column is evenly divisible by: {np.sort(list(factors(self.shape[0])))}")
         else:
             raise ValueError("Not a valid option of `nbins`.\nValid options are: 'guess', a number, a tuple, or a list.")
     @nbins.deleter
@@ -1156,6 +1158,9 @@ class Image(metaclass=_Meta):
             :py:func:`Image.imshow` """
         return self.imshow(*args, **kwargs)
 
+    def possible_nbins(self):
+        """return possible values for nbins in the y (nrows) and x (ncols) directions."""
+        return np.sort(list(factors(self.shape[1]))), np.sort(list(factors(self.shape[0])))
 
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
@@ -1413,7 +1418,7 @@ class Image(metaclass=_Meta):
         self._f = f
 
         self.set_shift(p=p, axis=axis)
-                
+
 
     def floor(self, x=0, y=0, n=30, nx=None, ny=None):
         """Set background intensity to zero.
@@ -1481,15 +1486,15 @@ class Image(metaclass=_Meta):
 
         # verification
         assert x_start >= 0 and x_start<=self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
-        assert is_integer(x_start), f'x_start must be a positive integer.'
+        assert is_integer(x_start), f'x_start must be an integer.'
         assert x_stop  >= 0 and x_stop<=self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
-        assert is_integer(x_stop),  f'x_stop must be a positive integer.'
+        assert is_integer(x_stop),  f'x_stop must be an integer.'
         assert x_stop > x_start, f'x_start must be smaller than x_stop.'
 
         assert y_start >= 0 and y_start<=self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
-        assert is_integer(y_start), f'y_start must be a positive integer.'
+        assert is_integer(y_start), f'y_start must be an integer.'
         assert y_stop  >= 0 and y_stop<=self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
-        assert is_integer(y_stop), f'y_stop must be a positive integer.'
+        assert is_integer(y_stop), f'y_stop must be an integer.'
         assert y_stop > y_start, f'y_start must be smaller than y_stop.'
 
         # crop
@@ -3409,7 +3414,10 @@ class Spectrum(metaclass=_Meta):
         # guess
         amp = max(self.y)
         c = self.x[np.argmax(self.y)]
-        fwhm = 0.1*(max(self.x)-min(self.x))
+        x, y = derivative(moving_average(self.x, 10), moving_average(self.y, 10))
+        fwhm = np.abs(x[np.argmin(y)] - x[np.argmax(y)])
+        if fwhm == 0:
+            fwhm = 0.1*(max(self.x)-min(self.x))
         self.peaks = {'c':c, 'amp':amp, 'fwhm':fwhm}
         if fixed is not None:
             self.peaks[0].fixed = fixed
