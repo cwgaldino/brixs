@@ -266,6 +266,37 @@ def _bins_interpreter(*args, **kwargs):
 
     return nbins, bins_size
 
+def _check_ranges(ranges, vmin, vmax):
+    """check if ranges is the right format.
+
+    If any item of ranges is None, this item is replaced by the min or max
+        value of the data.
+    """
+    text = 'Ranges should be a pair (x_init1, x_final1) or a list of pairs like this: ((x_init1, x_final1), (x_init2, x_final2), ...)\nUse None to indicate the minimum or maximum x value of the data.'
+
+    # check format
+    if ranges is None:
+        ranges = ((vmin, vmax),)
+    elif isinstance(ranges, Iterable) == True:
+        if isinstance(ranges[0], Iterable) == False:
+                ranges = (ranges, )
+    else:
+        raise ValueError(text)
+
+    # check pairs
+    ranges = list(ranges)
+    for i in range(len(ranges)):
+        if len(ranges[i]) == 2:
+            if None in ranges[i]:
+                ranges[i] = list(ranges[i])
+                if ranges[i][0] is None:
+                     ranges[i][0] = vmin
+                if ranges[i][1] is None:
+                     ranges[i][1] = vmax
+        else:
+            raise ValueError(f'Ranges pair {r} is not a valid pair.\n'+text)
+    return tuple(ranges)
+
 # BRIXS ========================================================================
 class Image(metaclass=_Meta):
     """Image object.
@@ -1160,7 +1191,7 @@ class Image(metaclass=_Meta):
 
     def possible_nbins(self):
         """return possible values for nbins in the y (nrows) and x (ncols) directions."""
-        return np.sort(list(factors(self.shape[1]))), np.sort(list(factors(self.shape[0])))
+        return np.sort(list(factors(self.shape[0]))), np.sort(list(factors(self.shape[1])))
 
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
@@ -1260,7 +1291,7 @@ class Image(metaclass=_Meta):
         elif axis == 1:
             return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
 
-    def calculate_shift(self, axis=0, limit_size=1000):
+    def calculate_shift(self, axis=0, mode='cc', limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
 
         Args:
@@ -1279,7 +1310,7 @@ class Image(metaclass=_Meta):
 
         assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
 
-        mode = 'cross-correlation'
+        # mode = 'cross-correlation'
         peak = 0
         bkg_check = True
 
@@ -1297,13 +1328,18 @@ class Image(metaclass=_Meta):
             ss = self.reduced.rows
             centers = self.reduced.y_centers
 
+        # peaks
+        if mode == 'fitted peaks' or mode == 'peaks':
+            ss.fit_peak()
+
         # calculate
-        ss.calculate_shift(mode=mode, peak=peak, bkg_check=bkg_check)
+        ss.calculate_shift(mode=mode, bkg_check=bkg_check)
         if mode in cc:
             self._calculated_shift = ss.calculated_shift
             self.calculated_shift.factor = ss.step
         else:
             self._calculated_shift = ss.calculated_shift
+            self._calculated_shift.y = [int(round(y)) for y in self._calculated_shift.y]
         self._calculated_shift.x = centers
 
     def set_shift(self, value=None, p=None, f=None, axis=0, type='absolute'):
@@ -1395,7 +1431,7 @@ class Image(metaclass=_Meta):
         #     self.binning(nbins=self.nbins)
         self._reduced = None
 
-    def fix_curvature(self, deg=2, axis=0):
+    def fix_curvature(self, deg=2, axis=0, mode='cc'):
         """Fix curvature.
 
         Args:
@@ -1411,7 +1447,7 @@ class Image(metaclass=_Meta):
 
         # calculate shifts
         self.reduced.floor()
-        self.calculate_shift(axis=axis)
+        self.calculate_shift(axis=axis, mode=mode)
 
         p, f = self.calculated_shift.polyfit(deg=deg)
         self._p = p
@@ -2661,36 +2697,6 @@ class Spectrum(metaclass=_Meta):
         raise AttributeError('Cannot delete object.')
 
 
-    def _check_ranges(self, ranges):
-        """check if ranges is the right format.
-
-        If any item of ranges is None, this item is replaced by the min or max
-            value of the data.
-        """
-        text = 'Ranges should be a pair (x_init1, x_final1) or a list of pairs like this: ((x_init1, x_final1), (x_init2, x_final2), ...)\nUse None to indicate the minimum or maximum x value of the data.'
-        # check format
-        if ranges is None:
-            ranges = ((min(self.x), max(self.x)),)
-        elif isinstance(ranges, Iterable) == True:
-            if isinstance(ranges[0], Iterable) == False:
-                    ranges = (ranges, )
-        else:
-            raise ValueError(text)
-        # check pairs
-        ranges = list(ranges)
-        for i in range(len(ranges)):
-            if len(ranges[i]) == 2:
-                if None in ranges[i]:
-                    ranges[i] = list(ranges[i])
-                    if ranges[i][0] is None:
-                         ranges[i][0] = min(self.x)
-                    if ranges[i][1] is None:
-                         ranges[i][1] = max(self.x)
-            else:
-                raise ValueError(f'Ranges pair {r} is not a valid pair.\n'+text)
-        return tuple(ranges)
-
-
     def save(self, filepath, only_data=False,  **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
@@ -3192,7 +3198,7 @@ class Spectrum(metaclass=_Meta):
         Returns:
             :py:attr:`Spectrum`
         """
-        ranges = self._check_ranges(ranges)
+        ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
         x, y  = extract(self.x, self.y, ranges)
         s = Spectrum(x=x, y=y)
         s._offset       = self.offset
@@ -3275,7 +3281,7 @@ class Spectrum(metaclass=_Meta):
                 value2 = -self.y[i]
                 self.offset = self.offset+value2
         else:
-            ranges = self._check_ranges(ranges)
+            ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
             _, y= extract(self.x, self.y, ranges)
             value2 = -np.mean(y)
             self.offset = self.offset+value2
@@ -3387,46 +3393,6 @@ class Spectrum(metaclass=_Meta):
         return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
 
 
-    def fit_peak(self, offset=True, asymmetry=None, fixed=None, verbose=False):
-        """Fits one peak. Initial guess is based on the maximum y value.
-
-        Args:
-            asymmetry (bool or dict, optional): if True, fits each half of the
-                with a different width.
-            fixed_m (False, number, or dict, optional): m is the amount of lorentzian
-                contribution for a peak. If False, m will be fitted for each peak.
-                If a number (from 0 to 1), this will be used as the value of m
-                (fixed m).
-            offset (bool, optional): if True, a offset value will be fitted.
-            amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
-                maximum multiplication factor for boundary values. For amp, the
-                bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
-                For c, bounds are set c+fwhm*c_bound[0] and c+fwhm*c_bound[1].
-                Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
-                and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
-                less than zero, the minimum fwhm boundary is set to zero as it
-                cannot be negative. If None, the data max and min limits will be
-                used.
-
-        Returns:
-            None
-        """
-        # guess
-        amp = max(self.y)
-        c = self.x[np.argmax(self.y)]
-        x, y = derivative(moving_average(self.x, 10), moving_average(self.y, 10))
-        fwhm = np.abs(x[np.argmin(y)] - x[np.argmax(y)])
-        if fwhm == 0:
-            fwhm = 0.1*(max(self.x)-min(self.x))
-        self.peaks = {'c':c, 'amp':amp, 'fwhm':fwhm}
-        if fixed is not None:
-            self.peaks[0].fixed = fixed
-        if asymmetry is not None:
-            self.peaks[0].asymmetry = asymmetry
-
-        # fit
-        self.fit_peaks(offset=offset, verbose=verbose)
-
     def find_peaks(self, prominence=5, width=4, moving_average_window=8):
         """Find peaks. Wrapper for `scipy.signal.find_peaks()`_.
 
@@ -3493,7 +3459,75 @@ class Spectrum(metaclass=_Meta):
         except IndexError:
             self._peaks = Peaks({}, shift=self.shift, offset=self.offset, calib=self.calib, factor=self.factor)
 
-    def fit_peaks(self, offset=False, verbose=False):
+    def fit_peak(self, offset=True, asymmetry=None, fixed=None, ranges=None, verbose=False):
+        """Fits one peak. Initial guess is based on the maximum y value.
+
+        Args:
+            asymmetry (bool or dict, optional): if True, fits each half of the
+                with a different width.
+            fixed_m (False, number, or dict, optional): m is the amount of lorentzian
+                contribution for a peak. If False, m will be fitted for each peak.
+                If a number (from 0 to 1), this will be used as the value of m
+                (fixed m).
+            offset (bool, optional): if True, a offset value will be fitted.
+            amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
+                maximum multiplication factor for boundary values. For amp, the
+                bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
+                For c, bounds are set c+fwhm*c_bound[0] and c+fwhm*c_bound[1].
+                Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
+                and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
+                less than zero, the minimum fwhm boundary is set to zero as it
+                cannot be negative. If None, the data max and min limits will be
+                used.
+
+        Returns:
+            None
+        """
+        if ranges is None:
+            x0 = self.x
+            y0 = self.y
+        else:
+            s0 = self.extract(ranges)
+            x0 = s0.x
+            y0 = s0.y
+
+        if asymmetry is None:
+            asymmetry = False
+
+        # smoothing
+        x = moving_average(x0, 8)
+        y = moving_average(y0, 8)
+        # plt.plot(x, y)
+
+        # guess amp and c
+        amp = max(y)
+        c = x[np.argmax(y)]
+
+        # guess fwhm
+        fwhm1 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][index(y[:np.argmax(y)][::-1], max(y)/2)]
+        fwhm2 = x[np.argmax(y):][index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
+        fwhm = fwhm1 + fwhm2
+
+        # x, y = derivative(moving_average(self.x, 10), moving_average(self.y, 10))
+        # fwhm = np.abs(x[np.argmin(y)] - x[np.argmax(y)])
+        if fwhm == 0:
+            fwhm = 0.1*(max(self.x)-min(self.x))
+
+        # peaks
+        if asymmetry:
+            self.peaks = {'c':c, 'amp':amp, 'fwhm1':fwhm1, 'fwhm2':fwhm2}
+        else:
+            self.peaks = {'c':c, 'amp':amp, 'fwhm':fwhm}
+        # print(self.peaks)
+        if fixed is not None:
+            self.peaks[0].fixed = fixed
+        if asymmetry is not None:
+            self.peaks[0].asymmetry = asymmetry
+
+        # fit
+        self.fit_peaks(offset=offset, verbose=verbose, ranges=ranges)
+
+    def fit_peaks(self, offset=False, ranges=None, verbose=False):
         """Fit peaks. Wrapper for `scipy.optimize.curve_fit()`_.
 
         Args:
@@ -3510,7 +3544,15 @@ class Spectrum(metaclass=_Meta):
 
         .. _scipy.optimize.curve_fit(): https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
         """
-        self.check_monotonicity()
+        if ranges is None:
+            x = self.x
+            y = self.y
+            self.check_monotonicity()
+        else:
+            s = self.extract(ranges)
+            x = s.x
+            y = s.y
+            s.check_monotonicity()
 
         # check if peaks is defined
         if len(self.peaks) == 0:
@@ -3521,8 +3563,10 @@ class Spectrum(metaclass=_Meta):
         model = self.peaks.build_model()
 
         # fitting
+        # print(model)
+        # print(p0)
         if verbose: print(f'Fitting data...')
-        popt, pcov = curve_fit(model, self.x, self.y, p0=p0, bounds=(bounds_min, bounds_max))
+        popt, pcov = curve_fit(model, x, y, p0=p0, bounds=(bounds_min, bounds_max))
         if verbose: print(f'Done!')
 
         # guess ================================================================
@@ -3538,7 +3582,7 @@ class Spectrum(metaclass=_Meta):
         # save fitted peaks parameters =========================================
         psigma = np.sqrt(np.diag(pcov))
         peaks   = decode(popt, psigma)
-
+        # print(popt)
         # fit ==================================================================
         x_temp = peaks._find_suitable_x()
         self._fit = Spectrum(x=x_temp, y=model(x_temp, *popt))

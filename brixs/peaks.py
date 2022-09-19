@@ -67,7 +67,8 @@ def build_model_str(**kwargs):
 
     # function string
     if asymmetry:
-        f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
+        # f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
+        f_str = f'np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
     else:
         f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, m_{idx})'
 
@@ -86,7 +87,12 @@ def build_model_str(**kwargs):
             f_str = f_str.replace(f'w1_{idx}', str(kwargs['fwhm1']))
         else:
             args_str += f'w1_{idx}, '
-        if 'm1' in kwargs:
+        if 'm' in kwargs:
+            if 'm1' not in kwargs:
+                f_str = f_str.replace(f'm1_{idx}', str(kwargs['m']))
+            if 'm1' in kwargs:
+                f_str = f_str.replace(f'm1_{idx}', str(kwargs['m1']))
+        elif 'm1' in kwargs:
             f_str = f_str.replace(f'm1_{idx}', str(kwargs['m1']))
         else:
             args_str += f'm1_{idx}, '
@@ -94,10 +100,13 @@ def build_model_str(**kwargs):
             f_str = f_str.replace(f'w2_{idx}', str(kwargs['fwhm2']))
         else:
             args_str += f'w2_{idx}, '
-        if 'm2' in kwargs:
+        if 'm' in kwargs:
+            if 'm2' not in kwargs:
+                f_str = f_str.replace(f'm2_{idx}', str(kwargs['m']))
+            if 'm2' in kwargs:
+                f_str = f_str.replace(f'm2_{idx}', str(kwargs['m2']))
+        elif 'm2' in kwargs:
             f_str = f_str.replace(f'm2_{idx}', str(kwargs['m2']))
-        else:
-            args_str += f'm2_{idx}, '
     else:
         if 'fwhm' in kwargs:
             f_str = f_str.replace(f'w_{idx}', str(kwargs['fwhm']))
@@ -134,7 +143,7 @@ def build_model(**kwargs):
         function f(x)
     """
     f_str, args_str = build_model_str(**kwargs)
-
+    # print(f_str)
     model_str = f'lambda x, {args_str}: {f_str}'
     return eval(model_str)
 
@@ -488,10 +497,15 @@ class Peak(MutableMapping):
         return self._asymmetry
     @asymmetry.setter
     def asymmetry(self, value):
+        # set asymmetry
         if isinstance(value, bool):
-            self._asymmetry = value
+            if self.asymmetry == value:
+                return
+            else:
+                self._asymmetry = value
         else:
             raise TypeError('value must be bool (True or False).')
+        # set everything else
         if self._asymmetry:
             self._store['fwhm1'] = self._store['fwhm']/2
             self._store['fwhm2'] = self._store['fwhm']/2
@@ -728,7 +742,8 @@ class Peak(MutableMapping):
         """
         if x is None:
             x = self._find_suitable_x()
-        f = build_model(amp=self['amp'], c=self['c'],  fwhm=self['fwhm'], m=self['m'], fwhm1=self['fwhm1'], fwhm2=self['fwhm2'], m1=self['m1'], m2=self['m2'])
+        # f = build_model(amp=self['amp'], c=self['c'],  fwhm=self['fwhm'], m=self['m'], fwhm1=self['fwhm1'], fwhm2=self['fwhm2'], m1=self['m1'], m2=self['m2'])
+        f = self.build_model(fixed=['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm1', 'm2', 'm'])
         s = br.Spectrum(x=x, y=f(x))
         s._shift  = self.shift
         s._factor = self.factor
@@ -893,8 +908,9 @@ class Peak(MutableMapping):
         bounds_min   = []
         bounds_max   = []
 
-        decode_fixed = {}
-        decode_free  = []
+        # decode (for fitting purposes)
+        decode_fixed = {}  # dictionary with parameter and value that will not be varied in a fit
+        decode_free  = []  # parameters that shall be varied in a fit
 
         if asymmetry is None:
             asymmetry = self.asymmetry
@@ -998,11 +1014,13 @@ class Peak(MutableMapping):
                 for parameter in peak:
                     error[parameter] = 0
 
+            # put parameters from p0 to a dictionary (peak)
             for i, parameter in enumerate(decode_free):
                 peak[parameter]  = popt[decode_free.index(parameter)]
                 if psigma is not None:
                     error[parameter] = psigma[decode_free.index(parameter)]
 
+            # create peak object
             peak = Peak(**peak)
             if psigma is not None:
                 peak.error.update(error)
@@ -1500,6 +1518,18 @@ class Peaks(MutableMapping):
         return s
 
 
+    def set_bounds(self, **kwargs):
+        """Set percentage wise bounds.
+
+        Args:
+
+
+        Return:
+            None
+        """
+        for peak in self:
+            peak.set_bounds(**kwargs)
+
     def build_guess(self):
         p0         = []
         bounds_min = []
@@ -1548,7 +1578,8 @@ class Peaks(MutableMapping):
 
     def build_model(self):
         f_str, args_str = self.build_model_str()
-
+        # print(f_str)
+        # print(args_str)
         model_str = f'lambda x, {args_str}: {f_str}'
         return eval(model_str)
 
