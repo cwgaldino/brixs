@@ -146,7 +146,8 @@ def copy2clipboard(txt):
         subprocess.check_call(cmd, shell=True)
     elif is_linux:
         p = subprocess.Popen(['xsel','-bi'], stdin=subprocess.PIPE)
-        p.communicate(input=bytes(txt.strip()).encode())
+        # p.communicate(input=bytes(txt.strip()).encode())
+        p.communicate(input=txt.strip())
     elif is_mac:
         cmd='echo '+ txt.strip() + ' | pbcopy'
         subprocess.check_call(cmd, shell=True)

@@ -3558,16 +3558,9 @@ class Spectrum(metaclass=_Meta):
         if len(self.peaks) == 0:
             raise ValueError('No peaks to fit.\nRun Spectrum.find_peaks().')
 
-        # build model
+        # build model ==========================================================
         p0, bounds_min, bounds_max, decode = self.peaks.build_guess()
         model = self.peaks.build_model()
-
-        # fitting
-        # print(model)
-        # print(p0)
-        if verbose: print(f'Fitting data...')
-        popt, pcov = curve_fit(model, x, y, p0=p0, bounds=(bounds_min, bounds_max))
-        if verbose: print(f'Done!')
 
         # guess ================================================================
         self._guess = Spectrum(x=self.x, y=model(self.x, *p0))
@@ -3578,6 +3571,13 @@ class Spectrum(metaclass=_Meta):
         self.guess._shift_roll   = self.shift_roll
         self.guess._shift_interp = self.shift_interp
         self.guess.peaks         = copy.deepcopy(self.peaks)
+
+        # fitting ==============================================================
+        # print(model)
+        # print(p0)
+        if verbose: print(f'Fitting data...')
+        popt, pcov = curve_fit(model, x, y, p0=p0, bounds=(bounds_min, bounds_max))
+        if verbose: print(f'Done!')
 
         # save fitted peaks parameters =========================================
         psigma = np.sqrt(np.diag(pcov))
@@ -4902,7 +4902,7 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type == 'relative':
+            if type in relative:
                 # check for previous shifts
                 if mode in roll:
                     v = value[i] + self[i].shift_roll
@@ -4910,7 +4910,7 @@ class Spectra(metaclass=_Meta):
                     v = value[i] + self[i].shift
                 elif mode in soft:
                     v = value[i] + self[i].shift_interp
-            elif type == 'absolute':
+            elif type in absolute:
                 v = value[i]
             else:
                 raise ValueError("type has to be either 'relative' or 'absolute'.")
@@ -4959,9 +4959,9 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type == 'relative':
+            if type in relative:
                 v = value[i]*self[i].factor
-            elif type == 'absolute':
+            elif type in absolute:
                 v = value[i]
             else:
                 raise ValueError("type has to be either 'relative' or 'absolute'.")
@@ -4996,9 +4996,9 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type == 'relative':
+            if type in relative:
                 v = value[i] * self[i].calib
-            elif type == 'absolute':
+            elif type in absolute:
                 v = value[i]
             else:
                 raise ValueError("type has to be either 'relative' or 'absolute'.")
@@ -5043,9 +5043,9 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type == 'relative':
+            if type in relative:
                 v = value[i] + self[i].offset
-            elif type == 'absolute':
+            elif type in absolute:
                 v = value[i]
             else:
                 raise ValueError("type has to be either 'relative' or 'absolute'.")
