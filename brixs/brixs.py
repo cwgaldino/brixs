@@ -2757,7 +2757,7 @@ class Spectrum(metaclass=_Meta):
             dict = get_attributes(self)
             kwargs['header'] += '==== brixs Spectrum ===='  + '\n'
             for n in dict:
-                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov']:
+                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov', '_peaks']:
                     if dict[n] is None:
                         kwargs['header'] += f'{n}: None'  + '\n'
                         # else:
@@ -2793,8 +2793,8 @@ class Spectrum(metaclass=_Meta):
 
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
-        # if 'delimiter' not in kwargs:
-        #     kwargs['delimiter'] = ', '
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
             kwargs['comments'] = '#'
 
@@ -2822,19 +2822,20 @@ class Spectrum(metaclass=_Meta):
                     name = line[1:-1].split(':')[0].strip()
                     value = eval(str(line[1:-1].split(':')[1:]).strip())
 
-
                     ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
                     if name in ['_peaks']:
-                        if value == []:
-                            self._peaks = Peaks()
-                        else:
-                            temp = eval(':'.join(value))
-                            for t in temp:
-                                t.pop('area')
-                            self._peaks = Peaks(temp)
+                        pass
+                        # if value == []:
+                        #     self._peaks = Peaks()
+                        # else:
+                        #     temp = eval(':'.join(value))
+                        #     for t in temp:
+                        #         t.pop('area')
+                        #     self._peaks = Peaks(temp)
                     ### DEALING WITH OTHER ATTRIBUTES ###
                     elif name not in []:  # except these attrs
                         try:
+                            value = eval(value[0])
                             setattr(self, name, value)
                         except Exception as e:
                             print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
@@ -3581,8 +3582,8 @@ class Spectrum(metaclass=_Meta):
 
         # save fitted peaks parameters =========================================
         psigma = np.sqrt(np.diag(pcov))
-        peaks   = decode(popt, psigma)
-        # print(popt)
+        peaks  = decode(popt, psigma)
+
         # fit ==================================================================
         x_temp = peaks._find_suitable_x()
         self._fit = Spectrum(x=x_temp, y=model(x_temp, *popt))
@@ -4434,6 +4435,9 @@ class Spectra(metaclass=_Meta):
         if max_error is None:
             max_error = settings.MAX_ERROR_STEP_X
 
+        # check length
+        self.check_length()
+
         # average step
         if self.step is None:
             step = 0
@@ -5175,7 +5179,7 @@ class Spectra(metaclass=_Meta):
         self._calculated_shift.mode      = mode
         self._calculated_shift.ref_value = ref_value
 
-    def calculate_factor(self, mode='peak', peak=0, bkg_check=True):
+    def calculate_factor(self, mode='peak', peak=0, ranges=None, bkg_check=True):
         """Calculate mult. factor for spectra to be same height as the first spectrum.
 
         Args:
@@ -5204,6 +5208,11 @@ class Spectra(metaclass=_Meta):
         """
         # spectra will be alined to the first spectrum
         ref = 0
+
+        # # ranges ===============================================================
+        # if ranges is not None:
+        #     ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
+        #     _, y= extract(self.x, self.y, ranges)
 
         # common variables =====================================================
         values = np.array([0.0]*len(self))

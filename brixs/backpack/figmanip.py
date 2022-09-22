@@ -315,6 +315,7 @@ def onclick(event):
             n = n_decimal_places(round_to_1(delta))*2
             x = round(event.xdata, n)
             # x = event.xdata
+            # print(x)
             copy2clipboard(str(x))
         except TypeError:
             pass

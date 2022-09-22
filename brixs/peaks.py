@@ -817,6 +817,8 @@ class Peak(MutableMapping):
                 type = 'additive'
             elif type.startswith('m'):
                 type = 'multiplicative'
+            elif type.startswith('p'):
+                type = 'percentage'
             else:
                 raise ValueError(f'type={type} not valid.\nValid types are: additive and multiplicative')
 
@@ -832,15 +834,25 @@ class Peak(MutableMapping):
                 elif isinstance(kwargs[parameter], Iterable):
                     if type == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
+                    elif type == 'multiplicative':
+                        assert kwargs[parameter][0] <= 1, f'first value for parameter "{parameter}" must be less than 1./nValue passed: {kwargs[parameter][0]}'
+                        assert kwargs[parameter][1] >= 1, f'second value for parameter "{parameter}" must be higher than 1./nValue passed: {kwargs[parameter][0]}'
+                        self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
                     else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0], self[parameter]+self[parameter]*kwargs[parameter][-1]]
+                        if self[parameter] < 0:
+                            self.bounds[parameter] = [self[parameter]+self[parameter]*kwargs[parameter][0]/100, self[parameter]-self[parameter]*kwargs[parameter][-1]/100]
+                        else:
+                            self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                     assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
                 else:
                     assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
                     if type == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
+                    elif type == 'multiplicative':
+                        raise ValueError(f'Value must be a tuple for type = multiplicative, not a number')
                     else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter], self[parameter]+self[parameter]*kwargs[parameter]]
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
+
 
         for parameter in ['fwhm', 'fwhm1', 'fwhm2']:
             if parameter in kwargs:
@@ -849,15 +861,22 @@ class Peak(MutableMapping):
                 elif isinstance(kwargs[parameter], Iterable):
                     if type == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
+                    elif type == 'multiplicative':
+                        assert kwargs[parameter][0] <= 1, f'first value for parameter "{parameter}" must be less than 1./nValue passed: {kwargs[parameter][0]}'
+                        assert kwargs[parameter][1] >= 1, f'second value for parameter "{parameter}" must be higher than 1./nValue passed: {kwargs[parameter][0]}'
+                        self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
                     else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0], self[parameter]+self[parameter]*kwargs[parameter][-1]]
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                     assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
                 else:
                     assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
                     if type == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
+                    elif type == 'multiplicative':
+                        raise ValueError(f'Value must be a tuple for type = multiplicative, not a number')
                     else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter], self[parameter]+self[parameter]*kwargs[parameter]]
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
+
                 if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
 
         for parameter in ['m', 'm1', 'm2']:
@@ -867,15 +886,21 @@ class Peak(MutableMapping):
                 elif isinstance(kwargs[parameter], Iterable):
                     if type == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
+                    elif type == 'multiplicative':
+                        assert kwargs[parameter][0] <= 1, f'first value for parameter "{parameter}" must be less than 1./nValue passed: {kwargs[parameter][0]}'
+                        assert kwargs[parameter][1] >= 1, f'second value for parameter "{parameter}" must be higher than 1./nValue passed: {kwargs[parameter][0]}'
+                        self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
                     else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0], self[parameter]+self[parameter]*kwargs[parameter][-1]]
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                     assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
                 else:
                     assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
                     if type == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
+                    elif type == 'multiplicative':
+                        raise ValueError(f'Value must be a tuple for type = multiplicative, not a number')
                     else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter], self[parameter]+self[parameter]*kwargs[parameter]]
+                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                 if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
                 if self.bounds[parameter][1] > 1: self.bounds[parameter][1] = 1
 
@@ -1025,7 +1050,8 @@ class Peak(MutableMapping):
             if psigma is not None:
                 peak.error.update(error)
             peak.asymmetry = copy.copy(self.asymmetry)
-            peak.fixed = copy.copy(self.fixed)
+            peak.fixed     = copy.copy(self.fixed)
+            peak.bounds    = copy.copy(self.bounds)
             return peak
 
         return p0, bounds_min, bounds_max, decode

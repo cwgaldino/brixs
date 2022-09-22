@@ -138,16 +138,20 @@ def query(question, default="yes"):
 def copy2clipboard(txt):
     """Copy text to clipboard.
 
-    on linux it uses ``xsel`` package (``sudo apt-get install -y xsel``)."""
+    on linux it uses ``xclip`` package (``sudo apt install xclip``).
+    """
     if is_windows:
         # cmd='echo ' + txt.strip() + ' | clip'
         cmd=f'echo|set /p={txt.strip()}| clip'
         # cmd='echo ' + txt.strip() + '| Set-Clipboard -Value {$_.Trim()}'
         subprocess.check_call(cmd, shell=True)
     elif is_linux:
-        p = subprocess.Popen(['xsel','-bi'], stdin=subprocess.PIPE)
+        # p = subprocess.Popen(['xsel','-bi'], stdin=subprocess.PIPE)
         # p.communicate(input=bytes(txt.strip()).encode())
-        p.communicate(input=txt.strip())
+        # p.communicate(input=bytes(txt.strip(), encoding='utf-8'))
+        # p.communicate(input=txt.strip())
+        with subprocess.Popen(['xclip','-selection', 'clipboard'], stdin=subprocess.PIPE) as pipe:
+            pipe.communicate(input=txt.strip().encode('utf-8'))
     elif is_mac:
         cmd='echo '+ txt.strip() + ' | pbcopy'
         subprocess.check_call(cmd, shell=True)
