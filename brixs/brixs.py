@@ -5209,23 +5209,29 @@ class Spectra(metaclass=_Meta):
         # spectra will be alined to the first spectrum
         ref = 0
 
-        # # ranges ===============================================================
-        # if ranges is not None:
-        #     ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-        #     _, y= extract(self.x, self.y, ranges)
+
 
         # common variables =====================================================
         values = np.array([0.0]*len(self))
 
         # CALCULATION ==========================================================
         if mode == 'max':
-            ref_value = max(self.data[ref].y)
-            for i in range(len(self)):
-                values[i] = ref_value/max(self.data[i].y)
+            if ranges is not None:
+                ss = self.extract(ranges)
+            else:
+                ss = self
+
+            ref_value = max(ss.data[ref].y)
+            for i in range(len(ss)):
+                values[i] = ref_value/max(ss.data[i].y)
         elif mode == 'delta':
-            ref_value = max(self.data[ref].y) - max(self.data[ref].y)
-            for i in range(len(self)):
-                values[i] = ref_value/(max(self.data[i].y) - min(self.data[i].y))
+            if ranges is not None:
+                ss = self.extract(ranges)
+            else:
+                ss = self
+            ref_value = max(ss.data[ref].y) - min(ss.data[ref].y)
+            for i in range(len(ss)):
+                values[i] = ref_value/(max(ss.data[i].y) - min(ss.data[i].y))
         elif mode == 'area':
             if bkg_check:  # check if background is zero
                 temp = [False]*len(self)
@@ -5244,7 +5250,7 @@ class Spectra(metaclass=_Meta):
             ref_value = self.data[ref].area
             for i in range(len(self)):
                 values[i] = ref_value/self.data[i].area
-        elif mode == 'fitted peaks':
+        elif mode == 'fitted peaks' or mode == 'fitted peak':
             # check if all data has fit
             self._check_fit()
             # check if number of peaks for each spectrum is the same
@@ -5301,7 +5307,7 @@ class Spectra(metaclass=_Meta):
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
         else:
-            raise ValueError('mode not valid.\nValid modes: max, delta, area, fitted peaks, fitted peaks area, peak, peak area.')
+            raise ValueError('mode not valid.\nValid modes: max, delta, area, fitted peaks (or fitted peak), fitted peaks area, peak, peak area.')
 
         # save calculated values ===============================================
         self._calculated_factor           = Spectrum(y=values)

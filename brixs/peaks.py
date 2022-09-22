@@ -1649,3 +1649,79 @@ class Peaks(MutableMapping):
             r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
             plt.text(self[i]['c']*calib+shift, self[i]['amp']*factor+offset, i, fontsize=14)
         return r
+
+
+class Peakss(MutableMapping):
+
+        def __init__(self, *args, **kwargs):
+            # core
+            self._store = []
+
+            # modifiers
+            if 'shift' in kwargs:
+                self._shift = kwargs.pop('shift')
+            else:
+                self._shift = 0
+            if 'calib' in kwargs:
+                self._calib = kwargs.pop('calib')
+            else:
+                self._calib = 1
+            if 'offset' in kwargs:
+                self._offset = kwargs.pop('offset')
+            else:
+                self._offset = 0
+            if 'factor' in kwargs:
+                self._factor = kwargs.pop('factor')
+            else:
+                self._factor = 1
+
+            # data
+            if 'data' in kwargs:
+                if isinstance(kwargs['data'], dict) or isinstance(kwargs['data'], Peak):#(id(Peak) == id(kwargs['data'].__class__)):#
+                    self.append(kwargs['data'])
+                elif isinstance(kwargs['data'], Iterable):
+                    for p in kwargs['data']:
+                        self.append(p)
+                else:
+                    raise ValueError('data must be a list of peaks (dictionaries).')
+            else:
+                if len(args) == 1:
+                    if isinstance(args[0], dict) or isinstance(args[0], Peak): #(id(Peak) == id(args[0].__class__)):#
+                        self.append(args[0])
+                    elif isinstance(args[0], Iterable):
+                        for p in args[0]:
+                            self.append(p)
+                    else:
+                        raise ValueError('data must be a list of peaks (dictionaries).')
+                elif len(args) > 1:
+                    for p in args:
+                        self.append(p)
+
+        def __str__(self):
+            return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+
+        def __repr__(self):
+            return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+
+        def __getitem__(self, key):
+            return self._store[self._check_key(key)]
+
+        def __setitem__(self, key, value):
+
+            if isinstance(value, Peak):
+                self._store[self._check_key(key)] = value
+            elif isinstance(value, dict):
+                self._store[self._check_key(key)] = Peak(**value)
+            else:
+                raise ValueError('valuea must be a dict or a peak object')
+            self._fix_order()
+
+        def __delitem__(self, key):
+            del self._store[self._check_key(key)]
+            self._fix_order()
+
+        def __iter__(self):
+            return iter(self._store)
+
+        def __len__(self):
+            return len(self._store)
