@@ -1,0 +1,134 @@
+{
+    "_store": {
+        "amp": 4,
+        "area": 0.7515498229597211,
+        "c": 1.1,
+        "fwhm": 0.2,
+        "fwhm1": null,
+        "fwhm2": null,
+        "m": 0,
+        "m1": null,
+        "m2": null
+    },
+    "error": {
+        "amp": 0,
+        "area": 0,
+        "c": 0,
+        "fwhm": 0,
+        "fwhm1": 0,
+        "fwhm2": 0,
+        "m": 0,
+        "m1": 0,
+        "m2": 0
+    },
+    "bounds": {
+        "amp": [
+            -Infinity,
+            Infinity
+        ],
+        "c": [
+            -Infinity,
+            Infinity
+        ],
+        "fwhm": [
+            0,
+            Infinity
+        ],
+        "fwhm1": [
+            0,
+            Infinity
+        ],
+        "fwhm2": [
+            0,
+            Infinity
+        ],
+        "m": [
+            0,
+            1
+        ],
+        "m1": [
+            0,
+            1
+        ],
+        "m2": [
+            0,
+            1
+        ]
+    },
+    "asymmetry": false,
+    "fixed": [
+        "m"
+    ],
+    "_shift": 0,
+    "_calib": 1,
+    "_offset": 0,
+    "_factor": 1
+}
+end_of_peak
+{
+    "_store": {
+        "amp": 4,
+        "area": 1.5030996459194421,
+        "c": 3,
+        "fwhm": 0.4,
+        "fwhm1": null,
+        "fwhm2": null,
+        "m": 0,
+        "m1": null,
+        "m2": null
+    },
+    "error": {
+        "amp": 0,
+        "area": 0,
+        "c": 0,
+        "fwhm": 0,
+        "fwhm1": 0,
+        "fwhm2": 0,
+        "m": 0,
+        "m1": 0,
+        "m2": 0
+    },
+    "bounds": {
+        "amp": [
+            -Infinity,
+            Infinity
+        ],
+        "c": [
+            -Infinity,
+            Infinity
+        ],
+        "fwhm": [
+            0,
+            Infinity
+        ],
+        "fwhm1": [
+            0,
+            Infinity
+        ],
+        "fwhm2": [
+            0,
+            Infinity
+        ],
+        "m": [
+            0,
+            1
+        ],
+        "m1": [
+            0,
+            1
+        ],
+        "m2": [
+            0,
+            1
+        ]
+    },
+    "asymmetry": false,
+    "fixed": [
+        "m"
+    ],
+    "_shift": 0,
+    "_calib": 1,
+    "_offset": 0,
+    "_factor": 1
+}
+end_of_peak

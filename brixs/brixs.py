@@ -2365,80 +2365,6 @@ class Spectrum(metaclass=_Meta):
         # default values
         # self.calib = settings.DEFAULT_SPECTRUM_CALIB
 
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath. If two data sets are passed, it will
-            assume one is the x coordinates and the next one is the y coordinates.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, x, y, filepath
-        """
-        # initial check
-        if kwargs != {} and args != ():
-            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
-
-        # initialization
-        data = None
-        x    = None
-        y    = None
-        filepath = None
-
-        # keyword arguments
-        if 'data' in kwargs:
-            data = kwargs['data']
-        if 'y' in kwargs:
-            if 'x' in kwargs:
-                x = kwargs['x']
-            else:
-                x = None
-            y = kwargs['y']
-        elif 'x' in kwargs:
-            raise AttributeError('cannot seem to find y data.')
-        if 'filepath' in kwargs:
-            filepath = kwargs['filepath']
-
-        # positional arguments
-        if len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = args[0]
-            elif isinstance(args[0], Iterable):
-                data = args[0]
-        elif len(args) == 2:
-            x = args[0]
-            y = args[1]
-        elif len(args) > 2:
-            raise AttributeError('brixs.Spectrum() cannot figure out the data out of the arguments passed. Maybe use key word arguments (x, y, data, filepath).')
-
-        return data, x, y, filepath
-
-    def _transfer_attributes(self, object, type='Spectrum'):
-        """Select attributes that will be copyed to different output objects."""
-        dict = get_attributes(self)
-
-        # list of attributes NOT to transfer based on the type
-        do_not_transfer = {'Image':        ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
-                           'PhotonEvents': ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
-                           'Spectrum':     ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
-                           'Spectra':      ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks']}
-
-        # uncomment to check attributes (for testing only)
-        # for n in dict:
-        #     print(n)
-
-        for n in dict:
-            if n not in do_not_transfer[type]:
-                object.__setattr__(n, self.__getattribute__(n))
-        return object
-
-
     def __len__(self):
         if self.x is None:
             return 0
@@ -2513,6 +2439,81 @@ class Spectrum(metaclass=_Meta):
 
     def __truediv__(self, object):
         return self.__div__(object)
+
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
+
+        Keyword arguments (kwargs) cannot be mixed with positional arguments.
+
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath. If two data sets are passed, it will
+            assume one is the x coordinates and the next one is the y coordinates.
+
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, x, y, filepath
+        """
+        # initial check
+        if kwargs != {} and args != ():
+            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
+        if any([item not in ['data', 'x', 'y', 'filepath'] for item in kwargs.keys()]):
+            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `x`, `y`, and `filepath`\nInput attributes: {kwargs.keys()}')
+
+        # initialization
+        data = None
+        x    = None
+        y    = None
+        filepath = None
+
+        # keyword arguments
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'y' in kwargs:
+            if 'x' in kwargs:
+                x = kwargs['x']
+            else:
+                x = None
+            y = kwargs['y']
+        elif 'x' in kwargs:
+            raise AttributeError('cannot seem to find y data.')
+        if 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = args[0]
+            elif isinstance(args[0], Iterable):
+                data = args[0]
+        elif len(args) == 2:
+            x = args[0]
+            y = args[1]
+        elif len(args) > 2:
+            raise AttributeError('brixs.Spectrum() cannot figure out the data out of the arguments passed. Maybe use key word arguments (x, y, data, filepath).')
+
+        return data, x, y, filepath
+
+    def _transfer_attributes(self, object, type='Spectrum'):
+        """Select attributes that will be copyed to different output objects."""
+        dict = get_attributes(self)
+
+        # list of attributes NOT to transfer based on the type
+        do_not_transfer = {'Image':        ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
+                           'PhotonEvents': ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
+                           'Spectrum':     ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
+                           'Spectra':      ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks']}
+
+        # uncomment to check attributes (for testing only)
+        # for n in dict:
+        #     print(n)
+
+        for n in dict:
+            if n not in do_not_transfer[type]:
+                object.__setattr__(n, self.__getattribute__(n))
+        return object
 
 
 
@@ -3743,7 +3744,7 @@ class Spectra(metaclass=_Meta):
         self._data = None
 
         # argument parsing
-        data, dirpath, n = self._args_checker(args, kwargs)
+        data, dirpath, n = self._sort_args(args, kwargs)
 
         # sorting data
         if data is not None:
@@ -3788,7 +3789,6 @@ class Spectra(metaclass=_Meta):
         else:
             raise TypeError('Index must be int, not {}'.format(type(key).__name__))
 
-
     def __setitem__(self, item, value):
         if isinstance(value, Spectrum) == False:
             raise ValueError(f'value must be of type brixs.spectrum, not {type(value)}')
@@ -3805,7 +3805,7 @@ class Spectra(metaclass=_Meta):
     def __delitem__(self, item):
         self.remove(item)
 
-    def _args_checker(self, args, kwargs):
+    def _sort_args(self, args, kwargs):
         """checks initial arguments.
 
          Keyword arguments (kwargs) cannot be mixed with positional arguments.
@@ -4227,7 +4227,7 @@ class Spectra(metaclass=_Meta):
         self._calculated_offset = None
 
         # if dirpath is str
-        if type(dirpath) == str:
+        if isinstance(dirpath, str) or isinstance(dirpath, Path):
             dirpath = Path(dirpath)
             if dirpath.is_file():
                 if verbose: print('dirpath is a file')
@@ -4906,19 +4906,19 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type in relative:
-                # check for previous shifts
-                if mode in roll:
-                    v = value[i] + self[i].shift_roll
-                elif mode in hard:
-                    v = value[i] + self[i].shift
-                elif mode in soft:
-                    v = value[i] + self[i].shift_interp
-            elif type in absolute:
-                v = value[i]
-            else:
-                raise ValueError("type has to be either 'relative' or 'absolute'.")
-            self.data[i].set_shift(value=v, mode=mode)
+            # if type in relative:
+            #     # check for previous shifts
+            #     if mode in roll:
+            #         v = value[i] + self[i].shift_roll
+            #     elif mode in hard:
+            #         v = value[i] + self[i].shift
+            #     elif mode in soft:
+            #         v = value[i] + self[i].shift_interp
+            # elif type in absolute:
+            #     v = value[i]
+            # else:
+            #     raise ValueError("type has to be either 'relative' or 'absolute'.")
+            self.data[i].set_shift(value=value[i], mode=mode, type=type)
 
         # if mode not interp and shifts are different, reset x
         if mode not in soft:
@@ -4950,7 +4950,6 @@ class Spectra(metaclass=_Meta):
         if value is None:
             if self.calculated_factor is None:
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_factor().')
-
             value = self.calculated_factor.y
         else:
             # check if value is a number
@@ -4960,16 +4959,15 @@ class Spectra(metaclass=_Meta):
         # value must be the right length
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
-
         # set values ===========================================================
         for i in range(len(self)):
-            if type in relative:
-                v = value[i]*self[i].factor
-            elif type in absolute:
-                v = value[i]
-            else:
-                raise ValueError("type has to be either 'relative' or 'absolute'.")
-            self[i].set_factor(value=v)
+            # if type in relative:
+            #     v = value[i]*self[i].factor
+            # elif type in absolute:
+            #     v = value[i]
+            # else:
+            #     raise ValueError("type has to be either 'relative' or 'absolute'.")
+            self[i].set_factor(value=value[i], type=type)
 
         # reset attributes =====================================================
         # self._restart_check_attr()
@@ -5000,13 +4998,13 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type in relative:
-                v = value[i] * self[i].calib
-            elif type in absolute:
-                v = value[i]
-            else:
-                raise ValueError("type has to be either 'relative' or 'absolute'.")
-            self[i].set_calib(value=v)
+            # if type in relative:
+            #     v = value[i] * self[i].calib
+            # elif type in absolute:
+            #     v = value[i]
+            # else:
+            #     raise ValueError("type has to be either 'relative' or 'absolute'.")
+            self[i].set_calib(value=value[i], type=type)
 
         # reset attributes =====================================================
         self._restart_check_attr()
@@ -5047,13 +5045,13 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            if type in relative:
-                v = value[i] + self[i].offset
-            elif type in absolute:
-                v = value[i]
-            else:
-                raise ValueError("type has to be either 'relative' or 'absolute'.")
-            self[i].set_offset(value=v)
+            # if type in relative:
+            #     v = value[i] + self[i].offset
+            # elif type in absolute:
+            #     v = value[i]
+            # else:
+            #     raise ValueError("type has to be either 'relative' or 'absolute'.")
+            self[i].set_offset(value=value[i], type=type)
 
         # reset attributes =====================================================
         # self._restart_check_attr()

@@ -83,7 +83,7 @@ print(ps)
 # plot
 fig = br.backpack.figure()
 _ = ps.spectrum.plot(marker='o', label='peak curve')
-ps.plot('peak position')
+ps.plot(label='peak position')
 plt.legend()
 
 # append and remove
@@ -105,11 +105,26 @@ temp = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
 ps = br.Peaks(temp)
 ps.save()
 
-p2 = br.Peak(amp=0, c=0, fwhm=1)
+p2 = br.Peaks()
 p2.load('Untitled.txt')
 print(p2)
 
 
+# %% collection ================================================================
+import brixs as br
+
+
+temp = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
+ps1 = br.Peaks(temp)
+
+temp = [{'amp':4, 'c':1.1, 'fwhm':0.2}, {'amp':4, 'c':3, 'fwhm':0.4}]
+ps2 = br.Peaks(temp)
+
+c = br.Collection([ps1, ps2])
+
+ps1[0]
+ps1.save('test/hh.dat')
+c.save('test/')
 
 
 

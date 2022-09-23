@@ -15,6 +15,7 @@ import json
 # backpack
 from .backpack.arraymanip import sort
 from .backpack.model_functions import voigt_fwhm, dirac_delta
+from .backpack.figmanip import n_digits
 
 # BRIXS
 from . import brixs as br
@@ -1090,6 +1091,7 @@ class Peak(MutableMapping):
         temp['asymmetry'] = self.asymmetry
         return build_model(**temp)
 
+
 class Peaks(MutableMapping):
     """A special dictionary for saving peaks.
 
@@ -1119,45 +1121,13 @@ class Peaks(MutableMapping):
         # core
         self._store = []
 
-        # modifiers
-        if 'shift' in kwargs:
-            self._shift = kwargs.pop('shift')
-        else:
-            self._shift = 0
-        if 'calib' in kwargs:
-            self._calib = kwargs.pop('calib')
-        else:
-            self._calib = 1
-        if 'offset' in kwargs:
-            self._offset = kwargs.pop('offset')
-        else:
-            self._offset = 0
-        if 'factor' in kwargs:
-            self._factor = kwargs.pop('factor')
-        else:
-            self._factor = 1
+        data, filepath = self._sort_args(args, kwargs)
 
         # data
-        if 'data' in kwargs:
-            if isinstance(kwargs['data'], dict) or isinstance(kwargs['data'], Peak):#(id(Peak) == id(kwargs['data'].__class__)):#
-                self.append(kwargs['data'])
-            elif isinstance(kwargs['data'], Iterable):
-                for p in kwargs['data']:
-                    self.append(p)
-            else:
-                raise ValueError('data must be a list of peaks (dictionaries).')
-        else:
-            if len(args) == 1:
-                if isinstance(args[0], dict) or isinstance(args[0], Peak): #(id(Peak) == id(args[0].__class__)):#
-                    self.append(args[0])
-                elif isinstance(args[0], Iterable):
-                    for p in args[0]:
-                        self.append(p)
-                else:
-                    raise ValueError('data must be a list of peaks (dictionaries).')
-            elif len(args) > 1:
-                for p in args:
-                    self.append(p)
+        if data is not None:
+            self._store = data
+        elif filepath is not None:
+            self.load(filepath)
 
     def __str__(self):
         return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
@@ -1166,20 +1136,24 @@ class Peaks(MutableMapping):
         return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
 
     def __getitem__(self, key):
-        return self._store[self._check_key(key)]
+        if isinstance(key, int):
+            return self._store[key]
+        elif isinstance(key, slice):
+            return Peaks(self._store[key])
+        else:
+            raise TypeError('Index must be int, not {}'.format(type(key).__name__))
 
     def __setitem__(self, key, value):
-
         if isinstance(value, Peak):
-            self._store[self._check_key(key)] = value
+            self._store[key] = value
         elif isinstance(value, dict):
-            self._store[self._check_key(key)] = Peak(**value)
+            self._store[key] = Peak(**value)
         else:
             raise ValueError('valuea must be a dict or a peak object')
         self._fix_order()
 
     def __delitem__(self, key):
-        del self._store[self._check_key(key)]
+        del self._store[key]
         self._fix_order()
 
     def __iter__(self):
@@ -1188,12 +1162,49 @@ class Peaks(MutableMapping):
     def __len__(self):
         return len(self._store)
 
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
 
-    def _check_key(self, key):
-        """Check if key exists. Allows for minus (-) assignment."""
-        if key > len(self)-1 or key < -len(self):
-            raise KeyError('key out of range of defined peaks.\n')
-        return key
+         Keyword arguments (kwargs) cannot be mixed with positional arguments.
+
+        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
+            3) filepath. For example, if `data` and `filepath` are passed as
+            arguments, `filepath` is ignored.
+
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath. If two data sets are passed, it will
+            assume one is the x coordinates and the next one is the y coordinates.
+
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, x, y, filepath
+        """
+        # print(kwargs)
+        # print(args)
+        if kwargs != {} and args != ():
+            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
+        if any([item not in ['data', 'filepath'] for item in kwargs.keys()]):
+            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `dirpath`, and `filepaths`\nInput attributes: {kwargs.keys()}')
+
+        data     = None
+        filepath = None
+        if 'data' in kwargs:
+            data = kwargs['data']
+        elif 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+        elif len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = Path(args[0])
+            elif isinstance(args[0], Peak):
+                    data = [args[0], ]
+            elif isinstance(args[0], Iterable):
+                data = args[0]
+        elif len(args) > 1:
+            data = args
+        return data, filepath
 
     def _fix_order(self):
         """Returns another PeakDict where peak number is numbered according to its position c."""
@@ -1210,7 +1221,10 @@ class Peaks(MutableMapping):
 
     @property
     def calib(self):
-        return self._calib
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].calib
+        return temp
     @calib.setter
     def calib(self, value):
         self.set_calib(value)
@@ -1220,7 +1234,10 @@ class Peaks(MutableMapping):
 
     @property
     def shift(self):
-        return self._shift
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].shift
+        return temp
     @shift.setter
     def shift(self, value):
         self.set_shift(value)
@@ -1230,7 +1247,10 @@ class Peaks(MutableMapping):
 
     @property
     def offset(self):
-        return self._offset
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].offset
+        return temp
     @offset.setter
     def offset(self, value):
         self.set_offset(value)
@@ -1240,7 +1260,10 @@ class Peaks(MutableMapping):
 
     @property
     def factor(self):
-        return self._factor
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].factor
+        return temp
     @factor.setter
     def factor(self, value):
         self.set_factor(value)
@@ -1376,7 +1399,7 @@ class Peaks(MutableMapping):
             del self._store[key]
 
 
-    def set_calib(self, value):
+    def set_calib(self, value, type='relative'):
         """Set calibration value.
 
         Args:
@@ -1386,12 +1409,19 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
         for peak in self._store:
-            peak.calib = value
-        self._calib = value
+            # peak.calib = value
+            peak.set_calib(value=value, type=type)
         self._fix_order()
 
-    def set_shift(self, value):
+    def set_shift(self, value, type='relative'):
         """Set shift value.
 
         Args:
@@ -1400,11 +1430,23 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        for peak in self._store:
-            peak.shift = value
-        self._shift = value
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
 
-    def set_offset(self, value):
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peak in self._store:
+            # peak.calib = value
+            peak.set_shift(value=value, type=type)
+        self._fix_order()
+
+        # for peak in self._store:
+        #     peak.shift = value
+        # self._shift = value
+
+    def set_offset(self, value, type='relative'):
         """Set offset value.
 
         Args:
@@ -1413,11 +1455,23 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        for peak in self._store:
-            peak.offset = value
-        self._offset = value
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
 
-    def set_factor(self, value):
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peak in self._store:
+            # peak.calib = value
+            peak.set_offset(value=value, type=type)
+        # self._fix_order()
+
+        # for peak in self._store:
+        #     peak.offset = value
+        # self._offset = value
+
+    def set_factor(self, value, type='relative'):
         """Set y multiplicative factor.
 
         Args:
@@ -1427,9 +1481,21 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
         for peak in self._store:
-            peak.factor = value
-        self._factor = value
+            # peak.calib = value
+            peak.set_factor(value=value, type=type)
+        # self._fix_order()
+
+        # for peak in self._store:
+        #     peak.factor = value
+        # self._factor = value
 
 
     def split(self, key, n=1):
@@ -1470,14 +1536,14 @@ class Peaks(MutableMapping):
                 count = len([k2 for k2 in key if k2 == i])   # counts same key
                 if count > 0:
                     for n in range(count):
-                        temp = copy.deepcopy(self._store[self._check_key(key)])
+                        temp = copy.deepcopy(self._store[key])
                         temp['c']+=temp['fwhm']/4
                         self.append(temp)
             for value in temp:
                 self.append(value)
         else:
-            temp = copy.deepcopy(self._store[self._check_key(key)])
-            self._store[self._check_key(key)]['c'] -= self._store[self._check_key(key)]['fwhm']/4
+            temp = copy.deepcopy(self._store[key])
+            self._store[key]['c'] -= self._store[key]['fwhm']/4
             temp['c'] += temp['fwhm']/4
             self.append(temp)
 
@@ -1643,6 +1709,8 @@ class Peaks(MutableMapping):
                     set_window_position(settings.FIGURE_POSITION)
                 except:
                     pass
+        elif type(ax) == str:
+            raise ValueError(f'ax parameter cannot be type str ("{ax}").')
 
         r = {}
         for i in range(len(self)):
@@ -1651,77 +1719,382 @@ class Peaks(MutableMapping):
         return r
 
 
-class Peakss(MutableMapping):
+class Collection(MutableMapping):
 
-        def __init__(self, *args, **kwargs):
-            # core
-            self._store = []
+    def __init__(self, *args, **kwargs):
+        # core
+        self._store = []
 
-            # modifiers
-            if 'shift' in kwargs:
-                self._shift = kwargs.pop('shift')
-            else:
-                self._shift = 0
-            if 'calib' in kwargs:
-                self._calib = kwargs.pop('calib')
-            else:
-                self._calib = 1
-            if 'offset' in kwargs:
-                self._offset = kwargs.pop('offset')
-            else:
-                self._offset = 0
-            if 'factor' in kwargs:
-                self._factor = kwargs.pop('factor')
-            else:
-                self._factor = 1
+        # argument parsing
+        data, dirpath, filepaths = self._sort_args(args, kwargs)
 
-            # data
-            if 'data' in kwargs:
-                if isinstance(kwargs['data'], dict) or isinstance(kwargs['data'], Peak):#(id(Peak) == id(kwargs['data'].__class__)):#
-                    self.append(kwargs['data'])
-                elif isinstance(kwargs['data'], Iterable):
-                    for p in kwargs['data']:
-                        self.append(p)
+        # data
+        if data is not None:
+            if isinstance(data, Peaks):
+                self.append(data)
+            elif isinstance(data, Iterable):
+                for peaks in data:
+                    self.append(peaks)
+            else:
+                raise ValueError('data must be a list of type brixs.Peaks.')
+        elif dirpath is not None:
+            self.load(dirpath)
+        elif filepaths is not None:
+            self.load(filepaths)
+
+    def __str__(self):
+        return str([val for i, val in enumerate(self._store)])[1:-1].replace('}, ', '}\n=====\n')
+
+    def __repr__(self):
+        return str([val for i, val in enumerate(self._store)])[1:-1].replace('}, ', '}\n=====\n')
+
+    def __getitem__(self, key):
+        return self._store[key]
+
+    def __setitem__(self, key, value):
+
+        if isinstance(value, Peaks):
+            self._store[key] = value
+        else:
+            raise ValueError('value must be a brixs.Peaks object')
+
+    def __delitem__(self, key):
+        del self._store[key]
+
+    def __iter__(self):
+        return iter(self._store)
+
+    def __len__(self):
+        return len(self._store)
+
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
+
+         Keyword arguments (kwargs) cannot be mixed with positional arguments.
+
+        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
+            3) filepath. For example, if `data` and `filepath` are passed as
+            arguments, `filepath` is ignored.
+
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath. If two data sets are passed, it will
+            assume one is the x coordinates and the next one is the y coordinates.
+
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, x, y, filepath
+        """
+        # print(kwargs)
+        # print(args)
+        if kwargs != {} and args != ():
+            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
+        if any([item not in ['data', 'dirpath'] for item in kwargs.keys()]):
+            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `dirpath`, and `filepaths`\nInput attributes: {kwargs.keys()}')
+
+        data      = None
+        dirpath   = None
+        filepaths = None
+        if 'data' in kwargs:
+            data = kwargs['data']
+        elif 'dirpath' in kwargs:
+            dirpath = kwargs['dirpath']
+        elif 'filepaths' in kwargs:
+            filepaths = kwargs['filepaths']
+        elif len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                temp = Path(args[0])
+                if temp.is_file():
+                    filepaths = [temp, ]
+                elif temp.is_dir():
+                    dirpath = temp
                 else:
-                    raise ValueError('data must be a list of peaks (dictionaries).')
+                    raise ValueError(f'cannot read dirpath or filepath.\nError: {dirpath}')
+            elif isinstance(args[0], Iterable):
+                if isinstance(args[0][0], str) or isinstance(args[0][0], Path):
+                    filepaths = [Path(x) for x in args[0]]
+                else:
+                    data = args[0]
+        elif len(args) > 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepaths = [Path(x) for x in args]
+            elif isinstance(args[0], Iterable):
+                data = args
+        return data, dirpath, filepaths
+
+
+
+    @property
+    def calib(self):
+        return self._calib
+    @calib.setter
+    def calib(self, value):
+        self.set_calib(value)
+    @calib.deleter
+    def calib(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def shift(self):
+        return self._shift
+    @shift.setter
+    def shift(self, value):
+        self.set_shift(value)
+    @shift.deleter
+    def shift(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def offset(self):
+        return self._offset
+    @offset.setter
+    def offset(self, value):
+        self.set_offset(value)
+    @offset.deleter
+    def offset(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def factor(self):
+        return self._factor
+    @factor.setter
+    def factor(self, value):
+        self.set_factor(value)
+    @factor.deleter
+    def factor(self):
+            raise AttributeError('Cannot delete object.')
+
+
+    def save(self, dirpath='./', prefix='peaks_', suffix='.dat', zfill=None, verbose=False, **kwargs):
+        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user want to overwrite file.
+
+        Returns:
+            None
+
+        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
+        """
+        dirpath = Path(dirpath)
+
+        # check if dirpath is a directory
+        assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
+        assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
+
+        # set filenames
+        if zfill is None:
+            zfill = n_digits(len(self)-1)[0]
+
+        # saving
+        if verbose: print('saving files...')
+        for i, peaks in enumerate(self):
+            filename = f'{prefix}' + f'{i}'.zfill(zfill) + f'{suffix}'
+            if verbose:  print(f':{i}/{len(self)-1}: {filename}')
+            peaks.save(filepath=dirpath/filename, **kwargs)
+        if verbose: print('Done!')
+
+    def load(self, dirpath, string='*', verbose=False, **kwargs):
+        """Load peak from a text file. Wrapper for `json.load()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first decompressed.
+
+        Returns:
+            None
+
+        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
+        """
+        # reset data
+        self._store     = []
+
+        # if dirpath is str
+        if isinstance(dirpath, str) or isinstance(dirpath, Path):
+            dirpath = Path(dirpath)
+            if dirpath.is_file():
+                if verbose: print('dirpath is a file')
+                if verbose: print('Loading...')
+                self.append(Peaks(filepath=dirpath))
+                if verbose: print('Done!')
+                return
+            elif dirpath.is_dir():
+                dirpath = [dirpath, ]
             else:
-                if len(args) == 1:
-                    if isinstance(args[0], dict) or isinstance(args[0], Peak): #(id(Peak) == id(args[0].__class__)):#
-                        self.append(args[0])
-                    elif isinstance(args[0], Iterable):
-                        for p in args[0]:
-                            self.append(p)
-                    else:
-                        raise ValueError('data must be a list of peaks (dictionaries).')
-                elif len(args) > 1:
-                    for p in args:
-                        self.append(p)
+                raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
 
-        def __str__(self):
-            return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+        # if dirpath is iterable
+        if isinstance(dirpath, Iterable):
+            if verbose: print('Loading...')
+            for j, filepath in enumerate(dirpath):
+                if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
 
-        def __repr__(self):
-            return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+                if Path(filepath).is_dir():
+                    fl = filelist(dirpath=filepath, string=string)
+                    for i, f in enumerate(fl):
+                        if verbose: print(f'        {j+1}/{len(fl)}: {f}')
+                        self.append(Peaks(filepath=f))
 
-        def __getitem__(self, key):
-            return self._store[self._check_key(key)]
+                elif Path(filepath).is_file():
+                    self.append(Peaks(filepath=filepath))
+                else:
+                    raise ValueError(f'cannot read filepath.\nfilepath: {dirpath}')
+        if verbose: print('Done!')
 
-        def __setitem__(self, key, value):
 
-            if isinstance(value, Peak):
-                self._store[self._check_key(key)] = value
-            elif isinstance(value, dict):
-                self._store[self._check_key(key)] = Peak(**value)
-            else:
-                raise ValueError('valuea must be a dict or a peak object')
-            self._fix_order()
+    def append(self, value):
+        """Append peak. Peak order is reassigned.
 
-        def __delitem__(self, key):
-            del self._store[self._check_key(key)]
-            self._fix_order()
+        Args:
+            value (Peak or dict): peak to be appended.
 
-        def __iter__(self):
-            return iter(self._store)
+        Returns:
+            None
+        """
+        if isinstance(value, Peaks):
+            self._store.append(value)
+        else:
+            raise ValueError('value must be a brixs.Peaks object')
 
-        def __len__(self):
-            return len(self._store)
+    def remove(self, key):
+        """Remove peak. Peak order is reassigned.
+
+        Args:
+            key (int or list): peaks to be removed.
+
+        Returns:
+            None
+        """
+        if isinstance(key, Iterable):
+            key = [self._check_key(k) for k in key]
+            key = sort(key)[::-1]
+            if has_duplicates(key):
+                raise ValueError('list has duplicated peaks')
+            for k in key:
+                del self._store[k]
+        else:
+            del self._store[key]
+
+
+    def set_calib(self, value, type='relative'):
+        """Set calibration value.
+
+        Args:
+            value (number): calibration value (x-coordinates will be multiplied
+                by this value).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_calib(value=value, type=type)
+
+    def set_shift(self, value, type='relative'):
+        """Set shift value.
+
+        Args:
+            value (float or int): shift value (value will be added to x-coordinates).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_shift(value=value, type=type)
+
+    def set_offset(self, value, type='relative'):
+        """Set offset value.
+
+        Args:
+            value (value): offset value (value will be added to y-coordinates).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_offset(value=value, type=type)
+
+    def set_factor(self, value, type='relative'):
+        """Set y multiplicative factor.
+
+        Args:
+            value (number): multiplicative factor (y-coordinates will be
+                multiplied by this value).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_factor(value=value, type=type)
+
+
+
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            offset (number, optional): defines a vertical offset. Default is 0.
+            shift (number, optional): horizontal shift value. Default is 0.
+            factor (number, optional): multiplicative factor on the y axis.
+                Default is 1.
+            calib (number, optional): multiplicative factor on the x axis.
+                Default is 1.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+
+        Returns:
+            dict with `ErrorbarContainer`_
+
+        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        """
+        if ax is None:
+            ax = plt
+            if settings.ALWAYS_PLOT_NEW_WINDOW:
+                figure()
+                if settings.FIGURE_POSITION is not None:
+                    try:
+                        set_window_position(settings.FIGURE_POSITION)
+                    except:
+                        pass
+            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+                try:
+                    set_window_position(settings.FIGURE_POSITION)
+                except:
+                    pass
+
+        r = {}
+        for i in range(len(self)):
+            r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
+        return r
