@@ -50,7 +50,7 @@ def is_notebook():
         if shell == 'ZMQInteractiveShell':
             return True   # Jupyter notebook or qtconsole
         elif shell == 'TerminalInteractiveShell':
-            return False  # Terminal running IPython
+            return True  # Terminal running IPython
         else:
             return False  # Other type (?)
     except NameError:
@@ -182,8 +182,8 @@ def svg2clipboard(filepath):
     if is_windows:
         raise NotImplementedError('This function is not implemented on Windows yet.')
     elif is_linux:
-        p = Popen([f'xclip -selection clipboard -t image/svg+xml -i {filepath}'], shell=True)  # ctrl+V
-        p = Popen([f'echo {filepath}  |xclip -in -selection primary -target text/uri-list'], shell=True)  # ctrl+V
+        p = subprocess.Popen([f'xclip -selection clipboard -t image/svg+xml -i {filepath}'], shell=True)  # ctrl+V
+        p = subprocess.Popen([f'echo {filepath}  |xclip -in -selection primary -target text/uri-list'], shell=True)  # ctrl+V
     elif is_mac:
         raise NotImplementedError('This function is not implemented on Mac yet.')
     return

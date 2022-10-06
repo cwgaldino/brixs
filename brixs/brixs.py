@@ -37,7 +37,7 @@ from .backpack.filemanip import load_Comments, filelist
 from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes, derivative
 from .backpack.arraymanip import is_integer, all_equal, factors, flatten, peak_fit, check_monotonicity, fix_monotonicity
 from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
-from .peaks import Peak, Peaks
+from .peaks import Peak, Peaks, Collection
 from .backpack.model_functions import voigt_fwhm, dirac_delta
 
 # common definitions ===========================================================
@@ -2841,6 +2841,12 @@ class Spectrum(metaclass=_Meta):
                         except Exception as e:
                             print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
 
+            # peaks
+            self._peaks = Peaks()
+            self.peaks._shift  = self.shift
+            self.peaks._calib  = self.calib
+            self.peaks._offset = self.offset
+            self.peaks._factor = self.factor
 
     def check_step_x(self, max_error=0.1):
         """Checks vector uniformity of the x-coordinates.
@@ -3006,14 +3012,10 @@ class Spectrum(metaclass=_Meta):
                 # print('here')
                 if self.shift_roll != 0:  # undo last shift
                     self._x, self._y = shifted(self.x, self.y, value=-self.shift_roll, mode='roll')
-                    if self.peaks is not None:
-                        self.peaks.shift += self.step*-self.shift_roll
                 if value != 0:
                     # print(value)
                     self._x, self._y = shifted(self.x, self.y, value=value, mode=mode)
                     # print(self._y)
-                    if self.peaks is not None:
-                        self.peaks.shift += self.step*value
                 self._shift_roll = value
                 self._data[:, 0] = self._x
                 self._data[:, 1] = self._y
@@ -3024,12 +3026,8 @@ class Spectrum(metaclass=_Meta):
             if self.shift != value:
                 if self.shift != 0:
                     self._x, self._y = shifted(self.x, self.y, value=-self._shift, mode='x')
-                    if self.peaks is not None:
-                        self.peaks.shift += -self._shift
                 if value != 0:
                     self._x, self._y = shifted(self.x, self.y, value=value, mode=mode)
-                    if self.peaks is not None:
-                        self.peaks.shift += value
                 self._shift = value
                 self._data[:, 0] = self._x
                 self._data[:, 1] = self._y
@@ -3045,12 +3043,10 @@ class Spectrum(metaclass=_Meta):
 
                 if self.shift_interp != 0:
                     self._x, self._y = shifted(self.x, self.y, value=-self.shift_interp, mode='interp')
-                    if self.peaks is not None:
-                        self.peaks.shift += -self.shift_interp
+                    # if self.peaks is not None:
+                    #     self.peaks.shift += -self.shift_interp
                 if value != 0:
                     self._x, self._y = shifted(self.x, self.y, value=value, mode=mode)
-                    if self.peaks is not None:
-                        self.peaks.shift += value
                 self._shift_interp = value
                 self._data[:, 0] = self._x
                 self._data[:, 1] = self._y
@@ -3058,7 +3054,11 @@ class Spectrum(metaclass=_Meta):
             raise ValueError(f'Invalid mode. Valid options are `roll`, `x`, `interp`.')
 
         # pass value to child data =================================
-        # peaks is changed above
+        if self.peaks is not None:
+            total = self.shift_interp + self.shift
+            if self.step is not None:
+                total += self.shift_roll*self.step
+            self.peaks.set_shift(value = total, type='absolute')
         if self.guess is not None:
             self.guess.set_shift(value, mode=mode)
         if self.fit is not None:
@@ -3455,11 +3455,25 @@ class Spectrum(metaclass=_Meta):
             # print(d)
             # self._peaks = {i: {'amp': d['width_heights'][i], 'c': x2[peaks[i]],  'fwhm': abs(d['widths'][i]*self.step)} for i in range(len(peaks))}
             # self._peaks = {i: {'amp': d['prominences'][i]+(y2[d['right_bases'][i]]+y2[d['left_bases'][i]])/2, 'c': x2[peaks[i]],  'fwhm': abs(d['widths'][i]*self.step)} for i in range(len(peaks))}
-            shift = self.shift_roll*self.step + self.shift_interp + self._shift
-            self._peaks = Peaks([{'amp': d['prominences'][i]+max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]]), 'c': x2[peaks[i]],  'fwhm': abs(d['widths'][i]*self.step)} for i in range(len(peaks))],
-                                      shift=shift, offset=self.offset, calib=self.calib, factor=self.factor)
+            # shift = self.shift_roll*self.step + self.shift_interp + self._shift
+            self._peaks = Peaks(data=[{'amp': d['prominences'][i]+max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]]), 'c': x2[peaks[i]],  'fwhm': abs(d['widths'][i]*self.step)} for i in range(len(peaks))])
+            total = self.shift_interp + self.shift
+            if self.step is not None:
+                total += self.shift_roll*self.step
+            self.peaks._shift  = total
+            self.peaks._offset = self.offset
+            self.peaks._calib  = self.calib
+            self.peaks._factor = self.factor
+            # for peak in self._peaks:
+            #     total = self.shift_interp + self.shift
+            #     if self.step is not None:
+            #         total += self.shift_roll*self.step
+            #     peak._shift  = total
+            #     peak._offset = self.offset
+            #     peak._calib  = self.calib
+            #     peak._factor = self.factor
         except IndexError:
-            self._peaks = Peaks({}, shift=self.shift, offset=self.offset, calib=self.calib, factor=self.factor)
+            self._peaks = Peaks(data={}, shift=self.shift, offset=self.offset, calib=self.calib, factor=self.factor)
 
     def fit_peak(self, offset=True, asymmetry=None, fixed=None, ranges=None, verbose=False):
         """Fits one peak. Initial guess is based on the maximum y value.
@@ -3741,7 +3755,8 @@ class Spectra(metaclass=_Meta):
 
     def __init__(self, *args, **kwargs):
         # basic
-        self._data = None
+        self._data  = None
+        # self._peaks = Collection()
 
         # argument parsing
         data, dirpath, n = self._sort_args(args, kwargs)
@@ -3876,6 +3891,11 @@ class Spectra(metaclass=_Meta):
                 self._data = value
             else:
                 raise ValueError('data must be a list.')
+        # # reset peaks
+        # self._peaks = Collection()
+        # for i in range(len(self)):
+        #     self.peaks.append(self[i].peaks)
+        # reset parameters
         self._restart_check_attr()
         self._calculated_shift  = None
         self._calculated_calib  = None
@@ -4046,7 +4066,7 @@ class Spectra(metaclass=_Meta):
 
     @property
     def peaks(self):
-        return self.get_peaks(key='peaks')
+        return Collection([s.peaks for s in self])
     @peaks.setter
     def peaks(self, value):
         raise AttributeError('Attribute is "read only". Cannot set attribute.')
@@ -4472,9 +4492,9 @@ class Spectra(metaclass=_Meta):
     def _check_number_of_peaks_per_spectrum(self, fitted_peaks=False):
         """Check if number of peaks for each spectrum is the same."""
         if fitted_peaks:
-            peaks = self.fit.get_peaks('s')
+            peaks = self.fit.peaks
         else:
-            peaks = self.get_peaks('s')
+            peaks = self.peaks
 
         temp = [len(peaks[i]) for i in range(len(peaks))]
         if np.all(np.diff(temp) != 0) == True:
@@ -4737,7 +4757,7 @@ class Spectra(metaclass=_Meta):
                 del kwargs['vertical_increment']
             temp = [0]*len(self)
             for i in range(len(self)):
-                temp[i] = max(self.data[i].y) - min(self.data[i].y)
+                temp[i] = -(max(self.data[i].y) - min(self.data[i].y))
             vi = max(temp)*factor*vi/100
         else:
             vi = 0
@@ -4792,6 +4812,10 @@ class Spectra(metaclass=_Meta):
             factor = [factor]*len(self)
 
         # plot
+        # temp = [0]*len(self)
+        # for i in range(len(self)-1, -1, -1):
+        #     temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
+
         temp = [0]*len(self)
         for i in range(len(self)):
             temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
@@ -4801,6 +4825,8 @@ class Spectra(metaclass=_Meta):
 
     def set_shift(self, value=None, mode=None, type='relative'):
         """Shift data recursively.
+
+        if value is none, calculated values will be used and type will be set to relative.
 
         Args:
             value (number or list, optional): value will be added to x-coordinates.
@@ -4841,6 +4867,7 @@ class Spectra(metaclass=_Meta):
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_shift().')
 
             value = self.calculated_shift.y
+            type = 'relative'
 
             # if mode is not defined, auto pick the right one
             if mode is None:
@@ -4906,18 +4933,6 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            # if type in relative:
-            #     # check for previous shifts
-            #     if mode in roll:
-            #         v = value[i] + self[i].shift_roll
-            #     elif mode in hard:
-            #         v = value[i] + self[i].shift
-            #     elif mode in soft:
-            #         v = value[i] + self[i].shift_interp
-            # elif type in absolute:
-            #     v = value[i]
-            # else:
-            #     raise ValueError("type has to be either 'relative' or 'absolute'.")
             self.data[i].set_shift(value=value[i], mode=mode, type=type)
 
         # if mode not interp and shifts are different, reset x
@@ -4933,6 +4948,8 @@ class Spectra(metaclass=_Meta):
 
     def set_factor(self, value=None, type='relative'):
         """Apply multiplicative y factor recursively.
+
+        if value is none, calculated values will be used and type will be set to relative.
 
         Args:
             value (number or list, optional): value will be multiplied to y-coordinates.
@@ -4951,6 +4968,7 @@ class Spectra(metaclass=_Meta):
             if self.calculated_factor is None:
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_factor().')
             value = self.calculated_factor.y
+            type = 'relative'
         else:
             # check if value is a number
             if isinstance(value, Iterable) == False:
@@ -4961,12 +4979,6 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            # if type in relative:
-            #     v = value[i]*self[i].factor
-            # elif type in absolute:
-            #     v = value[i]
-            # else:
-            #     raise ValueError("type has to be either 'relative' or 'absolute'.")
             self[i].set_factor(value=value[i], type=type)
 
         # reset attributes =====================================================
@@ -5016,6 +5028,8 @@ class Spectra(metaclass=_Meta):
     def set_offset(self, value=None, type='relative'):
         """Apply additive y factor recursively.
 
+        if value is none, calculated values will be used and type will be set to relative.
+
         Args:
             value (number or list, optional): value will be added to y-coordinates.
                 If None, it will look for calculated values from Spectra.calculate_offset().
@@ -5032,8 +5046,8 @@ class Spectra(metaclass=_Meta):
         if value is None:
             if self.calculated_offset is None:
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_offset().')
-
             value = self.calculated_offset.y
+            type = 'relative'
         else:
             # check if value is a number
             if isinstance(value, Iterable) == False:
@@ -5150,9 +5164,9 @@ class Spectra(metaclass=_Meta):
             assert len(self[0].fit.peaks) > 0, 'Spectra does not have defined fitted peaks.\nMaybe use Spectra.fit_peaks(), Spectra.find_peaks().'
 
             # calculate peak
-            peaks     = self.fit.get_peaks('p')
-            ref_value = peaks[peak]['c'][0]
-            values    = [c for c in peaks[peak]['c']]
+            peaks     = self.fit.peaks
+            ref_value = peaks['c'][peak][ref]
+            values    = peaks['c'][peak]
             if None in values:
                 raise ValueError(f'cannot calculate shifts.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value-np.array(values)
@@ -5163,9 +5177,9 @@ class Spectra(metaclass=_Meta):
             assert len(self[0].peaks) > 0, 'Spectra does not have defined peaks.\nMaybe use Spectra.find_peaks().'
 
             # calculate peak
-            peaks     = self.get_peaks('p')
-            ref_value = peaks[peak]['c'][0]
-            values    = [c for c in peaks[peak]['c']]
+            peaks     = self.peaks
+            ref_value = peaks['c'][peak][ref]
+            values    = peaks['c'][peak]
             if None in values:
                 raise ValueError(f'cannot calculate shifts.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value-np.array(values)
@@ -5179,6 +5193,8 @@ class Spectra(metaclass=_Meta):
 
     def calculate_factor(self, mode='peak', peak=0, ranges=None, bkg_check=True):
         """Calculate mult. factor for spectra to be same height as the first spectrum.
+
+        ranges only work for max and delta (for now).
 
         Args:
             mode (string, optional): method used to calculate the multiplicative factors.
@@ -5257,9 +5273,9 @@ class Spectra(metaclass=_Meta):
             assert len(self[0].fit.peaks) > 0, 'Spectra does not have defined fitted peaks.\nMaybe use Spectra.fit_peaks(), Spectra.find_peaks().'
 
             # calculate peak
-            peaks     = self.fit.get_peaks('p')
-            ref_value = peaks[peak]['amp'][0]
-            values    = [c for c in peaks[peak]['amp']]
+            peaks     = self.fit.peaks
+            ref_value = peaks['amp'][peak][ref]
+            values    = peaks['amp'][peak]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5272,9 +5288,9 @@ class Spectra(metaclass=_Meta):
             assert len(self[0].fit.peaks) > 0, 'Spectra does not have defined fitted peaks.\nMaybe use Spectra.fit_peaks(), Spectra.find_peaks().'
 
             # calculate peak
-            peaks     = self.fit.get_peaks('p')
-            ref_value = peaks[peak]['area'][0]
-            values    = [c for c in peaks[peak]['area']]
+            peaks     = self.fit.peaks
+            ref_value = peaks['area'][peak][ref]
+            values    = peaks['area'][peak]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5285,9 +5301,9 @@ class Spectra(metaclass=_Meta):
             assert len(self[0].peaks) > 0, 'Spectra does not have defined peaks.\nMaybe use Spectra.find_peaks().'
 
             # calculate peak
-            peaks     = self.get_peaks('p')
-            ref_value = peaks[peak]['amp'][0]
-            values    = [c for c in peaks[peak]['amp']]
+            peaks     = self.peaks
+            ref_value = peaks['amp'][peak][ref]
+            values    = peaks['amp'][peak]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5298,9 +5314,9 @@ class Spectra(metaclass=_Meta):
             assert len(self[0].peaks) > 0, 'Spectra does not have defined peaks.\nMaybe use Spectra.find_peaks().'
 
             # calculate peak
-            peaks     = self.get_peaks('p')
-            ref_value = peaks[peak]['area'][0]
-            values    = [c for c in peaks[peak]['area']]
+            peaks     = self.peaks
+            ref_value = peaks['area'][peak][ref]
+            values    = peaks['area'][peak]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5448,139 +5464,140 @@ class Spectra(metaclass=_Meta):
         return im
 
 
-    def get_errors(self):
-        """Return a list with peak errors data from all spectra.
+    # def get_errors(self):
+    #     """Return a list with peak errors data from all spectra.
+    #
+    #     Returns:
+    #         list
+    #     """
+    #     peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
+    #     n_peaks = max([len(s.peaks) for s in self])
+    #     if n_peaks == 0:
+    #         return {}
+    #     return [{k: [s.peaks[peak].error[k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
 
-        Returns:
-            list
-        """
-        peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
-        n_peaks = max([len(s.peaks) for s in self])
-        if n_peaks == 0:
-            return {}
-        return [{k: [s.peaks[peak].error[k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
+    # def get_peaks(self, key='peak'):
+    #     """Return a list with peak data from all spectra.
+    #
+    #     Args:
+    #         key (string, optional): if 'peaks', list is organized by peak
+    #             indices. If 'spectrum', list is organized by spectrum
+    #             indices.
+    #
+    #     Returns:
+    #         list
+    #     """
+    #     if key.startswith('p'):
+    #         peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
+    #         n_peaks = max([len(s.peaks) for s in self])
+    #         if n_peaks == 0:
+    #             return {}
+    #         return [{k: [s.peaks[peak][k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
+    #     elif key.startswith('s'):
+    #         return [self[i].peaks for i in range(len(self))]
+    #     else:
+    #         raise ValueError(f"Ivalid key.\nPossible keys are: 'peak' (p) and 'spectrum' (s).")
+
+    # def plot_peaks(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+    #     """Place a marker at the maximum of every peak positionfor all spectra.
+    #
+    #     Wrapper for `matplotlib.pyplot.errorbar()`_.
+    #
+    #     Args:
+    #         ax (matplotlib.axes, optional): axes for plotting on.
+    #         offset (number or list, optional): defines a vertical offset. Default is 0.
+    #         shift (number or list, optional): horizontal shift value. Default is 0.
+    #         factor (number or list, optional): multiplicative factor on the y axis.
+    #             Default is 1.
+    #         calib (number or list, optional): multiplicative factor on the x axis.
+    #             Default is 1.
+    #         **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+    #
+    #     Returns:
+    #         list with dicts with `ErrorbarContainer`_ for each spectrum.
+    #
+    #     .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+    #     .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+    #     """
+    #     if ax is None:
+    #         ax = plt
+    #
+    #     # percentage wise increment ====================
+    #     if 'vi' in kwargs and 'vertical_increment' in kwargs:
+    #         raise SyntaxError('keyword argument repeated: vertical increment/vi')
+    #     elif 'vi' in kwargs or 'vertical_increment' in kwargs:
+    #         if 'vi' in kwargs:
+    #             vi = kwargs['vi']
+    #             del kwargs['vi']
+    #         if 'vertical_increment' in kwargs:
+    #             vi = kwargs['vertical_increment']
+    #             del kwargs['vertical_increment']
+    #         temp = [0]*len(self)
+    #         for i in range(len(self)):
+    #             temp[i] = max(self.data[i].y) - min(self.data[i].y)
+    #         vi = max(temp)*factor*vi/100
+    #     else:
+    #         vi = 0
+    #
+    #     # percentage wise horizontal increment ====================
+    #     if 'hi' in kwargs and 'horizontal_increment' in kwargs:
+    #         raise SyntaxError('keyword argument repeated: horizontal increment and hi')
+    #     elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
+    #         if 'hi' in kwargs:
+    #             hi = kwargs['hi']
+    #             del kwargs['hi']
+    #         if 'horizontal_increment' in kwargs:
+    #             hi = kwargs['horizontal_increment']
+    #             del kwargs['horizontal_increment']
+    #         temp = [0]*len(self)
+    #         for i in range(len(self)):
+    #             temp[i] = max(self.data[i].x) - min(self.data[i].x)
+    #         hi = max(temp)*factor*hi/100
+    #     else:
+    #         hi = 0
+    #
+    #     # offset
+    #     if isinstance(offset, Iterable):
+    #         if len(offset) != len(self):
+    #             raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
+    #     else:
+    #         offset = [offset]*len(self)
+    #         for i in range(len(self)):
+    #             offset[i] = offset[i]+(vi*i)
+    #
+    #     # shift
+    #     if isinstance(shift, Iterable):
+    #         if len(shift) != len(self):
+    #             raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
+    #     else:
+    #         shift = [shift]*len(self)
+    #         for i in range(len(self)):
+    #             shift[i] = shift[i]+(hi*i)
+    #
+    #     # calib
+    #     if isinstance(calib, Iterable):
+    #         if len(calib) != len(self):
+    #             raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
+    #     else:
+    #         calib = [calib]*len(self)
+    #
+    #     # factor
+    #     if isinstance(factor, Iterable):
+    #         if len(factor) != len(self):
+    #             raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
+    #     else:
+    #         factor = [factor]*len(self)
+    #
+    #     # get peaks ======================================
+    #     peaks = self.get_peaks(key='spectrum')
+    #
+    #     # plot
+    #     r = [0]*len(self)
+    #     for i in range(len(self)):
+    #         r[i] = peaks[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
+    #     return r
 
 
-    def get_peaks(self, key='peak'):
-        """Return a list with peak data from all spectra.
-
-        Args:
-            key (string, optional): if 'peaks', list is organized by peak
-                indices. If 'spectrum', list is organized by spectrum
-                indices.
-
-        Returns:
-            list
-        """
-        if key.startswith('p'):
-            peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
-            n_peaks = max([len(s.peaks) for s in self])
-            if n_peaks == 0:
-                return {}
-            return [{k: [s.peaks[peak][k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
-        elif key.startswith('s'):
-            return [self[i].peaks for i in range(len(self))]
-        else:
-            raise ValueError(f"Ivalid key.\nPossible keys are: 'peak' (p) and 'spectrum' (s).")
-
-    def plot_peaks(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak positionfor all spectra.
-
-        Wrapper for `matplotlib.pyplot.errorbar()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number or list, optional): defines a vertical offset. Default is 0.
-            shift (number or list, optional): horizontal shift value. Default is 0.
-            factor (number or list, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number or list, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-
-        Returns:
-            list with dicts with `ErrorbarContainer`_ for each spectrum.
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-
-        # percentage wise increment ====================
-        if 'vi' in kwargs and 'vertical_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: vertical increment/vi')
-        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
-            if 'vi' in kwargs:
-                vi = kwargs['vi']
-                del kwargs['vi']
-            if 'vertical_increment' in kwargs:
-                vi = kwargs['vertical_increment']
-                del kwargs['vertical_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].y) - min(self.data[i].y)
-            vi = max(temp)*factor*vi/100
-        else:
-            vi = 0
-
-        # percentage wise horizontal increment ====================
-        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
-        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
-            if 'hi' in kwargs:
-                hi = kwargs['hi']
-                del kwargs['hi']
-            if 'horizontal_increment' in kwargs:
-                hi = kwargs['horizontal_increment']
-                del kwargs['horizontal_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].x) - min(self.data[i].x)
-            hi = max(temp)*factor*hi/100
-        else:
-            hi = 0
-
-        # offset
-        if isinstance(offset, Iterable):
-            if len(offset) != len(self):
-                raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
-        else:
-            offset = [offset]*len(self)
-            for i in range(len(self)):
-                offset[i] = offset[i]+(vi*i)
-
-        # shift
-        if isinstance(shift, Iterable):
-            if len(shift) != len(self):
-                raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
-        else:
-            shift = [shift]*len(self)
-            for i in range(len(self)):
-                shift[i] = shift[i]+(hi*i)
-
-        # calib
-        if isinstance(calib, Iterable):
-            if len(calib) != len(self):
-                raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
-        else:
-            calib = [calib]*len(self)
-
-        # factor
-        if isinstance(factor, Iterable):
-            if len(factor) != len(self):
-                raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
-        else:
-            factor = [factor]*len(self)
-
-        # get peaks ======================================
-        peaks = self.get_peaks(key='spectrum')
-
-        # plot
-        r = [0]*len(self)
-        for i in range(len(self)):
-            r[i] = peaks[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
-        return r
 
     def find_peaks(self, prominence=None, width=4, moving_average_window=8):
         """Find peaks recursively. Wrapper for `scipy.signal.find_peaks()`_.

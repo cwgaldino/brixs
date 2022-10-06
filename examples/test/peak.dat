@@ -1,0 +1,66 @@
+{
+    "_store": {
+        "amp": 1,
+        "area": 0.11742965983745642,
+        "c": 0,
+        "fwhm": 0.25,
+        "fwhm1": null,
+        "fwhm2": null,
+        "m": 0,
+        "m1": null,
+        "m2": null
+    },
+    "error": {
+        "amp": 0,
+        "area": 0,
+        "c": 0,
+        "fwhm": 0,
+        "fwhm1": 0,
+        "fwhm2": 0,
+        "m": 0,
+        "m1": 0,
+        "m2": 0
+    },
+    "bounds": {
+        "amp": [
+            -Infinity,
+            Infinity
+        ],
+        "c": [
+            -Infinity,
+            Infinity
+        ],
+        "fwhm": [
+            0,
+            Infinity
+        ],
+        "fwhm1": [
+            0,
+            Infinity
+        ],
+        "fwhm2": [
+            0,
+            Infinity
+        ],
+        "m": [
+            0,
+            1
+        ],
+        "m1": [
+            0,
+            1
+        ],
+        "m2": [
+            0,
+            1
+        ]
+    },
+    "asymmetry": false,
+    "fixed": [
+        "m"
+    ],
+    "_shift": 0,
+    "_calib": 1,
+    "_offset": 0,
+    "_factor": 1
+}

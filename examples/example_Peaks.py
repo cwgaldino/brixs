@@ -43,10 +43,10 @@ print(p)
 
 # save and load
 p = br.Peak(amp=1, c=0, fwhm=0.2)
-p.save()
+p.save('test/peak.dat')
 
 p2 = br.Peak(amp=0, c=0, fwhm=1)
-p2.load('Untitled.txt')
+p2.load('test/peak.dat')
 print(p2)
 
 # %% Peaks object is just a modified list ======================================
@@ -103,17 +103,14 @@ print(ps)
 # save and load
 temp = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
 ps = br.Peaks(temp)
-ps.save()
+ps.save('test/peaks.dat')
 
 p2 = br.Peaks()
-p2.load('Untitled.txt')
+p2.load('test/peaks.dat')
 print(p2)
 
 
 # %% collection ================================================================
-import brixs as br
-
-
 temp = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
 ps1 = br.Peaks(temp)
 
@@ -121,10 +118,17 @@ temp = [{'amp':4, 'c':1.1, 'fwhm':0.2}, {'amp':4, 'c':3, 'fwhm':0.4}]
 ps2 = br.Peaks(temp)
 
 c = br.Collection([ps1, ps2])
+print(c)
 
-ps1[0]
-ps1.save('test/hh.dat')
-c.save('test/')
+# save
+c.save('test/peaks')
+
+# load
+c2 = br.Collection()
+c2.load('test/peaks', string='peaks')
+
+# load
+c2 = br.Collection('test/peaks')
 
 
 
@@ -164,6 +168,7 @@ print(args_str)
 
 model = p.build_model()
 model
+
 # %% Peaks methods for fitting purposes ========================================
 p = [{'amp':1, 'c':0, 'fwhm':0.2}, {'amp':2, 'c':1, 'fwhm':0.4}]
 ps = br.Peaks(p)
