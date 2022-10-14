@@ -5191,7 +5191,7 @@ class Spectra(metaclass=_Meta):
         self._calculated_shift.mode      = mode
         self._calculated_shift.ref_value = ref_value
 
-    def calculate_factor(self, mode='peak', peak=0, ranges=None, bkg_check=True):
+    def calculate_factor(self, mode='peak', peak=0, ref_value=None, ranges=None, bkg_check=True):
         """Calculate mult. factor for spectra to be same height as the first spectrum.
 
         ranges only work for max and delta (for now).
@@ -5235,7 +5235,8 @@ class Spectra(metaclass=_Meta):
             else:
                 ss = self
 
-            ref_value = max(ss.data[ref].y)
+            if ref_value is None:
+                ref_value = max(ss.data[ref].y)
             for i in range(len(ss)):
                 values[i] = ref_value/max(ss.data[i].y)
         elif mode == 'delta':
@@ -5243,7 +5244,8 @@ class Spectra(metaclass=_Meta):
                 ss = self.extract(ranges)
             else:
                 ss = self
-            ref_value = max(ss.data[ref].y) - min(ss.data[ref].y)
+            if ref_value is None:
+                ref_value = max(ss.data[ref].y) - min(ss.data[ref].y)
             for i in range(len(ss)):
                 values[i] = ref_value/(max(ss.data[i].y) - min(ss.data[i].y))
         elif mode == 'area':
@@ -5261,7 +5263,8 @@ class Spectra(metaclass=_Meta):
                 if True in temp:
                     raise ValueError(f'some spectra have a background that seems to be too big for a reliable cross-corelation.\nSpectra with big bkg: {temp}\nYou can try using Spectra.floor()')
 
-            ref_value = self.data[ref].area
+            if ref_value is None:
+                ref_value = self.data[ref].area
             for i in range(len(self)):
                 values[i] = ref_value/self.data[i].area
         elif mode == 'fitted peaks' or mode == 'fitted peak':
@@ -5274,8 +5277,9 @@ class Spectra(metaclass=_Meta):
 
             # calculate peak
             peaks     = self.fit.peaks
-            ref_value = peaks['amp'][peak][ref]
             values    = peaks['amp'][peak]
+            if ref_value is None:
+                ref_value = peaks['amp'][peak][ref]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5289,8 +5293,9 @@ class Spectra(metaclass=_Meta):
 
             # calculate peak
             peaks     = self.fit.peaks
-            ref_value = peaks['area'][peak][ref]
             values    = peaks['area'][peak]
+            if ref_value is None:
+                ref_value = peaks['area'][peak][ref]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5302,8 +5307,9 @@ class Spectra(metaclass=_Meta):
 
             # calculate peak
             peaks     = self.peaks
-            ref_value = peaks['amp'][peak][ref]
             values    = peaks['amp'][peak]
+            if ref_value is None:
+                ref_value = peaks['amp'][peak][ref]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
@@ -5315,8 +5321,9 @@ class Spectra(metaclass=_Meta):
 
             # calculate peak
             peaks     = self.peaks
-            ref_value = peaks['area'][peak][ref]
             values    = peaks['area'][peak]
+            if ref_value is None:
+                ref_value = peaks['area'][peak][ref]
             if None in values:
                 raise ValueError(f'cannot calculate multiplicative factors.\npeak {peak} is not defined for all spectra.\ncenter of peak {peak}: {values}')
             values    = ref_value/np.array(values)
