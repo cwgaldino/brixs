@@ -9,7 +9,10 @@ import os
 import brixs as br
 
 # %% I21 beamline - Diamond - UK ===============================================
-import h5py
+try:
+    import h5py
+except ModuleNotFoundError:
+    pass
 
 def h52dict(f):
     data = {}

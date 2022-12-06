@@ -542,6 +542,7 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
         kwargs['delimiter'] = None
 
     # get data
+    print(kwargs)
     data = np.genfromtxt(str(filepath), **kwargs)
 
     # if a column returns only nan, this column yield 0
@@ -556,6 +557,7 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
 
     # get labels
     if labels is None and force_array is False:
+        print('here')
         header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
         if header:
             header_line = header[-1].replace(kwargs['comments'], '').strip()
@@ -563,6 +565,7 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
             if header_delimiter is None:
                 header_delimiter = detect(header_line)
             labels = header_line.split(header_delimiter)
+    print(labels)
 
     # check labels length
     if labels is not None:
