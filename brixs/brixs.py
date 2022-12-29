@@ -19,7 +19,8 @@
 #     * flip() or transpose() method
 #     * noise_filter() method (remove cosmic rays)
 #     * save image as tiff
-# """
+#
+#
 
 # standard libraries
 import copy
