@@ -19,11 +19,9 @@ from .backpack.model_functions import voigt_fwhm, dirac_delta
 from .backpack.figmanip import n_digits
 
 # BRIXS
-from . import brixs as br
+import brixs as br
 
 # common definitions ===========================================================
-from .config import settings
-
 relative = ['relative', 'r', 'rel']
 absolute = ['a', 'abs', 'absolute']
 
@@ -791,16 +789,16 @@ class Peak(MutableMapping):
         """
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if br.settings.ALWAYS_PLOT_NEW_WINDOW:
                 figure()
-                if settings.FIGURE_POSITION is not None:
+                if br.settings.FIGURE_POSITION is not None:
                     try:
-                        set_window_position(settings.FIGURE_POSITION)
+                        set_window_position(br.settings.FIGURE_POSITION)
                     except:
                         pass
-            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+            elif plt.get_fignums() == [] and br.settings.FIGURE_POSITION is not None:
                 try:
-                    set_window_position(settings.FIGURE_POSITION)
+                    set_window_position(br.settings.FIGURE_POSITION)
                 except:
                     pass
 
@@ -1746,18 +1744,9 @@ class Peaks(MutableMapping):
         """
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-                if settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(settings.FIGURE_POSITION)
-                    except:
-                        pass
-            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
-                try:
-                    set_window_position(settings.FIGURE_POSITION)
-                except:
-                    pass
+               
         elif type(ax) == str:
             raise ValueError(f'ax parameter cannot be type str ("{ax}").')
         # elif type(ax) == module:
@@ -2177,18 +2166,8 @@ class Collection(MutableMapping):
         """
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-                if settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(settings.FIGURE_POSITION)
-                    except:
-                        pass
-            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
-                try:
-                    set_window_position(settings.FIGURE_POSITION)
-                except:
-                    pass
         elif type(ax) == str:
             raise ValueError(f'ax parameter cannot be type str ("{ax}").')
         # elif type(ax) == module:

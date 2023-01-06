@@ -930,7 +930,7 @@ class Image(metaclass=_Meta):
         # initialization
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
                 if settings.FIGURE_POSITION is not None:
                     try:
@@ -1043,7 +1043,7 @@ class Image(metaclass=_Meta):
         # initialization
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
                 if settings.FIGURE_POSITION is not None:
                     try:
@@ -1991,7 +1991,7 @@ class PhotonEvents(metaclass=_Meta):
         """
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
                 if settings.FIGURE_POSITION is not None:
                     try:
@@ -3380,18 +3380,18 @@ class Spectrum(metaclass=_Meta):
         """
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-                if settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(settings.FIGURE_POSITION)
-                    except:
-                        pass
-            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
-                try:
-                    set_window_position(settings.FIGURE_POSITION)
-                except:
-                    pass
+            #     if settings.FIGURE_POSITION is not None:
+            #         try:
+            #             set_window_position(settings.FIGURE_POSITION)
+            #         except:
+            #             pass
+            # elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
+            #     try:
+            #         set_window_position(settings.FIGURE_POSITION)
+            #     except:
+            #         pass
 
         return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
 
@@ -4733,18 +4733,9 @@ class Spectra(metaclass=_Meta):
         """
         if ax is None:
             ax = plt
-            if settings.ALWAYS_PLOT_NEW_WINDOW:
+            if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-                if settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(settings.FIGURE_POSITION)
-                    except:
-                        pass
-            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
-                try:
-                    set_window_position(settings.FIGURE_POSITION)
-                except:
-                    pass
+
 
         # percentage wise vertical increment ====================
         if 'vi' in kwargs and 'vertical_increment' in kwargs:

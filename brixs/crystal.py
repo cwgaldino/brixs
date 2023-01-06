@@ -20,11 +20,11 @@ def momentum_transfer(energy, theta, two_theta):
 
     Args:
         energy (number): energy (in eV) of the incident beam.
-        theta (number): angle (in degress) between the incident beam and the sample surface.
-        two_theta (number): angle (in degress) between the incident and scattered beam.
+        theta (number): angle (in degrees) between the incident beam and the sample surface.
+        two_theta (number): angle (in degrees) between the incident and scattered beam.
 
     Returns:
-        q, q_parallel, q_perperdicular
+        q, q_parallel, q_perpendicular
     """
     # calculate wavelength
     wavelength = eV2angstrom(energy)
@@ -52,12 +52,12 @@ def momentum_transfer(energy, theta, two_theta):
 
     # projected momentum
     # q_parallel      = q*(np.cos(theta_f)-np.cos(theta_i))
-    # q_perperdicular = q*(np.sin(theta_f)+np.sin(theta_i))
+    # q_perpendicular = q*(np.sin(theta_f)+np.sin(theta_i))
 
     q_parallel      = q*(2*np.sin(two_theta/2))**-1   *(np.cos(theta_f)-np.cos(theta_i))
-    q_perperdicular = q*(2*np.sin(two_theta/2))**-1  *(np.sin(theta_f)+np.sin(theta_i))
+    q_perpendicular = q*(2*np.sin(two_theta/2))**-1  *(np.sin(theta_f)+np.sin(theta_i))
 
-    return q, q_parallel, q_perperdicular
+    return q, q_parallel, q_perpendicular
 
 def lattice(a, b, c, alpha=90, beta=90, gamma=90):
     """Returns the unit cell and the reciprocal unit cell matrix in real space.

@@ -3,11 +3,11 @@
 """Everyday use functions that eases matplotlib figure manipulation."""
 
 
-# standard libraries
+# %% ------------------------- Standard Imports --------------------------- %% #
 import sys
-import numpy as np
-from pathlib import Path
 import copy
+from pathlib import Path
+import numpy as np
 import warnings
 from subprocess import Popen, PIPE
 import decimal
@@ -16,48 +16,113 @@ try:
     from bs4 import BeautifulSoup
 except ModuleNotFoundError:
     pass
-try:
-    import brixs as br
-except:
-    pass
 
-# matplotlib libraries
+# %% ------------------------- Special Imports ---------------------------- %% #
+import brixs as br
+
+# %% ------------------------- Matplotlib Imports ------------------------- %% #
+import matplotlib
 from matplotlib.pyplot import get_current_fig_manager
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import AutoMinorLocator
 
-# backpack
+# %% ------------------------- backpack Imports --------------------------- %% #
 from .arraymanip import index
 from .interact import copy2clipboard, png2clipboard, svg2clipboard, operating_system
 
+# %% ------------------------- Initial definitions ------------------------ %% #
 is_windows = operating_system() == 'windows'
 is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
 
-def bring2top():
-    figManager = get_current_fig_manager()
-    figManager.window.raise_()
+def available_colors():
+    """Returns matplotlib available colors."""
+    from matplotlib import colors as mcolors    
+    return dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
 
-def set_default_window_position(*args):
-    """Set the default window position for when :py:func:`setWindowPosition` is called.
 
+def set_cycler(n='tab10', ls=1):
+    """Set color cycles for matplotlib.
+    
     Args:
-        *args: A tuple like (x, y) or two separate x, y values (in px).
-    """
-    if len(args) > 1:
-        x = int(args[0])
-        y = int(args[1])
-    elif len(args) == 1 and len(args[0]) == 2:
-        x = int(args[0][0])
-        y = int(args[0][1])
-    else:
-        warnings.warn('Wrong input')
-        return
+        n (int, str, list, optional): name of a matplotlib sequential colormap.      
+            If n is a number, n colors will be selected in order from the 
+            listing: 'k', 'b', 'g', 'r', 'c', 'm', 'y', tab20b, tab20c. 
+            The maximum value is then 47 colors. n can also be a list of colors 
+            by name. Default is 'tab10'. Use None to use the default.
+        ls (int, list, optional): number of different linestyles to iterate from
+            (from 1 to 4) or a list of linestyles by name. Default is 1.
 
-    global p
-    p = (x, y)
+    Returns:
+        None
+    """
+    from cycler import cycler
+
+    # colors
+    if n is None:
+        n = 'tab10'
+    elif type(n) == str:
+        if n not in plt.colormaps():
+            raise ValueError(f'{n} is not a recognized colormap. To check all available colormaps use plt.colormaps().')
+        else:
+            colors = plt.get_cmap(n).colors
+    elif type(n) == int:
+        if n > 47 or n < 1:
+            raise ValueError('Permitted values for the number of colors is between 1 and 67.')
+        init = ['k', 'b', 'g', 'r', 'c', 'm', 'y']
+        init += plt.get_cmap('tab20b').colors + plt.get_cmap('tab20c').colors
+        colors = init[0:n]
+    elif type(n) == list:
+        available_colors = available_colors()
+        for color in n:
+            if color not in available_colors:
+                raise ValueError(f'{color} is not a recognized color. To check all available colors use brixs.available_colors().')
+        colors = n
+    else:
+        raise ValueError(f'"n" must be False, int, str, or a list.\nType(n) = {type(n)}')
+
+    # linestyle
+    linestyles_available = ('-', '--', ':', '-.')
+    if type(ls) == int:
+        if ls > 4 or ls < 1:
+            raise ValueError('Permitted values for the number of linestyles is between 1 and 4.')
+        linestyles = linestyles_available[0:ls]
+    elif type(ls) == list:
+        linestyles = ls
+    else:
+        raise ValueError(f'"ls" must be False, int, or a list.\nType(ls) = {type(ls)}')
+    
+    # adjust lists
+    number_of_colors     = len(colors)
+    number_of_linestyles = len(linestyles)
+    colors     = colors*number_of_linestyles
+    linestyles = list(np.repeat(linestyles, number_of_colors))
+    
+    # set colormap and linestyles
+    plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', linestyles)))
+
+
+def bring2top():
+    """Brings current window to the top.
+
+    This function was not tested for all available matplotlib backends.
+    """
+    print('gg')
+    backend = matplotlib.get_backend()
+    if backend.startswith(('Qt5', 'qt5', 'QT5')):
+        from PyQt5 import QtCore
+        window = plt.get_current_fig_manager().window
+        window.setWindowFlags(window.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+        plt.show()
+        # window.setWindowFlags(window.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
+        # plt.show()
+    elif backend.startswith(('tk', 'TK', 'Tk')):
+        plt.gcf().canvas.get_tk_widget().focus_force() 
+    else:
+        figManager = get_current_fig_manager()
+        figManager.window.raise_()
 
 
 def set_window_position(*args):
@@ -81,30 +146,25 @@ def set_window_position(*args):
         x = int(args[0][0])
         y = int(args[0][1])
     elif len(args) == 0:
-        try:
-            # global p
-            # print('g')
+        if br.settings.FIGURE_POSITION is not None:
             set_window_position(br.settings.FIGURE_POSITION)
-            return
-        except:
-            pass
+        return
     else:
         warnings.warn('Wrong input')
         return
 
-    figManager = get_current_fig_manager()
+    figManager    = get_current_fig_manager()
     width, height = get_window_size()
 
     try:  # tested on tKinter backend
         figureGeometry = str(width) + 'x' + str(height) + '+' + str(x) + '+' + str(y)
         figManager.window.wm_geometry(figureGeometry)
-
     except AttributeError:
         try:  # tested on qt4 and qt5 backends
             figManager.window.setGeometry(int(x), int(y), width, height)
         except AttributeError:
             warnings.warn('Backend not suported.')
-
+    
 
 def get_window_position():
     """Return the position of a matplotlib position on the screen.
@@ -121,7 +181,6 @@ def get_window_position():
 
     try:  # tested under tKinter backend
         return (figManager.window.winfo_x(), figManager.window.winfo_y())
-
     except AttributeError:  # tested under qt4 and qt5 backends
         try:
             return (figManager.window.geometry().x(), figManager.window.geometry().y())
@@ -155,7 +214,6 @@ def set_window_size(*args):
     try:  # tested on tKinter backend
         figureGeometry = str(width) + 'x' + str(height) + '+' + str(x) + '+' + str(y)
         figManager.window.wm_geometry(figureGeometry)
-
     except AttributeError:
         try:  # tested on qt4 and qt5 backends
             figManager.window.setGeometry(x, y, width, height)
@@ -212,15 +270,77 @@ def figure(**kwargs):
 
     See Also:
         :py:func:`onclick`
-    """
+    """   
+    # open figure and initialize event callbacks
     fig = plt.figure(**kwargs)
-    cid = fig.canvas.mpl_connect('button_press_event', onclick)
-    try:
-        set_window_position()
-    except NameError:
-        pass
+    cid1 = fig.canvas.mpl_connect('button_press_event', onclick)
+    # cid2 = fig.canvas.mpl_connect('resize_event', onmove)
 
+    # position
+    if br.settings.FIGURE_POSITION is not None:
+        set_window_position(br.settings.FIGURE_POSITION)
+
+    if br.settings.FIGURE_FORCE_ON_TOP:
+        bring2top()
+
+    # size and dpi
+    if 'dpi' not in kwargs:
+        if br.settings.FIGURE_DPI is not None:
+            # kwargs['dpi'] = br.settings.FIGURE_DPI
+            fig.set_dpi(br.settings.FIGURE_DPI)
+    if 'figsize' not in kwargs:
+        if br.settings.FIGURE_SIZE is not None:
+            # kwargs['figsize'] = br.settings.FIGURE_SIZE
+            set_window_size(br.settings.FIGURE_SIZE)
+    
+    
+    # save parameters
+    # fig.old_size = get_window_size()
+    # fig.old_dpi  = fig.get_dpi()
     return fig
+
+
+def onmove(event):
+    if br.br.settings.FIGURE_FIX_RESOLUTION:
+        fig = plt.gcf()
+        fig.set_dpi(fig.old_dpi)
+        # time.sleep(1)
+
+        # dpi
+        
+
+        # adjust size
+        # set_window_size(fig.old_size)
+        
+        # # before
+        # old_size = fig.old_size
+        # old_dpi  = fig.old_dpi
+
+        # # current
+        # size = (event.width, event.height)
+        # dpi  = old_dpi
+        
+        # if old_size == size:
+        #     print('same')
+        # else:
+        #     print('changed')
+        #     print(size, old_size)
+
+        #     # new (corrected)
+        #     new_size = size
+        #     new_dpi  = dpi*old_size[0]/(size[0])
+        #     print(new_dpi)
+
+        #     # set
+        #     # fig.set_dpi(new_dpi)
+        #     fig.old_size = new_size
+        #     # set_window_size(new_size)
+
+        # # print('moved')
+        # # print(new_dpi)
+        # # # print('old size: ' + str(old_size))
+        # # # print('new size: ' + str(new_size))
+    pass
 
 
 def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None):
