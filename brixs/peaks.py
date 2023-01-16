@@ -472,7 +472,7 @@ class Peak(MutableMapping):
         return self._shift
     @shift.setter
     def shift(self, value):
-        self.set_shift(value)
+        self.set_shifts(value)
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
@@ -482,7 +482,7 @@ class Peak(MutableMapping):
         return self._offset
     @offset.setter
     def offset(self, value):
-        self.set_offset(value)
+        self.set_offsets(value)
     @offset.deleter
     def offset(self):
         raise AttributeError('Cannot delete object.')
@@ -492,7 +492,7 @@ class Peak(MutableMapping):
         return self._factor
     @factor.setter
     def factor(self, value):
-        self.set_factor(value)
+        self.set_factors(value)
     @factor.deleter
     def factor(self):
             raise AttributeError('Cannot delete object.')
@@ -666,7 +666,7 @@ class Peak(MutableMapping):
             # fix area
             self.calculate_area()
 
-    def set_shift(self, value, type='relative'):
+    def set_shifts(self, value, type='relative'):
         """Set shift value.
 
         Args:
@@ -685,7 +685,7 @@ class Peak(MutableMapping):
                 self._store['c'] = self._store['c']+value
             self._shift = value
 
-    def set_offset(self, value, type='relative'):
+    def set_offsets(self, value, type='relative'):
         """Set offset value.
 
         Args:
@@ -704,7 +704,7 @@ class Peak(MutableMapping):
                 self._store['amp'] = self._store['amp']+value
             self._offset = value
 
-    def set_factor(self, value, type='relative'):
+    def set_factors(self, value, type='relative'):
         """Set y multiplicative factor.
 
         Args:
@@ -789,18 +789,8 @@ class Peak(MutableMapping):
         """
         if ax is None:
             ax = plt
-            if br.settings.ALWAYS_PLOT_NEW_WINDOW:
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-                if br.settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(br.settings.FIGURE_POSITION)
-                    except:
-                        pass
-            elif plt.get_fignums() == [] and br.settings.FIGURE_POSITION is not None:
-                try:
-                    set_window_position(br.settings.FIGURE_POSITION)
-                except:
-                    pass
 
         # data
         c = self['c']
@@ -1134,7 +1124,7 @@ class Peaks(MutableMapping):
             ps = br.Peaks([p1, p2])
 
     Args:
-        data (Peak or list): can be passed as positional arguments
+        data (list): can be passed as positional arguments
         shift( number): initial shift value (does not have initial effect over the data).
         calib (number): initial calibration value (does not have initial effect over the data).
         offset( number): initial offset value (does not have initial effect over the data).
@@ -1156,8 +1146,11 @@ class Peaks(MutableMapping):
 
         # data
         if data is not None:
-            for peak in data:
-                self.append(peak)
+            if isinstance(data, list):
+                for peak in data:
+                    self.append(peak)
+            else:
+                raise TypeError('data must be a list')
         elif filepath is not None:
             self.load(filepath)
 
@@ -1277,7 +1270,7 @@ class Peaks(MutableMapping):
         return temp
     @shift.setter
     def shift(self, value):
-        self.set_shift(value)
+        self.set_shifts(value)
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
@@ -1290,21 +1283,21 @@ class Peaks(MutableMapping):
         return temp
     @offset.setter
     def offset(self, value):
-        self.set_offset(value)
+        self.set_offsets(value)
     @offset.deleter
     def offset(self):
         raise AttributeError('Cannot delete object.')
 
     @property
     def factor(self):
-        return self._factor
-        # temp = [0]*len(self)
-        # for i in range(len(self)):
-        #     temp[i] = self[i].factor
-        # return temp
+        # return self._factor
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].factor
+        return temp
     @factor.setter
     def factor(self, value):
-        self.set_factor(value)
+        self.set_factors(value)
     @factor.deleter
     def factor(self):
             raise AttributeError('Cannot delete object.')
@@ -1344,7 +1337,6 @@ class Peaks(MutableMapping):
         .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
         """
         filepath = Path(filepath)
-
         # check overwrite
         if check_overwrite:
             if filepath.exists() == True:
@@ -1440,6 +1432,33 @@ class Peaks(MutableMapping):
         else:
             del self._store[key]
 
+    def copy(self, value):
+        if isinstance(value, Peaks):
+            calib  = self.calib
+            shift  = self.shift
+            offset = self.offset
+            factor = self.factor
+
+            # modifiers must be the same 
+            # in case you have a different number of peaks between the current obj
+            # and the one you are coping from.
+            if all_equal(calib) == False:
+                raise RuntimeError('calib have different values for different peaks. All values must be the same.')
+            if all_equal(shift) == False:
+                raise RuntimeError('shift have different values for different peaks. All values must be the same.')
+            if all_equal(offset) == False:
+                raise RuntimeError('offset have different values for different peaks. All values must be the same.')
+            if all_equal(factor) == False:
+                raise RuntimeError('factor have different values for different peaks. All values must be the same.')
+
+            self._store = copy.deepcopy(value._store)
+            for peak in self:
+                peak._calib  = calib[0]
+                peak._shift  = shift[0]
+                peak._offset = offset[0]
+                peak._factor = factor[0]
+        else:
+            raise ValueError('obj to copy must be of type br.Peaks.')
 
     def set_calib(self, value, type='relative'):
         """Set calibration value.
@@ -1462,7 +1481,7 @@ class Peaks(MutableMapping):
             self[i].set_calib(value=value[i], type=type)
         self._fix_order()
 
-    def set_shift(self, value, type='relative'):
+    def set_shifts(self, value, type='relative'):
         """Set shift value.
 
         Args:
@@ -1481,14 +1500,14 @@ class Peaks(MutableMapping):
 
         for i in range(len(self)):
             # peak.calib = value
-            self[i].set_shift(value=value[i], type=type)
+            self[i].set_shifts(value=value[i], type=type)
         self._fix_order()
 
         # for peak in self._store:
         #     peak.shift = value
         # self._shift = value
 
-    def set_offset(self, value, type='relative'):
+    def set_offsets(self, value, type='relative'):
         """Set offset value.
 
         Args:
@@ -1505,13 +1524,13 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_offset(value=value[i], type=type)
+            self[i].set_offsets(value=value[i], type=type)
 
         # for peak in self._store:
         #     peak.offset = value
         # self._offset = value
 
-    def set_factor(self, value, type='relative'):
+    def set_factors(self, value, type='relative'):
         """Set y multiplicative factor.
 
         if value is a list, type is applied. if value is a number, type is set to relative.
@@ -1523,26 +1542,31 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        # # check if value is a number
-        # if isinstance(value, Iterable) == False:
-        #     value = [value]*len(self)
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
 
-        if isinstance(value, Iterable):
-            # value must be the right length
-            assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
-            for i in range(len(self)):
-                self[i].set_factor(value=value[i], type=type)
-        else:
-            type='relative'
-            if self.factor != value:
-                if self.factor != 0:
-                    for i in range(len(self)):
-                        self[i].set_factor(value=self.factor, type=type)
-                if value != 0:
-                    for i in range(len(self)):
-                        self[i].set_factor(value=value, type=type)
-            self._factor = value
+        for i in range(len(self)):
+            self[i].set_factors(value=value[i], type=type)
+
+        # if isinstance(value, Iterable):
+        #     # value must be the right length
+        #     assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        #     for i in range(len(self)):
+        #         self[i].set_factors(value=value[i], type=type)
+        # else:
+        #     type='relative'
+        #     if self.factor != value:
+        #         if self.factor != 0:
+        #             for i in range(len(self)):
+        #                 self[i].set_factors(value=self.factor, type=type)
+        #         if value != 0:
+        #             for i in range(len(self)):
+        #                 self[i].set_factors(value=value, type=type)
+        #     self._factor = value
 
 
     def split(self, key, n=1):
@@ -1699,7 +1723,6 @@ class Peaks(MutableMapping):
                     peaks.append(decode_func[i](popt[i], psigma[i]))
                 else:
                     peaks.append(decode_func[i](popt[i]))
-
             return peaks
 
         return p0, bounds_min, bounds_max, decode
@@ -1744,7 +1767,7 @@ class Peaks(MutableMapping):
         """
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
                
         elif type(ax) == str:
@@ -1907,7 +1930,7 @@ class Collection(MutableMapping):
         return temp
     @shift.setter
     def shift(self, value):
-        self.set_shift(value)
+        self.set_shifts(value)
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
@@ -1920,7 +1943,7 @@ class Collection(MutableMapping):
         return temp
     @offset.setter
     def offset(self, value):
-        self.set_offset(value)
+        self.set_offsets(value)
     @offset.deleter
     def offset(self):
         raise AttributeError('Cannot delete object.')
@@ -1933,7 +1956,7 @@ class Collection(MutableMapping):
         return temp
     @factor.setter
     def factor(self, value):
-        self.set_factor(value)
+        self.set_factors(value)
     @factor.deleter
     def factor(self):
             raise AttributeError('Cannot delete object.')
@@ -1970,12 +1993,23 @@ class Collection(MutableMapping):
             peaks.save(filepath=dirpath/filename, **kwargs)
         if verbose: print('Done!')
 
-    def load(self, dirpath, string='*', verbose=False, **kwargs):
-        """Load peak from a text file. Wrapper for `json.load()`_.
+    def _load(self, dirpath, string='*', verbose=True):
+        """THIS FUNCTION WORKS, BUT IT DOES NOT WORK WELL ON A SPECTRA OBJECT.
+        
+        Load peak from a text file. Wrapper for `json.load()`_.
 
         Args:
-            filepath (string or path object, optional): filepath or file handle.
+            dirpath (string or path object, optional): filepath, list of 
+                filepaths (or folderpaths), or folderpath.
+                If filepath, peak is loaded from file and appended. 
+                If list, each filepath within the list is loaded.
+                If folderpath,
+                All files inside folder are loaded and peaks are appended.
                 If the filename extension is .gz or .bz2, the file is first decompressed.
+            string (str, optional): file names without this string will be ignored.
+                Use '*' for matching anything. Default is '*'.
+            verbose (bool, optional): verbose. Default is True.
+
 
         Returns:
             None
@@ -2004,10 +2038,11 @@ class Collection(MutableMapping):
             if verbose: print('Loading...')
             for j, filepath in enumerate(dirpath):
                 if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
+                
                 if Path(filepath).is_dir():
                     fl = filelist(dirpath=filepath, string=string)
                     for i, f in enumerate(fl):
-                        if verbose: print(f'        {j+1}/{len(fl)}: {f}')
+                        if verbose: print(f'    {i+1}/{len(fl)}: {f}')
                         self.append(Peaks(filepath=f))
 
                 elif Path(filepath).is_file():
@@ -2015,6 +2050,7 @@ class Collection(MutableMapping):
                 else:
                     raise ValueError(f'cannot read filepath.\nfilepath: {dirpath}')
         if verbose: print('Done!')
+        # print(self._store)
 
 
     def append(self, value):
@@ -2027,6 +2063,7 @@ class Collection(MutableMapping):
             None
         """
         if isinstance(value, Peaks):
+            # print('here')
             self._store.append(value)
         else:
             raise ValueError('value must be a brixs.Peaks object')
@@ -2071,7 +2108,7 @@ class Collection(MutableMapping):
         for peaks in self._store:
             peaks.set_calib(value=value, type=type)
 
-    def set_shift(self, value, type='relative'):
+    def set_shifts(self, value, type='relative'):
         """Set shift value.
 
         Args:
@@ -2088,9 +2125,9 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_shift(value=value, type=type)
+            peaks.set_shifts(value=value, type=type)
 
-    def set_offset(self, value, type='relative'):
+    def set_offsets(self, value, type='relative'):
         """Set offset value.
 
         Args:
@@ -2107,9 +2144,9 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_offset(value=value, type=type)
+            peaks.set_offsets(value=value, type=type)
 
-    def set_factor(self, value, type='relative'):
+    def set_factors(self, value, type='relative'):
         """Set y multiplicative factor.
 
         Args:
@@ -2127,7 +2164,7 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_factor(value=value, type=type)
+            peaks.set_factors(value=value, type=type)
 
 
     def get_errors(self, key):
@@ -2150,7 +2187,7 @@ class Collection(MutableMapping):
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optional): defines a vertical offset. Default is 0.
+            offset (number, optionakl): defines a vertical offset. Default is 0.
             shift (number, optional): horizontal shift value. Default is 0.
             factor (number, optional): multiplicative factor on the y axis.
                 Default is 1.
@@ -2166,7 +2203,7 @@ class Collection(MutableMapping):
         """
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
         elif type(ax) == str:
             raise ValueError(f'ax parameter cannot be type str ("{ax}").')

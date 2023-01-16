@@ -229,3 +229,4 @@ def send_email(recipient, subject, body, sender, password=None):
 
     server.sendmail(sender, recipient, content)
     server.close()
+

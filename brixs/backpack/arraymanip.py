@@ -59,14 +59,16 @@ def choose(x, ranges):
         choose_range = np.logical_and(x>=x_init, x<=x_final)
     return choose_range
 
-def extract(x, y, ranges):
-    """Returns specifc data ranges from x and y.
+def extract(x, y, ranges, invert=False):
+    """Returns specific data ranges from x and y.
 
     Args:
         x (list or array): 1D reference vector.
         y (list or array): 1D y-coordinates or list of several data sets.
         ranges (list): a pair of values or a list of pairs. Each pair represents
             the start and stop of a data range from x.
+        invert (bool, optional): if inverted is True, data outside of the data 
+            will be returned. Default is False.
 
     Returns:
         x and y arrays. If `y` is 1d, the returned `y` is 1d. If `y` is
@@ -110,8 +112,11 @@ def extract(x, y, ranges):
     y = np.array(y)
 
     choose_range = choose(x, ranges)
+    # print(choose_range[0:10])
+    if invert:
+        choose_range = np.invert(choose_range)
     # temp = np.compress(choose_range, np.c_[y.transpose(), x], axis=0)
-    # print(choose_range))
+    # print(choose_range[0:10])
     temp = np.compress(choose_range, np.c_[y, x], axis=0)
     # print(temp)
     if temp.any():

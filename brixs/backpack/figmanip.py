@@ -109,7 +109,6 @@ def bring2top():
 
     This function was not tested for all available matplotlib backends.
     """
-    print('gg')
     backend = matplotlib.get_backend()
     if backend.startswith(('Qt5', 'qt5', 'QT5')):
         from PyQt5 import QtCore
@@ -140,21 +139,22 @@ def set_window_position(*args):
         :py:func:`get_window_position`
     """
     if len(args) > 1:
-        x = int(args[0])
-        y = int(args[1])
+        x = int(args[1])
+        y = int(args[0])
     elif len(args) == 1 and len(args[0]) == 2:
-        x = int(args[0][0])
-        y = int(args[0][1])
+        x = int(args[0][1])
+        y = int(args[0][0])
     elif len(args) == 0:
         if br.settings.FIGURE_POSITION is not None:
-            set_window_position(br.settings.FIGURE_POSITION)
+            position = (int(br.settings.FIGURE_POSITION[0]), int(br.settings.FIGURE_POSITION[1]))
+            set_window_position(position)
         return
     else:
         warnings.warn('Wrong input')
         return
 
     figManager    = get_current_fig_manager()
-    width, height = get_window_size()
+    height, width = get_window_size()
 
     try:  # tested on tKinter backend
         figureGeometry = str(width) + 'x' + str(height) + '+' + str(x) + '+' + str(y)
@@ -180,10 +180,10 @@ def get_window_position():
     figManager = get_current_fig_manager()
 
     try:  # tested under tKinter backend
-        return (figManager.window.winfo_x(), figManager.window.winfo_y())
+        return (figManager.window.winfo_y(), figManager.window.winfo_x())
     except AttributeError:  # tested under qt4 and qt5 backends
         try:
-            return (figManager.window.geometry().x(), figManager.window.geometry().y())
+            return (figManager.window.geometry().y(), figManager.window.geometry().x())
         except AttributeError:
             warnings.warn('Backend not suported.')
             return (0, 0)
@@ -193,39 +193,41 @@ def set_window_size(*args):
     """Change the size of the window of a matplotlib figure.
 
     Args:
-        *args: A tuple like (width, height) or two separate width, height values (in px).
+        *args: A tuple like (width, height) or two separate width, height values
+            in px.
 
     See Also:
         :py:func:`get_window_size`
     """
     if len(args) > 1:
-        width = int(args[0])
+        width  = int(args[0])
         height = int(args[1])
     elif len(args) == 1 and len(args[0]) == 2:
-        width = int(args[0][0])
+        width  = int(args[0][0])
         height = int(args[0][1])
     else:
-        warnings.warn('Wrong input')
-        return
-
+        return 
+    
     figManager = get_current_fig_manager()
     x,y = get_window_position()
 
     try:  # tested on tKinter backend
-        figureGeometry = str(width) + 'x' + str(height) + '+' + str(x) + '+' + str(y)
+        figureGeometry = str(height) + 'x' + str(width) + '+' + str(x) + '+' + str(y)
         figManager.window.wm_geometry(figureGeometry)
     except AttributeError:
         try:  # tested on qt4 and qt5 backends
-            figManager.window.setGeometry(x, y, width, height)
+            figManager.window.setGeometry(x, y, height, width)
         except AttributeError:
             warnings.warn('Backend not suported.')
 
+    # This also works:
+    # plt.gcf().set_size_inches(height, width)
 
 def get_window_size():
     """Returns the size of the window of a matplotlib figure.
 
     Returns:
-        Tuple with the width and height values.
+        Tuple with the width and height values in px.
 
     See Also:
         :py:func:`set_window_size`
@@ -233,15 +235,17 @@ def get_window_size():
     figManager = get_current_fig_manager()
 
     try:  # tested on tKinter backend
-        return (figManager.window.winfo_width(), figManager.window.winfo_height())
+        return (figManager.window.winfo_height(), figManager.window.winfo_width())
 
     except AttributeError:  # tested on qt4 and qt5 backends
         try:
-            return (figManager.window.geometry().width(), figManager.window.geometry().height())
+            return (figManager.window.geometry().height(), figManager.window.geometry().width())
         except AttributeError:
             warnings.warn('Backend not suported.')
             return (0, 0)
-
+    
+    # this also works, but in inches
+    # return list(plt.gcf().get_size_inches())
 
 def maximize():
     """Maximize current fig."""
@@ -278,8 +282,7 @@ def figure(**kwargs):
 
     # position
     if br.settings.FIGURE_POSITION is not None:
-        set_window_position(br.settings.FIGURE_POSITION)
-
+        set_window_position()
     if br.settings.FIGURE_FORCE_ON_TOP:
         bring2top()
 
@@ -293,10 +296,31 @@ def figure(**kwargs):
             # kwargs['figsize'] = br.settings.FIGURE_SIZE
             set_window_size(br.settings.FIGURE_SIZE)
     
-    
-    # save parameters
-    # fig.old_size = get_window_size()
-    # fig.old_dpi  = fig.get_dpi()
+    # grid
+    if br.settings.FIGURE_GRID != (1, 1) and br.settings.FIGURE_GRID:
+        rows    = br.settings.FIGURE_GRID[0]
+        columns = br.settings.FIGURE_GRID[1]
+
+        if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
+            count  = br.settings._figure_count - 1
+            row    = int((count/columns)%rows)
+            column = count%columns
+
+            if br.settings.FIGURE_SIZE is None:
+                height, width = get_window_size()
+            else:
+                height  = br.settings.FIGURE_SIZE[0]
+                width = br.settings.FIGURE_SIZE[1]
+
+            position = (br.settings.FIGURE_POSITION[0]+row*(height+br.settings.FIGURE_GRID_OFFSET[0]), br.settings.FIGURE_POSITION[1]+column*(width+br.settings.FIGURE_GRID_OFFSET[1]))
+            # print(br.settings.FIGURE_POSITION)
+            # print(position)
+            set_window_position(position)
+
+            br.settings._figure_count += 1
+    else:
+        set_window_position()
+        br.settings._figure_count = 0
     return fig
 
 
@@ -461,6 +485,8 @@ def onclick(event):
             if is_linux:
                 plt.savefig(f'{onclick_folder/".temporary_fig.svg"}')
                 svg2clipboard(onclick_folder/".temporary_fig.svg")
+            elif is_windows:
+                print('hh')
 
         elif onclick_fig_format == 'png':
             if is_linux:
@@ -468,43 +494,42 @@ def onclick(event):
                 png2clipboard(onclick_folder/".temporary_fig.png")
 
 
-def zoom(start, stop, fig=None, margin_x=10, margin_y=10):
-    """Zoom up portion of a plot from start to stop.
+def zoom(start, stop, ymargin=2):
+    """Zoom up portion of current figure from start to stop.
 
     Args:
         start (float or int): initial x value.
-        stop (float or int): final x value.
-        fig (int, optional): number of the figure. If None, current figure is used.
-        margin_x (int, optional): margin value between data and the edges of plot in percentage of the x data range.
-        margin_y (int, optional): margin value between data and the edges of plot in percentage of the y data range.
+        ymargin (number, optional): margin value between data and the edges of
+            plot in percentage of the y data range.
     """
-    if fig is None:
-        fig = plt.gcf()
+    fig = plt.gcf()
 
-    ymax = 0
-    ymin = 0
+    ymax = None
+    ymin = None
 
     for axis in fig.axes:
         for line in axis.get_lines():
-            try:
-                ymax_temp = max(line.get_data()[1][index(line.get_data()[0], start): index(line.get_data()[0], stop)])
-                ymin_temp = min(line.get_data()[1][index(line.get_data()[0], start): index(line.get_data()[0], stop)])
-            except ValueError:
-                warnings.warn("All points of some data are outside of the required range.")
+
+            x = line.get_data()[0]
+            y = line.get_data()[1]
+
+            _, y = br.extract(x=x, y=y, ranges=(start, stop))
+            ymin_temp = min(y)
+            ymax_temp = max(y)
+
+            if ymin is None:
+                    ymin = copy.copy(ymin_temp)
+                    ymax = copy.copy(ymax_temp)
             try:
                 if ymax_temp > ymax:
                     ymax = copy.copy(ymax_temp)
                 if ymin_temp < ymin:
                     ymin = copy.copy(ymin_temp)
-
-                m =  (ymax-ymin)*margin_y/100
-                plt.ylim(ymin-m, ymax+m)
-
-                m =  (stop-start)*margin_x/100
-                plt.xlim(start, stop)
             except UnboundLocalError:
                 warnings.warn("All data are outside of the required range. Cannot zoom.")
-
+    m = (ymax-ymin)*ymargin/100
+    plt.ylim(ymin-m, ymax+m)
+    plt.xlim(start, stop)
 
 def savefigs(filepath, figs='all'):
     """Save multiple matplotlib figures in a pdf.
@@ -581,6 +606,24 @@ def cm2inch(*tupl):
     else:
         return tuple(i/inch for i in tupl)
 
+
+def mm2inch(*tupl):
+    """Convert values from mm to inches.
+
+    Args:
+        *Args: single value or a tuple with values to convert
+
+    Returns:
+        A tuple with values converted
+    """
+    inch = 2.54/10
+    if isinstance(tupl[0], tuple):
+        return tuple(i/inch for i in tupl[0])
+    else:
+        return tuple(i/inch for i in tupl)
+
+
+
 def round_to_1(x):
     """return the most significant digit"""
     return round(x, -int(np.floor(np.log10(abs(x)))))
@@ -643,7 +686,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
             #. n_decimal_places (int)
                 Number of decimal places to use for tick labels.
             #. direction
-                default is 'in', possible values are 'in' and 'out'
+                default is 'out', possible values are 'in' and 'out'
 
     Note:
         To set minor and major ticks 'manually' use `XAxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
@@ -680,7 +723,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
                         min_value = min(line.get_ydata())
             # min_value = ticks_showing[0]
     else:
-        min_value = ticks_showing[-1]
+        min_value = min(ticks_showing)
         for line in ax.get_lines():
             if axis == 'x':
                 if min_value > min(line.get_xdata()):
@@ -703,7 +746,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
                         max_value = max(line.get_ydata())
             # max_value = ticks_showing[-1]
     else:
-        max_value = ticks_showing[0]
+        max_value = max(ticks_showing)
         for line in ax.get_lines():
             if axis == 'x':
                 if max_value < max(line.get_xdata()):
@@ -831,14 +874,14 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
 
     # direction
     if 'direction' in kwargs:
-        if direction == 'in':
+        if kwargs['direction'] == 'in':
             direction = 'in'
-        elif direction == 'out':
+        elif kwargs['direction'] == 'out':
             direction = 'out'
         else:
             raise ValueError('invalid value for direction.\nMust be either `in` or `out`.')
     else:
-        direction = 'in'
+        direction = 'out'
 
     if axis == 'x':
         ax.tick_params(which='major', direction=direction, bottom=True, top=True, labeltop=False)

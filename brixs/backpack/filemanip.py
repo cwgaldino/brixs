@@ -96,14 +96,20 @@ def rename_files(filelist, pattern, new_pattern, ask=True):
     else:
         warnings.warn('Files NOT renamed.')
 
+def mkdir(dirpath):
+    dirpath = Path(dirpath)
+    dirpath.mkdir(parents=True, exist_ok=True)
 
-def rmdir(dirpath):
+def rmdir(dirpath, not_found_ok=False):
     """Remove a directory and everyting in it.
 
     Args:
         dirpath (string or pathlib.Path): directory path.
     """
     dirpath = Path(dirpath)
+    if not_found_ok:
+        if dirpath.exists() == False:
+            return            
     for item in dirpath.iterdir():
         if item.is_dir():
             rmdir(item)
