@@ -162,7 +162,7 @@ def moving_average(x, n):
     return np.convolve(x, window, 'valid')
 
 def derivative(x, y, order=1):
-    """Returns the derivative of y-coordinates as a function of x-coodinates.
+    """Returns the derivative of y-coordinates as a function of x-coordinates.
 
         Args:
             x (list or array): 1D array x-coordinates.
@@ -173,8 +173,14 @@ def derivative(x, y, order=1):
             x and y arrays.
     """
 
+    # check order   
     if order<0:
         raise ValueError('order must be a positive integer.')
+    
+    # check monotonicity
+    if check_monotonicity(x) < 0:
+        raise ValueError('x array must be monotonically increasing. Please use brixs.fix_monotonocity().')
+
 
     x = np.array(x)
     y = np.array(y)
@@ -190,7 +196,7 @@ def derivative(x, y, order=1):
     return x, y_diff
 
 def check_monotonicity(array):
-    """return 1 (-1) if increas. (decre.) monotonic or 0 if not monotonicaly."""
+    """return 1 (-1) if increas. (decre.) monotonic or 0 if not monotonic."""
     if np.all(np.diff(array) > 0) == True:
         return 1
     elif np.all(np.diff(array) < 0) == True:

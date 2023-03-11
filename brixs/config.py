@@ -28,7 +28,7 @@ class _settings():
     def __init__(self):
         self.FIGURE_FORCE_NEW_WINDOW  = False
         self.FIGURE_FORCE_ON_TOP      = False
-        self.FIGURE_GRID              = (1, 1)  # (1, 1) same as False
+        self.FIGURE_GRID              = (1, 1)  # (rows, cols) -> (1, 1) same as False 
         self.FIGURE_GRID_OFFSET       = (40, 0)
 
         self.FIGURE_POSITION = None
