@@ -1,308 +1,59 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Functions for file handling."""
+"""Support functions for reading files from ADRESS beamline - PSI.
 
+Last edited: Carlos Galdino 03-2023
+"""
+
+# %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path
 import numpy as np
-import os
+
+# %% ------------------------- Special Imports ---------------------------- %% #
+import brixs as br
 try:
     import h5py
 except ModuleNotFoundError:
     pass
 
-import brixs as br
-
-# %% ADRESS beamline - PSI - Switzerland =======================================
-def read(*args, **kwargs):
-    """Read files from ADRESS beamline at PSI.
-
-    If a specif filepath is given, this file is imported. If a folderpath, prefix,
-    and scan number (n) is given, data from the 3 ccds are imported.
-
-    Example:
-
-        >>> import brixs as br
-        >>>
-        >>> # single file
-        >>> s = br.ADRESS.read(filepath)
-        >>>
-        >>> # data for each ccd
-        >>> ss = br.ADRESS.read(folderpath, prefix, n)
-        >>>
-        >>> # One can also use keyword arguments
-        >>> s  = br.ADRESS.read(filepath=filepath)
-        >>> ss = br.ADRESS.read(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
-        >>>
-        >>> # experiment parameters can be accesed by:
-        >>> print(s.nd)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file (for loading a single file).
-        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
-        prefix (str): prefix (with or without 'underscore'). Example: for
-            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
-        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
-            The number of extra zeros (0001) is defined by the argument `zfill`.
-        zfill (number, optional): number of digits to fill scan number (Default is 4).
-
-    Returns:
-        :py:class:`brixs.Spectrum` or :py:class:`brixs.Spectra`
-
-    Last updated: 04/04/2022 by Carlos Galdino
-    """
-    filepath, folderpath, prefix, n, zfill = _sort_args(*args, **kwargs)
-
-    if filepath is not None:
-        return _read_1(filepath)
-    if folderpath is not None:
-        if folderpath.is_dir() == False:
-            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
-        if prefix is None:
-            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
-        if n is None:
-            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
-        filepaths = [folderpath/(prefix+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
-        ss  = br.Spectra(3)
-        nd = [0]*3
-        for i, filepath in enumerate(filepaths):
-            ss[i] = _read_1(filepath)
-            ss[i].scan = n
-            ss[i].ccd = i
-        ss.scan = n
-        return ss
-
-def read_pe(*args, **kwargs):
-    """Return photon event list from ADRESS beamline at PSI.
-
-    If a specif filepath is given, this file is imported. If a folderpath, prefix,
-    and scan number (n) is given, data from the 3 ccds are imported.
-
-    Example:
-
-        >>> import brixs as br
-        >>>
-        >>> # single file
-        >>> pe = br.ADRESS.read_pe(filepath)
-        >>>
-        >>> # data for each ccd
-        >>> pes = br.ADRESS.read_pe(folderpath, prefix, n)
-        >>>
-        >>> # One can also use keyword arguments
-        >>> pe  = br.ADRESS.read_pe(filepath=filepath)
-        >>> pes = br.ADRESS.read_pe(folderpath=folderpath, prefix=prefix, n=n, zfill=zfill)
-        >>>
-        >>> # experiment parameters can be accesed by:
-        >>> print(pe.nd)
-
-    Args:
-        filepath (str or Path object): filepath to h5 file (for loading a single file).
-        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
-        prefix (str): prefix (with or without 'underscore'). Example: for
-            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
-        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
-            The number of extra zeros (0001) is defined by the argument `zfill`.
-        zfill (number, optional): number of digits to fill scan number (Default is 4).
-
-    Returns:
-        :py:class:`brixs.PhotonEvents`
-
-    Last updated: 04/04/2022 by Carlos Galdino
-    """
-    filepath, folderpath, prefix, n, zfill = _sort_args(*args, **kwargs)
-
-    if filepath is not None:
-        return _read_1_pe(filepath)
-    if folderpath is not None:
-        if folderpath.is_dir() == False:
-            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
-        if prefix is None:
-            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
-        if n is None:
-            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
-        filepaths = [folderpath/(prefix+'_'+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
-        pes = [0]*3
-        nd = [0]*3
-        for i, filepath in enumerate(filepaths):
-            pes[i] = _read_1_pe(filepath)
-            pes[i].scan = n
-            pes[i].ccd = i
-        pes.scan = n
-        return pes
-
-def read_bad(filepath):
-    """Return image with bad events read from ADRESS beamline at PSI.
-
-    Example:
-
-        >>> import brixs as br
-        >>> im = br.ADRESS.read_bad(filepath)
-        >>> print(im.nd)
-
-    Args:
-        filepath (str or Path object): filepath.
-
-    Returns:
-        :py:class:`brixs.Image`
-
-    Last updated: 04/04/2022 by Carlos Galdino
-    """
-    f = h5py.File(Path(filepath), 'r')
-    nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
-
-    im = br.Image(np.array(f['entry/analysis/bad'][:]))
-    im.nd = nd
-
-    return  im
-
-def calculate_calib(folderpath, prefix, mode='cc', start=None, stop=None, scans=None, start_value=None, stop_value=None, values=None, verbose=False):
-    """Returns the calibration factor (dispersion) for ADRESS data.
-
-    Args:
-        folderpath:
-        prefix:
-        mode:
-        ...
-
-    If energy values are not given, it will be read from the file.
-
-    >>> import brixs as br
-    >>> disp, sss = br.calculate_calib_ADRESS(folderpath, prefix, start_scan, stop_scan)
-    >>>
-    >>> # disp is a list with the calculated dispersion for each ccd
-    >>> disp_ccd0 = disp[0]
-    >>> disp_ccd1 = disp[1]
-    >>> disp_ccd2 = disp[2]
-    >>> disp = np.mean(disp)
-    >>>
-    >>> # sss is a list of spectra for each ccd
-    >>> ss_ccd0 = sss[0]
-    >>> ss_ccd1 = sss[1]
-    >>> ss_ccd2 = sss[2]
-
-    Returns:
-        dispersion and list of brixs.Spectra object.
-    """
-    # scans
-    if scans is None:
-        scans = np.arange(start, stop+1)
-
-    # values
-    pick_values_from_files = False
-    if values is None:
-        if start_value is None and stop_value is None:
-            pick_values_from_files = True
-            values = np.zeros(len(scans))
-        else:
-            values = np.linspace(start_value, stop_value, len(scans))
-    assert len(scans) == len(values), f'number of values ({len(values)}) do not match the number of scans ({len(scans)})'
-
-    # CALCULATION
-    disp     = [0, 0, 0]
-    disp_bin = [0, 0, 0]
-    sss      = [0, 0, 0]
-    for ccd in range(3):
-        ss = br.Spectra(n=len(scans))
-        y_max = None
-        y_bin = None
-        for i, scan in enumerate(scans):
-            ss_temp = read(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
-            ss_temp[ccd].photon_energy = np.mean(ss_temp[ccd].nd['PhotonEnergy'])
-            ss[i] = ss_temp[ccd]
-            if pick_values_from_files:
-                values[i] = ss_temp[ccd].photon_energy
-
-            if y_max is None:
-                y_max = ss_temp[ccd].nd['ArraySizeY'][0]
-                y_bin = len(ss_temp[ccd].x)
-
-            if y_max != ss_temp[ccd].nd['ArraySizeY'][0]:
-                raise ValueError('detector size is not the same for all scans.')
-            if y_bin != len(ss_temp[ccd].x):
-                raise ValueError('binning is not the same for all scans.')
-
-            if verbose:
-                print(f'ccd: {ccd}, scan: {scans[i]}, value: {values[i]}')
-
-        if mode == 'fitted peaks':
-            ss.find_peaks(prominence=50)
-            p = [0.0]*len(ss)
-            for i in range(len(ss)):
-                p[i] = len(ss[i].peaks)
-            assert br.backpack.all_equal(p) and p[0]==1, f'Some spectra have more the one peak.\nSpectra should have just the elastic line.\nccd number: {ccd}\nNumber of peaks for each spectra: {p}'
-            ss.fit_peaks()
-        if mode == 'peak':
-            ss.find_peaks(prominence=50)
-            p = [0.0]*len(ss)
-            for i in range(len(ss)):
-                p[i] = len(ss[i].peaks)
-            assert br.backpack.all_equal(p) and p[0]==1, f'Some spectra have more the one peak.\nSpectra should have just the elastic line.\nccd number: {ccd}\nNumber of peaks for each spectra: {p}'
-        disp_bin[ccd] = ss.calculate_calib(values=values, mode=mode, peak=0)
-        disp[ccd] = disp_bin[ccd] / (y_max / y_bin)
-        ss.ccd = ccd
-        sss[ccd] = ss
-
-    return disp, disp_bin, sss
-    # return disp_bin, sss
-
-def read_xas(folderpath, prefix, n, zfill=4):
-    """Read XAS files from ADRESS beamline at PSI.
-
-    Args:
-        folderpath (str or Path object): folderpath to files.
-        prefix (str): prefix (with or without 'underscore'). Example: for
-            'Cu_0001_d1.h5' the prefix is 'Cu' or 'Cu_'.
-        n (number): scan number. Eample: for 'Cu_0001_d1.h5' the file number is 1.
-            The number of extra zeros (0001) is defined by the argument `zfill`.
-        zfill (number, optional): number of digits to fill scan number (Default is 4).
-
-    Returns:
-        TEY (:py:class:`brixs.Spectrum`), TFY (:py:class:`brixs.Spectrum`)
-
-    Last updated: 20/05/2022 by Carlos Galdino
-    """
-
-    if folderpath.is_dir() == False:
-        raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
-
-    if prefix is not None:
-        if prefix[-1] != '_':
-            prefix += '_'
-
-    filepath = folderpath/(prefix+str(n).zfill(zfill)+'.xas')
-
-    # data
-    data = br.backpack.load_data(filepath)
-    TEY = br.Spectrum(x=data['E_'+str(n).zfill(zfill)], y=data['D1_'+str(n).zfill(zfill)])
-    TFY = br.Spectrum(x=data['E_'+str(n).zfill(zfill)], y=data['D2_'+str(n).zfill(zfill)])
-    RMU = br.Spectrum(x=data['E_'+str(n).zfill(zfill)], y=data['D3_'+str(n).zfill(zfill)])
-
-    # header
-    header = br.backpack.load_Comments(filepath)[1:-7]
-    nd = {}
-    for line in header:
-        split = line[1:].split(':')
-        name = split[0].strip()
-        value = split[1].strip()
-        nd[name] = value
-    TEY.nd = nd
-    TFY.nd = nd
-    RMU.nd = nd
-
-    return TEY, TFY, RMU
-
-
-# %% SUPPORT ===================================================================
-
+# %% ----------------------------- Support -------------------------------- %% #
 def _sort_args(*args, **kwargs):
+    """Sort arguments given to a function.
+
+    Allows for more flexibility when using functions from this and other files.
+
+    Args:
+        filepath (str or Path object, optional): filepath. 
+        folderpath (str or Path object, optional): folderpath.
+        prefix (str, optional): file prefix string.
+        n (int, optional): scan number (number following of prefix).
+        zfill (int, optional): fill "n" zeros on the left side. Default is 4.
+
+    For positional arguments, the number of args define what they are: 
+        1 arg: filepath
+        2 args: Raises AttributeError
+        3 args: folderpath, prefix, n
+        4 args: folderpath, prefix, n, zfill
+
+    Raises:
+        AttributeError: positional arguments are mixed with keyword arguments.
+        AttributeError: if 2 positional arguments are given.
+        AttributeError: if 5 or more positional arguments are given.
+
+    Returns: 
+        filepath, folderpath, prefix, n, zfill
+
+    Last updated: Carlos Galdino 03-2023
+    """
     filepath   = None
     folderpath = None
     prefix     = None
     n          = None
     zfill      = 4
-    # print(args)
-    # print(kwargs)
+
+    # check if positional arguments are mixed with keyword arguments
     if len(args) > 0 and len(kwargs) > 0:
-        raise AttributeError(f'cannot mix positional arguments with keyword arguents.\nKeyword args: {kwargs}\nPosition args: {args}')
+        raise AttributeError(f'cannot mix positional arguments with keyword arguments.\nKeyword args: {kwargs}\nPosition args: {args}')
 
     # kwargs
     for key in kwargs.keys():
@@ -335,28 +86,291 @@ def _sort_args(*args, **kwargs):
         else:
             raise AttributeError(f'Cannot read positional attributes.\nAttributes = {args}')
 
-    if prefix is not None:
-        if prefix[-1] != '_':
-            prefix += '_'
-
     return filepath, folderpath, prefix, n, zfill
 
-def _read_1_pe(filepath):
-    f = h5py.File(Path(filepath), 'r')
+def _read_1(filepath, type_='spectrum'):
+    """Read one file from ADRESS beamline.
 
+    Args:
+        filepath (str or Path object): filepath.
+        type_ (str, optional): data to return (case insensitive). Use 
+            'spectrum' or 's' for spectrum; 'photon events' or 'pe', for photon
+            events list; and 'bad' or 'b' for bad events image.  
+    
+    Returns:
+        brixs.Spectrum() or brixs.PhotonEvents()
+    
+    Last updated: Carlos Galdino 03-2023
+    """
+    # read file
+    try:
+        f = h5py.File(Path(filepath), 'r')
+    except NameError:
+        raise ModuleNotFoundError('Cannot find h5py. Make sure h5py is installed.') 
+
+    # get metadata
     nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
-    x_max = nd['ArraySizeX'][0]
-    y_max = nd['ArraySizeY'][0]
 
-    pe   = br.PhotonEvents(data=f['entry']['analysis']['events'][:], shape=(y_max, x_max))
-    pe.nd = nd
+    if type_.lower() in ['spectrum', 's']:
+        # spectrum
+        s    = br.Spectrum(f['entry']['analysis']['spectrum'][:])
+        s.nd = nd
+        return s
+    elif type_.lower() in ['photon events', 'pe']:
+        # get array size
+        x_max = nd['ArraySizeX'][0]
+        y_max = nd['ArraySizeY'][0]
+        # get photon events list
+        pe   = br.PhotonEvents(data=f['entry']['analysis']['events'][:], shape=(y_max, x_max))
+        pe.nd = nd
+        return pe
+    elif type_.lower() in ['bad', 'b']:
+        # bad events image
+        im = br.Image(np.array(f['entry/analysis/bad'][:]))
+        im.nd = nd
+        return  im
+    else:
+        raise ValueError("type_ must be one of 'spectrum', 'photon events', or 'bad'.")
 
-    return pe
+def _read_xas(filepath):
+    """Read xas file from ADRESS beamline.
 
-def _read_1(filepath):
-    f = h5py.File(filepath, 'r')
+    Args:
+        filepath (str or Path object): filepath.
+    
+    Returns:
+        TEY, TFY, RMU (:py:class:`brixs.Spectrum`)
+    
+    Last updated: Carlos Galdino 03-2023
+    """
+    # data
+    data = br.load_data(filepath, force_array=True)
+    TEY = br.Spectrum(x=data[:, 0], y=data[:, 1])
+    TFY = br.Spectrum(x=data[:, 0], y=data[:, 2])
+    RMU = br.Spectrum(x=data[:, 0], y=data[:, 3])
 
-    nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
-    s    = br.Spectrum(f['entry']['analysis']['spectrum'][:])
-    s.nd = nd
-    return s
+    # metadata
+    header = br.load_Comments(filepath)[1:-7]
+    nd = {}
+    for line in header:
+        split = line[1:].split(':')
+        name  = split[0].strip()
+        value = split[1].strip()
+        nd[name] = value
+    TEY.nd = nd
+    TFY.nd = nd
+    RMU.nd = nd
+
+    return TEY, TFY, RMU
+
+# %% ---------------------------------------------------------------------- %% #
+def read(*args, **kwargs):
+    """Read files from ADRESS beamline at PSI.
+
+    Args:
+        filepath (str or Path object): filepath to h5 file (for loading a single file).
+        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
+        prefix (str): file prefix.
+        n (number): scan number. Example: for 'Cu_0001_d1.h5' the file number is 1.
+            The number of extra zeros (0001) is defined by the argument `zfill`.
+        zfill (number, optional): number of digits to fill scan number (Default is 4).
+        type_ (str, optional): data to return (not case sensitive). Use 
+            'spectrum' or 's' for spectrum; 'photon events' or 'pe', for photon
+            events list; 'bad' or 'b' for bad events image; and 'xas' or 'x' for
+            xas data.
+
+    Example:
+
+        >>> s   = br.ADRESS.read(filepath)
+        >>> pe  = br.ADRESS.read(filepath, type_='pe')
+        >>> bad = br.ADRESS.read(filepath, type_='bad')
+
+    Experiment parameters can be accessed by:
+   
+        >>> print(s.nd)
+
+    ADRESS beamline has three ccds. Data from all three ccd's can be extracted
+    simultaneously:
+
+        >>> ss   = br.ADRESS.read(folderpath, prefix, scan)
+        >>> pes  = br.ADRESS.read(folderpath, prefix, scan, type_='pe')
+        >>> bads = br.ADRESS.read(folderpath, prefix, scan, type_='bad')
+
+    X-ray absorption data (XAS) from ADRESS data can be read by:
+
+        >>> TEY, TFY, RMU = br.ADRESS.read(filepath, type_='xas')
+        >>> TEY, TFY, RMU = br.ADRESS.read(folderpath, prefix, scan, type_='xas')
+
+    Returns:
+        :py:class:`brixs.Spectrum` or :py:class:`brixs.Spectra`
+
+        if ``type_ = 'pe'``: :py:class:`brixs.PhotonEvents` or a list of :py:class:`brixs.PhotonEvents`.
+
+        if ``type_ = 'bad'``: :py:class:`brixs.Image` or a list of :py:class:`brixs.Image`
+
+        if ``type_ = 'xas'``: TEY (:py:class:`brixs.Spectrum`), TFY (:py:class:`brixs.Spectrum`), TEY (:py:class:`brixs.Spectrum`), RMU (:py:class:`brixs.Spectrum`)
+
+    Last updated: Carlos Galdino 03-2023
+    """
+    # select type
+    if 'type_' in kwargs: 
+        type_ = kwargs.pop('type_')
+    else:
+        type_ = 'spectrum'
+
+    # sort args
+    filepath, folderpath, prefix, n, zfill = _sort_args(*args, **kwargs)
+
+    # get data
+    if filepath is not None:
+        # xas data
+        if type_.lower() in ['xas', 'x']:
+            return _read_xas(filepath)
+        # spectrum, photon events, bad events
+        return _read_1(filepath, type_=type_)
+    if folderpath is not None:
+        if folderpath.is_dir() == False:
+            raise AttributeError(f'It seems like the folderpath is not a folder\nfolderpath = {folderpath}')
+        if prefix is None:
+            raise AttributeError('Missing prefix.\nPlease, inform the file prefix.\nExample: for Cu_0001_d1.h5 the prefix is `Cu` or `Cu_`.')
+        if n is None:
+            raise AttributeError('Missing file number (scan number).\nPlease, inform the file number.\nExample: for Cu_0001_d1.h5 the file number is 1.')
+        
+        # xas data
+        if type_.lower() in ['xas', 'x']:
+            filepath = folderpath/(prefix+str(n).zfill(zfill)+'.xas')
+            return _read_xas(filepath)
+        
+        # spectrum, photon events, bad events
+        filepaths = [folderpath/(prefix+str(n).zfill(zfill)+f'_d{i}.h5') for i in (1, 2, 3)]
+
+        if type_.lower() in ['spectrum', 's']:
+            ss  = br.Spectra(3)
+            for i, filepath in enumerate(filepaths):
+                ss[i] = _read_1(filepath)
+                ss[i].scan = n
+                ss[i].ccd = i
+            ss.scan = n
+            ss.nd = ss[0].nd
+            return ss
+        elif type_.lower() in ['photon events', 'pe']:
+            pes = [0]*3
+            for i, filepath in enumerate(filepaths):
+                pes[i] = _read_1(filepath, type_=type_)
+                pes[i].scan = n
+                pes[i].ccd = i
+            pes.scan = n
+            return pes
+        elif type_.lower() in ['bad', 'b']:
+            bads = [0]*3
+            for i, filepath in enumerate(filepaths):
+                bads[i] = _read_1(filepath, type_=type_)
+                bads[i].scan = n
+                bads[i].ccd = i
+            bads.scan = n
+            return bads
+        else:
+            raise ValueError("type_ must be one of 'spectrum', 'photon events', or 'bad'.")
+
+def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=None, start_energy=None, stop_energy=None, energies=None):
+    """Returns the calibration factor (dispersion) for ADRESS data.
+
+    Args:
+        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
+        prefix (str): file prefix.
+        mode (string, optional): method used to calculate the shifts.
+                The current options are: 'cross-correlation' ('cc'), 'max',
+                'fitted peaks', or 'peak'. For mode='peak', mode will be 
+                changed to 'fitted peaks'. If mode = 'fitted peaks', data will 
+                be fitted with one peak using function br.Spectrum.fit_peak().
+                Default is 'cc'.
+        start_scan (number, optional): first scan number. Default is None.
+        stop_scan (number, optional): last scan number. Default is None.
+        scans (list, optional): list of scan numbers. Overwrites start_scan and
+            stop_scan. Default is None.
+        start_energy (number, optional): first energy value. Default is None.
+        stop_energy (number, optional): last energy value. Default is None.
+        energies (list, optional): list with energy values. It overwrites
+            start_energy and stop_energy. Default is None. If start_energy and 
+            stop_energy are also None, the photon energy values will be
+            extracted from the file.   
+
+
+    Example:
+
+        >>> calib, sss = br.ADRESS.calib(folderpath=folderpath, prefix='Cu_', start_scan=19, stop_scan=29)
+
+    Calibration value from ccd1:
+
+        >>> print(calib[0])
+    
+    Spectra:
+
+        >>> br.figure()
+        >>> sss[0].plot()
+    
+    Shift (or peak center) as a function of energy:
+
+        >>> br.figure()
+        >>> sss[0].calculated_calib.plot(marker='o', lw=0, color='black')
+        >>> sss[0].calculated_calib.fit.plot(color='red', color='red', label='fit')
+        >>> plt.legend()
+        >>> plt.xlabel('Energy (eV)')
+        >>> plt.ylabel('Shift or peak center (bin)')
+
+    Returns:
+        2 lists with three elements. First list contains the calibration values 
+            for each ccd and the second list contains the spectra.
+    """
+    # scan numbers
+    if scans is None:
+        scans = np.arange(start_scan, stop_scan+1)
+
+    # get data
+    sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
+    for i, scan in enumerate(scans):
+        temp = read(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
+        sss[0][i] = temp[0]
+        sss[1][i] = temp[1]
+        sss[2][i] = temp[2]
+
+    # get energies
+    if energies is None:
+        if start_energy is None and stop_energy is None:
+            energies = [s.nd['PhotonEnergy'][0] for s in sss[0]]
+        else:
+            energies = np.linspace(start_energy, stop_energy, len(scans))
+    assert len(scans) == len(energies), f'number of energies ({len(energies)}) do not match the number of scans ({len(scans)})'
+
+    # calculate calib
+    disp = [0, 0, 0]   
+    if mode == 'peak':
+        mode = 'fitted peaks'
+    if mode == 'fitted peaks':
+        sss[0].fit_peak()
+        sss[1].fit_peak()
+        sss[2].fit_peak()
+    disp[0] = sss[0].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
+    disp[1] = sss[1].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
+    disp[2] = sss[2].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
+
+    # dispersion as a function of detector size instead of bin
+    # y_max = None
+    # y_bin = None
+
+    # if y_max is None:
+    #     y_max = ss_temp[ccd].nd['ArraySizeY'][0]
+    #     y_bin = len(ss_temp[ccd].x)
+
+    # if y_max != ss_temp[ccd].nd['ArraySizeY'][0]:
+    #     raise ValueError('detector size is not the same for all scans.')
+    # if y_bin != len(ss_temp[ccd].x):
+    #     raise ValueError('binning is not the same for all scans.')
+
+    # disp_bin[ccd] = ss.calculate_calib(values=energies, mode=mode, peak=0)
+    # disp[ccd] = disp_bin[ccd] / (y_max / y_bin)
+    # ss.ccd = ccd
+    # sss[ccd] = ss
+
+    # return disp, disp_bin, sss
+    return disp, sss

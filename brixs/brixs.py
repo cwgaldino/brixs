@@ -4972,19 +4972,14 @@ class Spectra(metaclass=_Meta):
         y = np.concatenate([s.y for s in self.data])
         return Spectrum(x=x, y=y)
 
-    def align(self, mode=None, peak=0, bkg_check=True):
-        """Uses Spectra.calculate_shifts() and Spectra.set_shifts() to align spectra.
+    def align(self, bkg_check=True):
+        """Uses calculate_shifts via cross-correlation and align spectra.
 
         Args:
-            mode (string, optional): method used to calculate the shifts. If
-                None, it will try to use 'cross-correlation'. If it fails, it
-                will use 'max'. See :py:func:`Spectra.calculate_shifts()` for more info.
             bkg_check (bool, optional): if mode is 'cc', bkg_check=true prevents
                 from cross correlating spectra with significant background (10 % of
                 the maximum y) which can lead to wrong results.
                 See :py:func:`Spectra.calculate_shifts()` for more info.
-            peak (int, optional): if mode='peak' or mode='fitted peaks', this variable selects which peak
-                to align data.
 
         Returns:
             None
@@ -4992,16 +4987,7 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.calculate_shifts`
         """
-        if mode is None:
-            if self.x is None:
-                try:
-                    self.check_same_x()
-                    mode = 'cc'
-                except ValueError:
-                    mode = 'max'
-            else:
-                mode = 'cc'
-        self.calculate_shifts(mode=mode, peak=peak, bkg_check=bkg_check)
+        self.calculate_shifts(mode='cc', bkg_check=bkg_check)
         self.set_shifts()
 
     def normalize(self, mode=None, peak=0, bkg_check=True):
@@ -5733,12 +5719,15 @@ class Spectra(metaclass=_Meta):
         # self._calculated_offsets.mode      = mode
         self._calculated_offsets.ref_value = ref_value
 
-    def calculate_calib(self, start=None, stop=None, values=None, mode='cross-correlation', peak=0, bkg_check=True, deg=1):
+    def calculate_calib(self, start_value=None, stop_value=None, values=None, mode='cross-correlation', ref_peak=0, bkg_check=True, deg=1):
         """Calculate calibration factor via :py:func:`Spectra.calculate_shifts()`.
 
+        The calibration factor is the shift value (x array) as a function of the
+            values array.
+
         Args:
-            start (number): value used for measuring the first spectrum.
-            stop (number): value used for measuring the last spectrum.
+            start_value (number): value used for measuring the first spectrum.
+            stop_value (number): value used for measuring the last spectrum.
             values (list): value list. It overwrites start and stop. Must be the
                 same length as number of spectra.
             mode (string, optional): method used to calculate the shifts.
@@ -5746,7 +5735,7 @@ class Spectra(metaclass=_Meta):
                 parameter is passed to :py:func:`Spectra.calculate_shifts()`.
                 see :py:func:`Spectra.calculate_shifts()` for more.
             bkg_check (bool, optional): see :py:func:`Spectra.calculate_shifts()` for more.
-            peak (int, optional): see :py:func:`Spectra.calculate_shifts()` for more.
+            ref_peak (int, optional): see :py:func:`Spectra.calculate_shifts()` for more.
             deg (int, ooptional): degree of the fitting polynomial. Default is 1.
 
         Returns:
@@ -5754,12 +5743,12 @@ class Spectra(metaclass=_Meta):
         """
         # check number of values matches the numbre of spectra
         if values is None:
-            values = np.linspace(start, stop, len(self))
+            values = np.linspace(start_value, stop_value, len(self))
         if len(self) != len(values):
             raise ValueError(f'number of values ({len(values)}) do not match the number of spectra ({len(self)})')
 
         # CALCULATION ==========================================================
-        self.calculate_shifts(mode=mode, peak=peak, bkg_check=bkg_check)
+        self.calculate_shifts(mode=mode, ref_peak=ref_peak, bkg_check=bkg_check)
         centers = -(self.calculated_shifts.y + self.calculated_shifts.ref_value)
 
         if mode in cc:

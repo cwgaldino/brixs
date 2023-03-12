@@ -18,7 +18,7 @@ There are two recommended methods:
 
 or
 
-2. Cloning (or downloading) the GitHub repository
+2. Cloning (or downloading) the GitHub repository then adding brixs to the "path":
 
 ```python
     import sys
@@ -35,7 +35,7 @@ Base (required):
 
 Reading files:
 - detect_delimiter
-- h5py
+- h5py (only for reading .hdf files)
 
 Reciprocal space calculations:
 - pbcpy
