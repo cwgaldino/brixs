@@ -1453,10 +1453,10 @@ class Peaks(MutableMapping):
 
             self._store = copy.deepcopy(value._store)
             for peak in self:
-                peak._calib  = calib[0]
-                peak._shift  = shift[0]
-                peak._offset = offset[0]
-                peak._factor = factor[0]
+                peak._calib  = calib
+                peak._shift  = shift
+                peak._offset = offset
+                peak._factor = factor
         else:
             raise ValueError('obj to copy must be of type br.Peaks.')
 
