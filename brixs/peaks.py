@@ -635,7 +635,7 @@ class Peak(MutableMapping):
         self._obj_decode(obj)
 
 
-    def set_calib(self, value, type='relative'):
+    def set_calib(self, value, type_='relative'):
         """Set calibration value.
 
         Args:
@@ -645,7 +645,7 @@ class Peak(MutableMapping):
         Returns:
             None
         """
-        if type in relative:
+        if type_ in relative:
             value = self.calib * value
 
         if self.calib != value:
@@ -666,7 +666,7 @@ class Peak(MutableMapping):
             # fix area
             self.calculate_area()
 
-    def set_shifts(self, value, type='relative'):
+    def set_shifts(self, value, type_='relative'):
         """Set shift value.
 
         Args:
@@ -675,7 +675,7 @@ class Peak(MutableMapping):
         Returns:
             None
         """
-        if type in relative:
+        if type_ in relative:
             value = self.shift + value
 
         if self.shift != value:
@@ -685,7 +685,7 @@ class Peak(MutableMapping):
                 self._store['c'] = self._store['c']+value
             self._shift = value
 
-    def set_offsets(self, value, type='relative'):
+    def set_offsets(self, value, type_='relative'):
         """Set offset value.
 
         Args:
@@ -694,7 +694,7 @@ class Peak(MutableMapping):
         Returns:
             None
         """
-        if type in relative:
+        if type_ in relative:
             value = self.offset + value
 
         if self.offset != value:
@@ -704,7 +704,7 @@ class Peak(MutableMapping):
                 self._store['amp'] = self._store['amp']+value
             self._offset = value
 
-    def set_factors(self, value, type='relative'):
+    def set_factors(self, value, type_='relative'):
         """Set y multiplicative factor.
 
         Args:
@@ -714,7 +714,7 @@ class Peak(MutableMapping):
         Returns:
             None
         """
-        if type in relative:
+        if type_ in relative:
             value = self.factor * value
 
         if self.factor != value:
@@ -818,16 +818,16 @@ class Peak(MutableMapping):
         Return:
             None
         """
-        if 'type' in kwargs:
-            type = kwargs.pop('type')
-            if type.startswith('a'):
-                type = 'additive'
-            elif type.startswith('m'):
-                type = 'multiplicative'
-            elif type.startswith('p'):
-                type = 'percentage'
+        if 'type_' in kwargs:
+            type_ = kwargs.pop('type_')
+            if type_.startswith('a'):
+                type_ = 'additive'
+            elif type_.startswith('m'):
+                type_ = 'multiplicative'
+            elif type_.startswith('p'):
+                type_ = 'percentage'
             else:
-                raise ValueError(f'type={type} not valid.\nValid types are: additive and multiplicative')
+                raise ValueError(f'type_={type} not valid.\nValid type_s are: additive and multiplicative')
 
         if any([item not in self._store for item in kwargs.keys()]):
             for key in kwargs:
@@ -839,9 +839,9 @@ class Peak(MutableMapping):
                 if kwargs[parameter] is None:
                     self.bounds[parameter] = [-np.inf, np.inf]
                 elif isinstance(kwargs[parameter], Iterable):
-                    if type == 'additive':
+                    if type_ == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
-                    elif type == 'multiplicative':
+                    elif type_ == 'multiplicative':
                         assert self[parameter] != 0,      f'bounds cannot be set via multiplicative factor for parameter "{parameter}", because its value is zero'
                         if self[parameter] < 0:
                             assert kwargs[parameter][1] <= 1, f'For negative values, the second bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
@@ -859,10 +859,10 @@ class Peak(MutableMapping):
                             self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                 else:
                     assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
-                    if type == 'additive':
+                    if type_ == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
-                    elif type == 'multiplicative':
-                        raise ValueError(f'Value must be a tuple for type = multiplicative, not a number')
+                    elif type_ == 'multiplicative':
+                        raise ValueError(f'Value must be a tuple for type_ = multiplicative, not a number')
                     else:
                         if self[parameter] < 0:
                             self.bounds[parameter] = [self[parameter]+self[parameter]*kwargs[parameter]/100, self[parameter]-self[parameter]*kwargs[parameter]/100]
@@ -875,9 +875,9 @@ class Peak(MutableMapping):
                 if kwargs[parameter] is None:
                     self.bounds[parameter] = [0, np.inf]
                 elif isinstance(kwargs[parameter], Iterable):
-                    if type == 'additive':
+                    if type_ == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
-                    elif type == 'multiplicative':
+                    elif type_ == 'multiplicative':
                         assert self[parameter] != 0,      f'bounds cannot be set via multiplicative factor for parameter "{parameter}", because its value is zero'
                         assert kwargs[parameter][0] <= 1, f'The first bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
                         assert kwargs[parameter][1] >= 1, f'The second bound multiplicative factor must be higher than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
@@ -886,10 +886,10 @@ class Peak(MutableMapping):
                         self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                 else:
                     assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
-                    if type == 'additive':
+                    if type_ == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
-                    elif type == 'multiplicative':
-                        raise ValueError(f'Value must be a tuple for type = multiplicative, not a number')
+                    elif type_ == 'multiplicative':
+                        raise ValueError(f'Value must be a tuple for type_ = multiplicative, not a number')
                     else:
                         self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter]/100, self[parameter]+self[parameter]*kwargs[parameter]/100]
                 assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
@@ -901,9 +901,9 @@ class Peak(MutableMapping):
                 if kwargs[parameter] is None:
                     self.bounds[parameter] = [0, 1]
                 elif isinstance(kwargs[parameter], Iterable):
-                    if type == 'additive':
+                    if type_ == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
-                    elif type == 'multiplicative':
+                    elif type_ == 'multiplicative':
                         assert self[parameter] != 0,      f'bounds cannot be set via multiplicative factor for parameter "{parameter}", because its value is zero'
                         assert kwargs[parameter][0] <= 1, f'The first bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
                         assert kwargs[parameter][1] >= 1, f'The second bound multiplicative factor must be higher than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
@@ -912,10 +912,10 @@ class Peak(MutableMapping):
                         self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
                 else:
                     assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
-                    if type == 'additive':
+                    if type_ == 'additive':
                         self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
-                    elif type == 'multiplicative':
-                        raise ValueError(f'Value must be a tuple for type = multiplicative, not a number')
+                    elif type_ == 'multiplicative':
+                        raise ValueError(f'Value must be a tuple for type_ = multiplicative, not a number')
                     else:
                         self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter]/100, self[parameter]+self[parameter]*kwargs[parameter]/100]
                 if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
@@ -1460,7 +1460,7 @@ class Peaks(MutableMapping):
         else:
             raise ValueError('obj to copy must be of type br.Peaks.')
 
-    def set_calib(self, value, type='relative'):
+    def set_calib(self, value, type_='relative'):
         """Set calibration value.
 
         Args:
@@ -1478,10 +1478,10 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_calib(value=value[i], type=type)
+            self[i].set_calib(value=value[i], type_=type_)
         self._fix_order()
 
-    def set_shifts(self, value, type='relative'):
+    def set_shifts(self, value, type_='relative'):
         """Set shift value.
 
         Args:
@@ -1500,14 +1500,14 @@ class Peaks(MutableMapping):
 
         for i in range(len(self)):
             # peak.calib = value
-            self[i].set_shifts(value=value[i], type=type)
+            self[i].set_shifts(value=value[i], type_=type_)
         self._fix_order()
 
         # for peak in self._store:
         #     peak.shift = value
         # self._shift = value
 
-    def set_offsets(self, value, type='relative'):
+    def set_offsets(self, value, type_='relative'):
         """Set offset value.
 
         Args:
@@ -1524,16 +1524,16 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_offsets(value=value[i], type=type)
+            self[i].set_offsets(value=value[i], type_=type_)
 
         # for peak in self._store:
         #     peak.offset = value
         # self._offset = value
 
-    def set_factors(self, value, type='relative'):
+    def set_factors(self, value, type_='relative'):
         """Set y multiplicative factor.
 
-        if value is a list, type is applied. if value is a number, type is set to relative.
+        if value is a list, type_ is applied. if value is a number, type_ is set to relative.
 
         Args:
             value (number): multiplicative factor (y-coordinates will be
@@ -1549,23 +1549,23 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_factors(value=value[i], type=type)
+            self[i].set_factors(value=value[i], type_=type_)
 
         # if isinstance(value, Iterable):
         #     # value must be the right length
         #     assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         #     for i in range(len(self)):
-        #         self[i].set_factors(value=value[i], type=type)
+        #         self[i].set_factors(value=value[i], type_=type_)
         # else:
-        #     type='relative'
+        #     type_='relative'
         #     if self.factor != value:
         #         if self.factor != 0:
         #             for i in range(len(self)):
-        #                 self[i].set_factors(value=self.factor, type=type)
+        #                 self[i].set_factors(value=self.factor, type_=type_)
         #         if value != 0:
         #             for i in range(len(self)):
-        #                 self[i].set_factors(value=value, type=type)
+        #                 self[i].set_factors(value=value, type_=type_)
         #     self._factor = value
 
 
@@ -1855,7 +1855,7 @@ class Collection(MutableMapping):
 
          Keyword arguments (kwargs) cannot be mixed with positional arguments.
 
-        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
+        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finally
             3) filepath. For example, if `data` and `filepath` are passed as
             arguments, `filepath` is ignored.
 
@@ -2088,7 +2088,7 @@ class Collection(MutableMapping):
             del self._store[key]
 
 
-    def set_calib(self, value, type='relative'):
+    def set_calib(self, value, type_='relative'):
         """Set calibration value.
 
         Args:
@@ -2106,9 +2106,9 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_calib(value=value, type=type)
+            peaks.set_calib(value=value, type_=type_)
 
-    def set_shifts(self, value, type='relative'):
+    def set_shifts(self, value, type_='relative'):
         """Set shift value.
 
         Args:
@@ -2125,9 +2125,9 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_shifts(value=value, type=type)
+            peaks.set_shifts(value=value, type_=type_)
 
-    def set_offsets(self, value, type='relative'):
+    def set_offsets(self, value, type_='relative'):
         """Set offset value.
 
         Args:
@@ -2144,9 +2144,9 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_offsets(value=value, type=type)
+            peaks.set_offsets(value=value, type_=type_)
 
-    def set_factors(self, value, type='relative'):
+    def set_factors(self, value, type_='relative'):
         """Set y multiplicative factor.
 
         Args:
@@ -2164,7 +2164,7 @@ class Collection(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for peaks in self._store:
-            peaks.set_factors(value=value, type=type)
+            peaks.set_factors(value=value, type_=type_)
 
 
     def get_errors(self, key):

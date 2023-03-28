@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 
-def eV2angstrom(value):
+def ev2angstrom(value):
     """Converts value from energy (eV) to photon wavelength (angstrom)."""
     return h*speed_of_light/(physical_constants['electron volt-joule relationship'][0]*value) * 10**10
 
@@ -27,7 +27,7 @@ def momentum_transfer(energy, theta, two_theta):
         q, q_parallel, q_perpendicular
     """
     # calculate wavelength
-    wavelength = eV2angstrom(energy)
+    wavelength = ev2angstrom(energy)
 
     # check angles
     # if sum(x is None for x in [theta_i, theta_f, two_theta]) > 1:

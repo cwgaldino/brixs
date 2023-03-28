@@ -8,6 +8,7 @@ Last edited: Carlos Galdino 03-2023
 # %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path
 import numpy as np
+from collections.abc import Iterable
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import brixs as br
@@ -114,7 +115,11 @@ def _read_1(filepath, type_='spectrum'):
     if type_.lower() in ['spectrum', 's']:
         # spectrum
         s    = br.Spectrum(f['entry']['analysis']['spectrum'][:])
-        s.nd = nd
+
+        # save attr to object
+        for attr in nd:
+            setattr(s, attr, nd[attr])
+        # s.nd = nd
         return s
     elif type_.lower() in ['photon events', 'pe']:
         # get array size
@@ -122,11 +127,18 @@ def _read_1(filepath, type_='spectrum'):
         y_max = nd['ArraySizeY'][0]
         # get photon events list
         pe   = br.PhotonEvents(data=f['entry']['analysis']['events'][:], shape=(y_max, x_max))
-        pe.nd = nd
+        
+        # save attr to object
+        for attr in nd:
+            setattr(pe, attr, nd[attr])
+        # pe.nd = nd
         return pe
     elif type_.lower() in ['bad', 'b']:
         # bad events image
         im = br.Image(np.array(f['entry/analysis/bad'][:]))
+        # save attr to object
+        for attr in nd:
+            setattr(im, attr, nd[attr])
         im.nd = nd
         return  im
     else:
@@ -251,7 +263,7 @@ def read(*args, **kwargs):
                 ss[i].scan = n
                 ss[i].ccd = i
             ss.scan = n
-            ss.nd = ss[0].nd
+            # ss.nd   = [ss[0].nd, ss[1].nd, ss[2].nd]
             return ss
         elif type_.lower() in ['photon events', 'pe']:
             pes = [0]*3
@@ -300,23 +312,44 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
 
         >>> calib, sss = br.ADRESS.calib(folderpath=folderpath, prefix='Cu_', start_scan=19, stop_scan=29)
 
-    Calibration value from ccd1:
+    Calibration values for each ccd (eV/bin):
 
-        >>> print(calib[0])
+        >>> print(calib)
     
     Spectra:
 
-        >>> br.figure()
-        >>> sss[0].plot()
+        >>> for ccd in (0, 1, 2):
+        >>>     br.figure()
+        >>>     _ = sss[ccd].plot()
+        >>>     plt.title(f'ccd {ccd}: {np.round(calib[ccd], 4)} eV/bin')
+        >>>     plt.legend(np.round(sss[ccd].E))
+        >>>     plt.xlabel('Energy loss (eV)')
+        >>>     plt.ylabel('Intensity (arb. units)')
+        >>>     plt.grid()
+
+    If mode is 'fitted peak', the fitted curves can be plotted as well:
+
+        >>> for ccd in (0, 1, 2):
+        >>>     br.figure()
+        >>>     _ = sss[ccd].plot()
+        >>>     _ = sss[ccd].fit.plot(color='red', lw=1)
+        >>>     plt.title(f'ccd {ccd}: {np.round(calib[ccd], 4)} eV/bin')
+        >>>     plt.legend(np.round(sss[ccd].E))
+        >>>     plt.xlabel('Energy loss (eV)')
+        >>>     plt.ylabel('Intensity (arb. units)')
+        >>>     plt.grid()
     
     Shift (or peak center) as a function of energy:
 
-        >>> br.figure()
-        >>> sss[0].calculated_calib.plot(marker='o', lw=0, color='black')
-        >>> sss[0].calculated_calib.fit.plot(color='red', color='red', label='fit')
-        >>> plt.legend()
-        >>> plt.xlabel('Energy (eV)')
-        >>> plt.ylabel('Shift or peak center (bin)')
+        >>> for ccd in (0, 1, 2):
+        >>>     br.figure()
+        >>>     plt.title(f'ccd {ccd}: {np.round(calib1[ccd], 4)} eV/bin')
+        >>>     sss[ccd].calculated_calib.plot(marker='o', lw=0, color='black')
+        >>>     sss[ccd].calculated_calib.fit.plot(color='red', label='fit')
+        >>>     plt.legend()
+        >>>     plt.xlabel('Photon energy (eV)')
+        >>>     plt.ylabel('Shift or peak center (bin)')
+        >>>     plt.grid()
 
     Returns:
         2 lists with three elements. First list contains the calibration values 
@@ -330,29 +363,33 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
     sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
     for i, scan in enumerate(scans):
         temp = read(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
-        sss[0][i] = temp[0]
-        sss[1][i] = temp[1]
-        sss[2][i] = temp[2]
+        for ccd in (0, 1, 2):
+            sss[ccd][i] = temp[ccd]
 
     # get energies
     if energies is None:
         if start_energy is None and stop_energy is None:
-            energies = [s.nd['PhotonEnergy'][0] for s in sss[0]]
+            energies = [np.mean(s.nd['PhotonEnergy']) for s in sss[0]]
         else:
             energies = np.linspace(start_energy, stop_energy, len(scans))
     assert len(scans) == len(energies), f'number of energies ({len(energies)}) do not match the number of scans ({len(scans)})'
+    
+    # save energies to spectra
+    for ccd in (0, 1, 2):
+        sss[ccd].E = energies
+        for j in range(len(sss[ccd])):
+            sss[ccd][j].E = energies[j]
 
     # calculate calib
     disp = [0, 0, 0]   
     if mode == 'peak':
         mode = 'fitted peaks'
     if mode == 'fitted peaks':
-        sss[0].fit_peak()
-        sss[1].fit_peak()
-        sss[2].fit_peak()
-    disp[0] = sss[0].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
-    disp[1] = sss[1].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
-    disp[2] = sss[2].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
+        for ccd in (0, 1, 2):
+            sss[ccd].fit_peak()
+    for ccd in (0, 1, 2):
+        disp[ccd] = sss[ccd].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
+
 
     # dispersion as a function of detector size instead of bin
     # y_max = None
@@ -374,3 +411,53 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
 
     # return disp, disp_bin, sss
     return disp, sss
+
+def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref=-1, zfill=4):
+    """[EXPERIMENTAL] Align and sum data from all ccd's.
+    
+    Args:
+        filepath (str or Path object): filepath to h5 file (for loading a single file).
+        folderpath (str or Path object): folderpath to files (for loading a data from 3 cdd files).
+        prefix (str): file prefix.
+        n (number): scan number. Example: for 'Cu_0001_d1.h5' the file number is 1.
+            The number of extra zeros (0001) is defined by the argument `zfill`.
+        calib (number, optional): calibration factor. If None, calibration is
+            not performed. If list, the number of elements must be the same as 
+            the number of ccd's. Each calib. factor will be applied to it's
+            respective ccd in order. After calibration, data is interpolated, 
+            aligned and summed up. If number, data is aligned first, then 
+            calibrated, and finally summed up. Default is None.
+        zero_mode (string, optional): 
+        zfill (number, optional): number of digits to fill scan number (Default is 4).
+    """
+    ss = br.ADRESS.read(folderpath, prefix, scan)
+
+    if calib is not None:
+        if isinstance(calib, Iterable):
+            assert len(ss) == len(calib), f'Number of calibration factor must match the number of spectra.\nnumber of calibration factors: {len(calib)}\nnumber of spectra: {len(ss)}'
+            for i in range(len(ss)):
+                ss[i].calib = calib[i]
+            ss.interp()
+            ss.align()
+            s = ss.sum
+        else:
+            ss.align()
+            s = ss.sum
+            s.calib = calib
+    else:
+        ss.align()
+        s = ss.sum
+
+    # zero
+    if zero_mode is not None:
+        if zero_mode == 'fitted peaks':
+            s.find_peaks()
+            s.fit_peaks()
+        elif zero_mode == 'peaks':
+            s.find_peaks()
+        s.zero(mode=zero_mode, ref=ref)
+
+    # attr
+    s.scan = scan
+
+    return s

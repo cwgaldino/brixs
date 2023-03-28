@@ -128,7 +128,7 @@ def rm(filepath):
 
 
 def filelist(dirpath='.', string='*'):
-    """Returns a list with all the files containg `string` in its name.
+    """Returns a list with all the files containing `string` in its name.
 
     Note:
         List is sorted by the filename.
@@ -167,7 +167,7 @@ def parsed_filelist(dirpath='.', string='*', ref=0, type='int'):
         dirpath (str or pathlib.Path, optional): directory path.
         string (str, optional): string to filter filenames.
         ref (int, optional): index of the reference number to be used as key.
-        type (string, optional): if 'int', dict keys are transormed in integers.
+        type (string, optional): if 'int', dict keys are transformed in integers.
             If 'float', dict keys are transformed into float.
 
     Returns:
@@ -227,7 +227,7 @@ def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
     if check_overwrite:
         if filepath.exists() == True:
             if filepath.is_file() == True:
-                if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                     pass
                 else:
                     warnings.warn('File not saved.')

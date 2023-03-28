@@ -38,6 +38,7 @@ from .backpack.filemanip import load_Comments, filelist
 from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes, derivative
 from .backpack.arraymanip import is_integer, all_equal, factors, flatten, peak_fit, check_monotonicity, fix_monotonicity
 from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
+from .backpack.interact import query
 from .peaks import Peak, Peaks, Collection
 from .backpack.model_functions import voigt_fwhm, dirac_delta
 
@@ -424,25 +425,29 @@ class Image(metaclass=_Meta):
 
         return data, filepath
 
-    def _transfer_attributes(self, object, type='Image'):
-        """Select attributes that will be copyed to different output objects."""
-        dict = get_attributes(self)
+    def _transfer_attributes(self, object):
+        """Transfer user defined attributes to output objects."""
 
-        # list of attributes NOT to transfer based on the type
-        do_not_transfer = {'Image':        ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shifts', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
-                           'PhotonEvents': ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shifts', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
-                           'Spectrum':     ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shifts', '_x_centers', '_y_centers', '_x_edges', '_y_edges'],
-                           'Spectra':      ['_data', '_vmin', '_vmax', '_shape', '_nbins', '_bins_size', '_reduced', '_shifts_v', '_shifts_h', '_p', '_f', '_calculated_shifts', '_x_centers', '_y_centers', '_x_edges', '_y_edges']}
-
-        # uncomment to check attributes (for testing only)
+        # # list of attributes NOT to transfer
+        # do_not_transfer = ['_data', '_vmin', '_vmax', '_shape', 
+        #                    '_nbins', '_bins_size', 
+        #                    '_reduced', '_shifts_v', '_shifts_h', 
+        #                    '_p', '_f', '_calculated_shifts', 
+        #                    '_x_centers', '_y_centers', 
+        #                    '_x_edges', '_y_edges']
+        
+        # dict = get_attributes(self)
         # for n in dict:
-            # print(n)
+        #     if n not in do_not_transfer:
+        #         object.__setattr__(n, self.__getattribute__(n))
+        # return object
+    
+        # copy user defined attributes
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                object.__setattr__(attr, self.__dict__[attr])
 
-        for n in dict:
-            if n not in do_not_transfer[type]:
-                object.__setattr__(n, self.__getattribute__(n))
         return object
-
 
     def __len__(self):
         if self._data is None:
@@ -760,15 +765,20 @@ class Image(metaclass=_Meta):
         raise AttributeError('Cannot delete object.')
 
 
-    def save(self, filepath, only_data=False,  **kwargs):
+    def save(self, filepath=None, only_data=False,  check_overwrite=True, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format.
+                compressed gzip format. If None, filepath can be inferred from a
+                user defined attr 'im.filepath'. Default is None.  Last used 
+                filepath is saved to im.filepath.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
 
         If not specified, the following parameters are passed to `numpy.savetxt()`_:
 
@@ -776,7 +786,7 @@ class Image(metaclass=_Meta):
             fmt (string, or list, optional): A single format (like ``%10.5f``), or a
                 sequence of formats. See numpy's documentation for more information.
                 If not specified, best fmt is calculated based on the
-                number of decimal places of the data. Specifing fmt makes the code
+                number of decimal places of the data. Specifying fmt makes the code
                 runs a little faster (not much tough, but it might make a difference
                 if saving a lot of files).
             delimiter (str, optional): String or character separating columns.
@@ -794,7 +804,24 @@ class Image(metaclass=_Meta):
 
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
-
+        # filepath
+        if filepath is None:
+            try: 
+                filepath = Path(self.filepath)
+            except AttributeError:
+                raise TypeError("Missing 1 required argument: 'filepath'")
+        
+        # check overwrite
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+                
         # kwargs
         if 'fmt' not in kwargs: # pick best format
             decimal = max([n_decimal_places(x) for x in flatten(self._data)])
@@ -828,12 +855,16 @@ class Image(metaclass=_Meta):
                         kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
             np.savetxt(Path(filepath), self._data, **kwargs)
 
+        # save filepath
+        self.filepath = filepath
+
     def load(self, filepath, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
+                If the filename extension is .gz or .bz2, the file is first 
+                decompressed. Last used filepath is saved to im.filepath.
 
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
@@ -899,6 +930,9 @@ class Image(metaclass=_Meta):
                 self.binning(nbins=self.nbins, bins_size=self.bins_size)
             except:
                 pass
+        
+        # save filepath
+        self.filepath = str(filepath)
 
 
     def pcolormesh(self, ax=None, colorbar=False, **kwargs):
@@ -1343,7 +1377,7 @@ class Image(metaclass=_Meta):
             self._calculated_shifts.y = [int(round(y)) for y in self._calculated_shifts.y]
         self._calculated_shifts.x = centers
 
-    def set_shifts(self, value=None, p=None, f=None, axis=0, type='absolute'):
+    def set_shifts(self, value=None, p=None, f=None, axis=0, type_='absolute'):
         """Roll array of pixels along a given axis.
 
         Elements that roll beyond the edge are NOT re-introduced at the first.
@@ -1376,7 +1410,7 @@ class Image(metaclass=_Meta):
             elif axis == 1:
                 value = f(self.y_centers)
 
-        if type in relative:
+        if type_ in relative:
             if axis == 0:
                 value = self.shifts_v + value
             elif axis == 1:
@@ -1829,15 +1863,20 @@ class PhotonEvents(metaclass=_Meta):
         else:
             return len(self._data[:, 0])
 
-    def save(self, filepath, only_data=False,  **kwargs):
+    def save(self, filepath=None, only_data=False,  check_overwrite=True, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format.
+                compressed gzip format. If None, filepath can be inferred from a
+                user defined attr 'im.filepath'. Default is None.  Last used 
+                filepath is saved to pe.filepath.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
 
         If not specified, the following parameters are passed to `numpy.savetxt()`_:
 
@@ -1863,7 +1902,24 @@ class PhotonEvents(metaclass=_Meta):
 
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
+        # filepath
+        if filepath is None:
+            try: 
+                filepath = Path(self.filepath)
+            except AttributeError:
+                raise TypeError("Missing 1 required argument: 'filepath'")
 
+        # check overwrite
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+                
         # kwargs
         if 'fmt' not in kwargs: # pick best format
             decimal = max([n_decimal_places(x) for x in flatten(self._data)])
@@ -1897,12 +1953,16 @@ class PhotonEvents(metaclass=_Meta):
                         kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
             np.savetxt(Path(filepath), self._data, **kwargs)
 
+        # save filepath
+        self.filepath = filepath
+
     def load(self, filepath, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
+                If the filename extension is .gz or .bz2, the file is first 
+                decompressed. Last used filepath is saved to pe.filepath.
 
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
@@ -1968,6 +2028,9 @@ class PhotonEvents(metaclass=_Meta):
                 self.binning(nbins=self.nbins, bins_size=self.bins_size)
             except:
                 pass
+
+        # save filepath
+        self.filepath = str(filepath)
 
     def plot(self, ax=None, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
@@ -2427,7 +2490,7 @@ class Spectrum(metaclass=_Meta):
             if 0 in object.y:
                 raise ZeroDivisionError(f'y axis contain zeros. Cannot divide by zero.')
             else:
-                final = Spectrum(x=self.x, y=self.y / object.y)
+                final = Spectrum(x=self.x, y=self.y/object.y)
                 return self._transfer_attributes(final)
         elif isinstance(object, (np.floating, float, int)):
             if object == 0:
@@ -2497,26 +2560,29 @@ class Spectrum(metaclass=_Meta):
 
         return data, x, y, filepath
 
-    def _transfer_attributes(self, object, type='Spectrum'):
-        """Select attributes that will be copyed to different output objects."""
-        dict = get_attributes(self)
+    def _transfer_attributes(self, object):
+        """Transfer user defined attributes to output objects."""
+        
+        # # list of attributes NOT to transfer based on the type
+        # do_not_transfer = ['_data', '_x', '_y', '_area', 
+        #                    '_offset', '_factor', '_calib', 
+        #                    '_shift', '_shift_roll', '_shift_interp', 
+        #                    '_fit', '_residue', '_guess', '_R2', 
+        #                    '_peaks']
 
-        # list of attributes NOT to transfer based on the type
-        do_not_transfer = {'Image':        ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
-                           'PhotonEvents': ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
-                           'Spectrum':     ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks'],
-                           'Spectra':      ['_data', '_x', '_y', '_area', '_offset', '_factor', '_calib', '_shift', '_shift_roll', '_shift_interp', '_fit', '_residue', '_guess', '_R2', '_peaks']}
-
-        # uncomment to check attributes (for testing only)
+        # # get and set attr
+        # dict = get_attributes(self)
         # for n in dict:
-        #     print(n)
+        #     if n not in do_not_transfer[type]:
+        #         object.__setattr__(n, self.__getattribute__(n))
+        # return object
+    
+        # copy user defined attributes
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                object.__setattr__(attr, self.__dict__[attr])
 
-        for n in dict:
-            if n not in do_not_transfer[type]:
-                object.__setattr__(n, self.__getattribute__(n))
         return object
-
-
 
 
     @property
@@ -2744,15 +2810,22 @@ class Spectrum(metaclass=_Meta):
         raise AttributeError('Cannot delete object.')
 
 
-    def save(self, filepath, only_data=False, **kwargs):
+    def save(self, filepath=None, only_data=False, check_overwrite=True, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
+
+        User defined attr are saved in the header (except for dictionaries).
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format.
+                compressed gzip format. If None, filepath can be inferred from a
+                user defined attr 's.filepath'. Default is None. Last used 
+                dirpath is saved to an attr ss.filepath.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
 
         If not specified, the following parameters are passed to `numpy.savetxt()`_:
 
@@ -2778,6 +2851,24 @@ class Spectrum(metaclass=_Meta):
 
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
+        # filepath
+        if filepath is None:
+            try: 
+                filepath = self.filepath
+            except AttributeError:
+                raise TypeError("Missing 1 required argument: 'filepath'")
+        
+        # check overwrite
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+
         # kwargs
         if 'fmt' not in kwargs: # pick best format
             decimal = max([n_decimal_places(x) for x in flatten(self._data)])
@@ -2807,24 +2898,26 @@ class Spectrum(metaclass=_Meta):
                 if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov', '_peaks']:
                     if dict[n] is None:
                         kwargs['header'] += f'{n}: None'  + '\n'
-                        # else:
-                        #     kwargs['header'] += f'{n}: {dict[n].data}'  + '\n'
                     elif isinstance(dict[n], str):
                         kwargs['header'] += f'{n}: \"{str(dict[n])}\"'  + '\n'
+                    elif isinstance(dict[n], dict):
+                        pass
                     elif isinstance(dict[n], Iterable):
                         kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
-                        # if n == '_peaks':
-                        #     kwargs['header'] += f'{'_peaks.error'}: {list(dict[n])}'  + '\n'
                     else:
                         kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
             np.savetxt(Path(filepath), self._data, **kwargs)
+
+        # save filepath
+        self.filepath = str(filepath)
 
     def load(self, filepath, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
+                If the filename extension is .gz or .bz2, the file is first 
+                decompressed. Last used filepath is saved to an attr s.filepath.
 
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
@@ -2893,6 +2986,9 @@ class Spectrum(metaclass=_Meta):
             self.peaks._calib  = self.calib
             self.peaks._offset = self.offset
             self.peaks._factor = self.factor
+
+            # save filepath
+            self.filepath = str(filepath)
 
     def check_step_x(self, max_error=0.1):
         """Checks vector uniformity of the x-coordinates.
@@ -2972,13 +3068,13 @@ class Spectrum(metaclass=_Meta):
             self.check_monotonicity()
 
 
-    def set_calib(self, value, type='absolute'):
+    def set_calib(self, value, type_='absolute'):
         """Set calibration value.
 
         Args:
             value (number): calibration value (x-coordinates will be multiplied
                 by this value).
-            type (string, optional): either 'absolute' (default) or 'relative'.
+            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
@@ -2986,7 +3082,7 @@ class Spectrum(metaclass=_Meta):
         if value == 0:
             raise ValueError('cannot set calib = 0.')
 
-        if type in relative:
+        if type_ in relative:
             value = self.calib * value
 
         if self.calib != value:
@@ -3016,7 +3112,7 @@ class Spectrum(metaclass=_Meta):
         if self.residue is not None:
             self.residue.calib = value
 
-    def set_shift(self, value, mode, type='absolute'):
+    def set_shift(self, value, mode, type_='absolute'):
         """Set shift value.
 
         Args:
@@ -3026,7 +3122,7 @@ class Spectrum(metaclass=_Meta):
                 while y is interpolated with a shift. If ``mode='roll'`` (or rotate or r), x is also preserved
                 and y elements are rolled along the array (``shift`` value must be an integer).
                 The form of y-coordinates is fully preserved, but the edge of y-coordinates are lost.
-            type (string, optional): either 'absolute' (default) or 'relative'.
+            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
@@ -3051,7 +3147,7 @@ class Spectrum(metaclass=_Meta):
             if is_integer(value) == False:
                 raise ValueError('shift must be an integer for mode = `roll`.')
 
-            if type in relative:
+            if type_ in relative:
                 value = self.shift_roll + value
 
             if self.shift_roll != value:
@@ -3066,7 +3162,7 @@ class Spectrum(metaclass=_Meta):
                 self._data[:, 0] = self._x
                 self._data[:, 1] = self._y
         elif mode in hard:
-            if type in relative:
+            if type_ in relative:
                 value = self.shift + value
 
             if self.shift != value:
@@ -3078,7 +3174,7 @@ class Spectrum(metaclass=_Meta):
                 self._data[:, 0] = self._x
                 self._data[:, 1] = self._y
         elif mode in soft:
-            if type in relative:
+            if type_ in relative:
                 value = self.shift_interp + value
 
             if self.shift_interp != value:
@@ -3104,7 +3200,7 @@ class Spectrum(metaclass=_Meta):
             total = self.shift_interp + self.shift
             if self.step is not None:
                 total += self.shift_roll*self.step
-            self.peaks.set_shifts(value = total, type='absolute')
+            self.peaks.set_shifts(value = total, type_='absolute')
         if self.guess is not None:
             self.guess.set_shift(value, mode=mode)
         if self.fit is not None:
@@ -3112,17 +3208,17 @@ class Spectrum(metaclass=_Meta):
         if self.residue is not None:
             self.residue.set_shift(value, mode=mode)
 
-    def set_offset(self, value, type='absolute'):
+    def set_offset(self, value, type_='absolute'):
         """Set offset value.
 
         Args:
             value (value): offset value (value will be added to y-coordinates).
-            type (string, optional): either 'absolute' (default) or 'relative'.
+            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
         """
-        if type in relative:
+        if type_ in relative:
             value = self.offset + value
 
         if self.offset != value:
@@ -3144,13 +3240,13 @@ class Spectrum(metaclass=_Meta):
         if self.residue is not None:
             self.residue.offset = value
 
-    def set_factor(self, value, type='absolute'):
+    def set_factor(self, value, type_='absolute'):
         """Set y multiplicative factor.
 
         Args:
             value (number): multiplicative factor (y-coordinates will be
                 multiplied by this value).
-            type (string, optional): either 'absolute' (default) or 'relative'.
+            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
@@ -3158,7 +3254,7 @@ class Spectrum(metaclass=_Meta):
         if value == 0:
             raise ValueError('cannot set factor = 0.')
 
-        if type in relative:
+        if type_ in relative:
             value = self.factor * value
 
         if self.factor != value:
@@ -3427,6 +3523,36 @@ class Spectrum(metaclass=_Meta):
         """
         return np.trapz(y=self.y, x=self.x)
 
+    def derivative(self, order=1):
+        """Returns the derivative of y-coordinates as a function of x-coordinates.
+
+        Args:
+            order (number, optional): derivative order. Defaut is 1.
+
+        Returns:
+            Derivative spectrum
+        """
+        x, y = derivative(self.x, self.y, order=order)
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return s
+
+    def smooth(self, n=8):
+        """Returns the moving average of the data.
+
+        Args:
+            n (int, optional): number of points to average. Default is 8.
+
+        Returns:
+            spectrum of length given by (len(x)-n+1).
+        """
+        x = moving_average(self.x, n=n)
+        y = moving_average(self.y, n=n)
+        
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return s
+    
     def normalize(self, value, ranges):
         """Set a factor such as the average y between ranges is equal to value.
 
@@ -3447,38 +3573,72 @@ class Spectrum(metaclass=_Meta):
         s = self.extract(ranges=ranges)
         self.set_factors(self.factor*value/np.mean(s.y))
 
-    def zero(self, mode='max', ref_peak=0):
-        """Uses Spectrum.set_shift() to shift a specified position to zero.
+    def zero(self, mode='max', ref=0):
+        """[EXPERIMENTAL] Uses Spectrum.set_shift() to shift a specified position to zero.
 
-        It shifts data using shift mode: 'hard'.
+        It shifts data using shift mode: 'hard' ('x').
 
         Args:
             mode (string, optional): method for identifing the point which the x-
                 coordinate is zero. Default is 'max'. Options are: 'max', 'min',
                 'fitted peaks', 'peak'.
-            peak (int, optional): if mode='peak' or mode='fitted peaks', this
-                variable selects which peak to align data.
+            ref (int, optional): if mode='peak' or mode='fitted peaks', this
+                variable selects which peak to align data. If mode='cc', ref 
+                must be a reference spectrum of type brixs.Spectrum.
 
         Returns:
             None
         """
-        shift_mode = 'x'
-        if mode == 'max':
-            self.set_shifts(-self.x[np.argmax(self.y)], mode=shift_mode)
+        if mode == 'second derivative minimum':
+            s = self.derivative(2)
+            value = -self.x[np.argmin(s.y)]
+        elif mode in cc:
+            assert isinstance(ref, Spectrum), 'ref must be of type brixs.Spectrum.'
+            try:
+                ref.check_step_x()
+            except ValueError:
+                raise ValueError(f'Cannot shift data using mode = {mode}, because x-coordinates of reference spectrum are not uniform.')
+
+            # max
+            ss = Spectra([copy.deepcopy(ref), copy.deepcopy(self)])
+            ss.calculate_shifts('max')
+            value1 = ss.calculated_shifts.y[1]
+            ss.set_shifts()
+
+            # cc
+            ss.interp(x=ss[0].x)
+            ss.calculate_factors(mode='area')
+            ss.set_factors()
+            ss.calculate_shifts(mode='cc')
+            value2 = ss.calculated_shifts.y[1]*ref.step
+
+            value = value1+value2
+        elif mode == 'max':
+            value = -self.x[np.argmax(self.y)]
         elif mode == 'min':
-            self.set_shift(-self.x[np.argmin(self.y)], mode=shift_mode)
+            value = -self.x[np.argmin(self.y)]
         elif mode == 'fitted peaks':
             assert self.fit != None, 'fit is not defined for this spectrum.'
             assert self.fit.peaks != None, 'peaks are not defined for the fitted curve.'
-            self.set_shift(-self.fit.peaks[ref_peak]['c'], mode=shift_mode)
+            value = -self.fit.peaks[ref]['c']
         elif mode == 'peak':
             assert self.peaks != None, 'peaks are not defined for this spectrum.'
-            self.set_shift(-self.peaks[ref_peak]['c'], mode=shift_mode)
+            value = -self.peaks[ref]['c']
         else:
             raise ValueError('mode not valid.\nValid modes: max, min, fitted peaks, peak.')
+        
+        # # if roll, shift value must be an integer
+        # if shift_mode in roll and self.step is None:
+        #     try:
+        #         self.check_step_x()
+        #     except ValueError:
+        #         raise ValueError(f'Cannot shift data using shift_mode = {shift_mode}, because x-coordinates are not uniform.')
+        #     value = int(value/self.step)
+        
+        # apply shift
+        self.set_shift(value, mode='x', type_='relative')
 
-
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Args:
@@ -3488,6 +3648,8 @@ class Spectrum(metaclass=_Meta):
             factor (number, optional): multiplicative factor on the y axis.
                 Default is 1.
             calib (number, optional): multiplicative factor on the x axis.
+                Default is 1.
+            smooth (int, optional): number of points to average data (moving average).
                 Default is 1.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
 
@@ -3511,8 +3673,13 @@ class Spectrum(metaclass=_Meta):
             #         set_window_position(settings.FIGURE_POSITION)
             #     except:
             #         pass
+        x = (self.x*calib) + shift
+        y = self.y*factor + offset
 
-        return ax.plot((self.x*calib) + shift, self.y*factor + offset, **kwargs)
+        if smooth > 1:
+            x = moving_average(x, int(smooth))
+            y = moving_average(y, int(smooth))
+        return ax.plot(x, y, **kwargs)
 
 
     def find_peaks(self, prominence=5, width=4, moving_average_window=8):
@@ -3792,7 +3959,7 @@ class Spectrum(metaclass=_Meta):
 
         return popt, model
 
-
+    # OBSOLET
     def apply_correction(self, f):
         """Changes the values of x, y based on a function.
 
@@ -3844,6 +4011,11 @@ class Spectra(metaclass=_Meta):
             the data array.
         data (list or array, optional): list of :py:class:`spectrum` objects.
             Overwrites ``n``.
+        dirpath (string, path object, or list): folderpath, folder handle,
+                or a list of filepaths. The list can be comprised of file and
+                folderpaths. All files inside a folder where string can be found
+                in the filename are imported. If the filename extension is .gz or .bz2,
+                the file is first decompressed.
 
     Attributes:
         data (list of :py:attr:`Spectrum`): list with :py:attr:`Spectrum` objects.
@@ -3978,7 +4150,7 @@ class Spectra(metaclass=_Meta):
         if kwargs != {} and args != ():
             raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
         if any([item not in ['data', 'n', 'dirpath'] for item in kwargs.keys()]):
-            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `n`, and `filepaths`\nInput attributes: {kwargs.keys()}')
+            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `n`, and `dirpath`\nInput attributes: {kwargs.keys()}')
 
         data = None
         n    = None
@@ -4006,6 +4178,28 @@ class Spectra(metaclass=_Meta):
                 data = args
         return data, dirpath, n
 
+    def _transfer_attributes(self, object):
+        """Transfer user defined attributes to output objects."""
+        
+        # # list of attributes NOT to transfer based on the type
+        # do_not_transfer = ['_data', '_x', '_y', '_area', 
+        #                    '_offset', '_factor', '_calib', 
+        #                    '_shift', '_shift_roll', '_shift_interp', 
+        #                    '_fit', '_residue', '_guess', '_R2', 
+        #                    '_peaks']
+
+        # # get and set attr
+        # dict = get_attributes(self)
+        # for n in dict:
+        #     if n not in do_not_transfer[type]:
+        #         object.__setattr__(n, self.__getattribute__(n))
+
+        # copy user defined attributes
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                object.__setattr__(attr, self.__dict__[attr])
+
+        return object
 
 
     @property
@@ -4305,12 +4499,14 @@ class Spectra(metaclass=_Meta):
         self._calculated_calib   = None
 
 
-    def save(self, dirpath='./', prefix='spectrum_', suffix='.dat', zfill=None, only_data=False, verbose=False, **kwargs):
+    def save(self, dirpath=None, prefix='spectrum_', suffix='.dat', zfill=None, only_data=False, check_overwrite=True, verbose=False, **kwargs):
         r"""Save Spectra. Wrapper for `numpy.savetxt()`_.
 
         Args:
-            dirpath (string or pathlib.Path, optional): folderpath or folder handle.
-                Default is the current directory.
+            dirpath (string or pathlib.Path, optional): folderpath, folder handle,
+                or a list of filepaths. If None, filepath can be inferred from a
+                user defined attr 'ss.dirpath'. Default is None. Last used 
+                dirpath is saved to ss.dirpath.
             prefix (string, optional): prefix used for naming the files.
             suffix (string, optional): suffix used for naming the files. If the
                 filename ends in .gz, the file is automatically saved in
@@ -4319,8 +4515,11 @@ class Spectra(metaclass=_Meta):
                 zfill will be determined.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
+            check_overwrite (bool, optional): if True, it will check if files exist
+                and ask if user wants to overwrite file.
             verbose (bool, optional): turn verbose on and off. Default is `False`.
-
+            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
+            
         If not specified, the following parameters are passed to `numpy.savetxt()`_:
 
         Args:
@@ -4345,22 +4544,36 @@ class Spectra(metaclass=_Meta):
 
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
-        dirpath = Path(dirpath)
+        # dirpath
+        if dirpath is None:
+            try: 
+                dirpath = self.dirpath
+            except AttributeError:
+                raise TypeError("Missing 1 required argument: 'dirpath'")
 
         # check if dirpath is a directory
-        assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
-        assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
+        if isinstance(dirpath, Iterable):
+            for i, s in enumerate(self.data):
+                if verbose:  print(f':{i}/{len(self)-1}: {dirpath[i]}')
+                s.save(filepath=dirpath[i], only_data=only_data, check_overwrite=check_overwrite, **kwargs)
+        else:
+            assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
+            assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
 
-        # set filenames
-        if zfill is None:
-            zfill = n_digits(len(self)-1)[0]
+            # set filenames
+            if zfill is None:
+                zfill = n_digits(len(self)-1)[0]
 
-        # saving
-        if verbose: print('saving files...')
-        for i, s in enumerate(self.data):
-            filename = f'{prefix}' + f'{i}'.zfill(zfill) + f'{suffix}'
-            if verbose:  print(f':{i}/{len(self)-1}: {filename}')
-            s.save(filepath=dirpath/filename, only_data=only_data, **kwargs)
+            # saving
+            if verbose: print('saving files...')
+            for i, s in enumerate(self.data):
+                filename = f'{prefix}' + f'{i}'.zfill(zfill) + f'{suffix}'
+                if verbose:  print(f':{i}/{len(self)-1}: {filename}')
+                s.save(filepath=dirpath/filename, only_data=only_data, check_overwrite=check_overwrite, **kwargs)
+        
+        # save dirpath
+        self.dirpath = dirpath
+
         if verbose: print('Done!')
     
     def save1(self, filepath='./spectra.dat', only_data=False, ranges=None, **kwargs):
@@ -4467,15 +4680,15 @@ class Spectra(metaclass=_Meta):
             np.savetxt(Path(filepath), final, **kwargs)
 
 
-    def load(self, dirpath, string='*', verbose=True, **kwargs):
+    def load(self, dirpath, string='*', verbose=False, **kwargs):
         """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
             dirpath (string, path object, or list): folderpath, folder handle,
-                or a list of filepaths. The list can be comprised of file and
-                folderpaths. All files inside a folder where string can be found
-                in the filename are imported. If the filename extension is .gz or .bz2,
-                the file is first decompressed.
+                or a list of filepaths. All files inside a folder where string 
+                can be found in the filename are imported. If the filename 
+                extension is .gz or .bz2, the file is first decompressed. 
+                Last used dirpath is saved to ss.dirpath.
             string (str, optional): file names without this string will be ignored.
                 Use '*' for matching anything. Default is '*'.
 
@@ -4521,16 +4734,20 @@ class Spectra(metaclass=_Meta):
             for j, filepath in enumerate(dirpath):
                 if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
 
-                if Path(filepath).is_dir():
-                    fl = filelist(dirpath=filepath, string=string)
-                    for i, f in enumerate(fl):
-                        if verbose: print(f'    {i+1}/{len(fl)}: {f}')
-                        self.append(Spectrum(filepath=f))
+                # if Path(filepath).is_dir():
+                #     fl = filelist(dirpath=filepath, string=string)
+                #     for i, f in enumerate(fl):
+                #         if verbose: print(f'    {i+1}/{len(fl)}: {f}')
+                #         self.append(Spectrum(filepath=f))
 
                 elif Path(filepath).is_file():
                     self.append(Spectrum(filepath=filepath))
                 else:
-                    raise ValueError(f'cannot read filepath.\nfilepath: {dirpath}')
+                    raise ValueError(f'cannot read dirpath.\dirpath: {dirpath}')
+        
+        # save dirpath
+        self.dirpath = dirpath
+
         if verbose: print('Done!')
 
     def load1(self, filepath, **kwargs):
@@ -5019,7 +5236,7 @@ class Spectra(metaclass=_Meta):
         self.set_factors()
 
 
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, **kwargs):
         """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Args:
@@ -5029,6 +5246,8 @@ class Spectra(metaclass=_Meta):
             factor (number or list, optional): multiplicative factor on the y axis.
                 Default is 1.
             calib (number or list, optional): multiplicative factor on the x axis.
+                Default is 1.
+            smooth (int, optional): number of points to average data (moving average).
                 Default is 1.
             vertical_increment or vi (number): vertical increment between curves
                 in terms of percentage of the maximum delta y.
@@ -5113,6 +5332,13 @@ class Spectra(metaclass=_Meta):
         else:
             factor = [factor]*len(self)
 
+        # factor
+        if isinstance(smooth, Iterable):
+            if len(smooth) != len(self):
+                raise ValueError(f'smooth must be a number of a list with length compatible with the number of spectra.\nnumber of smooth: {len(factor)}\nnumber of spectra: {len(self)}')
+        else:
+            smooth = [smooth]*len(self)
+
         # plot
         # temp = [0]*len(self)
         # for i in range(len(self)-1, -1, -1):
@@ -5120,15 +5346,15 @@ class Spectra(metaclass=_Meta):
 
         temp = [0]*len(self)
         for i in range(len(self)):
-            temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
+            temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth[i],**kwargs)
 
         return temp, offset, shift
 
 
-    def set_shifts(self, value=None, mode=None, type='relative'):
+    def set_shifts(self, value=None, mode=None, type_='relative'):
         """Shift data recursively.
 
-        if value is none, calculated values will be used and type will be set to relative.
+        if value is none, calculated values will be used and type_ will be set to relative.
 
         Args:
             value (number or list, optional): value will be added to x-coordinates.
@@ -5138,7 +5364,7 @@ class Spectra(metaclass=_Meta):
                 while y is interpolated with a shift. If ``mode='roll'`` (or rotate or r), x is also preserved
                 and y elements are rolled along the array (``shift`` value must be an integer).
                 The form of y-coordinates is fully preserved, but the edge of y-coordinates are lost.
-            type (str, optional): set values 'relative' or in 'absolute' units.
+            type_ (str, optional): set values 'relative' or in 'absolute' units.
                 If 'relative', modifications will be done on top of previous
                 modifications. Default is 'relative'.
 
@@ -5169,7 +5395,7 @@ class Spectra(metaclass=_Meta):
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_shifts().')
 
             value = self.calculated_shifts.y
-            type = 'relative'
+            type_ = 'relative'
 
             # if mode is not defined, auto pick the right one
             if mode is None:
@@ -5235,7 +5461,7 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            self.data[i].set_shift(value=value[i], mode=mode, type=type)
+            self.data[i].set_shift(value=value[i], mode=mode, type_=type_)
 
         # if mode not interp and shifts are different, reset x
         if mode not in soft:
@@ -5248,15 +5474,15 @@ class Spectra(metaclass=_Meta):
         # self._calculated_factors = None
         # self._calculated_offsets = None
 
-    def set_factors(self, value=None, type='relative'):
+    def set_factors(self, value=None, type_='relative'):
         """Apply multiplicative y factor recursively.
 
-        if value is none, calculated values will be used and type will be set to relative.
+        if value is none, calculated values will be used and type_ will be set to relative.
 
         Args:
             value (number or list, optional): value will be multiplied to y-coordinates.
                 If None, it will look for calculated values from Spectra.calculate_factors().
-            type (str, optional): set values 'relative' or in 'absolute' units.
+            type_ (str, optional): set values 'relative' or in 'absolute' units.
                 If 'relative', modifications will be done on top of previous
                 modifications. Default is 'relative'.
 
@@ -5270,7 +5496,7 @@ class Spectra(metaclass=_Meta):
             if self.calculated_factors is None:
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_factors().')
             value = self.calculated_factors.y
-            type = 'relative'
+            type_ = 'relative'
         else:
             # check if value is a number
             if isinstance(value, Iterable) == False:
@@ -5281,7 +5507,7 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            self[i].set_factor(value=value[i], type=type)
+            self[i].set_factor(value=value[i], type_=type_)
 
         # reset attributes =====================================================
         # self._restart_check_attr()
@@ -5290,7 +5516,7 @@ class Spectra(metaclass=_Meta):
         self._calculated_factors = None
         # self._calculated_offsets = None
 
-    def set_calib(self, value, type='relative'):
+    def set_calib(self, value, type_='relative'):
         """Apply multiplicative x factor recursively.
 
         Args:
@@ -5327,7 +5553,7 @@ class Spectra(metaclass=_Meta):
         # self._calculated_factors = None
         # self._calculated_offsets = None
 
-    def set_offsets(self, value=None, type='relative'):
+    def set_offsets(self, value=None, type_='relative'):
         """Apply additive y factor recursively.
 
         if value is none, calculated values will be used and type will be set to relative.
@@ -5335,7 +5561,7 @@ class Spectra(metaclass=_Meta):
         Args:
             value (number or list, optional): value will be added to y-coordinates.
                 If None, it will look for calculated values from Spectra.calculate_offsets().
-            type (str, optional): set values 'relative' or in 'absolute' units.
+            type_ (str, optional): set values 'relative' or in 'absolute' units.
                 If 'relative', modifications will be done on top of previous
                 modifications. Default is 'relative'.
 
@@ -5349,7 +5575,7 @@ class Spectra(metaclass=_Meta):
             if self.calculated_offsets is None:
                 raise ValueError('values not defined. Please, pass values or use Spectra.calculate_offsets().')
             value = self.calculated_offsets.y
-            type = 'relative'
+            type_ = 'relative'
         else:
             # check if value is a number
             if isinstance(value, Iterable) == False:
@@ -5361,13 +5587,13 @@ class Spectra(metaclass=_Meta):
 
         # set values ===========================================================
         for i in range(len(self)):
-            # if type in relative:
+            # if type_ in relative:
             #     v = value[i] + self[i].offset
-            # elif type in absolute:
+            # elif type_ in absolute:
             #     v = value[i]
             # else:
             #     raise ValueError("type has to be either 'relative' or 'absolute'.")
-            self[i].set_offset(value=value[i], type=type)
+            self[i].set_offset(value=value[i], type_=type_)
 
         # reset attributes =====================================================
         # self._restart_check_attr()
@@ -5457,14 +5683,15 @@ class Spectra(metaclass=_Meta):
                     raise ValueError(f'some spectra have a background that seems to be too big for a reliable cross-corelation.\nSpectra with big bkg: {temp}\nYou can try using Spectra.floor()')
 
             # x must be the same for cc
-            x, ys = self._gather_ys()
+            # x, ys = self._gather_ys()
+            self.check_same_x()
 
             # x must be uniform (same step between each data point)
             self.check_step_x()
 
             # calculate cross-correlation
             for i in range(len(self)):
-                cross_correlation = np.correlate(ys[:, ref], ys[:, i], mode='full')
+                cross_correlation = np.correlate(self[ref].y, self[i].y, mode='full')
                 values[i] = np.argmax(cross_correlation)
             ref_value = values[ref]
             values -= ref_value
@@ -5771,8 +5998,12 @@ class Spectra(metaclass=_Meta):
             :py:class:`Spectra` object.
 
         Note:
-            All spectra have to have the same x-coordinates. This is verified
+            All spectra must have the same x-coordinates. This is verified
             before summing up the spectra.
+
+            User defined attr are saved to the summed spectrum. A number is 
+            added in front of the attr name indicating the index of the 
+            spectrum in which the attr was copied from.
         """
         # check x
         if self.x is None:
@@ -5786,9 +6017,10 @@ class Spectra(metaclass=_Meta):
         s = Spectrum(x=self.x, y=y)
 
         # copy user defined attributes
-        for attr in self.__dict__:
-            if attr.startswith('_') == False:
-                s.__setattr__(attr, self.__dict__[attr])
+        for j in range(len(self)):
+            for attr in self[j].__dict__:
+                if attr.startswith('_') == False:
+                    s.__setattr__(attr+f'_{j}', self[j].__dict__[attr])
 
         return s
 
