@@ -1,6 +1,4 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Peak objects"""
+# %%
 
 # standard libraries
 import copy
@@ -10,31 +8,23 @@ import matplotlib.pyplot as plt
 
 # specific libraries
 import lmfit
-from scipy.signal import find_peaks
 from collections.abc import Iterable, MutableMapping
-# import json
-
-# backpack
-from .backpack.filemanip import filelist
-from .backpack.arraymanip import all_equal
-from .backpack.model_functions import voigt_fwhm, voigt_area_fwhm, dirac_delta
-from .backpack.figmanip import n_digits
+import json
 
 # BRIXS
 import brixs as br
 
-# common definitions ===========================================================
+# %% common definitions ===========================================================
 names = ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']
 
-cc   = ['cross-correlation', 'cc']
-roll = ['roll', 'rotate', 'r', 'rot']
-hard = ['hard', 'x', 'h', 'Hard']
-soft = ['soft', 'Soft', 'interp', 'y', 's']
-relative = ['relative', 'r', 'rel']
-absolute = ['a', 'abs', 'absolute']
-increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
-decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
-
+br.cc   = ['cross-correlation', 'cc']
+br.roll = ['roll', 'rotate', 'r', 'rot']
+br.hard = ['hard', 'x', 'h', 'Hard']
+br.soft = ['soft', 'Soft', 'interp', 'y', 's']
+br.relative = ['relative', 'r', 'rel']
+br.absolute = ['a', 'abs', 'absolute']
+br.increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
+br.decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
 
 # %% Peaks =====================================================================
 class Peak(lmfit.Parameters):
@@ -54,7 +44,7 @@ class Peak(lmfit.Parameters):
         self._use_area  = False
         self._step      = None
         self._asymmetry = False
-        # self._use_peak  = True
+        self._use_peak  = True
         # self.bkg        = ''
 
         # parameters
@@ -74,7 +64,9 @@ class Peak(lmfit.Parameters):
         # asymmetry
         if 'asymmetry' in kwargs:
             self.asymmetry = kwargs.pop('asymmetry')
-        
+        # step
+        if 'step' in kwargs:
+            self._step = kwargs.pop('step')
 
 
         # values
@@ -107,18 +99,8 @@ class Peak(lmfit.Parameters):
         else:
             self._shift_interp = 0
         if 'shift_roll' in kwargs:
-            # step
-            if 'step' in kwargs:
-                self._step = kwargs.pop('step')
-                if self.step is not None:
-                    self._shift_roll = kwargs.pop('shift_roll')*self._step
-                else:
-                    self._shift_roll = 0
-            else:
-                self._shift_roll = 0
+            self._shift_roll = kwargs.pop('shishift_rollft')
         else:
-            if 'step' in kwargs:
-                self._step = kwargs.pop('step')
             self._shift_roll = 0
         if 'calib' in kwargs:
             self._calib = kwargs.pop('calib')
@@ -367,7 +349,7 @@ class Peak(lmfit.Parameters):
             None
         """
         # is relative?
-        if type_ in relative:
+        if type_ in br.relative:
             value = self.calib * value
 
         # apply
@@ -399,11 +381,11 @@ class Peak(lmfit.Parameters):
             None
         """
         # is relative?
-        if type_ in relative:
+        if type_ in br.relative:
             value = self.shift + value
         
         # apply
-        if mode in roll: 
+        if mode in br.roll: 
             value = self.step*value
 
             if self.shift_roll != value:
@@ -412,14 +394,14 @@ class Peak(lmfit.Parameters):
                 if value != 0:
                     self['c'].value = self['c'].value + value
                 self._shift_roll = value
-        elif mode in hard:
+        elif mode in br.hard:
             if self.shift != value:
                 if self.shift != 0:
                     self['c'].value = self['c'].value - self.shift
                 if value != 0:
                     self['c'].value = self['c'].value + value
                 self._shift = value
-        elif mode in soft:
+        elif mode in br.soft:
             if self.shift_interp != value:
                 if self.shift_interp != 0:
                     self['c'].value = self['c'].value - self.shift_interp
@@ -439,7 +421,7 @@ class Peak(lmfit.Parameters):
             None
         """
         # is relative?
-        if type_ in relative:
+        if type_ in br.relative:
             value = self.offset + value
 
         # apply
@@ -464,7 +446,7 @@ class Peak(lmfit.Parameters):
             None
         """
         # is relative?
-        if type_ in relative:
+        if type_ in br.relative:
             value = self.factor * value
 
         if self.factor != value:
@@ -532,7 +514,7 @@ class Peak(lmfit.Parameters):
         # data
         c = self['c'].value
         amp = self['amp'].value
-        xerr = self['w'].value/2
+        xerr = self['fwhm'].value/2
 
         if 'lw' not in kwargs and 'linewidth' not in kwargs:
             kwargs['lw'] = 0
@@ -1056,14 +1038,12 @@ class Peaks(MutableMapping):
     # basic
     def __str__(self):
         # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
-        return str({i:peak for i, peak in enumerate(self._store)})#[1:-1].replace(', ', '\n\n')
- 
+        return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
 
     def __repr__(self):
-        return str({i:peak for i, peak in enumerate(self._store)})#[1:-1].replace(', ', '\n\n')
+        # print('f')
         # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
+        return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
         # return str(self._store)
 
     def __getitem__(self, key):
@@ -1371,10 +1351,6 @@ class Peaks(MutableMapping):
         """
         del self._store[key]
 
-    def clear(self):
-        while len(self) > 0:
-            self.remove(0)
-
     # modifiers
     def set_calib(self, value, type_='relative'):
         """Set calibration value.
@@ -1414,7 +1390,7 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_shift(value=value[i], mode=mode, type_=type_)
+            self[i].set_shifts(value=value[i], mode=mode, type_=type_)
 
     def set_offsets(self, value, type_='relative'):
         """Set offset value.
@@ -1433,7 +1409,7 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_offset(value=value[i], type_=type_)
+            self[i].set_offsets(value=value[i], type_=type_)
 
     def set_factors(self, value, type_='relative'):
         """Set y multiplicative factor.
@@ -1454,15 +1430,9 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_factor(value=value[i], type_=type_)
+            self[i].set_factors(value=value[i], type_=type_)
 
     # plot and visualization
-    def pretty_print(self):
-        for peak in self:
-            print(f'Index: {peak.index}')
-            peak.pretty_print()
-            print('\n')
-
     def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
         """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
 
@@ -1533,70 +1503,12 @@ class Peaks(MutableMapping):
         
         return residual
     
-    def fit(self, x, y, method='least_squares', return_fitted_peaks=False):
-        """output, peaks = fit()
-        
-        I think x and y must be monotonic.
-        """
+    def fit(self, x, y, method='least_squares'):
+        """output, peaks = fit()"""
         residual = self.generate_residual_function(x, y)
-        out = lmfit.minimize(residual, method=method, params=self._add_peaks(), args=(x, y))
-        peaks2 = out.params._split_peaks()
-        if return_fitted_peaks:
-            return out, peaks2
-        else:
-            for i in range(len(peaks2)):
-                self[i] = peaks2[i].copy()
-                # for key in peaks2[i]:
-                #     self[i][key] = peaks2[i][key].copy()
-            return out
+        out = lmfit.minimize(residual, method='least_squares', params=self._add_peaks(), args=(x, y))
+        return out, out.params._split_peaks()
     
-    def find(self, x, y, prominence=5, width=4, moving_average_window=8):
-        """I think x and y must be monotonic and uniform."""
-        # check width and moving_average_window
-        if width < 1:
-            raise ValueError('width must be 1 or higher.')
-        if isinstance(width, int) == False:
-            if width.is_integer() == False:
-                raise ValueError('width must be an integer.')
-        if moving_average_window < 1:
-            raise ValueError('moving_average_window must be 1 or higher.')
-        if isinstance(moving_average_window, int) == False:
-            if moving_average_window.is_integer() == False:
-                raise ValueError('moving_average_window must be an integer.')
-            
-        # data smoothing
-        if moving_average_window > 1:
-            y2 = br.moving_average(y, moving_average_window)
-            x2 = br.moving_average(x, moving_average_window)
-        else:
-            x2 = x
-            y2 = y
-
-        # parameters
-        if prominence is None:
-            prominence = (max(y2)-min(y2))*0.1
-        else:
-            prominence = (max(y2)-min(y2))*prominence/100
-
-        try:
-            peaks, d = find_peaks(y2, prominence=prominence, width=width)
-            assert len(peaks) > 0, 'No peaks found.'
-            self.clear()
-            for i in range(len(peaks)):
-                amp = d['prominences'][i]+max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
-                c = x2[peaks[i]]
-                w = abs(d['widths'][i]*np.mean(np.diff(x)))
-
-                self.append(Peak(amp=amp, c=c, w=w, step=self.step,
-                                                    shift=self.shift, 
-                                                    shift_interp=self.shift_interp,
-                                                    shift_roll=self.shift_roll,
-                                                    shift_offset=self.offset,
-                                                    shift_calib=self.calib,
-                                                    shift_factor=self.factor))
-        except IndexError:
-            pass
-
     # extractors
     def calculate_spectra(self, x=None):
         """Return each peak spectrum separately.
@@ -1728,524 +1640,71 @@ class Peaks(MutableMapping):
         model_str = f'lambda x, {args_str}: {f_str}'
         return eval(model_str)
 
+
 # %%
-class Collection(MutableMapping):
 
-    def __init__(self, *args, **kwargs):
-        # core
-        self._store = []
-
-        # argument parsing
-        data, dirpath, filepaths = self._sort_args(args, kwargs)
-
-        # data
-        if data is not None:
-            if isinstance(data, Peaks):
-                self.append(data)
-            elif isinstance(data, Iterable):
-                for peaks in data:
-                    self.append(peaks)
-            else:
-                raise ValueError('data must be a list of type brixs.Peaks.')
-        elif dirpath is not None:
-            self.load(dirpath)
-        elif filepaths is not None:
-            self.load(filepaths)
-
-    # basic
-    def __str__(self):
-        # temp = str([val for i, val in enumerate(self._store)])[1:-1].replace('], [', ']\n=======\n[')
-        # return temp.replace('}, {', '}\n{')
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
-        return str(self._store)
-    
-    def __repr__(self):
-        return str(self._store)
-        # temp = str([val for i, val in enumerate(self._store)])[1:-1].replace('], [', ']\n=======\n[')
-        # return temp.replace('}, {', '}\n{')
-        # return str(self._store)
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace('}, ', '}\n=====\n')
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
-
-    def __getitem__(self, key):
-        if type(key) == int:
-            return self._store[key]
-        
-        elif type(key) == str:
-            if key not in names:
-                raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-            n_peaks = [len(peaks) for peaks in self]
-            if all_equal(n_peaks) == False:
-                print('WARNING: number of peaks is different between spectra')
-            if max(n_peaks) == 0:
-                return {}
-            else:
-                return [[peaks[j][key].value for peaks in self] for j in range(max(n_peaks))]
-        else:
-            raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-
-    def __setitem__(self, key, value):
-        print('nothing to set')
-        # if isinstance(value, Peaks):
-        #     self._store[key] = value
-        # else:
-        #     raise ValueError('value must be a brixs.Peaks object')
-
-    def __delitem__(self, key):
-        print('nothing to del')
-        # del self._store[key]
-
-    def __iter__(self):
-        return iter(self._store)
-
-    def __len__(self):
-        return len(self._store)
-
-    # support
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-         Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finally
-            3) filepath. For example, if `data` and `filepath` are passed as
-            arguments, `filepath` is ignored.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath. If two data sets are passed, it will
-            assume one is the x coordinates and the next one is the y coordinates.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, x, y, filepath
-        """
-        # print(kwargs)
-        # print(args)
-        if kwargs != {} and args != ():
-            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
-        if any([item not in ['data', 'dirpath'] for item in kwargs.keys()]):
-            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `dirpath`, and `filepaths`\nInput attributes: {kwargs.keys()}')
-
-        data      = None
-        dirpath   = None
-        filepaths = None
-        if 'data' in kwargs:
-            data = kwargs['data']
-        elif 'dirpath' in kwargs:
-            dirpath = kwargs['dirpath']
-        elif 'filepaths' in kwargs:
-            filepaths = kwargs['filepaths']
-        elif len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                temp = Path(args[0])
-                if temp.is_file():
-                    filepaths = [temp, ]
-                elif temp.is_dir():
-                    dirpath = temp
-                else:
-                    raise ValueError(f'cannot read dirpath or filepath.\nError: {dirpath}')
-            elif isinstance(args[0], Iterable):
-                if isinstance(args[0][0], str) or isinstance(args[0][0], Path):
-                    filepaths = [Path(x) for x in args[0]]
-                else:
-                    data = args[0]
-        elif len(args) > 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepaths = [Path(x) for x in args]
-            elif isinstance(args[0], Iterable):
-                data = args
-        return data, dirpath, filepaths
-
-    # save and load
-    def save(self, dirpath='./', prefix='peaks_', suffix='.dat', zfill=None, verbose=False, **kwargs):
-        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-            check_overwrite (bool, optional): if True, it will check if file exists
-                and ask if user want to overwrite file.
-
-        Returns:
-            None
-
-        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
-        """
-        dirpath = Path(dirpath)
-
-        # check if dirpath is a directory
-        assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
-        assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
-
-        # set filenames
-        if zfill is None:
-            zfill = n_digits(len(self)-1)[0]
-
-        # saving
-        if verbose: print('saving files...')
-        for i, peaks in enumerate(self):
-            filename = f'{prefix}' + f'{i}'.zfill(zfill) + f'{suffix}'
-            if verbose:  print(f':{i}/{len(self)-1}: {filename}')
-            peaks.save(filepath=dirpath/filename, **kwargs)
-        if verbose: print('Done!')
-
-    def _load(self, dirpath, string='*', verbose=True):
-        """THIS FUNCTION WORKS, BUT IT DOES NOT WORK WELL ON A SPECTRA OBJECT.
-        
-        Load peak from a text file. Wrapper for `json.load()`_.
-
-        Args:
-            dirpath (string or path object, optional): filepath, list of 
-                filepaths (or folderpaths), or folderpath.
-                If filepath, peak is loaded from file and appended. 
-                If list, each filepath within the list is loaded.
-                If folderpath,
-                All files inside folder are loaded and peaks are appended.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
-            string (str, optional): file names without this string will be ignored.
-                Use '*' for matching anything. Default is '*'.
-            verbose (bool, optional): verbose. Default is True.
-
-
-        Returns:
-            None
-
-        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
-        """
-        # reset data
-        self._store     = []
-
-        # if dirpath is str
-        if isinstance(dirpath, str) or isinstance(dirpath, Path):
-            dirpath = Path(dirpath)
-            if dirpath.is_file():
-                if verbose: print('dirpath is a file')
-                if verbose: print('Loading...')
-                self.append(Peaks(filepath=dirpath))
-                if verbose: print('Done!')
-                return
-            elif dirpath.is_dir():
-                dirpath = [dirpath, ]
-            else:
-                raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
-
-        # if dirpath is iterable
-        if isinstance(dirpath, Iterable):
-            if verbose: print('Loading...')
-            for j, filepath in enumerate(dirpath):
-                if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
-                
-                if Path(filepath).is_dir():
-                    fl = filelist(dirpath=filepath, string=string)
-                    for i, f in enumerate(fl):
-                        if verbose: print(f'    {i+1}/{len(fl)}: {f}')
-                        self.append(Peaks(filepath=f))
-
-                elif Path(filepath).is_file():
-                    self.append(Peaks(filepath=filepath))
-                else:
-                    raise ValueError(f'cannot read filepath.\nfilepath: {dirpath}')
-        if verbose: print('Done!')
-        # print(self._store)
-
-    # calculation and info
-    def calculate_spectra(self, x=None):
-        ss = br.Spectra()
-        for peaks in self:
-            s = peaks.calculate_spectrum(x=x)
-            ss.append(s)
-        return ss
-
-    def errors(self, key):
-        if type(key) == int:
-            return self._store[key]
-        
-        elif type(key) == str:
-            if key not in names:
-                raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-            n_peaks = [len(peaks) for peaks in self]
-            if all_equal(n_peaks) == False:
-                print('WARNING: number of peaks is different between spectra')
-            if max(n_peaks) == 0:
-                return {}
-            else:
-                return [[peaks[j][key].stderr for peaks in self] for j in range(max(n_peaks))]
-        else:
-            raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-        
-    # plotting and visualization
-    def pretty_print(self):
-        for i in range(len(self)):
-            print('='*5 + ' Spectrum ' + str(i) + ' ' + '='*5)
-            self[i].pretty_print()
-            print('\n')
-
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optionakl): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-
-        Returns:
-            dict with `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-        elif type(ax) == str:
-            raise ValueError(f'ax parameter cannot be type str ("{ax}").')
-        # elif type(ax) == module:
-        #     ax = plt
-
-        # percentage wise increment ====================
-        if 'vi' in kwargs and 'vertical_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: vertical increment/vi')
-        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
-            if 'vi' in kwargs:
-                vi = kwargs['vi']
-                del kwargs['vi']
-            if 'vertical_increment' in kwargs:
-                vi = kwargs['vertical_increment']
-                del kwargs['vertical_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].y) - min(self.data[i].y)
-            vi = max(temp)*factor*vi/100
-        else:
-            vi = 0
-
-        # percentage wise horizontal increment ====================
-        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
-        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
-            if 'hi' in kwargs:
-                hi = kwargs['hi']
-                del kwargs['hi']
-            if 'horizontal_increment' in kwargs:
-                hi = kwargs['horizontal_increment']
-                del kwargs['horizontal_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].x) - min(self.data[i].x)
-            hi = max(temp)*factor*hi/100
-        else:
-            hi = 0
-
-        # offset
-        if isinstance(offset, Iterable):
-            if len(offset) != len(self):
-                raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
-        else:
-            offset = [offset]*len(self)
-            for i in range(len(self)):
-                offset[i] = offset[i]+(vi*i)
-
-        # shift
-        if isinstance(shift, Iterable):
-            if len(shift) != len(self):
-                raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
-        else:
-            shift = [shift]*len(self)
-            for i in range(len(self)):
-                shift[i] = shift[i]+(hi*i)
-
-        # calib
-        if isinstance(calib, Iterable):
-            if len(calib) != len(self):
-                raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
-        else:
-            calib = [calib]*len(self)
-
-        # factor
-        if isinstance(factor, Iterable):
-            if len(factor) != len(self):
-                raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
-        else:
-            factor = [factor]*len(self)
-
-
-        # plot
-        r = [0]*len(self)
-        for i in range(len(self)):
-            r[i] = self[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
-        return r
-
-    # OBSOLETE ##############################
-    @property
-    def calib(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].calib
-        return temp
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift
-        return temp
-    @shift.setter
-    def shift(self, value):
-        self.set_shifts(value)
-    @shift.deleter
-    def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offset(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].offset
-        return temp
-    @offset.setter
-    def offset(self, value):
-        self.set_offsets(value)
-    @offset.deleter
-    def offset(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factor(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].factor
-        return temp
-    @factor.setter
-    def factor(self, value):
-        self.set_factors(value)
-    @factor.deleter
-    def factor(self):
-            raise AttributeError('Cannot delete object.')
-
-    # basic
-    def append(self, value):
-        """Append peak. Peak order is reassigned.
-
-        Args:
-            value (Peak or dict): peak to be appended.
-
-        Returns:
-            None
-        """
-        if isinstance(value, Peaks):
-            # print('here')
-            self._store.append(value)
-        else:
-            raise ValueError('value must be a brixs.Peaks object')
-
-    def remove(self, key):
-        """Remove peak. Peak order is reassigned.
-
-        Args:
-            key (int or list): peaks to be removed.
-
-        Returns:
-            None
-        """
-        if isinstance(key, Iterable):
-            key = [self._check_key(k) for k in key]
-            key = br.sort(key)[::-1]
-            if has_duplicates(key):
-                raise ValueError('list has duplicated peaks')
-            for k in key:
-                del self._store[k]
-        else:
-            del self._store[key]
-
-    # modifiers
-    def set_calib(self, value, type_='relative'):
-        """Set calibration value.
-
-        Args:
-            value (number): calibration value (x-coordinates will be multiplied
-                by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_calib(value=value, type_=type_)
-
-    def set_shifts(self, value, type_='relative'):
-        """Set shift value.
-
-        Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_shifts(value=value, type_=type_)
-
-    def set_offsets(self, value, type_='relative'):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_offsets(value=value, type_=type_)
-
-    def set_factors(self, value, type_='relative'):
-        """Set y multiplicative factor.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_factors(value=value, type_=type_)
+# %% data to plot
+x = np.linspace(-2, 6, 100)
+y1 = br.voigt_fwhm(x=x, amp=10, c=2, w=1, m=0)#+br.voigt_fwhm(x=x, amp=12, c=4, w=1, m=0)
+y2 = br.voigt_fwhm(x=x, amp=10, c=2, w=1, m=0)+br.voigt_fwhm(x=x, amp=12, c=4, w=1, m=0)
+
+
+# %% peak 1 ++++++++++++
+p1 = Peak()
+p1.index = 0
+# p1 = lmfit.Parameters()
+# p1.add('amp')
+# p1.add('c')
+# p1.add('w')
+# p1.add('m')
+# p1.add('w1')
+# p1.add('w2')
+# p1.add('m1')
+# p1.add('m2')
+# p1.add('area')
+# p1['w1'].vary = False
+# p1['w2'].vary = False
+# p1['m'].vary  = False
+# p1['m1'].vary = False
+# p1['m2'].vary = False
+# p1['area'].vary = False
+
+p1['amp'].value = 8
+p1['c'].value = 1.5
+p1['w'].value = 0.3
+
+# p1._find_suitable_x()
+
+p1.pretty_print()
+# s = p1.calculate_spectrum()
+# s.plot()
+# plt.show()
+
+# %% peak 2 ===================
+p2 = Peak()
+p2.index = 1
+
+p2['amp'].value = 6
+# p2['amp'].expr = 'amp_0'
+# p2['amp'].expr = ''
+p2['c'].value = 5
+p2['w'].value = 0.3
+
+# p2.pretty_print()
+# s = p2.calculate_spectrum()
+# s.plot()
+# plt.show()
+
+# %% fit
+peaks = Peaks(p1, p2)
+
+out, peaks2 = peaks.fit(x, y2)
+
+yfit = peaks2.calculate_spectrum()
+
+plt.figure()
+plt.plot(x, y2, marker='o')
+yfit.plot()
+plt.show()
+
+# %%

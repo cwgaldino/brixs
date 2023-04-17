@@ -1,24 +1,44 @@
-# ==============================================================================
-# %% EXAMPLE: Spectrum ====================================== 26/08/2022 =======
-# ==============================================================================
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Spectrum example"""
 
 # %% imports ===================================================================
 import brixs as br
-from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+
+from pathlib import Path
 import copy
 
-%matplotlib qt5
-%load_ext autoreload
-%autoreload 2
+# %% autoreload and matplotlib backend (ignore) ================================
+if br.is_notebook():
+    from IPython import get_ipython
+    get_ipython().run_line_magic('matplotlib', 'qt5')
+    get_ipython().run_line_magic('load_ext', 'autoreload')
+    get_ipython().run_line_magic('autoreload', '2')
+else:
+    plt.ion()
 
-# %% Many ways to create a br.Spectrum object ==================================
-arr = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]]
+# %% example ===================================================================
+
+x = np.linspace(-5, 5, 100)
+y = np.sin(x)
+
+s = br.Spectrum(x, y)
+
+s.plot()
+plt.show()
+
+# %% Initialization ============================================================
+# s = br.Spectrum(x, y)
+# s = br.Spectrum(y)
+# s = br.Spectrum(data)
+# s = br.Spectrum(filepath)
+
+arr = [x, y]
 s = br.Spectrum(data=arr)
 
 # also works if the array is inverted (transposed)
-arr = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]]
 arr2 = np.transpose(arr)
 s = br.Spectrum(data=arr2)
 

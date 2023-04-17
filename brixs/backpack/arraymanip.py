@@ -19,7 +19,7 @@ def index(x, value):
     Returns:
         index (int)
     """
-    return np.argmin(np.abs(np.array(x)-value))
+    return int(np.argmin(np.abs(np.array(x)-value)))
 
 def sort(ref, *args):
     """Returns sorted arrays based on a reference array.
@@ -473,15 +473,12 @@ def factors(n):
 
 def all_equal(array):
     """Returns True if all elements of an array are equal."""
-    if len(array) > 50:
-        return sum(array[:-1] == array[1:])+1 == len(array)
-    else:
-        iterator = iter(array)
-        try:
-            first = next(iterator)
-        except StopIteration:
-            return True
-        return all(first == x for x in iterator)
+    iterator = iter(array)
+    try:
+        first = next(iterator)
+    except StopIteration:
+        return True
+    return all(first == x for x in iterator)
 
 def is_integer(n):
     """Returns True if number is integer."""

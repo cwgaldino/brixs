@@ -169,9 +169,13 @@ def _read_xas(filepath):
         name  = split[0].strip()
         value = split[1].strip()
         nd[name] = value
-    TEY.nd = nd
-    TFY.nd = nd
-    RMU.nd = nd
+    # save attr to object
+    for attr in nd:
+        attr2 = attr.replace('-', '_')
+        setattr(TEY, attr2, nd[attr])
+        setattr(TFY, attr2, nd[attr])
+        setattr(RMU, attr2, nd[attr])
+
 
     return TEY, TFY, RMU
 
@@ -271,7 +275,7 @@ def read(*args, **kwargs):
                 pes[i] = _read_1(filepath, type_=type_)
                 pes[i].scan = n
                 pes[i].ccd = i
-            pes.scan = n
+            # pes.scan = n
             return pes
         elif type_.lower() in ['bad', 'b']:
             bads = [0]*3
@@ -279,7 +283,7 @@ def read(*args, **kwargs):
                 bads[i] = _read_1(filepath, type_=type_)
                 bads[i].scan = n
                 bads[i].ccd = i
-            bads.scan = n
+            # bads.scan = n
             return bads
         else:
             raise ValueError("type_ must be one of 'spectrum', 'photon events', or 'bad'.")
@@ -369,7 +373,7 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
     # get energies
     if energies is None:
         if start_energy is None and stop_energy is None:
-            energies = [np.mean(s.nd['PhotonEnergy']) for s in sss[0]]
+            energies = [np.mean(s.PhotonEnergy) for s in sss[0]]
         else:
             energies = np.linspace(start_energy, stop_energy, len(scans))
     assert len(scans) == len(energies), f'number of energies ({len(energies)}) do not match the number of scans ({len(scans)})'
@@ -412,7 +416,7 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
     # return disp, disp_bin, sss
     return disp, sss
 
-def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref=-1, zfill=4):
+def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref_spectrum=None, ref_peak=-1):
     """[EXPERIMENTAL] Align and sum data from all ccd's.
     
     Args:
@@ -432,6 +436,7 @@ def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref=-1, zfill=4)
     """
     ss = br.ADRESS.read(folderpath, prefix, scan)
 
+    # calibration and alignment
     if calib is not None:
         if isinstance(calib, Iterable):
             assert len(ss) == len(calib), f'Number of calibration factor must match the number of spectra.\nnumber of calibration factors: {len(calib)}\nnumber of spectra: {len(ss)}'
@@ -450,12 +455,9 @@ def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref=-1, zfill=4)
 
     # zero
     if zero_mode is not None:
-        if zero_mode == 'fitted peaks':
+        if zero_mode == 'peaks':
             s.find_peaks()
-            s.fit_peaks()
-        elif zero_mode == 'peaks':
-            s.find_peaks()
-        s.zero(mode=zero_mode, ref=ref)
+        s.zero(mode=zero_mode, ref_spectrum=ref_spectrum, ref_peak=ref_peak)
 
     # attr
     s.scan = scan

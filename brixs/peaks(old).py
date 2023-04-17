@@ -9,117 +9,236 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # specific libraries
-import lmfit
-from scipy.signal import find_peaks
 from collections.abc import Iterable, MutableMapping
-# import json
+import json
 
 # backpack
 from .backpack.filemanip import filelist
-from .backpack.arraymanip import all_equal
-from .backpack.model_functions import voigt_fwhm, voigt_area_fwhm, dirac_delta
+from .backpack.arraymanip import sort, all_equal
+from .backpack.model_functions import voigt_fwhm, dirac_delta
 from .backpack.figmanip import n_digits
 
 # BRIXS
 import brixs as br
 
 # common definitions ===========================================================
-names = ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']
-
-cc   = ['cross-correlation', 'cc']
-roll = ['roll', 'rotate', 'r', 'rot']
-hard = ['hard', 'x', 'h', 'Hard']
-soft = ['soft', 'Soft', 'interp', 'y', 's']
 relative = ['relative', 'r', 'rel']
 absolute = ['a', 'abs', 'absolute']
-increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
-decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
+
+# %% support functions ==========================================================
+def build_model_str(**kwargs):
+    """Returns instructions for building peak functions.
+
+    Args:
+        asymmetry (bool): if True, the returned peak function will require two
+            fwhm values, one for each half of the peak.
+        fixed_m (False or number): m is the amount of lorentzian
+            contribution for a peak. If False, m will be a required as an input
+            argument on the returned peak function.
+        idx (int, optional): number to be inprinted in the string
+
+    Returns:
+        function f(x), function f(x) as string, argument list as string
+    """
+    if 'asymmetry' in kwargs:
+        asymmetry = kwargs.pop('asymmetry')
+    else:
+        asymmetry = False
+    if 'idx' in kwargs:
+        idx = kwargs.pop('idx')
+    else:
+        idx = 0
+
+    # check kwargs
+    delete = []
+    for key in list(kwargs.keys()):
+        if key not in ['amp', 'c', 'fwhm', 'm', 'fwhm1', 'm1', 'fwhm2', 'm2']:
+            raise ValueError('Fixed parameter "' + str(key) + '" not valid.\nValid keys: "amp", "c", "fwhm", "m", "fwhm1", "m1", "fwhm2", "m2". ')
+        else:
+            if kwargs[key] is None:
+                del kwargs[key]
+
+    # check asymmetry
+    # if 'fwhm1' in kwargs or 'fwhm2' in kwargs:
+    #     if 'fwhm2' in kwargs and 'fwhm2' in kwargs:
+    #         asymmetry = True
+    #     else:
+    #         raise ValueError('If fwhm1 or fwhm2 are defined, both must be defined.')
+    # else:
+    #     asymmetry = False
+
+
+    # function string
+    if asymmetry:
+        # f_str = f'np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
+        f_str = f'np.heaviside(c_{idx}-x, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w1_{idx}, m1_{idx}) + np.heaviside(x-c_{idx}, 0)*voigt_fwhm(x, amp_{idx}, c_{idx}, w2_{idx}, m2_{idx}) + dirac_delta(x, amp_{idx}, c_{idx})'
+    else:
+        f_str = f'voigt_fwhm(x, amp_{idx}, c_{idx}, w_{idx}, m_{idx})'
+
+    # args string
+    args_str = ''
+    if 'amp' in kwargs:
+        f_str = f_str.replace(f'amp_{idx}', str(kwargs['amp']))
+    else:
+        args_str += f'amp_{idx}, '
+    if 'c' in kwargs:
+        f_str = f_str.replace(f'c_{idx}', str(kwargs['c']))
+    else:
+        args_str += f'c_{idx}, '
+    if asymmetry:
+        if 'fwhm1' in kwargs:
+            f_str = f_str.replace(f'w1_{idx}', str(kwargs['fwhm1']))
+        else:
+            args_str += f'w1_{idx}, '
+        if 'm' in kwargs:
+            if 'm1' not in kwargs:
+                f_str = f_str.replace(f'm1_{idx}', str(kwargs['m']))
+            if 'm1' in kwargs:
+                f_str = f_str.replace(f'm1_{idx}', str(kwargs['m1']))
+        elif 'm1' in kwargs:
+            f_str = f_str.replace(f'm1_{idx}', str(kwargs['m1']))
+        else:
+            args_str += f'm1_{idx}, '
+        if 'fwhm2' in kwargs:
+            f_str = f_str.replace(f'w2_{idx}', str(kwargs['fwhm2']))
+        else:
+            args_str += f'w2_{idx}, '
+        if 'm' in kwargs:
+            if 'm2' not in kwargs:
+                f_str = f_str.replace(f'm2_{idx}', str(kwargs['m']))
+            if 'm2' in kwargs:
+                f_str = f_str.replace(f'm2_{idx}', str(kwargs['m2']))
+        elif 'm2' in kwargs:
+            f_str = f_str.replace(f'm2_{idx}', str(kwargs['m2']))
+    else:
+        if 'fwhm' in kwargs:
+            f_str = f_str.replace(f'w_{idx}', str(kwargs['fwhm']))
+        else:
+            args_str += f'w_{idx}, '
+        if 'm' in kwargs:
+            f_str = f_str.replace(f'm_{idx}', str(kwargs['m']))
+        else:
+            args_str += f'm_{idx}, '
+
+    return f_str, args_str[:-2]
+
+def build_model(**kwargs):
+    """Returns a function f(x) of a peak.
+
+    Args:
+        amp (number): peak Amplitude (maximum value).
+        c (number): peak position.
+        fwhm (number): width of the peak (full width half maximum). If peak is
+            assymetric (fwhm1 and fwhm2 are defined), fwhm will be set to fwhm1+fwhm2.
+        fwhm1 (number, optional): fwhm of the first half of the peak (for
+            assimetric peaks).
+        fwhm2(number, optional): fwhm of the second half of the peak (for
+            assimetric peaks).
+        m (number, optional): factor from 0 to 1 of the lorentzian amount.
+            Default is 0 (fully gaussian peak). If peak is assymetric (m1 and m2
+            are defined), m will be set the average m value.
+        m1 (number, optional): m of the first half of the peak (for
+            assimetric peaks). Default is 0.
+        m2 (number, optional): m of the second half of the peak (for
+            assimetric peaks). Default is 0.
+
+    Returns:
+        function f(x)
+    """
+    f_str, args_str = build_model_str(**kwargs)
+    # print(f_str)
+    model_str = f'lambda x, {args_str}: {f_str}'
+    return eval(model_str)
 
 
 # %% Peaks =====================================================================
-class Peak(lmfit.Parameters):
+class Peak(MutableMapping):
+    """A dictionary for saving peaks parameters.
+
+    Only keyword arguments can be used.
+
+    Args:
+        amp (number): peak Amplitude (maximum value).
+        c (number): peak position.
+        fwhm (number): width of the peak (full width half maximum). If peak is
+            assymetric (fwhm1 and fwhm2 are defined), fwhm will be set to fwhm1+fwhm2.
+        fwhm1 (number, optional): fwhm of the first half of the peak (for
+            assimetric peaks).
+        fwhm2(number, optional): fwhm of the second half of the peak (for
+            asimetric peaks).
+        m (number, optional): factor from 0 to 1 of the lorentzian amount.
+            Default is 0 (fully gaussian peak). If peak is assymetric (m1 and m2
+            are defined), m will be set the average m value.
+        m1 (number, optional): m of the first half of the peak (for
+            assimetric peaks). Default is 0.
+        m2 (number, optional): m of the second half of the peak (for
+            assimetric peaks). Default is 0.
+        shift (number): initial shift value (does not affect the data).
+        calib (number): initial calibration value (does not affect the data).
+        offset( number): initial offset value (does not affect the data).
+        factor (number): initial multiplicative factor (does not affect the data).
+
+
+    Attributes:
+        area (number): peak area.
+        asymmetry (bool): True if peak is assymetric. This is defined when the
+            object is created. If asymmetry=False, and fhwm1 (or fwhm2) is set,
+            then asymmetry is set to True. If asymmetry=True, it cannot reverse
+            to False, and another object must be created from scratch.
+        store (dictionary):
+        shift (number): shift value (value will be added to x-coordinates).
+        calib (number): calibration value (x-coordinates will be multiplied by this value).
+        offset (number): offset value (value will be added to y-coordinates).
+        factor (number): multiplicative factor (y-coordinates will be multiplied by this value).
+    """
+
     def __init__(self, *args, **kwargs):
-        super().__init__()
+        # core
+        self._store = {'amp':None,
+                      'area':None,
+                      'c':None,
+                      'fwhm':None,
+                      'fwhm1':None,
+                      'fwhm2':None,
+                      'm':None,
+                      'm1':None,
+                      'm2':None,
+                      }
+        self.bounds = {'amp': [-np.inf, np.inf],
+                      'c':    [-np.inf, np.inf],
+                      'fwhm': [0, np.inf],
+                      'fwhm1':[0, np.inf],
+                      'fwhm2':[0, np.inf],
+                      'm':    [0, 1],
+                      'm1':   [0, 1],
+                      'm2':   [0, 1],
+                      }
+        self.error = {'amp':  0,
+                      'area': 0,
+                      'c':    0,
+                      'fwhm': 0,
+                      'fwhm1':0,
+                      'fwhm2':0,
+                      'm':    0,
+                      'm1':   0,
+                      'm2':   0,
+                      }
 
-        # when init, avoid run update_area_amp()
-        self._enable_update_area_amp = False
-
-        # index
-        if 'index' in kwargs:
-            self._index = kwargs.pop('index')
-        else:
-            self._index = 0
-
-        # initial definitions
-        self._use_area  = False
-        self._step      = None
-        self._asymmetry = False
-        # self._use_peak  = True
-        # self.bkg        = ''
-
-        # parameters
-        self.add(f'amp_{self.index}',  value=0)
-        self.add(f'area_{self.index}', value=0, vary=False)
-        self.add(f'c_{self.index}',    value=0)
-        self.add(f'w_{self.index}',    value=0, min=0)
-        self.add(f'w1_{self.index}',   value=0, min=0, vary=False)
-        self.add(f'w2_{self.index}',   value=0, min=0, vary=False)
-        self.add(f'm_{self.index}',    value=0, min=0, max=1)
-        self.add(f'm1_{self.index}',   value=0, min=0, max=1, vary=False)
-        self.add(f'm2_{self.index}',   value=0, min=0, max=1, vary=False)
-
-        # use area
-        if 'use_area' in kwargs:
-            self.use_area = kwargs.pop('use_area')
-        # asymmetry
+        # fit instructions
         if 'asymmetry' in kwargs:
-            self.asymmetry = kwargs.pop('asymmetry')
-        
-
-
-        # values
-        if 'amp' in kwargs:
-            self['amp'].value  = kwargs.pop('amp')
-        if 'area' in kwargs:
-            self['area'].value = kwargs.pop('area')
-        if 'c' in kwargs:
-            self['c'].value   = kwargs.pop('c')
-        if 'w' in kwargs:
-            self['w'].value   = kwargs.pop('w')
-        if 'w1' in kwargs:
-            self['w1'].value  = kwargs.pop('w1')
-        if 'w2' in kwargs:
-            self['w2'].value  = kwargs.pop('w2')
-        if 'm' in kwargs:
-            self['m'].value   = kwargs.pop('m')
-        if 'm1' in kwargs:
-            self['m1']  = kwargs.pop('m1')
-        if 'm2' in kwargs:
-            self['m2']  = kwargs.pop('m2')
+            self._asymmetry = kwargs.pop('asymmetry')
+        else:
+            self._asymmetry = False
+        if 'fixed' in kwargs:
+            self._fixed = kwargs.pop('fixed')
+        else:
+            self._fixed = ['m']
 
         # modifiers
         if 'shift' in kwargs:
             self._shift = kwargs.pop('shift')
         else:
             self._shift = 0
-        if 'shift_interp' in kwargs:
-            self._shift_interp = kwargs.pop('shift_interp')
-        else:
-            self._shift_interp = 0
-        if 'shift_roll' in kwargs:
-            # step
-            if 'step' in kwargs:
-                self._step = kwargs.pop('step')
-                if self.step is not None:
-                    self._shift_roll = kwargs.pop('shift_roll')*self._step
-                else:
-                    self._shift_roll = 0
-            else:
-                self._shift_roll = 0
-        else:
-            if 'step' in kwargs:
-                self._step = kwargs.pop('step')
-            self._shift_roll = 0
         if 'calib' in kwargs:
             self._calib = kwargs.pop('calib')
         else:
@@ -133,70 +252,211 @@ class Peak(lmfit.Parameters):
         else:
             self._factor = 1
 
-        # check
-        self._enable_update_area_amp = True
-        self.update_area_amp()
+        # check keys
+        if any([item not in self._store for item in kwargs.keys()]):
+            for key in kwargs:
+                if key not in self._store:
+                    raise AttributeError(f'{key} is not a valid attribute.')
 
-    def add(self, name, value=None, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None):
-        # check if name is valid
-        if not name.startswith(tuple(names)):
-            raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
-        
-        # add
-        super().add(name, value=value, vary=vary, min=min, max=max, expr=expr, brute_step=brute_step)
-
-    def __setitem__(self, name, value):
-        # check if name is valid
-        if not name.startswith(tuple(names)):
-            raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
-
-        # area and amp
-        if self._enable_update_area_amp:
-            if self.use_area:
-                if name == 'amp':
-                    raise ValueError('amp cannot be edited if Peak.use_area is True.\nUse Peak.update_area_amp()\nOr change Peak.use_area to False.')
+        # check kwargs
+        if 'amp' not in kwargs:
+            raise ValueError("Cannot initialize peak without 'amp'.")
+        else:
+            self._check_amp(kwargs['amp'])
+        if 'area' in kwargs:
+            raise ValueError("Area is a read-only parameter.")
+        if 'c' not in kwargs:
+            raise ValueError("Cannot initialize peak without 'c'.")
+        if 'fwhm' not in kwargs:
+            if 'fwhm1' not in kwargs and 'fwhm2' not in kwargs:
+                raise ValueError("Cannot initialize peak without 'fwhm' or ('fwhm1' and 'fhwm2').")
+            elif 'fwhm1' in kwargs and 'fwhm2' in kwargs:
+                self._asymmetry = True
+                self._check_fwhm(kwargs['fwhm1'])
+                self._check_fwhm(kwargs['fwhm2'])
+                kwargs['fwhm'] = kwargs['fwhm1']+kwargs['fwhm2']
             else:
-                if name == 'area':
-                    raise ValueError('area cannot be edited if Peak.use_area is False.\nUse Peak.update_area_amp().\nOr change Peak.use_area to True.')
-        
-        # set values
-        super().__setitem__(name, value)
-    
-        # if name == 'w':
-        #     self['w1'].value = self['w']/2
-        #     self['w2'].value = self['w']/2
+                raise ValueError(f'When "fwhm1" or "fwhm2" is defined, both must be defined.')
+        else:
+            if 'fwhm1' in kwargs or 'fwhm2' in kwargs:
+                raise ValueError("Cannot initialize peak with 'fwhm', ('fwhm1' and 'fhwm2').\nUse either 'fwhm' or (fwhm1 and fwhm2).")
+            self._check_fwhm(kwargs['fwhm'])
+            if self.asymmetry:
+                kwargs['fwhm1'] = kwargs['fwhm']/2
+                kwargs['fwhm2'] = kwargs['fwhm']/2
+        if self.asymmetry:
+            if 'm1' not in kwargs:
+                kwargs['m1'] = 0
+            else:
+                self._check_m(kwargs['m1'])
+            if 'm2' not in kwargs:
+                kwargs['m2'] = 0
+            else:
+                self._check_m(kwargs['m1'])
+            kwargs['m'] = (kwargs['m1']+kwargs['m2'])/2
+        else:
+            if 'm' not in kwargs:
+                kwargs['m'] = 0
+            else:
+                self._check_m(kwargs['m'])
 
-        # check
-        if self._enable_update_area_amp:
-            self.update_area_amp()
+        # calculate area
+        if self.asymmetry:
+            c1 = kwargs['m1']/np.pi + (1-kwargs['m1'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            c2 = kwargs['m2']/np.pi + (1-kwargs['m2'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            kwargs['area'] = (kwargs['amp']*kwargs['fwhm1']*c1 + kwargs['amp']*kwargs['fwhm2']*c2)/2
+        else:
+            c = kwargs['m']/np.pi + (1-kwargs['m'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            kwargs['area'] = kwargs['amp']*kwargs['fwhm']*c
+
+        # save kwargs
+        self._store.update(dict(**kwargs))
+
+
+    def __str__(self):
+        # return str({name:self._store[name] for name in self._store if self._store[name] is not None})[1:-1].replace(', ', '\n')
+        # return str({name:self._store[name] for name in self._store if self._store[name] is not None})[1:-1].replace(', ', '\n')
+        return str(self._store)[1:-1].replace(', ', '\n')
+        # return str(self._store).replace('}, ', '\n ')
+
+    def __repr__(self):
+
+        # return str({name:self._store[name] for name in self._store if self._store[name] is not None})
+        return str(self._store)[1:-1].replace(', ', '\n')
+        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
+        # return str(self._store).replace('}, ', '\n ')
+        # return str(self._store)
 
     def __getitem__(self, name):
-        if name in names:
-            name = name + f'_{self.index}'
-        return super().__getitem__(name)
+        return self._store[self._check_name(name)]
 
-    # support
-    def _find_suitable_x(self):
-        if self.asymmetry:
-            w = self['w1'].value + self['w2'].value
-        else:
-            w = self['w'].value
+    def __setitem__(self, name, value):
+        if name not in self._store:
+            raise KeyError(f'{name} is not defined as a peak parameter and cannot be created.')
+        if name == 'amp':
+            self._check_amp(value)
+            self._store['amp'] = value
+        if name == 'c':
+            self._store['c'] = value
+        if name == 'area':
+            raise ValueError('Area is read-only parameter. Change amp instead.')
+        if name == 'fwhm':
+            if self.asymmetry:
+                raise ValueError('Cannot change fwhm value when asymmetry = True.\nChange fwhm1 and fhwm2 instead.\nOr change asymmetry to False.')
+            else:
+                self._check_fwhm(value)
+                self._store['fwhm'] = value
+        if name == 'fwhm1':
+            if self.asymmetry:
+                if value is None:
+                    print('Peak asymmetry set to False.')
+                    self.asymmetry = False
+                else:
+                    self._check_fwhm(value)
+                    self._store['fwhm1'] = value
+                    self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+            else:
+                if value is None:
+                    self._store['fwhm1'] = None
+                else:
+                    print('Peak asymmetry set to True.')
+                    self.asymmetry = True
 
-        if w == 0:
-            w = self['c'].value*0.1
-        if w == 0:
-            w = 1
+                    self._check_fwhm(value)
+                    self._store['fwhm1'] = value
+                    if self._store['fwhm']-self._store['fwhm1'] >= 0:
+                        self._store['fwhm2'] = self._store['fwhm']-self._store['fwhm1']
+                    else:
+                        self._store['fwhm2'] = 0
+                        self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+        if name == 'fwhm2':
+            if self.asymmetry:
+                if value is None:
+                    print('Peak asymmetry set to False.')
+                    self.asymmetry = False
+                else:
+                    self._check_fwhm(value)
+                    self._store['fwhm2'] = value
+                    self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+            else:
+                if value is None:
+                    self._store['fwhm2'] = None
+                else:
+                    print('Peak asymmetry set to True.')
+                    self._asymmetry = True
 
-        vmin = self['c'].value-10*w
-        vmax = self['c'].value+10*w
+                    self._check_fwhm(value)
+                    self._store['fwhm2'] = value
+                    if self._store['fwhm']-self._store['fwhm2'] >= 0:
+                        self._store['fwhm1'] = self._store['fwhm']-self._store['fwhm2']
+                    else:
+                        self._store['fwhm1'] = 0
+                        self._store['fwhm'] = self._store['fwhm1']+self._store['fwhm2']
+        if name == 'm':
+            if self.asymmetry:
+                raise ValueError('cannot change m value when asymmetry = True.\nChange m1 and m2 instead.\nOr change asymmetry to False.')
+            else:
+                self._check_m(value)
+                self._store['m'] = value
+        if name == 'm2':
+            if self.asymmetry:
+                self._check_m(value)
+                self._store['m2'] = value
+                self._store['m'] = (self._store['m1']+self._store['m2'])/2
+            else:
+                raise ValueError('Cannot set m2 because asymmetry is False.')
+        if name == 'm1':
+            if self.asymmetry:
+                self._check_m(value)
+                self._store['m1'] = value
+                self._store['m'] = (self._store['m1']+self._store['m2'])/2
+            else:
+                raise ValueError('Cannot set m1 because asymmetry is False.')
 
-        if vmin == 0 and vmax == 0:
-            vmin = -10
-            vmax = 10
-        num = int((vmax-vmin)/w*20)+1
-        return np.linspace(vmin, vmax, num)
+        # fix area
+        self.calculate_area()
 
-    # attributes and properties
+    def __delitem__(self, key):
+        raise AttributeError('itens cannot be deleted')
+
+    def __iter__(self):
+        return iter(self._store)
+
+    def __len__(self):
+        # return len(self._store)
+        return len({name:self._store[name] for name in self._store if self._store[name] is not None})
+
+
+    def _check_name(self, name):
+        if name not in self._store:
+            raise KeyError(f'{name} is not a valid peak parameter.')
+        return name
+
+    def _check_amp(self, value):
+        pass
+        # if value <= 0:
+        #     raise ValueError('amp must be a number higher than 0.')
+
+    def _check_area(self, value):
+        pass
+        # if value <= 0:
+        #     raise ValueError('area must be a number higher than 0.')
+
+    def _check_fwhm(self, value):
+
+        if value <= 0:
+            raise ValueError(f'fwhm must be a number higher than 0.\nInvalid fwhm:{value}')
+
+    def _check_m(self, value):
+        if value < 0 or value > 1:
+            raise ValueError(f'm must be a number between 0 and 1.\nInvalid m:{value}')
+
+    def _check_fixed(self, value):
+        for key in value:
+            if key not in ['amp', 'c', 'fwhm', 'm']:
+                raise ValueError('parameter "' + str(key) + '" not valid.\nValid keys: "amp", "c", "fwhm", "m". ')
+
+
     @property
     def calib(self):
         return self._calib
@@ -212,31 +472,9 @@ class Peak(lmfit.Parameters):
         return self._shift
     @shift.setter
     def shift(self, value):
-        self.set_shift(value, mode='x')
+        self.set_shifts(value)
     @shift.deleter
     def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_roll(self):
-        return self._shift_roll
-    @shift_roll.setter
-    def shift_roll(self, value):
-        # raise AttributeError("Attribute is 'read only'. Cannot set attribute.\nPlease, use Spectrum.set_shifts(value, mode='roll').")
-        self.set_shift(value, mode='roll')
-    @shift_roll.deleter
-    def shift_roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_interp(self):
-        return self._shift_interp
-    @shift_interp.setter
-    def shift_interp(self, value):
-        # raise AttributeError("Attribute is 'read only'. Cannot set attribute.\nPlease, use Spectrum.set_shifts(value, mode='interp').")
-        self.set_shift(value, mode='interp')
-    @shift_interp.deleter
-    def shift_interp(self):
         raise AttributeError('Cannot delete object.')
 
     @property
@@ -258,91 +496,45 @@ class Peak(lmfit.Parameters):
     @factor.deleter
     def factor(self):
             raise AttributeError('Cannot delete object.')
-    
-    @property
-    def step(self):
-        return self._step
-    @step.setter
-    def step(self, value):
-        raise AttributeError('Cannot edit object.')
-    @step.deleter
-    def step(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def use_area(self):
-        return self._use_area
-    @use_area.setter
-    def use_area(self, value):
-        assert isinstance(value, bool), 'value must be True or False.'
-        self._use_area = value
-        if value:
-            for item in ['area']:
-                self[item+f'_{self.index}'].vary = True 
-            for item in ['amp']:
-                self[item+f'_{self.index}'].vary = False
-        else:
-            for item in ['area']:
-                self[item+f'_{self.index}'].vary = False 
-            for item in ['amp']:
-                self[item+f'_{self.index}'].vary = True
-    @use_area.deleter
-    def use_area(self):
-        raise AttributeError('Cannot delete object.')
 
     @property
     def asymmetry(self):
         return self._asymmetry
     @asymmetry.setter
     def asymmetry(self, value):
-        assert isinstance(value, bool), 'value must be True or False.'
-        self._asymmetry = value
-        if value:
-            for item in ['w1', 'w2', 'm1', 'm1']:
-                self[item+f'_{self.index}'].vary = True 
-            for item in ['w', 'm']:
-                self[item+f'_{self.index}'].vary = False
+        # set asymmetry
+        if isinstance(value, bool):
+            if self.asymmetry == value:
+                return
+            else:
+                self._asymmetry = value
         else:
-            for item in ['w1', 'w2', 'm1', 'm1']:
-                self[item+f'_{self.index}'].vary = False 
-            for item in ['w', 'm']:
-                self[item+f'_{self.index}'].vary = True
+            raise TypeError('value must be bool (True or False).')
+        # set everything else
+        if self._asymmetry:
+            self._store['fwhm1'] = self._store['fwhm']/2
+            self._store['fwhm2'] = self._store['fwhm']/2
+            self._store['m1']    = self._store['m']
+            self._store['m2']    = self._store['m']
+        else:
+            self._store['fwhm1'] = None
+            self._store['fwhm2'] = None
+            self._store['m1']    = None
+            self._store['m2']    = None
+        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
     @asymmetry.deleter
     def asymmetry(self):
-        raise AttributeError('Cannot delete object.')
+            raise AttributeError('Cannot delete object.')
 
     @property
-    def use_peak(self):
-        return self._use_peak
-    @use_peak.setter
-    def use_peak(self, value):
-        assert isinstance(value, bool), 'value must be True or False.'
-        self._use_peak = value
-    @use_peak.deleter
-    def use_peak(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def index(self):
-        return self._index
-    @index.setter
-    def index(self, value):
-        assert isinstance(value, int), 'value must be int.'
-        if self._index != value:
-            self._enable_update_area_amp = False
-            for name in names:
-                # self[name].name = name+f'_{value}'
-                old_name = name+f'_{self._index}'
-                self.add(name+f'_{value}', value=self[old_name].value, 
-                                        min=self[old_name].min, 
-                                        max=self[old_name].max, 
-                                        vary=self[old_name].vary, 
-                                        expr=self[old_name].expr)
-                del self[old_name]
-            self._index = value
-            self._enable_update_area_amp = True
-    @index.deleter
-    def index(self):
+    def fixed(self):
+        return self._fixed
+    @fixed.setter
+    def fixed(self, value):
+        self._check_fixed(value)
+        self._fixed = value
+    @fixed.deleter
+    def fixed(self):
             raise AttributeError('Cannot delete object.')
 
     @property
@@ -355,276 +547,6 @@ class Peak(lmfit.Parameters):
     def spectrum(self):
             raise AttributeError('Cannot delete object.')
 
-    # modifiers
-    def set_calib(self, value, type_='relative'):
-        """Set calibration value.
-
-        Args:
-            value (number): calibration value (x-coordinates will be multiplied
-                by this value).
-
-        Returns:
-            None
-        """
-        # is relative?
-        if type_ in relative:
-            value = self.calib * value
-
-        # apply
-        if self.calib != value:
-            if self.calib != 1:
-                self['c'].value = self['c'].value*self.calib**-1
-                self['w'].value = abs(self['w'].value*self.calib**-1)
-                if self.asymmetry:
-                    self['w1'].value = abs(self['w1'].value*self.calib**-1)
-                    self['w2'].value = abs(self['w2'].value*self.calib**-1)
-            if value != 1:
-                self['c'].value = self['c'].value*value
-                self['w'].value = abs(self['w'].value*value)
-                if self.asymmetry:
-                    self['w1'].value = abs(self['w1'].value*value)
-                    self['w2'].value = abs(self['w2'].value*value)
-            self._calib = value
-
-            # check
-            self.update_area_amp()
-
-    def set_shift(self, value, mode, type_='relative'):
-        """Set shift value.
-
-        Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-        # is relative?
-        if type_ in relative:
-            value = self.shift + value
-        
-        # apply
-        if mode in roll: 
-            value = self.step*value
-
-            if self.shift_roll != value:
-                if self.shift_roll != 0:
-                    self['c'].value = self['c'].value - self.shift_roll
-                if value != 0:
-                    self['c'].value = self['c'].value + value
-                self._shift_roll = value
-        elif mode in hard:
-            if self.shift != value:
-                if self.shift != 0:
-                    self['c'].value = self['c'].value - self.shift
-                if value != 0:
-                    self['c'].value = self['c'].value + value
-                self._shift = value
-        elif mode in soft:
-            if self.shift_interp != value:
-                if self.shift_interp != 0:
-                    self['c'].value = self['c'].value - self.shift_interp
-                if value != 0:
-                    self['c'].value = self['c'].value + value
-                self._shift_interp = value
-        else:
-            raise ValueError(f'Invalid mode. Valid options are `roll`, `x`, `interp`.') 
-
-    def set_offset(self, value, type_='relative'):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
-        Returns:
-            None
-        """
-        # is relative?
-        if type_ in relative:
-            value = self.offset + value
-
-        # apply
-        if self.offset != value:
-            if self.offset != 0:
-                self['amp'].value = self['amp'].value - self.offset
-            if value != 0:
-                self['amp'].value = self['amp'].value + value
-            self._offset = value
-
-        # check
-        self.update_area_amp()
-
-    def set_factor(self, value, type_='relative'):
-        """Set y multiplicative factor.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        # is relative?
-        if type_ in relative:
-            value = self.factor * value
-
-        if self.factor != value:
-            if self.factor != 1:
-                self['amp'].value  = self['amp'].value * self.factor**-1
-                self['area'].value = self['area'].value * self.factor**-1
-            if value != 1:
-                self['amp'].value  = self['amp'].value * value
-                self['area'].value = self['area'].value * value
-            self._factor = value
-
-        # check
-        self.update_area_amp()
-
-    # calculation and info
-    def update_area_amp(self):
-        """Updates the area amp values.
-
-        if use_area = True, amp is updated based on the area.
-        if use_area = False, area is updated based on the amp.
-
-        Only necessary if amp and area values are changed by hand.        
-        """
-        if self.asymmetry:
-            c1 = self['m1'].value/np.pi + (1-self['m1'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            c2 = self['m2'].value/np.pi + (1-self['m2'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            if self.use_area:
-                self['amp'].value = self['area'].value * 2 /(self['w1'].value*c1 + self['w2'].value*c2)
-            else:
-                self['area'].value = self['amp'].value * (self['w1'].value*c1 + self['w2'].value*c2)/2
-        else:
-            c = self['m'].value/np.pi + (1-self['m'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            if self.use_area:
-                self['amp'].value = self['area'].value/self['w'].value/c
-            else:
-                self['area'].value = self['amp'].value * self['w'].value * c
-
-    # plot and visualization
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optional): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-
-        Returns:
-            `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        self.update_area_amp()
-
-        # data
-        c = self['c'].value
-        amp = self['amp'].value
-        xerr = self['w'].value/2
-
-        if 'lw' not in kwargs and 'linewidth' not in kwargs:
-            kwargs['lw'] = 0
-        if 'elinewidth' not in kwargs :
-            kwargs['elinewidth'] = 2
-        if 'marker' not in kwargs :
-            kwargs['marker'] = 'o'
-        if 'markersize' not in kwargs and 'ms' not in kwargs:
-            kwargs['markersize'] = 5
-
-        return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
-
-    # extractors
-    def calculate_spectrum(self, x=None):
-        """Return peak curve.
-
-        Args:
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x, with at least 20 points within the peak,
-                will be constructed.
-
-        Returns:
-            :py:class:`Spectrum`.
-        """
-        if x is None:
-            x = self._find_suitable_x()
-        f = self.model()
-        s = br.Spectrum(x=x, y=f(x))
-
-        # copy modifiers
-        s._shift  = self.shift
-        # s._shift_roll    = self.shift_roll  # cannot copy shift_roll because step might be different
-        s._shift_interp  = self.shift_interp
-        s._factor = self.factor
-        s._calib  = self.calib
-        s._offset = self.offset
-        return s
-
-    def _split_peaks(self):
-        # index list
-        indexes = []
-        for key in self.keys():
-            index = int(key.split('_')[-1])
-            if index not in indexes:
-                indexes.append(index)
-        indexes = br.sort(indexes, indexes)
-
-        # allocation
-        peaks2 = Peaks()
-
-        # sort
-        for index in indexes:
-            peak = Peak()
-            peak.index = index
-            # peak.pretty_print()
-            for key in self.keys():
-                # print(index)
-                if index == int(key.split('_')[-1]):
-                    peak[key] = self[key]
-            # peak.pretty_print()
-            peaks2.append(peak)
-        
-        return peaks2
-
-    # calculation and info
-    def _model_str(self):
-        """Returns string for building peak function.
-
-        Returns:
-            function f(x) as string
-        """
-        i = self.index
-
-        if self.asymmetry:
-            if self.use_area:
-                return f"np.heaviside(parvals['c_{i}']-x, 0)*br.voigt_area_fwhm(x, parvals['area_{i}'], parvals['c_{i}'], parvals['w1_{i}'],  parvals['m1_{i}']) + np.heaviside(x-parvals['c_{i}'], 0)*br.voigt_area_fwhm(x, parvals['area_{i}'], parvals['c_{i}'],  parvals['w2_{i}'],  parvals['m2_{i}']) + dirac_delta(x, parvals['amp_{i}'], parvals['c_{i}'])" 
-            else:
-                return f"np.heaviside(parvals['c_{i}']-x, 0)*br.voigt_fwhm(x, parvals['amp_{i}'], parvals['c_{i}'], parvals['w1_{i}'],  parvals['m1_{i}']) + np.heaviside(x-parvals['c_{i}'], 0)*br.voigt_fwhm(x, parvals['amp_{i}'], parvals['c_{i}'],  parvals['w2_{i}'],  parvals['m2_{i}']) + dirac_delta(x, parvals['amp_{i}'], parvals['c_{i}'])" 
-        else:
-            if self.use_area:
-                return f"br.voigt_area_fwhm(x, parvals['area_{i}'], parvals['c_{i}'], parvals['w_{i}'], parvals['m_{i}'])"
-            else:
-                return f"br.voigt_fwhm(x, parvals['amp_{i}'], parvals['c_{i}'], parvals['w_{i}'], parvals['m_{i}'])"
-
-    def model(self):
-        """Returns a function f(x) for the peak."""
-        parvals = self.valuesdict()
-        model_str = f'lambda x, parvals: {self._model_str()}'
-        final = eval(model_str)
-        return lambda x: final(x, parvals)
-
-    #############
 
     def _string2save(self):
         """String used for saving peak to a file."""
@@ -712,7 +634,180 @@ class Peak(lmfit.Parameters):
             obj = json.load(file)
         self._obj_decode(obj)
 
-    # OBSOLETE
+
+    def set_calib(self, value, type_='relative'):
+        """Set calibration value.
+
+        Args:
+            value (number): calibration value (x-coordinates will be multiplied
+                by this value).
+
+        Returns:
+            None
+        """
+        if type_ in relative:
+            value = self.calib * value
+
+        if self.calib != value:
+            if self.calib != 1:
+                self._store['c'] = self._store['c']*self.calib**-1
+                self._store['fwhm'] = abs(self._store['fwhm']*self.calib**-1)
+                if self.asymmetry:
+                    self._store['fwhm1'] = abs(self._store['fwhm1']*self.calib**-1)
+                    self._store['fwhm2'] = abs(self._store['fwhm2']*self.calib**-1)
+            if value != 1:
+                self._store['c'] = self._store['c']*value
+                self._store['fwhm'] = abs(self._store['fwhm']*value)
+                if self.asymmetry:
+                    self._store['fwhm1'] = abs(self._store['fwhm1']*value)
+                    self._store['fwhm2'] = abs(self._store['fwhm2']*value)
+            self._calib = value
+
+            # fix area
+            self.calculate_area()
+
+    def set_shifts(self, value, type_='relative'):
+        """Set shift value.
+
+        Args:
+            value (float or int): shift value (value will be added to x-coordinates).
+
+        Returns:
+            None
+        """
+        if type_ in relative:
+            value = self.shift + value
+
+        if self.shift != value:
+            if self.shift != 0:
+                self._store['c'] = self._store['c']-self.shift
+            if value != 0:
+                self._store['c'] = self._store['c']+value
+            self._shift = value
+
+    def set_offsets(self, value, type_='relative'):
+        """Set offset value.
+
+        Args:
+            value (value): offset value (value will be added to y-coordinates).
+
+        Returns:
+            None
+        """
+        if type_ in relative:
+            value = self.offset + value
+
+        if self.offset != value:
+            if self.offset != 0:
+                self._store['amp'] = self._store['amp']-self.offset
+            if value != 0:
+                self._store['amp'] = self._store['amp']+value
+            self._offset = value
+
+    def set_factors(self, value, type_='relative'):
+        """Set y multiplicative factor.
+
+        Args:
+            value (number): multiplicative factor (y-coordinates will be
+                multiplied by this value).
+
+        Returns:
+            None
+        """
+        if type_ in relative:
+            value = self.factor * value
+
+        if self.factor != value:
+            if self.factor != 1:
+                self._store['amp'] = self._store['amp']*self.factor**-1
+            if value != 1:
+                self._store['amp'] = self._store['amp']*value
+            self._factor = value
+
+            # fix area
+            self.calculate_area()
+
+
+    def calculate_area(self):
+        """Calculate peak area.
+
+        Returns:
+            None
+        """
+        if self.asymmetry:
+            c1 = self._store['m1']/np.pi + (1-self._store['m1'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            c2 = self._store['m2']/np.pi + (1-self._store['m2'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            self._store['area'] = (self._store['amp']*self._store['fwhm1']*c1 + self._store['amp']*self._store['fwhm2']*c2)/2
+        else:
+            c = self._store['m']/np.pi + (1-self._store['m'])*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+            self._store['area'] = self._store['amp']*self._store['fwhm']*c
+
+
+    def _find_suitable_x(self):
+        return np.arange(self['c']-10*self['fwhm'], self['c']+10*self['fwhm'], self['fwhm']/20)
+
+    def calculate_spectrum(self, x=None):
+        """Return peak curve.
+
+        Args:
+            x (list, optional): x values to which the curve will be calculated.
+                If None, a suitable x, with at least 20 points within the peak,
+                will be constructed.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        if x is None:
+            x = self._find_suitable_x()
+        # f = build_model(amp=self['amp'], c=self['c'],  fwhm=self['fwhm'], m=self['m'], fwhm1=self['fwhm1'], fwhm2=self['fwhm2'], m1=self['m1'], m2=self['m2'])
+        f = self.build_model(fixed=['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm1', 'm2', 'm'])
+        s = br.Spectrum(x=x, y=f(x))
+        s._shift  = self.shift
+        s._factor = self.factor
+        s._calib  = self.calib
+        s._offset = self.offset
+        return s
+
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            offset (number, optional): defines a vertical offset. Default is 0.
+            shift (number, optional): horizontal shift value. Default is 0.
+            factor (number, optional): multiplicative factor on the y axis.
+                Default is 1.
+            calib (number, optional): multiplicative factor on the x axis.
+                Default is 1.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+
+        Returns:
+            `ErrorbarContainer`_
+
+        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        """
+        if ax is None:
+            ax = plt
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+        # data
+        c = self['c']
+        amp = self['amp']
+        xerr = self['fwhm']/2
+
+        if 'lw' not in kwargs and 'linewidth' not in kwargs:
+            kwargs['lw'] = 0
+        if 'elinewidth' not in kwargs :
+            kwargs['elinewidth'] = 2
+        if 'marker' not in kwargs :
+            kwargs['marker'] = 'o'
+        if 'markersize' not in kwargs and 'ms' not in kwargs:
+            kwargs['markersize'] = 5
+
+        return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
+
 
     def set_bounds(self, **kwargs):
         """Set percentage wise bounds.
@@ -978,6 +1073,7 @@ class Peak(lmfit.Parameters):
 
         return p0, bounds_min, bounds_max, decode
 
+
     def build_model_str(self, fixed=None, idx=0):
         """Returns instructions for building peak functions.
 
@@ -1011,7 +1107,7 @@ class Peak(lmfit.Parameters):
         temp['asymmetry'] = self.asymmetry
         return build_model(**temp)
 
-# %%
+
 class Peaks(MutableMapping):
     """A special dictionary for saving peaks.
 
@@ -1040,31 +1136,34 @@ class Peaks(MutableMapping):
         # core
         self._store = []
 
-        # sort
+        # modifiers
+        self._factor       = 1
+        self._offset       = 0
+        self._calib        = 1
+        self._shift        = 0
+
         data, filepath = self._sort_args(args, kwargs)
 
         # data
         if data is not None:
-            if isinstance(data, Iterable):
+            if isinstance(data, list):
                 for peak in data:
                     self.append(peak)
             else:
-                raise TypeError('data must be a list or tuple')
+                raise TypeError('data must be a list')
         elif filepath is not None:
             self.load(filepath)
-        
-    # basic
+
     def __str__(self):
         # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
-        return str({i:peak for i, peak in enumerate(self._store)})#[1:-1].replace(', ', '\n\n')
- 
+        return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
 
     def __repr__(self):
-        return str({i:peak for i, peak in enumerate(self._store)})#[1:-1].replace(', ', '\n\n')
+        # print('f')
         # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
+        return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
         # return str(self._store)
+
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -1072,19 +1171,20 @@ class Peaks(MutableMapping):
         elif isinstance(key, slice):
             return Peaks(self._store[key])
         else:
-            raise TypeError('Index must be int or a slice, not {}'.format(type(key).__name__))
+            raise TypeError('Index must be int, not {}'.format(type(key).__name__))
 
     def __setitem__(self, key, value):
-        if isinstance(key, int):
-            if isinstance(value, Peak):
-                self._store[key] = value
-            else:
-                raise TypeError('value must be br.Peak, not {}'.format(type(key).__name__))
+        if isinstance(value, Peak):
+            self._store[key] = value
+        elif isinstance(value, dict):
+            self._store[key] = Peak(**value)
         else:
-            raise TypeError('Index must be int, not {}'.format(type(key).__name__))
+            raise ValueError('valuea must be a dict or a peak object')
+        self._fix_order()
 
     def __delitem__(self, key):
         del self._store[key]
+        self._fix_order()
 
     def __iter__(self):
         return iter(self._store)
@@ -1092,13 +1192,12 @@ class Peaks(MutableMapping):
     def __len__(self):
         return len(self._store)
 
-    # support
     def _sort_args(self, args, kwargs):
         """checks initial arguments.
 
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
+         Keyword arguments (kwargs) cannot be mixed with positional arguments.
 
-        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finally
+        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
             3) filepath. For example, if `data` and `filepath` are passed as
             arguments, `filepath` is ignored.
 
@@ -1113,6 +1212,8 @@ class Peaks(MutableMapping):
         Returns:
             data, x, y, filepath
         """
+        # print(kwargs)
+        # print(args)
         if kwargs != {} and args != ():
             raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
         if any([item not in ['data', 'filepath'] for item in kwargs.keys()]):
@@ -1135,35 +1236,19 @@ class Peaks(MutableMapping):
             data = args
         return data, filepath
 
-    def reorder(self):
-        """Change the order of the peaks in the list according to its position c."""
+    def _fix_order(self):
+        """Returns another PeakDict where peak number is numbered according to its position c."""
         if self == []:
             return
         else:
             l = len(self)
             c = [0]*l
             for i, peak in enumerate(self):
-                c[i] = peak['c'].value
+                c[i] = peak['c']
             if sum(1 for test in np.diff(c) if test < 0) > 0:
-                self._store = br.sort(c, self._store)
-        
-        # update index
-        for i in range(len(self)):
-            self[i].index = i
+                self._store = sort(c, self._store)
 
-    def _find_suitable_x(self):
-        vmin  = []
-        vmax  = []
-        step  = []
-        for peak in self:
-            temp = peak._find_suitable_x()
-            vmin.append(min(temp))
-            vmax.append(max(temp))
-            step.append(abs(temp[1]-temp[0]))
-        num = int((max(vmax)-min(vmin))/max(step))+1
-        return np.linspace(min(vmin), max(vmax), num)
 
-    # attributes and properties
     @property
     def calib(self):
         temp = [0]*len(self)
@@ -1181,40 +1266,13 @@ class Peaks(MutableMapping):
     def shift(self):
         temp = [0]*len(self)
         for i in range(len(self)):
-            # print(type(self[i]))
             temp[i] = self[i].shift
         return temp
     @shift.setter
     def shift(self, value):
-        self.set_shifts(value, mode='x')
+        self.set_shifts(value)
     @shift.deleter
     def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_roll(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift_roll
-        return temp
-    @shift_roll.setter
-    def shift_roll(self, value):
-        self.set_shifts(value, mode='roll')
-    @shift_roll.deleter
-    def shift_roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_interp(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift_interp
-        return temp
-    @shift_interp.setter
-    def shift_interp(self, value):
-        self.set_shifts(value, mode='interp')
-    @shift_interp.deleter
-    def shift_interp(self):
         raise AttributeError('Cannot delete object.')
 
     @property
@@ -1264,7 +1322,7 @@ class Peaks(MutableMapping):
     def spectra(self):
             raise AttributeError('Cannot delete object.')
 
-    # save and load
+
     def save(self, filepath='./Untitled.txt', check_overwrite=False):
         r"""Save peak to a text file. Wrapper for `json.dumps()`_.
 
@@ -1332,9 +1390,9 @@ class Peaks(MutableMapping):
                 else:
                     raise e
 
-    # basic
+
     def append(self, value):
-        """Append peak.
+        """Append peak. Peak order is reassigned.
 
         Args:
             value (Peak or dict): peak to be appended.
@@ -1342,26 +1400,21 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        # value.pretty_print()
-        assert isinstance(value, Peak), 'Only type br.Peak can be appended.'
-        next_index = len(self)
-        value.index = next_index
-        self._store.append(value)
-        
-
-        # update modifiers
-        self._store[-1]._shift         = self.shift[0]
-        self._store[-1]._shift_roll    = self.shift_roll[0]
-        self._store[-1]._shift_interp  = self.shift_interp[0]
-        self._store[-1]._calib   = self.calib[0]
-        self._store[-1]._offset  = self.offset[0]
-        self._store[-1]._factor  = self.factor[0]
-
-        # # check
-        # self.reorder()
+        if isinstance(value, Peak):
+            self._store.append(value)
+        elif isinstance(value, dict):
+            peak = Peak(**value)
+            # peak._shift  = self.shift
+            # peak._calib  = self.calib
+            # peak._offset = self.offset
+            # peak._factor = self.factor
+            self._store.append(peak)
+        else:
+            raise ValueError('value must be a dict or a peak object')
+        self._fix_order()
 
     def remove(self, key):
-        """Remove peak.
+        """Remove peak. Peak order is reassigned.
 
         Args:
             key (int or list): peaks to be removed.
@@ -1369,13 +1422,44 @@ class Peaks(MutableMapping):
         Returns:
             None
         """
-        del self._store[key]
+        if isinstance(key, Iterable):
+            key = [self._check_key(k) for k in key]
+            key = sort(key)[::-1]
+            if has_duplicates(key):
+                raise ValueError('list has duplicated peaks')
+            for k in key:
+                del self._store[k]
+        else:
+            del self._store[key]
 
-    def clear(self):
-        while len(self) > 0:
-            self.remove(0)
+    def copy(self, value):
+        if isinstance(value, Peaks):
+            calib  = self.calib
+            shift  = self.shift
+            offset = self.offset
+            factor = self.factor
 
-    # modifiers
+            # modifiers must be the same 
+            # in case you have a different number of peaks between the current obj
+            # and the one you are coping from.
+            if all_equal(calib) == False:
+                raise RuntimeError('calib have different values for different peaks. All values must be the same.')
+            if all_equal(shift) == False:
+                raise RuntimeError('shift have different values for different peaks. All values must be the same.')
+            if all_equal(offset) == False:
+                raise RuntimeError('offset have different values for different peaks. All values must be the same.')
+            if all_equal(factor) == False:
+                raise RuntimeError('factor have different values for different peaks. All values must be the same.')
+
+            self._store = copy.deepcopy(value._store)
+            for peak in self:
+                peak._calib  = calib
+                peak._shift  = shift
+                peak._offset = offset
+                peak._factor = factor
+        else:
+            raise ValueError('obj to copy must be of type br.Peaks.')
+
     def set_calib(self, value, type_='relative'):
         """Set calibration value.
 
@@ -1395,8 +1479,9 @@ class Peaks(MutableMapping):
 
         for i in range(len(self)):
             self[i].set_calib(value=value[i], type_=type_)
+        self._fix_order()
 
-    def set_shifts(self, value, mode, type_='relative'):
+    def set_shifts(self, value, type_='relative'):
         """Set shift value.
 
         Args:
@@ -1414,7 +1499,13 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_shift(value=value[i], mode=mode, type_=type_)
+            # peak.calib = value
+            self[i].set_shifts(value=value[i], type_=type_)
+        self._fix_order()
+
+        # for peak in self._store:
+        #     peak.shift = value
+        # self._shift = value
 
     def set_offsets(self, value, type_='relative'):
         """Set offset value.
@@ -1433,7 +1524,11 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_offset(value=value[i], type_=type_)
+            self[i].set_offsets(value=value[i], type_=type_)
+
+        # for peak in self._store:
+        #     peak.offset = value
+        # self._offset = value
 
     def set_factors(self, value, type_='relative'):
         """Set y multiplicative factor.
@@ -1454,152 +1549,102 @@ class Peaks(MutableMapping):
         assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
         for i in range(len(self)):
-            self[i].set_factor(value=value[i], type_=type_)
+            self[i].set_factors(value=value[i], type_=type_)
 
-    # plot and visualization
-    def pretty_print(self):
-        for peak in self:
-            print(f'Index: {peak.index}')
-            peak.pretty_print()
-            print('\n')
+        # if isinstance(value, Iterable):
+        #     # value must be the right length
+        #     assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
 
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
+        #     for i in range(len(self)):
+        #         self[i].set_factors(value=value[i], type_=type_)
+        # else:
+        #     type_='relative'
+        #     if self.factor != value:
+        #         if self.factor != 0:
+        #             for i in range(len(self)):
+        #                 self[i].set_factors(value=self.factor, type_=type_)
+        #         if value != 0:
+        #             for i in range(len(self)):
+        #                 self[i].set_factors(value=value, type_=type_)
+        #     self._factor = value
+
+
+    def split(self, key, n=1):
+        """Splits a peak in n symmetric peaks.
+
+        Amplitude and fwhm are divided between the peaks. Position of the peaks
+            are equaly spread between c-fwhm and c+fwhm.
 
         Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optional): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+            key (int or list): key of the peak.
+            n (int, optional): number of extra peaks.
 
         Returns:
-            list with `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+            None
         """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-               
-        elif type(ax) == str:
-            raise ValueError(f'ax parameter cannot be type str ("{ax}").')
+        fwhm = self[key]['fwhm']/(n+1)
+        amp  = self[key]['amp']/(n+1)
+        cs = np.linspace(self[key]['c']-self[key]['fwhm']/2, self[key]['c']+self[key]['fwhm']/2, n+1)
+        m = self[key]['m']
 
-        r = [None]*len(self)
-        for i in range(len(self)):
-            r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
-            plt.text(self[i]['c'].value*calib+shift, self[i]['amp'].value*factor+offset, i, fontsize=14)
-        return r
+        self.remove(key)
+        for c in cs:
+            self.append(Peak(amp=amp, fwhm=fwhm, c=c, m=m))
 
-    # calculation and info
-    def _model_str(self):
-        for i in range(len(self)):
-            if i == 0:
-                model_str = self[i]._model_str() + '+'
-                p = self[i]
-            else:
-                model_str += self[i]._model_str() + '+'
-                p += self[i]
-        return model_str[:-1]
+    def add_near(self, key):
+        """Appends an extra peak 1/4 of the fwhm away from a peak.
 
-    def _add_peaks(self):
-        for i in range(len(self)):
-            if i == 0:
-                p = self[i]
-            else:
-                p += self[i]
-        return p
-   
-    def model(self):
-        """Returns a function f(x) for the peak."""
-        parvals = self._add_peaks().valuesdict()        
-        model_str = f'lambda x, parvals: {self._model_str()}'
-        final = eval(model_str)
-        return lambda x: final(x, parvals)
+        Args:
+            key (int or list): key of the peak. If list, use repeated elements
+                to append multiple peaks.
 
-    def generate_residual_function(self, x, y):
-        model_str = self._model_str()  
-        p = self._add_peaks()
-
-        def residual(p, x, y):
-            parvals = p.valuesdict()
-            model = eval(model_str)
-            return model-y
-        
-        return residual
-    
-    def fit(self, x, y, method='least_squares', return_fitted_peaks=False):
-        """output, peaks = fit()
-        
-        I think x and y must be monotonic.
+        Returns:
+            None
         """
-        residual = self.generate_residual_function(x, y)
-        out = lmfit.minimize(residual, method=method, params=self._add_peaks(), args=(x, y))
-        peaks2 = out.params._split_peaks()
-        if return_fitted_peaks:
-            return out, peaks2
+        if isinstance(key, Iterable):
+            temp = []
+            for i in range(len(self._store)):
+                count = len([k2 for k2 in key if k2 == i])   # counts same key
+                if count > 0:
+                    for n in range(count):
+                        temp = copy.deepcopy(self._store[key])
+                        temp['c']+=temp['fwhm']/4
+                        self.append(temp)
+            for value in temp:
+                self.append(value)
         else:
-            for i in range(len(peaks2)):
-                self[i] = peaks2[i].copy()
-                # for key in peaks2[i]:
-                #     self[i][key] = peaks2[i][key].copy()
-            return out
-    
-    def find(self, x, y, prominence=5, width=4, moving_average_window=8):
-        """I think x and y must be monotonic and uniform."""
-        # check width and moving_average_window
-        if width < 1:
-            raise ValueError('width must be 1 or higher.')
-        if isinstance(width, int) == False:
-            if width.is_integer() == False:
-                raise ValueError('width must be an integer.')
-        if moving_average_window < 1:
-            raise ValueError('moving_average_window must be 1 or higher.')
-        if isinstance(moving_average_window, int) == False:
-            if moving_average_window.is_integer() == False:
-                raise ValueError('moving_average_window must be an integer.')
-            
-        # data smoothing
-        if moving_average_window > 1:
-            y2 = br.moving_average(y, moving_average_window)
-            x2 = br.moving_average(x, moving_average_window)
-        else:
-            x2 = x
-            y2 = y
+            temp = copy.deepcopy(self._store[key])
+            self._store[key]['c'] -= self._store[key]['fwhm']/4
+            temp['c'] += temp['fwhm']/4
+            self.append(temp)
 
-        # parameters
-        if prominence is None:
-            prominence = (max(y2)-min(y2))*0.1
-        else:
-            prominence = (max(y2)-min(y2))*prominence/100
 
-        try:
-            peaks, d = find_peaks(y2, prominence=prominence, width=width)
-            assert len(peaks) > 0, 'No peaks found.'
-            self.clear()
-            for i in range(len(peaks)):
-                amp = d['prominences'][i]+max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
-                c = x2[peaks[i]]
-                w = abs(d['widths'][i]*np.mean(np.diff(x)))
+    def _find_suitable_x(self):
+        # find minimum value
+        vmin = self[0]['c']-10*self[0]['fwhm']
+        for i in range(len(self)):
+            v = self[i]['c']-10*self[i]['fwhm']
+            if v < vmin:
+                vmin = v
 
-                self.append(Peak(amp=amp, c=c, w=w, step=self.step,
-                                                    shift=self.shift, 
-                                                    shift_interp=self.shift_interp,
-                                                    shift_roll=self.shift_roll,
-                                                    shift_offset=self.offset,
-                                                    shift_calib=self.calib,
-                                                    shift_factor=self.factor))
-        except IndexError:
-            pass
+        # find maximum value
+        vmax = self[-1]['c']+10*self[-1]['fwhm']
+        for i in range(len(self)):
+            v = self[i]['c']+10*self[i]['fwhm']
+            if v > vmax:
+                vmax = v
 
-    # extractors
+        # find smallest fwhm
+        fwhm_min = self[0]['fwhm']
+        for i in range(len(self)):
+            fwhm = self[i]['fwhm']
+            if fwhm < fwhm_min:
+                fwhm_min = fwhm
+
+        return np.arange(vmin, vmax, fwhm_min/20)
+
     def calculate_spectra(self, x=None):
-        """Return each peak spectrum separately.
+        """Return each peak spectrum separetely.
 
         Args:
             x (list, optional): x values to which the curve will be calculated.
@@ -1634,35 +1679,7 @@ class Peaks(MutableMapping):
         for s1 in ss:
             s += s1
         return s
-    
-    # OBSOLETE  
-    def copy(self, value):
-        if isinstance(value, Peaks):
-            calib  = self.calib
-            shift  = self.shift
-            offset = self.offset
-            factor = self.factor
 
-            # modifiers must be the same 
-            # in case you have a different number of peaks between the current obj
-            # and the one you are coping from.
-            if all_equal(calib) == False:
-                raise RuntimeError('calib have different values for different peaks. All values must be the same.')
-            if all_equal(shift) == False:
-                raise RuntimeError('shift have different values for different peaks. All values must be the same.')
-            if all_equal(offset) == False:
-                raise RuntimeError('offset have different values for different peaks. All values must be the same.')
-            if all_equal(factor) == False:
-                raise RuntimeError('factor have different values for different peaks. All values must be the same.')
-
-            self._store = copy.deepcopy(value._store)
-            for peak in self:
-                peak._calib  = calib
-                peak._shift  = shift
-                peak._offset = offset
-                peak._factor = factor
-        else:
-            raise ValueError('obj to copy must be of type br.Peaks.')
 
     def set_bounds(self, **kwargs):
         """Set percentage wise bounds.
@@ -1728,7 +1745,43 @@ class Peaks(MutableMapping):
         model_str = f'lambda x, {args_str}: {f_str}'
         return eval(model_str)
 
-# %%
+
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            offset (number, optional): defines a vertical offset. Default is 0.
+            shift (number, optional): horizontal shift value. Default is 0.
+            factor (number, optional): multiplicative factor on the y axis.
+                Default is 1.
+            calib (number, optional): multiplicative factor on the x axis.
+                Default is 1.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+
+        Returns:
+            list with `ErrorbarContainer`_
+
+        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        """
+        if ax is None:
+            ax = plt
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+               
+        elif type(ax) == str:
+            raise ValueError(f'ax parameter cannot be type str ("{ax}").')
+        # elif type(ax) == module:
+        #     ax = plt
+
+        r = [None]*len(self)
+        for i in range(len(self)):
+            r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
+            plt.text(self[i]['c']*calib+shift, self[i]['amp']*factor+offset, i, fontsize=14)
+        return r
+
+
 class Collection(MutableMapping):
 
     def __init__(self, *args, **kwargs):
@@ -1752,48 +1805,44 @@ class Collection(MutableMapping):
         elif filepaths is not None:
             self.load(filepaths)
 
-    # basic
     def __str__(self):
         # temp = str([val for i, val in enumerate(self._store)])[1:-1].replace('], [', ']\n=======\n[')
         # return temp.replace('}, {', '}\n{')
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
-        return str(self._store)
-    
+        return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
+
     def __repr__(self):
-        return str(self._store)
         # temp = str([val for i, val in enumerate(self._store)])[1:-1].replace('], [', ']\n=======\n[')
         # return temp.replace('}, {', '}\n{')
         # return str(self._store)
         # return str([val for i, val in enumerate(self._store)])[1:-1].replace('}, ', '}\n=====\n')
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
+        return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
 
     def __getitem__(self, key):
         if type(key) == int:
             return self._store[key]
-        
         elif type(key) == str:
-            if key not in names:
-                raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
+            peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
+            if key not in peaks_attr:
+                raise KeyError("Collection indices must be integers or a peak attribute ('amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area')")
             n_peaks = [len(peaks) for peaks in self]
             if all_equal(n_peaks) == False:
                 print('WARNING: number of peaks is different between spectra')
             if max(n_peaks) == 0:
                 return {}
             else:
-                return [[peaks[j][key].value for peaks in self] for j in range(max(n_peaks))]
+                return [[peaks[j][key] for peaks in self] for j in range(max(n_peaks))]
         else:
-            raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
+            raise TypeError("Collection indices must be integers or a peak attribute ('amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area')")
 
     def __setitem__(self, key, value):
-        print('nothing to set')
-        # if isinstance(value, Peaks):
-        #     self._store[key] = value
-        # else:
-        #     raise ValueError('value must be a brixs.Peaks object')
+
+        if isinstance(value, Peaks):
+            self._store[key] = value
+        else:
+            raise ValueError('value must be a brixs.Peaks object')
 
     def __delitem__(self, key):
-        print('nothing to del')
-        # del self._store[key]
+        del self._store[key]
 
     def __iter__(self):
         return iter(self._store)
@@ -1801,7 +1850,6 @@ class Collection(MutableMapping):
     def __len__(self):
         return len(self._store)
 
-    # support
     def _sort_args(self, args, kwargs):
         """checks initial arguments.
 
@@ -1859,7 +1907,61 @@ class Collection(MutableMapping):
                 data = args
         return data, dirpath, filepaths
 
-    # save and load
+
+
+    @property
+    def calib(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].calib
+        return temp
+    @calib.setter
+    def calib(self, value):
+        self.set_calib(value)
+    @calib.deleter
+    def calib(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def shift(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].shift
+        return temp
+    @shift.setter
+    def shift(self, value):
+        self.set_shifts(value)
+    @shift.deleter
+    def shift(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def offset(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].offset
+        return temp
+    @offset.setter
+    def offset(self, value):
+        self.set_offsets(value)
+    @offset.deleter
+    def offset(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def factor(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].factor
+        return temp
+    @factor.setter
+    def factor(self, value):
+        self.set_factors(value)
+    @factor.deleter
+    def factor(self):
+            raise AttributeError('Cannot delete object.')
+
+
     def save(self, dirpath='./', prefix='peaks_', suffix='.dat', zfill=None, verbose=False, **kwargs):
         r"""Save peak to a text file. Wrapper for `json.dumps()`_.
 
@@ -1950,37 +2052,135 @@ class Collection(MutableMapping):
         if verbose: print('Done!')
         # print(self._store)
 
-    # calculation and info
-    def calculate_spectra(self, x=None):
-        ss = br.Spectra()
-        for peaks in self:
-            s = peaks.calculate_spectrum(x=x)
-            ss.append(s)
-        return ss
 
-    def errors(self, key):
-        if type(key) == int:
-            return self._store[key]
-        
-        elif type(key) == str:
-            if key not in names:
-                raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
+    def append(self, value):
+        """Append peak. Peak order is reassigned.
+
+        Args:
+            value (Peak or dict): peak to be appended.
+
+        Returns:
+            None
+        """
+        if isinstance(value, Peaks):
+            # print('here')
+            self._store.append(value)
+        else:
+            raise ValueError('value must be a brixs.Peaks object')
+
+    def remove(self, key):
+        """Remove peak. Peak order is reassigned.
+
+        Args:
+            key (int or list): peaks to be removed.
+
+        Returns:
+            None
+        """
+        if isinstance(key, Iterable):
+            key = [self._check_key(k) for k in key]
+            key = sort(key)[::-1]
+            if has_duplicates(key):
+                raise ValueError('list has duplicated peaks')
+            for k in key:
+                del self._store[k]
+        else:
+            del self._store[key]
+
+
+    def set_calib(self, value, type_='relative'):
+        """Set calibration value.
+
+        Args:
+            value (number): calibration value (x-coordinates will be multiplied
+                by this value).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_calib(value=value, type_=type_)
+
+    def set_shifts(self, value, type_='relative'):
+        """Set shift value.
+
+        Args:
+            value (float or int): shift value (value will be added to x-coordinates).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_shifts(value=value, type_=type_)
+
+    def set_offsets(self, value, type_='relative'):
+        """Set offset value.
+
+        Args:
+            value (value): offset value (value will be added to y-coordinates).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_offsets(value=value, type_=type_)
+
+    def set_factors(self, value, type_='relative'):
+        """Set y multiplicative factor.
+
+        Args:
+            value (number): multiplicative factor (y-coordinates will be
+                multiplied by this value).
+
+        Returns:
+            None
+        """
+        # check if value is a number
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        # value must be the right length
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+
+        for peaks in self._store:
+            peaks.set_factors(value=value, type_=type_)
+
+
+    def get_errors(self, key):
+        if type(key) == str:
+            peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
+            if key not in peaks_attr:
+                raise KeyError("Collection indices must be integers or a peak attribute ('amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area')")
             n_peaks = [len(peaks) for peaks in self]
             if all_equal(n_peaks) == False:
                 print('WARNING: number of peaks is different between spectra')
             if max(n_peaks) == 0:
                 return {}
             else:
-                return [[peaks[j][key].stderr for peaks in self] for j in range(max(n_peaks))]
+                return [[peaks[j].error[key] for peaks in self] for j in range(max(n_peaks))]
         else:
-            raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-        
-    # plotting and visualization
-    def pretty_print(self):
-        for i in range(len(self)):
-            print('='*5 + ' Spectrum ' + str(i) + ' ' + '='*5)
-            self[i].pretty_print()
-            print('\n')
+            raise TypeError("Collection indices must be integers or a peak attribute ('amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area')")
 
     def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
         """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
@@ -2082,170 +2282,3 @@ class Collection(MutableMapping):
         for i in range(len(self)):
             r[i] = self[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
         return r
-
-    # OBSOLETE ##############################
-    @property
-    def calib(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].calib
-        return temp
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift
-        return temp
-    @shift.setter
-    def shift(self, value):
-        self.set_shifts(value)
-    @shift.deleter
-    def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offset(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].offset
-        return temp
-    @offset.setter
-    def offset(self, value):
-        self.set_offsets(value)
-    @offset.deleter
-    def offset(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factor(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].factor
-        return temp
-    @factor.setter
-    def factor(self, value):
-        self.set_factors(value)
-    @factor.deleter
-    def factor(self):
-            raise AttributeError('Cannot delete object.')
-
-    # basic
-    def append(self, value):
-        """Append peak. Peak order is reassigned.
-
-        Args:
-            value (Peak or dict): peak to be appended.
-
-        Returns:
-            None
-        """
-        if isinstance(value, Peaks):
-            # print('here')
-            self._store.append(value)
-        else:
-            raise ValueError('value must be a brixs.Peaks object')
-
-    def remove(self, key):
-        """Remove peak. Peak order is reassigned.
-
-        Args:
-            key (int or list): peaks to be removed.
-
-        Returns:
-            None
-        """
-        if isinstance(key, Iterable):
-            key = [self._check_key(k) for k in key]
-            key = br.sort(key)[::-1]
-            if has_duplicates(key):
-                raise ValueError('list has duplicated peaks')
-            for k in key:
-                del self._store[k]
-        else:
-            del self._store[key]
-
-    # modifiers
-    def set_calib(self, value, type_='relative'):
-        """Set calibration value.
-
-        Args:
-            value (number): calibration value (x-coordinates will be multiplied
-                by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_calib(value=value, type_=type_)
-
-    def set_shifts(self, value, type_='relative'):
-        """Set shift value.
-
-        Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_shifts(value=value, type_=type_)
-
-    def set_offsets(self, value, type_='relative'):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_offsets(value=value, type_=type_)
-
-    def set_factors(self, value, type_='relative'):
-        """Set y multiplicative factor.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_factors(value=value, type_=type_)

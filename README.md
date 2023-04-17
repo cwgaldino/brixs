@@ -166,10 +166,10 @@ Also two support objects:
 
 ```python
     # basic
-    s.data              # np.array (float)
-    s.x                 # np.array (float)
-    s.y                 # np.array (float)
-    s.area              # float (computed attribute)
+    s.data              # np.array (2 column array)
+    s.x                 # np.array (array)
+    s.y                 # np.array (array)
+    s.area              # float
 
     # modifiers
     s.offset        # float [runs Spectrum.set_offset()]

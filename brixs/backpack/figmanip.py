@@ -682,18 +682,18 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
                 Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
             #. pad (float or int)
                 Distance between plot edge and the first tick in terms of tick separation.
-                Tipically, must be something between 0 and 1.
+                Typically, must be something between 0 and 1.
             #. n_decimal_places (int)
                 Number of decimal places to use for tick labels.
             #. direction
                 default is 'out', possible values are 'in' and 'out'
 
     Note:
-        To set minor and major ticks 'manually' use `XAxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
+        To set minor and major ticks 'manually' use `xaxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
 
             _ = ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
 
-        Set labels manualy by using:
+        Set labels manually by using:
 
             _ = ax.set_yticklabels([1, 2, 3, 4, 5, 6])
 
@@ -711,7 +711,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
 
     ## collecting kwargs
     if 'min_value' in kwargs:
-        min_value = kwargs['min_value']
+        min_value = kwargs.pop('min_value')
         if min_value is None:
             min_value = ticks_showing[-1]
             for line in ax.get_lines():
@@ -734,7 +734,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         # min_value = ticks_showing[0]
 
     if 'max_value' in kwargs:
-        max_value = kwargs['max_value']
+        max_value = kwargs.pop('max_value')
         if max_value is None:
             max_value = ticks_showing[0]
             for line in ax.get_lines():
@@ -757,7 +757,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         # max_value = ticks_showing[-1]
 
     if 'n_ticks' in kwargs:
-        n_ticks = kwargs['n_ticks']
+        n_ticks = kwargs.pop('n_ticks')
         if n_ticks is None:
             if 'ticks_sep' in kwargs:
                 ticks_sep = kwargs['ticks_sep']
@@ -768,7 +768,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
             else:
                 n_ticks = len(ticks_showing)
     elif 'ticks_sep' in kwargs:
-        ticks_sep = kwargs['ticks_sep']
+        ticks_sep = kwargs.pop('ticks_sep')
         if ticks_sep is not None:
             use_sep = True
         else:
@@ -778,28 +778,34 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         ticks_sep = np.mean(np.diff(ticks_showing))
 
     if 'n_minor_ticks' in kwargs:
-        n_minor_ticks = kwargs['n_minor_ticks']
+        n_minor_ticks = kwargs.pop('n_minor_ticks')
         if n_minor_ticks is None:
             n_minor_ticks = 2
     else:
         n_minor_ticks = 2
 
     if 'fontproperties' in kwargs:
-        fontproperties = kwargs['fontproperties']
+        fontproperties = kwargs.pop('fontproperties')
     else:
         fontproperties = None
 
     if 'pad' in kwargs:
-        pad = kwargs['pad']
+        pad = kwargs.pop('pad')
     else:
         pad = None
+    
+    if len(kwargs.keys()) > 0:
+        raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
 
     # ticks
     if use_sep:
+        # print('hh')
         ticks   = np.arange(min_value, max_value+ticks_sep*0.1, ticks_sep)
+        # print(ticks_sep)
+        # print(ticks)
     else:
         ticks   = np.linspace(min_value, max_value, n_ticks)
-    # ticks shift to get better values
+    # ticks shift to get better values (include zero)
     if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
         ticks = ticks-ticks[index(ticks, 0)]
     elif max_value-min_value > 5:
@@ -1012,6 +1018,28 @@ def remove_ticks_edge(ax):
     if ax.get_yticks()[-1] == ax.get_ylim()[-1]:
         ticks[-1].tick1line.set_visible(False)
         ticks[-1].tick2line.set_visible(False)
+
+def vlines(x, ymin=None, ymax=None, colors=None, linestyles='solid', label='', ax=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+
+    if ymin is None:
+        ymin = ax.get_ylim()[0]
+    if ymax is None:
+        ymax = ax.get_ylim()[1]
+
+    ax.vlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, label=label, **kwargs)
+
+def hlines(x, xmin=None, xmax=None, colors=None, linestyles='solid', label='', ax=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+
+    if xmin is None:
+        xmin = ax.get_xlim()[0]
+    if xmax is None:
+        xmax = ax.get_xlim()[1]
+
+    ax.hlines(x=x, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
 
 
 def ax_box2fig_box(ax, points):
