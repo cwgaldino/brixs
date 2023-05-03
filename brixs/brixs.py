@@ -29,12 +29,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # specific libraries
+import numbers
 from collections.abc import Iterable, MutableMapping
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
 # backpack
-from .backpack.filemanip import load_Comments
+from .backpack.filemanip import load_Comments, filelist
 from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes, derivative
 from .backpack.arraymanip import is_integer, all_equal, factors, flatten, check_monotonicity, fix_monotonicity
 from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
@@ -2398,6 +2399,9 @@ class Spectrum(metaclass=_Meta):
         # basic
         self._x    = None
         self._y    = None
+        self._xlabel   = ''
+        self._ylabel   = ''
+        self._filepath = ''
 
         # modifiers
         self._reset_modifiers()
@@ -2635,7 +2639,7 @@ class Spectrum(metaclass=_Meta):
         self.monotonicity = None
         self._reset_modifiers()
         #special
-        self.peaks.reset()
+        self.peaks.clear()
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
@@ -2655,7 +2659,7 @@ class Spectrum(metaclass=_Meta):
         # self.monotonicity = None
         # self._reset_modifiers()
         #special
-        self.peaks.reset()
+        self.peaks.clear()
     @y.deleter
     def y(self):
         raise AttributeError('Cannot delete object.')
@@ -2753,6 +2757,57 @@ class Spectrum(metaclass=_Meta):
         raise AttributeError('Cannot delete object.')
 
     @property
+    def xlabel(self):
+        return self._xlabel
+    @xlabel.setter
+    def xlabel(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str):
+            forbidden = [':', '#', '\n', '\r']
+            if np.sum([x in value for x in forbidden]):
+                raise ValueError(f'xlabel cannot contain the follwing characters: {forbidden}')
+            self._xlabel = str(value)
+        else:
+            raise TypeError('Invalid type for xlabel\nxlabel must be a string.')
+    @xlabel.deleter
+    def xlabel(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def ylabel(self):
+        return self._ylabel
+    @ylabel.setter
+    def ylabel(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str):
+            forbidden = [':', '#', '\n', '\r']
+            if np.sum([x in value for x in forbidden]):
+                raise ValueError(f'xlabel cannot contain the follwing characters: {forbidden}')
+            self._ylabel = str(value)
+        else:
+            raise TypeError('Invalid type for ylabel\nylabel must be a string.')
+    @ylabel.deleter
+    def ylabel(self):
+        raise AttributeError('Cannot delete object.')   
+    
+    @property
+    def filepath(self):
+        return self._filepath
+    @filepath.setter
+    def filepath(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, Path):
+            self._filepath = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nFilepath can only be str or pathlib.Path type.')
+    @filepath.deleter
+    def filepath(self):
+        raise AttributeError('Cannot delete object.')   
+
+    @property
     def step(self):
         return self._step
     @step.setter
@@ -2789,7 +2844,34 @@ class Spectrum(metaclass=_Meta):
     
 
     # save and load
-    def save(self, filepath=None, only_data=False, check_overwrite=True, **kwargs):
+    def _header(self, verbose):
+        """Gather attrs to be saved to a file."""
+        header = ''
+        temp = get_attributes(self)
+        for name in temp:
+            if name not in ['_x', '_y', '_peaks', '_xlabel', '_ylabel', '_filepath']:
+                if temp[name] is None:
+                    header += f'{name}: None'  + '\n'
+                elif isinstance(temp[name], str):
+                    temp2 = str(temp[name]).replace('\n','\\n')
+                    header += f'{name}: \"{temp2}\"'  + '\n'
+                elif isinstance(temp[name], Iterable):
+                    header += f'{name}: {list(temp[name])}'  + '\n'
+                elif isinstance(temp[name], dict):
+                    if verbose:
+                        type_ = str(type(temp[name]))
+                        print(r'Warning: Cannot save attr of type: ' + type_ + r'.\attr: '+ name + r'.\nTo turn off this warning, set verbose to False.')
+                elif isinstance(temp[name], numbers.Number):
+                    tosave = str(temp[name])
+                    if tosave[-1] == '\n':
+                        tosave = tosave[:-1]
+                    header += f'{name}: {tosave}'  + '\n'
+                else:
+                    temp2 = str(temp[name]).replace('\n','\\n')
+                    header += f'{name}: \"{temp2}\"'  + '\n'
+        return header[:-1]
+
+    def save(self, filepath=None, only_data=False, check_overwrite=True, verbose=True, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         User defined attr are saved in the header (except for dictionaries).
@@ -2832,10 +2914,11 @@ class Spectrum(metaclass=_Meta):
         """
         # filepath
         if filepath is None:
-            try: 
-                filepath = self.filepath
-            except AttributeError:
+            if filepath == '':
                 raise TypeError("Missing 1 required argument: 'filepath'")
+            else:
+                filepath = self.filepath               
+        filepath = Path(filepath)
         
         # check overwrite
         if check_overwrite:
@@ -2850,7 +2933,7 @@ class Spectrum(metaclass=_Meta):
 
         # kwargs
         if 'fmt' not in kwargs: # pick best format
-            decimal = max([n_decimal_places(x) for x in flatten(self._data)])
+            decimal = max([n_decimal_places(x) for x in flatten(self.data)])
             kwargs['fmt'] = f'%.{decimal}f'
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
@@ -2865,38 +2948,40 @@ class Spectrum(metaclass=_Meta):
                 del kwargs['header']
             if 'footer' in kwargs:
                 del kwargs['footer']
-            np.savetxt(Path(filepath), self._data, **kwargs)
         else:
             if 'header' not in kwargs:
-                kwargs['header'] = ''
+                kwargs['header'] = self._header(verbose=verbose)
             else:
-                kwargs['header'] += '\n'
-            dict = get_attributes(self)
-            kwargs['header'] += '==== brixs Spectrum ===='  + '\n'
-            for n in dict:
-                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov', '_peaks']:
-                    if dict[n] is None:
-                        kwargs['header'] += f'{n}: None'  + '\n'
-                    elif isinstance(dict[n], str):
-                        kwargs['header'] += f'{n}: \"{str(dict[n])}\"'  + '\n'
-                    elif isinstance(dict[n], dict):
-                        pass
-                    elif isinstance(dict[n], Iterable):
-                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
-                    else:
-                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
-            np.savetxt(Path(filepath), self._data, **kwargs)
+                if kwargs['header'] == '':
+                    kwargs['header'] = self._header(verbose=verbose)
+                elif kwargs['header'][-1] != '\n':
+                    kwargs['header'] += '\n'
+            
+            if self.xlabel != '' and self.ylabel != '':
+                kwargs['header'] += '\n' + self.xlabel + kwargs['delimiter'] + self.ylabel
+        np.savetxt(Path(filepath), self.data, **kwargs)
 
         # save filepath
         self.filepath = str(filepath)
 
-    def load(self, filepath, **kwargs):
+    def load(self, filepath, only_data=False, verbose=True, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
+
+        This a very simple loading function that works well with two column text
+        files. If file has more columns than two columns, the first two columns
+        will be loades. Use `usecols` to select columns, for example:
+        
+        usecols = (1, 4) 
+
+        If file was saved by br.Spectrum.save(), then the metadata (comments) can be 
+        recovered. If not, only_data must be set to True.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename extension is .gz or .bz2, the file is first 
                 decompressed. Last used filepath is saved to an attr s.filepath.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is loaded.
 
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
@@ -2916,58 +3001,84 @@ class Spectrum(metaclass=_Meta):
             kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
             kwargs['comments'] = '#'
+        if 'usecols' not in kwargs:
+            kwargs['usecols'] = (0, 1)
 
         # read data
         data = np.genfromtxt(Path(filepath), **kwargs)
-        self.data = data
+
+        # check data
+        x = data[:, 0]
+        y = data[:, 1]
+        assert len(x) == len(y), f'Length of x array (len={len(x)}) is not compatible with y array (len={len(y)}).'
+        self._x = x
+        self._y = y
 
         # read header
-        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-        attr_start = 0
-
-        # find where attributes listing starts
-        if header:
-            for i, line in enumerate(header):
-                if '==== brixs Spectrum ====' in line:
-                    attr_start = i
-                    break
-                attr_start = -1
-
-            # read attributes
-            if attr_start != -1:
-                for i, line in enumerate(header[attr_start+1:-1]):
-
+        if only_data is False:
+            header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            for line in header:
+                if ':' not in line:
+                    temp = line.split(kwargs['delimiter'])
+                    self.xlabel = temp[kwargs['usecols'][0]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
+                    self.ylabel = temp[kwargs['usecols'][1]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
+                else:
                     # extract name and value
                     name = line[1:-1].split(':')[0].strip()
-                    value = eval(str(line[1:-1].split(':')[1:]).strip())
-
-                    ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
-                    if name in ['_peaks']:
-                        pass
-                        # if value == []:
-                        #     self._peaks = Peaks()
-                        # else:
-                        #     temp = eval(':'.join(value))
-                        #     for t in temp:
-                        #         t.pop('area')
-                        #     self._peaks = Peaks(temp)
-                    ### DEALING WITH OTHER ATTRIBUTES ###
-                    elif name not in []:  # except these attrs
-                        try:
-                            value = eval(value[0])
-                            setattr(self, name, value)
-                        except Exception as e:
+                    value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
+                    try:
+                        setattr(self, name, value)
+                    except Exception as e:
+                        if verbose:
                             print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
 
-            # peaks
-            self._peaks = Peaks()
-            self.peaks._shift  = self.shift
-            self.peaks._calib  = self.calib
-            self.peaks._offset = self.offset
-            self.peaks._factor = self.factor
 
-            # save filepath
-            self.filepath = str(filepath)
+            # header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            # attr_start = 0
+
+            # # find where attributes listing starts
+            # if header:
+            #     for i, line in enumerate(header):
+            #         if '==== brixs Spectrum ====' in line:
+            #             attr_start = i
+            #             break
+            #         attr_start = -1
+
+            #     # read attributes
+            #     if attr_start != -1:
+            #         for i, line in enumerate(header[attr_start+1:-1]):
+
+            #             # extract name and value
+            #             name = line[1:-1].split(':')[0].strip()
+            #             value = eval(str(line[1:-1].split(':')[1:]).strip())
+
+            #             ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+            #             if name in ['_peaks']:
+            #                 pass
+            #                 # if value == []:
+            #                 #     self._peaks = Peaks()
+            #                 # else:
+            #                 #     temp = eval(':'.join(value))
+            #                 #     for t in temp:
+            #                 #         t.pop('area')
+            #                 #     self._peaks = Peaks(temp)
+            #             ### DEALING WITH OTHER ATTRIBUTES ###
+            #             elif name not in []:  # except these attrs
+            #                 try:
+            #                     value = eval(value[0])
+            #                     setattr(self, name, value)
+            #                 except Exception as e:
+            #                     print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+
+            #     # peaks
+            #     self._peaks = Peaks()
+            #     self.peaks._shift  = self.shift
+            #     self.peaks._calib  = self.calib
+            #     self.peaks._offset = self.offset
+            #     self.peaks._factor = self.factor
+
+        # save filepath
+        self.filepath = str(filepath)
 
     # check
     def check_step(self, max_error=None):
@@ -3061,7 +3172,7 @@ class Spectrum(metaclass=_Meta):
         # self.monotonicity = None
         # self._reset_modifiers()
         #special
-        # self.peaks.reset()
+        # self.peaks.clear()
 
     # modifiers
     def set_calib(self, value, type_='absolute'):
@@ -3096,7 +3207,7 @@ class Spectrum(metaclass=_Meta):
         self.monotonicity = None
         # self._reset_modifiers()
         #special
-        # self.peaks.reset()
+        # self.peaks.clear()
         self.peaks.set_calib(value=value, type_=type_)
 
     def set_shift(self, value, mode, type_='absolute'):
@@ -3455,7 +3566,7 @@ class Spectrum(metaclass=_Meta):
         self.monotonicity = None
         # self._reset_modifiers()
         #special
-        # self.peaks.reset()
+        # self.peaks.clear()
 
     def remove(self, ranges):
         """Remove data points inside range."""
@@ -3467,7 +3578,7 @@ class Spectrum(metaclass=_Meta):
         # self.monotonicity = None
         # self._reset_modifiers()
         #special
-        # self.peaks.reset()
+        # self.peaks.clear()
 
     def makeover(self, ranges, mode='poly', deg=1, n=3):
         """[EXPERIMENTAL] Replace y data points inside range with averaged out data points nearby.
@@ -4064,6 +4175,7 @@ class Spectra(metaclass=_Meta):
     def __init__(self, *args, **kwargs):
         # basic
         self._data  = None
+        self._dirpath  = ''
         # self._peaks = Collection()
 
         # argument parsing
@@ -4113,7 +4225,7 @@ class Spectra(metaclass=_Meta):
                     temp.__setattr__(n, dict[n])
             return temp        
         else:
-            raise TypeError('Index must be int, not {}'.format(type(key).__name__))
+            raise TypeError('Index must be int, not {}'.format(type(item).__name__))
 
     def __setitem__(self, item, value):
         if isinstance(value, Spectrum) == False:
@@ -4365,6 +4477,21 @@ class Spectra(metaclass=_Meta):
     def sum(self):
         raise AttributeError('Attribute cannot be deleted.')
 
+    @property
+    def dirpath(self):
+        return self._dirpath
+    @dirpath.setter
+    def dirpath(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, Path):
+            self._dirpath = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for dirpath\ndirpath can only be str or pathlib.Path type.')
+    @dirpath.deleter
+    def dirpath(self):
+        raise AttributeError('Cannot delete object.')  
+    
     # @property
     # def R2(self):
     #     temp = [0]*len(self)
@@ -4532,18 +4659,21 @@ class Spectra(metaclass=_Meta):
         self._restart_calculated_modifiers()
 
     # save and load
-    def save(self, dirpath=None, prefix='spectrum_', suffix='.dat', zfill=None, only_data=False, check_overwrite=True, verbose=False, **kwargs):
-        r"""Save Spectra. Wrapper for `numpy.savetxt()`_.
+    def save(self, dirpath=None, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, only_data=False, check_overwrite=True, verbose=True, **kwargs):
+        r"""Save spectra. Wrapper for `numpy.savetxt()`_.
 
         Args:
-            dirpath (string or pathlib.Path, optional): folderpath, folder handle,
-                or a list of filepaths. If None, filepath can be inferred from a
+            dirpath (string or pathlib.Path, optional): folderpath, folder handle. 
+                If None, filepath can be inferred from a
                 user defined attr 'ss.dirpath'. Default is None. Last used 
                 dirpath is saved to ss.dirpath.
             prefix (string, optional): prefix used for naming the files.
             suffix (string, optional): suffix used for naming the files. If the
                 filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
+            filenames (string, optional): overwrites prefix and suffix. Use `{<attr>}` to 
+                include spectrum attr in the name. Use `{i}` to include the
+                spectrum index. Example: 'spectrum_{i}_T{T}K.dat'
             zfill (int, optional): number of digits for file numbering. If `None`,
                 zfill will be determined.
             only_data (bool, optional): If True, header and footer are ignored and
@@ -4579,139 +4709,40 @@ class Spectra(metaclass=_Meta):
         """
         # dirpath
         if dirpath is None:
-            try: 
-                dirpath = self.dirpath
-            except AttributeError:
+            if dirpath == '':
                 raise TypeError("Missing 1 required argument: 'dirpath'")
+            else:
+                dirpath = self.dirpath               
+        dirpath = Path(dirpath)
 
-        # check if dirpath is a directory
-        if isinstance(dirpath, Iterable):
-            for i, s in enumerate(self.data):
-                if verbose:  print(f':{i}/{len(self)-1}: {dirpath[i]}')
-                s.save(filepath=dirpath[i], only_data=only_data, check_overwrite=check_overwrite, **kwargs)
-        else:
-            assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
-            assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
+        assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
+        assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
 
-            # set filenames
-            if zfill is None:
-                zfill = n_digits(len(self)-1)[0]
+        # set filenames
+        if zfill is None:
+            zfill = n_digits(len(self)-1)[0]
 
-            # saving
-            if verbose: print('saving files...')
-            for i, s in enumerate(self.data):
+        # saving
+        # if verbose: print('saving {} files...')
+        for i, s in enumerate(self.data):
+            if filenames is not None:
+                filename = filenames
+                for slot in filenames.split('{'):
+                    if '}' in slot:
+                        name = slot.split('}')[0]
+                        if '{' + name + '}' == '{i}':
+                            filename = filename.replace('{i}', str(i))
+                        else:
+                            filename = filename.replace('{' + name + '}', str(getattr(self[i], name)))
+            else:
                 filename = f'{prefix}' + f'{i}'.zfill(zfill) + f'{suffix}'
-                if verbose:  print(f':{i}/{len(self)-1}: {filename}')
-                s.save(filepath=dirpath/filename, only_data=only_data, check_overwrite=check_overwrite, **kwargs)
+            if verbose:  print(f'{i}/{len(self)-1}: {filename}')
+            s.save(filepath=dirpath/filename, only_data=only_data, check_overwrite=check_overwrite, verbose=verbose, **kwargs)
         
         # save dirpath
         self.dirpath = dirpath
-
         if verbose: print('Done!')
     
-    def save1(self, filepath='./spectra.dat', only_data=False, ranges=None, **kwargs):
-        r"""Save one file with every spectra. Wrapper for `numpy.savetxt()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format.
-            only_data (bool, optional): If True, header and footer are ignored and
-                only data is saved to the file.
-            ranges (list, optional): a pair of x-coordinate values or a list of
-                pairs. Each pair represents the start and stop of a data range.
-                The additive factor will be calculated for spectra such the average value of
-                data inside ranges is the same as for the first spectrum. Spectra
-                outside this range will not be saved.
-
-        If not specified, the following parameters are passed to `numpy.savetxt()`_:
-
-        Args:
-            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
-                sequence of formats. See numpy's documentation for more information.
-                If not specified, best fmt is calculated based on the
-                number of decimal places of the data. Specifing fmt makes the code
-                runs a little faster (not much tough, but it might make a difference
-                if saving a lot of files).
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (", ").
-            newline (str, optional): String or character separating lines.
-                Default is ``\n``.
-            header (bool, optional): String that will be written at the beginning of the file.
-                Note that, object attributes will be saved at the beginning of the file.
-                If only_data=True, header and footer is ignored.
-            comments (str, optional): String that will be prepended to the
-                header and footer strings, to mark them as comments. Default is "# ".
-
-        Returns:
-            None
-
-        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
-        """
-        filepath = Path(filepath)
-
-        # kwargs
-        if 'fmt' not in kwargs: # pick best format
-            decimal = 0
-            for s in self:
-                temp_decimal = max([n_decimal_places(x) for x in flatten(s._data)])
-                print(temp_decimal)
-                if temp_decimal > decimal:
-                    decimal = copy.deepcopy(temp_decimal)
-            kwargs['fmt'] = f'%.{decimal}f'
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
-
-        # check if dirpath is a directory
-        assert filepath.parent.exists(), f'dirpath does not exists.\ndirpath: {filepath.parent}'
-
-        # check x is the same
-        if self.x is None:
-            try:
-                self.check_same_x()
-            except ValueError:
-                raise ValueError('Cannot save spectra in one file. x axis are different.\nMaybe try interpolating the x axis or use Spectra.save() to save spectra in multiple files.')
-        
-        # save
-        final = np.zeros((self.length, len(self)+1))
-        x, y = self._gather_ys(ranges=ranges)
-        final[:, 0] = x
-        final[:, 1:] = y
-        
-
-        if only_data:
-            if 'header' in kwargs:
-                del kwargs['header']
-            if 'footer' in kwargs:
-                del kwargs['footer']
-            np.savetxt(Path(filepath), final, **kwargs)
-        else:
-            if 'header' not in kwargs:
-                kwargs['header'] = ''
-            else:
-                kwargs['header'] += '\n'
-            dict = get_attributes(self)
-            kwargs['header'] += '==== brixs Spectra ===='  + '\n'
-            for n in dict:
-                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov', '_peaks', '_step','_monotonicity','_calculated_shifts','_calculated_factors','_calculated_offsets','_calculated_calib',]:
-                    if dict[n] is None:
-                        kwargs['header'] += f'{n}: None'  + '\n'
-                        # else:
-                        #     kwargs['header'] += f'{n}: {dict[n].data}'  + '\n'
-                    elif isinstance(dict[n], str):
-                        kwargs['header'] += f'{n}: \"{str(dict[n])}\"'  + '\n'
-                    elif isinstance(dict[n], Iterable):
-                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
-                        # if n == '_peaks':
-                        #     kwargs['header'] += f'{'_peaks.error'}: {list(dict[n])}'  + '\n'
-                    else:
-                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
-            np.savetxt(Path(filepath), final, **kwargs)
-
     def load(self, dirpath, string='*', verbose=False, **kwargs):
         """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
 
@@ -4739,110 +4770,54 @@ class Spectra(metaclass=_Meta):
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
         # reset data
-        self._data     = []
+        self._data = []
         self._restart_check_attr()
-        self._calculated_shifts  = None
-        self._calculated_calib  = None
-        self._calculated_factors = None
-        self._calculated_offsets = None
+        self._restart_calculated_modifiers()
 
-        # if dirpath is str
-        if isinstance(dirpath, str) or isinstance(dirpath, Path):
-            dirpath = Path(dirpath)
-            if dirpath.is_file():
-                if verbose: print('dirpath is a file')
-                if verbose: print('Loading...')
-                self.append(Spectrum(filepath=dirpath))
-                if verbose: print('Done!')
-                return
-            elif dirpath.is_dir():
-                dirpath = [dirpath, ]
-            else:
-                raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
+        fl = filelist(dirpath=dirpath, string=string)
+        for i, filepath in enumerate(fl):
+            if verbose: print(f'Loading: {dirpath}')
+            if verbose: print(f'    {i+1}/{len(fl)}: {filepath.name}')
+            self.append(Spectrum(filepath=filepath))
 
-        # if dirpath is iterable
-        if isinstance(dirpath, Iterable):
-            if verbose: print('Loading...')
-            for j, filepath in enumerate(dirpath):
-                if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
+        # # if dirpath is str
+        # if isinstance(dirpath, str) or isinstance(dirpath, Path):
+        #     dirpath = Path(dirpath)
 
-                # if Path(filepath).is_dir():
-                #     fl = filelist(dirpath=filepath, string=string)
-                #     for i, f in enumerate(fl):
-                #         if verbose: print(f'    {i+1}/{len(fl)}: {f}')
-                #         self.append(Spectrum(filepath=f))
 
-                elif Path(filepath).is_file():
-                    self.append(Spectrum(filepath=filepath))
-                else:
-                    raise ValueError(f'cannot read dirpath.\dirpath: {dirpath}')
+
+        #     if dirpath.is_file():
+        #         if verbose: print('dirpath is a file')
+        #         if verbose: print('Loading...')
+        #         self.append(Spectrum(filepath=dirpath))
+        #         if verbose: print('Done!')
+        #         return
+        #     elif dirpath.is_dir():
+        #         dirpath = [dirpath, ]
+        #     else:
+        #         raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
+
+        # # if dirpath is iterable
+        # if isinstance(dirpath, Iterable):
+        #     if verbose: print('Loading...')
+        #     for j, filepath in enumerate(dirpath):
+        #         if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
+
+        #         # if Path(filepath).is_dir():
+        #         #     fl = filelist(dirpath=filepath, string=string)
+        #         #     for i, f in enumerate(fl):
+        #         #         if verbose: print(f'    {i+1}/{len(fl)}: {f}')
+        #         #         self.append(Spectrum(filepath=f))
+
+        #         elif Path(filepath).is_file():
+        #             self.append(Spectrum(filepath=filepath))
+        #         else:
+        #             raise ValueError(f'cannot read dirpath.\dirpath: {dirpath}')
         
         # save dirpath
         self.dirpath = dirpath
 
         if verbose: print('Done!')
-
-    def load1(self, filepath, **kwargs):
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '#'
-
-        # read data
-        data = np.genfromtxt(Path(filepath), **kwargs)
-        x  = data[:, 0]
-        ys = data[:, 1:]
-        # print()
-
-        # reset data
-        self._data     = []
-        self._restart_check_attr()
-        self._calculated_shifts  = None
-        self._calculated_calib   = None
-        self._calculated_factors = None
-        self._calculated_offsets = None
-
-        # allocate data
-        for i in range(ys.shape[1]):
-            self.append(x=x, y=ys[:, i])
-        
-        # read header
-        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-        attr_start = 0
-
-        # find where attributes listing starts
-        if header:
-            for i, line in enumerate(header):
-                if '==== brixs Spectra ====' in line:
-                    attr_start = i
-                    break
-                attr_start = -1
-
-            # read attributes
-            if attr_start != -1:
-                for i, line in enumerate(header[attr_start+1:-1]):
-
-                    # extract name and value
-                    name = line[1:-1].split(':')[0].strip()
-                    value = eval(str(line[1:-1].split(':')[1:]).strip())
-
-                    ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
-                    if name in ['_peaks']:
-                        pass
-                        # if value == []:
-                        #     self._peaks = Peaks()
-                        # else:
-                        #     temp = eval(':'.join(value))
-                        #     for t in temp:
-                        #         t.pop('area')
-                        #     self._peaks = Peaks(temp)
-                    ### DEALING WITH OTHER ATTRIBUTES ###
-                    elif name not in []:  # except these attrs
-                        try:
-                            value = eval(value[0])
-                            setattr(self, name, value)
-                        except Exception as e:
-                            print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
 
     # check
     def check_monotonicity(self):
@@ -6270,7 +6245,238 @@ class Spectra(metaclass=_Meta):
             r[i] = peaks[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
         return r
 
+    def save_to_single_file(self, filepath='./spectra.dat', only_data=False, ranges=None, **kwargs):
+        r"""Save all Spectra in one single file. Wrapper for `numpy.savetxt()`_.
 
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename ends in .gz, the file is automatically saved in
+                compressed gzip format.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is saved to the file.
+            ranges (list, optional): a pair of x-coordinate values or a list of
+                pairs. Each pair represents the start and stop of a data range.
+                The additive factor will be calculated for spectra such the average value of
+                data inside ranges is the same as for the first spectrum. Spectra
+                outside this range will not be saved.
 
+        If not specified, the following parameters are passed to `numpy.savetxt()`_:
 
+        Args:
+            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
+                sequence of formats. See numpy's documentation for more information.
+                If not specified, best fmt is calculated based on the
+                number of decimal places of the data. Specifing fmt makes the code
+                runs a little faster (not much tough, but it might make a difference
+                if saving a lot of files).
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (", ").
+            newline (str, optional): String or character separating lines.
+                Default is ``\n``.
+            header (bool, optional): String that will be written at the beginning of the file.
+                Note that, object attributes will be saved at the beginning of the file.
+                If only_data=True, header and footer is ignored.
+            comments (str, optional): String that will be prepended to the
+                header and footer strings, to mark them as comments. Default is "# ".
+
+        Returns:
+            None
+
+        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
+        """
+        filepath = Path(filepath)
+
+        # kwargs
+        if 'fmt' not in kwargs: # pick best format
+            decimal = 0
+            for s in self:
+                temp_decimal = max([n_decimal_places(x) for x in flatten(s._data)])
+                print(temp_decimal)
+                if temp_decimal > decimal:
+                    decimal = copy.deepcopy(temp_decimal)
+            kwargs['fmt'] = f'%.{decimal}f'
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'newline' not in kwargs:
+            kwargs['newline'] = '\n'
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
+        # check if dirpath is a directory
+        assert filepath.parent.exists(), f'dirpath does not exists.\ndirpath: {filepath.parent}'
+
+        # check x is the same
+        if self.x is None:
+            try:
+                self.check_same_x()
+            except ValueError:
+                raise ValueError('Cannot save spectra in one file. x axis are different.\nMaybe try interpolating the x axis or use Spectra.save() to save spectra in multiple files.')
+        
+        # save
+        final = np.zeros((self.length, len(self)+1))
+        x, y = self._gather_ys(ranges=ranges)
+        final[:, 0] = x
+        final[:, 1:] = y
+        
+
+        if only_data:
+            if 'header' in kwargs:
+                del kwargs['header']
+            if 'footer' in kwargs:
+                del kwargs['footer']
+            np.savetxt(Path(filepath), final, **kwargs)
+        else:
+            if 'header' not in kwargs:
+                kwargs['header'] = ''
+            else:
+                kwargs['header'] += '\n'
+            dict = get_attributes(self)
+            kwargs['header'] += '==== brixs Spectra ===='  + '\n'
+            for n in dict:
+                if n not in ['_x', '_y', '_data', '_fit', '_guess', '_residue', '_pcov', '_peaks', '_step','_monotonicity','_calculated_shifts','_calculated_factors','_calculated_offsets','_calculated_calib',]:
+                    if dict[n] is None:
+                        kwargs['header'] += f'{n}: None'  + '\n'
+                        # else:
+                        #     kwargs['header'] += f'{n}: {dict[n].data}'  + '\n'
+                    elif isinstance(dict[n], str):
+                        kwargs['header'] += f'{n}: \"{str(dict[n])}\"'  + '\n'
+                    elif isinstance(dict[n], Iterable):
+                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
+                        # if n == '_peaks':
+                        #     kwargs['header'] += f'{'_peaks.error'}: {list(dict[n])}'  + '\n'
+                    else:
+                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
+            np.savetxt(Path(filepath), final, **kwargs)
+
+    def load_from_single_file(self, filepath, **kwargs):
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '#'
+
+        # read data
+        data = np.genfromtxt(Path(filepath), **kwargs)
+        x  = data[:, 0]
+        ys = data[:, 1:]
+        # print()
+
+        # reset data
+        self._data     = []
+        self._restart_check_attr()
+        self._calculated_shifts  = None
+        self._calculated_calib   = None
+        self._calculated_factors = None
+        self._calculated_offsets = None
+
+        # allocate data
+        for i in range(ys.shape[1]):
+            self.append(x=x, y=ys[:, i])
+        
+        # read header
+        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+        attr_start = 0
+
+        # find where attributes listing starts
+        if header:
+            for i, line in enumerate(header):
+                if '==== brixs Spectra ====' in line:
+                    attr_start = i
+                    break
+                attr_start = -1
+
+            # read attributes
+            if attr_start != -1:
+                for i, line in enumerate(header[attr_start+1:-1]):
+
+                    # extract name and value
+                    name = line[1:-1].split(':')[0].strip()
+                    value = eval(str(line[1:-1].split(':')[1:]).strip())
+
+                    ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+                    if name in ['_peaks']:
+                        pass
+                        # if value == []:
+                        #     self._peaks = Peaks()
+                        # else:
+                        #     temp = eval(':'.join(value))
+                        #     for t in temp:
+                        #         t.pop('area')
+                        #     self._peaks = Peaks(temp)
+                    ### DEALING WITH OTHER ATTRIBUTES ###
+                    elif name not in []:  # except these attrs
+                        try:
+                            value = eval(value[0])
+                            setattr(self, name, value)
+                        except Exception as e:
+                            print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+
+    def load2(self, dirpath, string='*', verbose=False, **kwargs):
+        """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
+
+        Args:
+            dirpath (string, path object, or list): folderpath, folder handle,
+                or a list of filepaths. All files inside a folder where string 
+                can be found in the filename are imported. If the filename 
+                extension is .gz or .bz2, the file is first decompressed. 
+                Last used dirpath is saved to ss.dirpath.
+            string (str, optional): file names without this string will be ignored.
+                Use '*' for matching anything. Default is '*'.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (', ').
+            comments (str, optional): The character used to indicate the start
+                of a comment. Default is ``# ``. Attributes picked up
+                from the header will be loaded too.
+
+        Returns:
+            None
+
+        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
+        """
+        # reset data
+        self._data     = []
+        self._restart_check_attr()
+        self._calculated_shifts  = None
+        self._calculated_calib  = None
+        self._calculated_factors = None
+        self._calculated_offsets = None
+
+        # if dirpath is str
+        if isinstance(dirpath, str) or isinstance(dirpath, Path):
+            dirpath = Path(dirpath)
+            if dirpath.is_file():
+                if verbose: print('dirpath is a file')
+                if verbose: print('Loading...')
+                self.append(Spectrum(filepath=dirpath))
+                if verbose: print('Done!')
+                return
+            elif dirpath.is_dir():
+                dirpath = [dirpath, ]
+            else:
+                raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
+
+        # if dirpath is iterable
+        if isinstance(dirpath, Iterable):
+            if verbose: print('Loading...')
+            for j, filepath in enumerate(dirpath):
+                if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
+
+                # if Path(filepath).is_dir():
+                #     fl = filelist(dirpath=filepath, string=string)
+                #     for i, f in enumerate(fl):
+                #         if verbose: print(f'    {i+1}/{len(fl)}: {f}')
+                #         self.append(Spectrum(filepath=f))
+
+                elif Path(filepath).is_file():
+                    self.append(Spectrum(filepath=filepath))
+                else:
+                    raise ValueError(f'cannot read dirpath.\dirpath: {dirpath}')
+        
+        # save dirpath
+        self.dirpath = dirpath
+
+        if verbose: print('Done!')
 # %%

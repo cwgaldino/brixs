@@ -18,6 +18,7 @@ from .file_reading import I21
 from .crystal import *
 from .fake_data import fake
 from .peaks import *
+from .plotting_support import *
 
 # backpack
 from .backpack import *
