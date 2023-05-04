@@ -133,3 +133,4 @@ dmypy.json
 git_cheat
 *.sh
 local/*
+.vscode
