@@ -597,6 +597,17 @@ class Peak(lmfit.Parameters):
         
         return peaks2
 
+    def copy(self):
+        temp = Peak()
+        temp.index = self.index
+        for key in self:
+            temp[key].value = self[key].value
+            temp[key].min   = self[key].min
+            temp[key].max   = self[key].max
+            temp[key].vary  = self[key].vary
+            temp[key].expr  = self[key].expr
+        return temp
+    
     # calculation and info
     def _model_str(self):
         """Returns string for building peak function.
@@ -1501,19 +1512,9 @@ class Peaks(MutableMapping):
         for i in range(len(self)):
             if i == 0:
                 model_str = self[i]._model_str() + '+'
-                p = self[i]
             else:
                 model_str += self[i]._model_str() + '+'
-                p += self[i]
         return model_str[:-1]
-
-    def _add_peaks(self):
-        for i in range(len(self)):
-            if i == 0:
-                p = self[i]
-            else:
-                p += self[i]
-        return p
    
     def model(self):
         """Returns a function f(x) for the peak."""
@@ -1541,13 +1542,13 @@ class Peaks(MutableMapping):
         residual = self.generate_residual_function(x, y)
         out = lmfit.minimize(residual, method=method, params=self._add_peaks(), args=(x, y))
         peaks2 = out.params._split_peaks()
+        # return peaks2
         if return_fitted_peaks:
             return out, peaks2
         else:
-            for i in range(len(peaks2)):
-                self[i] = peaks2[i].copy()
-                # for key in peaks2[i]:
-                #     self[i][key] = peaks2[i][key].copy()
+            for i in range(len(self)):
+                for key in self[i]:
+                    self[i][key].value = peaks2[i][key].value
             return out
     
     def find(self, x, y, prominence=5, width=4, moving_average_window=8):
@@ -1598,6 +1599,14 @@ class Peaks(MutableMapping):
             pass
 
     # extractors
+    def _add_peaks(self):
+        for i in range(len(self)):
+            if i == 0:
+                p = self[i].copy()
+            else:
+                p += self[i].copy()
+        return p
+    
     def calculate_spectra(self, x=None):
         """Return each peak spectrum separately.
 
@@ -1635,8 +1644,14 @@ class Peaks(MutableMapping):
             s += s1
         return s
     
+    def copy(self):
+        temp = Peaks()
+        for peak in self:
+            temp.append(peak.copy())
+        return temp
+
     # OBSOLETE  
-    def copy(self, value):
+    def copy2(self, value):
         if isinstance(value, Peaks):
             calib  = self.calib
             shift  = self.shift

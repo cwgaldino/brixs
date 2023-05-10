@@ -354,7 +354,7 @@ class Image(metaclass=_Meta):
         fix_curvature()
     """
     # read only and non-removable arguments
-    _read_only = ['shape', 'vmin', 'vmax', 'reduced', 'calculated_shifts', 'p', 'f']
+    _read_only = ['shape', 'vmin', 'vmax', 'reduced', 'calculated_shifts']
     _non_removable = []
 
     def __init__(self, *args, **kwargs):
@@ -377,8 +377,6 @@ class Image(metaclass=_Meta):
         self._calculated_shifts = None
         self._shifts_v = None
         self._shifts_h = None
-        self._p = None
-        self._f = None
 
         # set data
         data, filepath = self._sort_args(args, kwargs)
@@ -544,6 +542,7 @@ class Image(metaclass=_Meta):
 
     def __truediv__(self, object):
         return self.__div__(object)
+
 
     @property
     def data(self):
@@ -936,6 +935,16 @@ class Image(metaclass=_Meta):
         # save filepath
         self.filepath = str(filepath)
 
+    def get_user_defined_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_data', '_vmin', '_vmax', '_shape', 
+                           '_nbins', '_bins_size', 
+                           '_reduced', '_shifts_v', '_shifts_h', 
+                           '_calculated_shifts', 
+                           '_x_centers', '_y_centers', 
+                           '_x_edges', '_y_edges']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+
     # plot and visualization
     def pcolormesh(self, ax=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
@@ -1035,7 +1044,7 @@ class Image(metaclass=_Meta):
 
         return pos
 
-    def imshow(self, ax=None, colorbar=False, verbose=True, **kwargs):
+    def imshow(self, ax=None, colorbar=False, hindexes=False, vindexes=False, verbose=True, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
@@ -1046,6 +1055,8 @@ class Image(metaclass=_Meta):
             colorbar (bool, optional): if True, colorbar is shown on the right side.
             verbose (bool, optional): if True, a warning will show up if data
                 has iregular pixel sizes. Default is true.
+            hindexes, vindexes (bool, optional): If True, the index number of a
+                pixel column/row will be ploted. Default is False.
             **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
 
         If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
@@ -1175,6 +1186,14 @@ class Image(metaclass=_Meta):
         # plot
         pos = ax.imshow(data2, **kwargs)
 
+        # column label
+        if hindexes:
+            for i in range(self.data.shape[1]):
+                plt.text(self.x_centers[i], self.y_centers[-1], i, ha='center')
+        if vindexes:
+            for i in range(self.data.shape[0]):
+                plt.text(self.y_centers[i], self.x_centers[-1], i, va='center')
+
         # colorbar
         if colorbar:
             # delta = self.vmax - self.vmin
@@ -1240,9 +1259,9 @@ class Image(metaclass=_Meta):
 
         assert self.x_edges is not None, 'x_edges cannot be None.'
         if mode == 'edges':
-            plt.vlines(self.y_edges, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
+            plt.hlines(self.y_edges, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
         elif mode == 'centers':
-            plt.vlines(self.y_centers, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
+            plt.hlines(self.y_centers, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
         else:
             raise AttributeError('mode must be either `edges` or `centers`.')
 
@@ -1365,8 +1384,10 @@ class Image(metaclass=_Meta):
         """
         axis = _axis_interpreter(axis)
 
-        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
+        # assert self.reduced is None, 'Image was not binned yet.\nPlease, use Image.binning()'
 
+        # print('ff')
+        # print(self.reduced)
         # mode = 'cross-correlation'
         peak = 0
         bkg_check = True
@@ -1374,23 +1395,23 @@ class Image(metaclass=_Meta):
         # select axis
         if axis == 0:
             if limit_size:
-                if len(self.reduced.x_centers) > limit_size:
+                if len(self.x_centers) > limit_size:
                     raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-            ss = self.reduced.columns
-            centers = self.reduced.x_centers
+            ss = self.columns
+            centers = self.x_centers
         elif axis == 1:
             if limit_size:
-                if len(self.reduced.rows) > limit_size:
+                if len(self.rows) > limit_size:
                     raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
-            ss = self.reduced.rows
-            centers = self.reduced.y_centers
+            ss = self.rows
+            centers = self.y_centers
 
         # peaks
         if mode == 'fitted peaks' or mode == 'peaks':
             ss.fit_peak()
 
         # calculate
-        ss.calculate_shifts(mode=mode, bkg_check=bkg_check)
+        ss.calculate_shifts(mode=mode)
         if mode in cc:
             self._calculated_shifts = ss.calculated_shifts
             self.calculated_shifts.factor = ss.step
@@ -1634,7 +1655,7 @@ class PhotonEvents(metaclass=_Meta):
 
     """
 
-    _read_only = ['reduced', 'calculated_shifts', 'p', 'f']
+    _read_only = ['reduced', 'calculated_shifts']
 
     def __init__(self, *args, **kwargs):
         # argument parsing
@@ -1651,8 +1672,6 @@ class PhotonEvents(metaclass=_Meta):
 
         # shifts
         self._calculated_shifts = None
-        self._p      = None
-        self._f      = None
         self._shifts = None
 
         # set data
@@ -1694,8 +1713,6 @@ class PhotonEvents(metaclass=_Meta):
 
         # shift attr
         self._calculated_shifts = None
-        self._p      = None
-        self._f      = None
         self._shifts = None
     @data.deleter
     def data(self):
@@ -1885,6 +1902,14 @@ class PhotonEvents(metaclass=_Meta):
         else:
             return len(self._data[:, 0])
 
+    def get_user_defined_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_data', '_shape', 
+                           '_nbins', '_bins_size', 
+                           '_reduced', '_shifts',
+                           '_calculated_shifts']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+    
     def save(self, filepath=None, only_data=False,  check_overwrite=True, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
@@ -2123,7 +2148,6 @@ class PhotonEvents(metaclass=_Meta):
                 nbins = (10)     # (10 rows, 10 columns)
                 nbins = (10, 5)  # (10 rows, 5 columns)
 
-
         Returns:
             None
         """
@@ -2142,12 +2166,9 @@ class PhotonEvents(metaclass=_Meta):
         self.reduced._y_centers = moving_average(_y_edges, n=2)
         self.reduced._x_edges = _x_edges
         self.reduced._y_edges = _y_edges
-        # self._x_centers = moving_average(self.x_edges, n=2)
-        # self._y_centers = moving_average(self.y_edges, n=2)
         self._nbins     = _nbins
         self._bins_size = _bins_size
         return
-        # return self.reduced
 
     def calculate_spectrum(self, nbins=None, bins_size=None, axis=1, xaxis='bins'):
         """Integrate data in one direction (sum columns or rows).
@@ -2179,9 +2200,9 @@ class PhotonEvents(metaclass=_Meta):
 
         if mode in cc:
             if axis == 0:
-                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y*self.bins_size[0]
+                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y#*self.bins_size[0]
             elif axis == 1:
-                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y*self.bins_size[1]
+                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y#*self.bins_size[1]
         self._calculated_shifts = self.reduced.calculated_shifts
 
     def transform(self, f):
@@ -2233,20 +2254,23 @@ class PhotonEvents(metaclass=_Meta):
             self._f = f
 
     def fix_curvature(self, deg=2, axis=0):
-        """mode = 'cc'"""
+        """mode = 'cc'
+        
+        return popt
+        """
         axis = _axis_interpreter(axis)
 
         assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
 
-        self.reduced.floor()
+        # self.reduced.floor()
         self.calculate_shifts(axis=axis)
 
-        p, f = self.calculated_shifts.polyfit(deg=deg)
-        self._p = p
-        self._f = f
+        popt, model, r2 = self.calculated_shifts.polyfit(deg=deg)
 
         # set shifts
-        self.set_shifts(p=p)
+        self.set_shifts(p=popt)
+
+        return popt, model, r2
 
     #
     # def guess_bins(self, bins_initial=(9, 100), bins_step=(1, 50), max_x_iter=3, max_iter=1000, mode='cross-correlation', ranges=None):
@@ -2589,6 +2613,13 @@ class Spectrum(metaclass=_Meta):
                 object.__setattr__(attr, self.__dict__[attr])
 
         return object
+
+    def get_user_defined_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_x', '_y', '_xlabel', '_ylabel', '_filepath', '_factor', '_offset', '_calib', '_shift', '_shift_roll', 
+'_shift_interp', '_step', '_monotonicity', '_peaks']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+
 
     # attributes and properties
     @property
@@ -3737,10 +3768,10 @@ class Spectrum(metaclass=_Meta):
     def polyfit(self, deg=2, ranges=None):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.
 
-            fit, residue = polyfit()
-            fit.popt = Polynomial coefficients, highest power first.
-            fit.R2
-            fit.model(x) = Model function f(x).
+            popt, model, R2 = polyfit()
+            opt = Polynomial coefficients, highest power first.
+            R2
+            model(x) = Model function f(x).
 
         Args:
             deg (int, optional): degree of the fitting polynomial. Default is 2.
@@ -3749,7 +3780,7 @@ class Spectrum(metaclass=_Meta):
                 the minimum or maximum x value of the data.
 
         Returns:
-            fit, residue as br.Spectrum()
+            popt, f(x) model, R2
 
         .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
         """
@@ -3764,31 +3795,9 @@ class Spectrum(metaclass=_Meta):
         # fit
         popt  = np.polyfit(x, y, deg=deg)
         model = lambda x: np.polyval(popt, x)
-
-        # curve
-        x_temp = np.linspace(self.x[0], self.x[-1], len(self.x)*4)
-        fit = Spectrum(x=x_temp, y=model(x_temp))
-        fit._offset       = self.offset
-        fit._factor       = self.factor
-        fit._calib        = self.calib
-        fit._shift        = self.shift
-        fit._shift_roll   = self.shift_roll
-        fit._shift_interp = self.shift_interp
-
-        fit.popt  = popt
-        fit.model = model
-        fit._R2 =  1- (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
-
-        # residue
-        residue = Spectrum(x=self.x, y=self.y-model(self.x))
-        residue._offset       = self.offset
-        residue._factor       = self.factor
-        residue._calib        = self.calib
-        residue._shift        = self.shift
-        residue._shift_roll   = self.shift_roll
-        residue._shift_interp = self.shift_interp
+        R2 =  1- (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
     
-        return fit, residue
+        return popt, model, R2
 
     # calculation and info
     def calculate_area(self):
@@ -4302,9 +4311,8 @@ class Spectra(metaclass=_Meta):
         """
         # copy user defined attributes
         for j in range(len(self)):
-            for attr in self[j].__dict__:
-                if attr.startswith('_') == False:
-                    object.__setattr__(attr+f'_{j}', self[j].__dict__[attr])
+            for attr in self[j].get_user_defined_attrs():
+                object.__setattr__(attr+f'_{j}', self[j].__dict__[attr])
         return object
 
     # attributes and properties
@@ -4665,6 +4673,34 @@ class Spectra(metaclass=_Meta):
         # self._restart_check_attr()
         self._restart_calculated_modifiers()
 
+    def get_by_attr(self, attr, value, approx=True, verbose=True):
+        """Return spectrum with attr closest to value.
+
+        Only works for numerical attr. If multiple spectrum have same value, it
+        returns the first one.
+
+        attr: name of the attr
+        value: value to look for
+        approx: if False, returns spectrum only if value is exact.
+        """
+        # check all spectra has attr
+        has = [hasattr(s, attr) for s in self]
+        if False in has:
+            raise ValueError(f'Some spectra do not have attr: {attr}.\nhas attr:{has}')
+
+        # get attr
+        temp = [getattr(s, attr) for s in self]
+
+        if approx:
+            i = index(temp, value)
+        else:
+            i = temp.index(value)
+
+        if verbose:
+            print(f'Spectrum number {i} have {attr}={temp[i]}')
+                
+        return self[i]
+    
     # save and load
     def save(self, dirpath=None, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, only_data=False, check_overwrite=True, verbose=True, **kwargs):
         r"""Save spectra. Wrapper for `numpy.savetxt()`_.
@@ -5432,6 +5468,83 @@ class Spectra(metaclass=_Meta):
 
         return temp, offset, shift
 
+    def sequential_plot(self, xlim=None, ylim=None, update_function=None):
+        """plot where you can use arrows to flip trhough spectra.
+
+        update_function must be a function of type:
+
+            def update_function(ss):
+                plt.title(ss.__i)
+                ss[ss.__i].plot(color='black', marker='o')
+            
+        note that the attr __i can be used to index the spectra.
+
+        """
+        self.__i = 0
+
+        # core update function
+        if update_function is None:
+            def _update(ss):
+                if self.__i >= len(self):
+                    self.__i = len(self) - 1
+                elif self.__i < 0:
+                    self.__i = 0
+
+                plt.title(self.__i)
+                ss[self.__i].plot(color='black', marker='o')
+                
+                if xlim is not None:
+                    plt.xlim(xlim)
+                if ylim is not None:
+                    plt.ylim(ylim)
+        else:
+            # add counter and xlim/ylim to update function
+            def _update(ss):
+                if self.__i >= len(self):
+                    self.__i = len(self) - 1
+                elif self.__i < 0:
+                    self.__i = 0
+
+                update_function(ss, __i=self.__i)
+                
+                if xlim is not None:
+                    plt.xlim(xlim)
+                if ylim is not None:
+                    plt.ylim(ylim)
+
+        # keyboard events
+        def keyboard(event, ss):
+            # print(event.key)
+            # print('keyboard')
+            # print(event.key)
+            if event.key == 'right':
+                self.__i = self.__i + 1
+
+                plt.cla()
+                _update(ss)
+                plt.draw()
+            elif event.key == 'left':
+                self.__i = self.__i - 1
+                
+                plt.cla()
+                _update(ss)
+                plt.draw()
+
+        # mouse events
+        def mouse(event):
+            """Mouse can be used with a keyboard key"""
+            # print('mouse')
+            # print(event.key)
+            # print(event.button)
+            pass
+
+        # plotting
+        fig = figure()
+        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
+        fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
+        _update(self)
+        return
+
     # modifiers
     def set_shifts(self, value=None, mode=None, type_='relative'):
         """Shift data recursively.
@@ -6054,7 +6167,7 @@ class Spectra(metaclass=_Meta):
         self._calculated_offsets.ref_spectrum = ref_spectrum
         self._calculated_offsets.ref_value    = ref_value
 
-    def calculate_calib(self, start_value=None, stop_value=None, values=None, mode='cross-correlation', ref_peak=0, bkg_check=True, deg=1):
+    def calculate_calib(self, start_value=None, stop_value=None, values=None, mode='cross-correlation', ref_peak=0, deg=1):
         """Calculate calibration factor via :py:func:`Spectra.calculate_shifts()`.
 
         The calibration factor is the shift value (x array) as a function of the
@@ -6088,7 +6201,7 @@ class Spectra(metaclass=_Meta):
             raise ValueError(f'number of values ({len(values)}) do not match the number of spectra ({len(self)})')
 
         # CALCULATION ==========================================================
-        self.calculate_shifts(mode=mode, ref_peak=ref_peak, bkg_check=bkg_check)
+        self.calculate_shifts(mode=mode, ref_peak=ref_peak)
         centers = -(self.calculated_shifts.y + self.calculated_shifts.ref_value)
 
         if mode in cc:
@@ -6098,9 +6211,10 @@ class Spectra(metaclass=_Meta):
         self._calculated_calib      = Spectrum(x=values, y=centers)
         self._calculated_calib.mode = mode
         # self._calculated_calib.ref_value = ref_value
-        popt, model = self.calculated_calib.polyfit(deg=deg)
+        popt, model, R2 = self.calculated_calib.polyfit(deg=deg)
         self._calculated_calib.popt = popt
         self._calculated_calib.model = model
+        self._calculated_calib.R2 = R2
 
         return 1/popt[0]
 
@@ -6202,19 +6316,24 @@ class Spectra(metaclass=_Meta):
 
         Args:
             deg (int, optional): degree of the fitting polynomial. Default is 2.
-
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+                
         Returns:
             list with polynomial coefficients, highest power first.
             list with Model function f(x).
+            list with R2.
 
         .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
         """
         popt = [0]*len(self)
         model = [0]*len(self)
+        R2 = [0]*len(self)
         for i in range(len(self)):
-            popt[i], model[i] = self[i].polyfit(deg=deg, ranges=ranges)
+            popt[i], model[i], R2[i] = self[i].polyfit(deg=deg, ranges=ranges)
 
-        return popt, model
+        return popt, model, R2
 
     # peaks
     def find_peaks(self, prominence=None, width=4, moving_average_window=8, ranges=None):

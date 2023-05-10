@@ -89,6 +89,69 @@ def _sort_args(*args, **kwargs):
 
     return filepath, folderpath, prefix, n, zfill
 
+def _unpack_attrs(s):
+    """Makes ADRESS relevant scan parameters more readable."""
+
+    # parameters
+    params = dict(pol      = 0,
+                 phi      = 0,
+                 T        = 0,
+                 Tmin     = 0,
+                 Tmax     = 0,
+                 Tstd     = 0,
+                 E        = 0,
+                 th       = 0,
+                 exposure = 0,
+                 split    = 0,
+                 slit     = 0)
+
+    # polarization
+    if s.PolarMode[0] == 1:
+        params['pol'] = 'LV'
+    else:
+        params['pol'] = 'LH'
+    
+    # phi
+    params['phi'] = np.mean(s.SamplePhi)
+
+    # Temperature
+    temp = s.SampleTemp
+    params['T']    = round(np.mean(temp), 2)
+    params['Tmin'] = round(min(temp), 2)
+    params['Tmax'] = round(max(temp), 2)
+    params['Tstd'] = round(np.std(temp), 2)
+
+    # Photon energy
+    params['E']        = round(np.mean(s.PhotonEnergy), 2)
+
+    # theta
+    params['th']       = round(np.mean(s.SampleTheta), 2)
+
+    # exposure
+    params['exposure'] = round(s.AcquireTime[0], 2)
+
+    # split
+    params['split']    = round(s.ExposureSplit[0], 2)
+
+    # slit
+    params['slit']     = round(s.ExitSlit[0], 2)
+
+    for name in params:
+        setattr(s, name,  params[name])
+
+def _unpack_attrs_xas(s):
+    """Makes ADRESS relevant XAS scan parameters more readable."""
+
+    # polarization
+    if s.Polarization == 1:
+        s.pol = 'LV'
+    else:
+        s.pol = 'LH'
+
+    s.T    = float(s.Cryostat_temperature[:-1])
+    s.th   = float(s.Manipulator_Theta[:-3])
+    s.slit = float(s.Exit_slit[:-3])
+
 def _read_1(filepath, type_='spectrum'):
     """Read one file from ADRESS beamline.
 
@@ -112,6 +175,9 @@ def _read_1(filepath, type_='spectrum'):
     # get metadata
     nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
 
+    # get scan number
+
+
     if type_.lower() in ['spectrum', 's']:
         # spectrum
         s    = br.Spectrum(f['entry']['analysis']['spectrum'][:])
@@ -119,7 +185,7 @@ def _read_1(filepath, type_='spectrum'):
         # save attr to object
         for attr in nd:
             setattr(s, attr, nd[attr])
-        # s.nd = nd
+        _unpack_attrs(s)
         return s
     elif type_.lower() in ['photon events', 'pe']:
         # get array size
@@ -131,7 +197,7 @@ def _read_1(filepath, type_='spectrum'):
         # save attr to object
         for attr in nd:
             setattr(pe, attr, nd[attr])
-        # pe.nd = nd
+        _unpack_attrs(pe)
         return pe
     elif type_.lower() in ['bad', 'b']:
         # bad events image
@@ -139,7 +205,7 @@ def _read_1(filepath, type_='spectrum'):
         # save attr to object
         for attr in nd:
             setattr(im, attr, nd[attr])
-        im.nd = nd
+        _unpack_attrs(im)
         return  im
     else:
         raise ValueError("type_ must be one of 'spectrum', 'photon events', or 'bad'.")
@@ -175,13 +241,15 @@ def _read_xas(filepath):
         setattr(TEY, attr2, nd[attr])
         setattr(TFY, attr2, nd[attr])
         setattr(RMU, attr2, nd[attr])
-
+    _unpack_attrs_xas(TEY)
+    _unpack_attrs_xas(TFY)
+    _unpack_attrs_xas(RMU)
 
     return TEY, TFY, RMU
 
 # %% ---------------------------------------------------------------------- %% #
 def read(*args, **kwargs):
-    """Read files from ADRESS beamline at PSI.
+    """Read RIXS and XAS files from ADRESS beamline at PSI.
 
     Args:
         filepath (str or Path object): filepath to h5 file (for loading a single file).
@@ -195,15 +263,17 @@ def read(*args, **kwargs):
             events list; 'bad' or 'b' for bad events image; and 'xas' or 'x' for
             xas data.
 
-    Example:
+    Spectra can be loaded from filepath:
 
         >>> s   = br.ADRESS.read(filepath)
-        >>> pe  = br.ADRESS.read(filepath, type_='pe')
-        >>> bad = br.ADRESS.read(filepath, type_='bad')
+    
+    Photon event list can be load using:
 
-    Experiment parameters can be accessed by:
-   
-        >>> print(s.nd)
+        >>> pe  = br.ADRESS.read(filepath, type_='pe')
+    
+    and Bad photon events image can be loaded by:
+
+        >>> bad = br.ADRESS.read(filepath, type_='bad')
 
     ADRESS beamline has three ccds. Data from all three ccd's can be extracted
     simultaneously:
@@ -226,7 +296,7 @@ def read(*args, **kwargs):
 
         if ``type_ = 'xas'``: TEY (:py:class:`brixs.Spectrum`), TFY (:py:class:`brixs.Spectrum`), TEY (:py:class:`brixs.Spectrum`), RMU (:py:class:`brixs.Spectrum`)
 
-    Last updated: Carlos Galdino 03-2023
+    Last updated: Carlos Galdino 05-2023
     """
     # select type
     if 'type_' in kwargs: 
@@ -267,7 +337,6 @@ def read(*args, **kwargs):
                 ss[i].scan = n
                 ss[i].ccd = i
             ss.scan = n
-            # ss.nd   = [ss[0].nd, ss[1].nd, ss[2].nd]
             return ss
         elif type_.lower() in ['photon events', 'pe']:
             pes = [0]*3
@@ -275,7 +344,6 @@ def read(*args, **kwargs):
                 pes[i] = _read_1(filepath, type_=type_)
                 pes[i].scan = n
                 pes[i].ccd = i
-            # pes.scan = n
             return pes
         elif type_.lower() in ['bad', 'b']:
             bads = [0]*3
@@ -283,12 +351,11 @@ def read(*args, **kwargs):
                 bads[i] = _read_1(filepath, type_=type_)
                 bads[i].scan = n
                 bads[i].ccd = i
-            # bads.scan = n
             return bads
         else:
             raise ValueError("type_ must be one of 'spectrum', 'photon events', or 'bad'.")
 
-def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=None, start_energy=None, stop_energy=None, energies=None):
+def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=None, start_energy=None, stop_energy=None, energies=None, nbins=None, curvature=None):
     """Returns the calibration factor (dispersion) for ADRESS data.
 
     Args:
@@ -363,12 +430,23 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
     if scans is None:
         scans = np.arange(start_scan, stop_scan+1)
 
-    # get data
-    sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
-    for i, scan in enumerate(scans):
-        temp = read(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
-        for ccd in (0, 1, 2):
-            sss[ccd][i] = temp[ccd]
+    # rebinning
+    if nbins is not None:
+        sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
+        for i, scan in enumerate(scans):
+            pes = br.ADRESS.read(folderpath=folderpath, prefix=prefix, n=scan, type_='pe')
+            for ccd in (0, 1, 2):
+                pes[ccd].set_shifts(p=curvature[ccd], axis=0)
+                s = pes[ccd].calculate_spectrum(nbins=nbins)
+                s.PhotonEnergy = pes[ccd].PhotonEnergy
+                sss[ccd][i] = s
+    else:
+        # get data
+        sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
+        for i, scan in enumerate(scans):
+            temp = read(folderpath=folderpath, prefix=prefix, n=scan, zfill=4)
+            for ccd in (0, 1, 2):
+                sss[ccd][i] = temp[ccd]
 
     # get energies
     if energies is None:
@@ -392,28 +470,8 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
         for ccd in (0, 1, 2):
             sss[ccd].fit_peak()
     for ccd in (0, 1, 2):
-        disp[ccd] = sss[ccd].calculate_calib(values=energies, mode=mode, bkg_check=False, deg=1)
+        disp[ccd] = sss[ccd].calculate_calib(values=energies, mode=mode, deg=1)
 
-
-    # dispersion as a function of detector size instead of bin
-    # y_max = None
-    # y_bin = None
-
-    # if y_max is None:
-    #     y_max = ss_temp[ccd].nd['ArraySizeY'][0]
-    #     y_bin = len(ss_temp[ccd].x)
-
-    # if y_max != ss_temp[ccd].nd['ArraySizeY'][0]:
-    #     raise ValueError('detector size is not the same for all scans.')
-    # if y_bin != len(ss_temp[ccd].x):
-    #     raise ValueError('binning is not the same for all scans.')
-
-    # disp_bin[ccd] = ss.calculate_calib(values=energies, mode=mode, peak=0)
-    # disp[ccd] = disp_bin[ccd] / (y_max / y_bin)
-    # ss.ccd = ccd
-    # sss[ccd] = ss
-
-    # return disp, disp_bin, sss
     return disp, sss
 
 def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref_spectrum=None, ref_peak=-1):
@@ -453,6 +511,12 @@ def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref_spectrum=Non
         ss.align()
         s = ss.sum
 
+    # save attrs to final spectrum
+    for attr in ss[0].get_user_defined_attrs():
+        value = br.flatten([getattr(ss[i], attr) for i in (0, 1, 2)])
+        setattr(s, attr, value)
+    _unpack_attrs(s)
+
     # zero
     if zero_mode is not None:
         if zero_mode == 'peaks':
@@ -463,3 +527,67 @@ def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref_spectrum=Non
     s.scan = scan
 
     return s
+
+def rebinning(folderpath, prefix, scan, nbins, curvature, calib=None, zero_mode=None, ref_spectrum=None, ref_peak=-1):
+
+    pes = br.ADRESS.read(folderpath=folderpath, prefix=prefix, n=scan, type_='pe')
+
+    # rebinning
+    ss = br.Spectra()
+    for i, pe in enumerate(pes):
+        pe.set_shifts(p=curvature[i], axis=0)
+        
+        s = pe.calculate_spectrum(nbins=nbins)
+        ss.append(s)
+
+    # calibration and alignment
+    if calib is not None:
+        if isinstance(calib, Iterable):
+            assert len(ss) == len(calib), f'Number of calibration factor must match the number of spectra.\nnumber of calibration factors: {len(calib)}\nnumber of spectra: {len(ss)}'
+            for i in range(len(ss)):
+                ss[i].calib = calib[i]
+            ss.interp()
+            ss.align()
+            s = ss.sum
+        else:
+            ss.align()
+            s = ss.sum
+            s.calib = calib
+    else:
+        ss.align()
+        s = ss.sum
+            
+    # save attrs to final spectrum
+    for attr in pes[0].get_user_defined_attrs():
+        value = br.flatten([getattr(pes[i], attr) for i in (0, 1, 2)])
+        setattr(s, attr, value)
+    _unpack_attrs(s)
+
+    # zero
+    if zero_mode is not None:
+        if zero_mode == 'peaks':
+            s.find_peaks()
+        s.zero(mode=zero_mode, ref_spectrum=ref_spectrum, ref_peak=ref_peak)
+
+    # attr
+    s.scan = scan
+
+    return s
+
+
+
+# %% -------------------------- high level functions ---------------------- %% #
+# def get_energy_map(start_scan=None, stop_scan=None, scans=None, n=1, T_str=None, check_same_pol=True, check_same_phi=True, check_same_th=True, dictionary=None, verbose=True):
+#     if scans is None:
+#         scans = np.arange(start_scan, stop_scan+1)
+    
+#     ss = multiple(start_scan=start_scan, stop_scan=stop_scan, scans=scans, n=n, T_str=T_str, E_str=None, check_same_pol=check_same_pol, check_same_phi=check_same_phi, check_same_th=check_same_th, dictionary=dictionary, verbose=verbose)
+
+#     # get map
+#     ss.interp()
+#     emap = ss.calculate_map()
+#     emap.x_centers = ss.E
+
+#     ss.emap = emap
+    
+#     return ss

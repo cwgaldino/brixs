@@ -33,6 +33,7 @@ def _xylabels(title, ax, xlabel, ylabel, grid):
         else:
             ax.grid(visible=False)
     else:
+        plt.title(title)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         if grid:
@@ -55,27 +56,27 @@ def label_rixs(title=None, ax=None, grid=True):
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
 
     
-def label_emap(title=None, ax=None, grid=True):
+def label_energy_map(title=None, ax=None, grid=False):
     """Quickly set x and y labels and title in energy map plots."""
     xlabel = 'Photon energy (eV)'
     ylabel = 'Energy loss (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
 
-def label_emission_map(title=None, ax=None, grid=True):
+def label_emission_map(title=None, ax=None, grid=False):
     """Quickly set x and y labels and title in energy map plots."""
     xlabel = 'Emission energy (eV)'
     ylabel = 'Photon energy (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
     
 
-def label_thmap(title=None, ax=None, grid=True):
+def label_th_map(title=None, ax=None, grid=False):
     """Quickly set x and y labels and title in energy map plots."""
     xlabel = r'$\Theta$ ($^\circ$)'
     ylabel = 'Energy loss (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
 
-
-def label_qmap_rlu(title=None, ax=None, grid=True):
+# Experimental
+def label_qmap_rlu(title=None, ax=None, grid=False):
     """Quickly set x and y labels and title in momentum map plots."""
     xlabel = 'Momentum transfer (RLU)'
     ylabel = 'Energy loss (eV)'

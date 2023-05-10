@@ -442,12 +442,14 @@ def flatten(x):
     if len(x) == 0:
         return x
 
-    if type(x) == list or type(x) == tuple:
-        if isinstance(x[0], list) or isinstance(x[0], tuple):
-            return flatten(x[0]) + flatten(x[1:])
-        return x[:1] + flatten(x[1:])
-    elif type(x) == np.ndarray:
-        return x.flatten()
+    return np.array(x).flatten()
+
+    # if type(x) == list or type(x) == tuple:
+    #     if isinstance(x[0], list) or isinstance(x[0], tuple):
+    #         return flatten(x[0]) + flatten(x[1:])
+    #     return x[:1] + flatten(x[1:])
+    # elif type(x) == np.ndarray:
+    #     return x.flatten()
 
 def transpose(array):
     """Returns transposed lists/arrays.
