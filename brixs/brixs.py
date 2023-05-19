@@ -2608,10 +2608,13 @@ class Spectrum(metaclass=_Meta):
         """Transfer user defined attributes to output objects."""
         
         # copy user defined attributes
-        for attr in self.__dict__:
-            if attr.startswith('_') == False:
-                object.__setattr__(attr, self.__dict__[attr])
+        for attr in self.get_user_defined_attrs():
+            object.__setattr__(attr, self.__dict__[attr])
 
+        # copy other attrs
+        for attr in ['_xlabel', '_ylabel']:
+            object.__setattr__(attr, self.__dict__[attr])
+        
         return object
 
     def get_user_defined_attrs(self):
@@ -2849,7 +2852,7 @@ class Spectrum(metaclass=_Meta):
             self._shift_roll = 0
 
             # special
-            self.peaks.step  = None
+            self.peaks._step  = None
         else:
             raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
     @step.deleter
@@ -3057,7 +3060,10 @@ class Spectrum(metaclass=_Meta):
                     else:
                         # extract name and value
                         name = line[1:-1].split(':')[0].strip()
-                        value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
+                        try:
+                            value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
+                        except:
+                            value = str(':'.join(line[1:-1].split(':')[1:])).strip()
                         try:
                             setattr(self, name, value)
                         except Exception as e:
@@ -3685,6 +3691,13 @@ class Spectrum(metaclass=_Meta):
         self._x, self._y  = extract(self.x, self.y, (start, stop))
 
     # extractors
+    def _extract(self, ranges):
+        """Same as extract(), but attrs are not copied"""
+        ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
+        x, y   = extract(self.x, self.y, ranges)
+        s      = Spectrum(x=x, y=y)
+        return s
+    
     def extract(self, ranges):
         """Return the extracted data range from full data.
 
@@ -3696,9 +3709,7 @@ class Spectrum(metaclass=_Meta):
         Returns:
             :py:attr:`Spectrum`
         """
-        ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-        x, y   = extract(self.x, self.y, ranges)
-        s      = Spectrum(x=x, y=y)
+        s = self._extract(ranges=ranges)
 
         # modifiers
         s._offset       = self.offset
@@ -3799,6 +3810,9 @@ class Spectrum(metaclass=_Meta):
     
         return popt, model, R2
 
+    def copy(self):
+        return copy.deepcopy(self)
+    
     # calculation and info
     def calculate_area(self):
         """Returns the calculated area under the curve. Wrapper for `numpy.trapz()`_.
@@ -3811,7 +3825,7 @@ class Spectrum(metaclass=_Meta):
         return np.trapz(y=self.y, x=self.x)
 
     # plot and visualization
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, ranges=None, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Args:
@@ -3832,12 +3846,18 @@ class Spectrum(metaclass=_Meta):
         .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
         .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
         """
+        if ranges is not None:
+            x, y = self.extract(ranges=ranges)
+        else:
+            x = self.x
+            y = self.y
+
         if ax is None:
             ax = plt
             if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-        x = (self.x*calib) + shift
-        y = self.y*factor + offset
+        x = (x*calib) + shift
+        y = y*factor + offset
 
         if 'label' not in kwargs and hasattr(self, 'label'):
             kwargs['label'] = self.label
@@ -3942,14 +3962,14 @@ class Spectrum(metaclass=_Meta):
         # peaks
         self.peaks.clear()
         if asymmetry:
-            self.peaks.append(Peak(amp=amp, c=c, w1=w1, w2=w2, asymmetry=asymmetry))
+            self.peaks.append(amp=amp, c=c, w1=w1, w2=w2)
         else:
-            self.peaks.append(Peak(amp=amp, c=c, w=w, asymmetry=asymmetry))
+            self.peaks.append(amp=amp, c=c, w=w)
 
         # fit
         self.fit_peaks(ranges=ranges)
 
-    def fit_peaks(self, method='least_squares', ranges=None):
+    def fit_peaks(self, yerr=None, method='least_squares', ranges=None):
         """Fit peaks. Wrapper for `scipy.optimize.curve_fit()`_.
 
         Args:
@@ -3982,66 +4002,7 @@ class Spectrum(metaclass=_Meta):
             raise ValueError('No peaks to fit.\nRun Spectrum.find_peaks().')
 
         # self.guess = 
-        return self.peaks.fit(x, y, method=method, return_fitted_peaks=False)
-
-        # # build model ==========================================================
-        # p0, bounds_min, bounds_max, decode = self.peaks.build_guess()
-        # model = self.peaks.build_model()
-
-        # # guess ================================================================
-        # self._guess = Spectrum(x=self.x, y=model(self.x, *p0))
-        # self.guess._offset       = self.offset
-        # self.guess._factor       = self.factor
-        # self.guess._calib        = self.calib
-        # self.guess._shift        = self.shift
-        # self.guess._shift_roll   = self.shift_roll
-        # self.guess._shift_interp = self.shift_interp
-        # self.guess.peaks         = copy.deepcopy(self.peaks)
-
-        # # fitting ==============================================================
-        # # print(model)
-        # # print(p0)
-        # if verbose: print(f'Fitting data...')
-        # popt, pcov = curve_fit(model, x, y, p0=p0, bounds=(bounds_min, bounds_max))
-        # if verbose: print(f'Done!')
-
-        # # save fitted peaks parameters =========================================
-        # psigma = np.sqrt(np.diag(pcov))
-        # peaks  = decode(popt, psigma)
-
-        # # modifiers
-        # for peak in peaks:
-        #     total = self.shift_interp + self.shift
-        #     if self.step is not None:
-        #         total += self.shift_roll*self.step
-        #     peak._shift  = total
-        #     peak._offset = self.offset
-        #     peak._calib  = self.calib
-        #     peak._factor = self.factor
-
-        # # fit ==================================================================
-        # x_temp = peaks._find_suitable_x()
-        # self._fit = Spectrum(x=x_temp, y=model(x_temp, *popt))
-        # self.fit._offset       = self.offset
-        # self.fit._factor       = self.factor
-        # self.fit._calib        = self.calib
-        # self.fit._shift        = self.shift
-        # self.fit._shift_roll   = self.shift_roll
-        # self.fit._shift_interp = self.shift_interp
-        # self.fit._peaks = peaks
-        # self.fit._pcov = pcov
-        # self.fit._R2 =  1- (sum((self.y-model(self.x, *popt))**2)/sum((self.y-np.mean(self.y))**2))
-        # # residue ==============================================================
-        # if offset:
-        #     self._residue = Spectrum(x=self.x, y=self.y-model(self.x, *popt)+popt[-1])
-        # else:
-        #     self._residue = Spectrum(x=self.x, y=self.y-model(self.x, *popt))
-        # self.residue._offset       = self.offset
-        # self.residue._factor       = self.factor
-        # self.residue._calib        = self.calib
-        # self.residue._shift        = self.shift
-        # self.residue._shift_roll   = self.shift_roll
-        # self.residue._shift_interp = self.shift_interp
+        return self.peaks.fit(x, y, yerr=yerr, method=method, return_fitted_peaks=False)
 
     # OBSOLET
     def apply_correction(self, f):
@@ -4141,10 +4102,10 @@ class Spectra(metaclass=_Meta):
         self._data  = None
         self._dirpath  = ''
         self._filepath  = ''
-        # self._peaks = Collection()
+        self._peaks = Collection()
 
         # argument parsing
-        data, dirpath, n = self._sort_args(args, kwargs)
+        data, dirpath, fl, n = self._sort_args(args, kwargs)
 
         # sorting data
         if data is not None:
@@ -4153,6 +4114,8 @@ class Spectra(metaclass=_Meta):
         elif dirpath is not None:
             self.load(dirpath)
             # _restart_attr is builtin inside load
+        elif fl is not None:
+            self.load(fl) 
         elif n is not None:
             self._data     = [-1]*n
             # check
@@ -4218,6 +4181,8 @@ class Spectra(metaclass=_Meta):
             3) filepath. For example, if `data` and `filepath` are passed as
             arguments, `filepath` is ignored.
 
+        fl : filelist
+
         For positional arguments, if one data set is passed, it assumes it is
             `data`. If this one argument is of type string or Pathlib.Path, it
             assumes it is a filepath. If two data sets are passed, it will
@@ -4239,28 +4204,33 @@ class Spectra(metaclass=_Meta):
         data = None
         n    = None
         dirpath = None
+        fl = None
         if 'data' in kwargs:
             data = kwargs['data']
         elif 'dirpath' in kwargs:
             dirpath = kwargs['dirpath']
+        elif 'fl' in kwargs:
+            fl = kwargs['fl']
         elif 'n' in kwargs:
             n = kwargs['n']
         elif len(args) == 1:
             if isinstance(args[0], int):
                 n = args[0]
             elif isinstance(args[0], str) or isinstance(args[0], Path):
-                dirpath = [args[0], ]
+                dirpath = args[0]
             elif isinstance(args[0], Iterable):
                 if isinstance(args[0][0], str) or isinstance(args[0][0], Path):
-                    dirpath = args[0]
+                    fl = args[0]
                 else:
                     data = args[0]
+            elif isinstance(args[0], Spectrum):
+                data = [args[0], ]
         elif len(args) > 1:
             if isinstance(args[0], str) or isinstance(args[0], Path):
-                dirpath = args
-            elif isinstance(args[0], Iterable):
+                fl = args
+            if isinstance(args[0], Spectrum):
                 data = args
-        return data, dirpath, n
+        return data, dirpath, fl, n
 
     def _restart_check_attr(self):
         """restart check attributes."""
@@ -4292,12 +4262,18 @@ class Spectra(metaclass=_Meta):
             x, ys = extract(self.data[0].x, ys, ranges=ranges)
         return x, ys
 
+    def get_user_defined_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_data', '_dirpath', '_filepath', '_calculated_shifts', '_calculated_factors', 
+'_calculated_offsets', '_calculated_calib', '_monotonicity', '_x', '_step', '_length']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+    
     def _transfer_attributes(self, object):
         """Transfer user defined attributes to output objects."""
 
         # copy user defined attributes
         for attr in self.__dict__:
-            if attr.startswith('_') == False:
+            for attr in self.get_user_defined_attrs():
                 object.__setattr__(attr, self.__dict__[attr])
 
         return object
@@ -4507,83 +4483,15 @@ class Spectra(metaclass=_Meta):
     def ylabels(self):
         raise AttributeError('Cannot delete object.')
 
-    # @property
-    # def R2(self):
-    #     temp = [0]*len(self)
-    #     for i in range(len(self)):
-    #         temp[i] = self[i].R2
-    #     return temp
-    # @R2.setter
-    # def R2(self, value):
-    #     raise AttributeError('Cannot be set.')
-    # @R2.deleter
-    # def R2(self):
-    #     raise AttributeError('Cannot delete object.')
-
-    # @property
-    # def fit(self):
-
-    #     self._check_fit()
-    #     ss = Spectra(n=len(self))
-    #     for i in range(len(self)):
-    #         ss[i] = self[i].fit
-    #     return ss
-    # @fit.setter
-    # def fit(self, value):
-    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    # @fit.deleter
-    # def fit(self):
-    #     raise AttributeError('Attribute cannot be deleted.')
-
-    # @property
-    # def guess(self):
-    #     self._check_fit()
-    #     ss = Spectra(n=len(self))
-    #     for i in range(len(self)):
-    #         ss[i] = self[i].guess
-    #     return ss
-    # @guess.setter
-    # def guess(self, value):
-    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    # @guess.deleter
-    # def guess(self):
-    #     raise AttributeError('Attribute cannot be deleted.')
-
-    # @property
-    # def residue(self):
-    #     self._check_fit()
-    #     ss = Spectra(n=len(self))
-    #     for i in range(len(self)):
-    #         ss[i] = self[i].residue
-    #     # if None in temp:
-    #     #     print(f'Some spectra do not have fit defined.\nfit={temp}')
-    #     return ss
-    # @residue.setter
-    # def residue(self, value):
-    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    # @residue.deleter
-    # def residue(self):
-    #     raise AttributeError('Attribute cannot be deleted.')
-
     @property
     def peaks(self):
-        return Collection([s.peaks for s in self])
+        return self._peaks#Collection([s.peaks for s in self])
     @peaks.setter
     def peaks(self, value):
         raise AttributeError('Attribute is "read only". Cannot set attribute.')
     @peaks.deleter
     def peaks(self):
         raise AttributeError('Attribute cannot be deleted.')
-
-    # @property
-    # def errors(self):
-    #     return self.get_errors()
-    # @errors.setter
-    # def errors(self, value):
-    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    # @errors.deleter
-    # def errors(self):
-    #     raise AttributeError('Attribute cannot be deleted.')
 
     @property
     def map(self):
@@ -4786,26 +4694,18 @@ class Spectra(metaclass=_Meta):
         self.dirpath = dirpath
         if verbose: print('Done!')
     
-    def load(self, dirpath, string='*', verbose=False, **kwargs):
+    def load(self, dirpath, string='*', verbose=False):
         """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
-            dirpath (string, path object, or list): folderpath, folder handle,
-                or a list of filepaths. All files inside a folder where string 
+            dirpath (string, path object, or list): folderpath, folder handle, 
+                or file list. 
+                All files inside a folder where string 
                 can be found in the filename are imported. If the filename 
                 extension is .gz or .bz2, the file is first decompressed. 
                 Last used dirpath is saved to ss.dirpath.
             string (str, optional): file names without this string will be ignored.
                 Use '*' for matching anything. Default is '*'.
-
-        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
-
-        Args:
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (', ').
-            comments (str, optional): The character used to indicate the start
-                of a comment. Default is ``# ``. Attributes picked up
-                from the header will be loaded too.
 
         Returns:
             None
@@ -4817,48 +4717,19 @@ class Spectra(metaclass=_Meta):
         self._restart_check_attr()
         self._restart_calculated_modifiers()
 
-        fl = filelist(dirpath=dirpath, string=string)
+        if isinstance(dirpath, str) or isinstance(dirpath, Path): 
+            fl = filelist(dirpath=dirpath, string=string)
+            self.dirpath = dirpath
+        elif isinstance(dirpath, Iterable):
+            fl = dirpath
+        else:
+            raise TypeError(f'dirpath is uknoun format: {dirpath}')
+        
+        # get data
         for i, filepath in enumerate(fl):
             if verbose: print(f'Loading: {dirpath}')
             if verbose: print(f'    {i+1}/{len(fl)}: {filepath.name}')
             self.append(Spectrum(filepath=filepath))
-
-        # # if dirpath is str
-        # if isinstance(dirpath, str) or isinstance(dirpath, Path):
-        #     dirpath = Path(dirpath)
-
-
-
-        #     if dirpath.is_file():
-        #         if verbose: print('dirpath is a file')
-        #         if verbose: print('Loading...')
-        #         self.append(Spectrum(filepath=dirpath))
-        #         if verbose: print('Done!')
-        #         return
-        #     elif dirpath.is_dir():
-        #         dirpath = [dirpath, ]
-        #     else:
-        #         raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
-
-        # # if dirpath is iterable
-        # if isinstance(dirpath, Iterable):
-        #     if verbose: print('Loading...')
-        #     for j, filepath in enumerate(dirpath):
-        #         if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
-
-        #         # if Path(filepath).is_dir():
-        #         #     fl = filelist(dirpath=filepath, string=string)
-        #         #     for i, f in enumerate(fl):
-        #         #         if verbose: print(f'    {i+1}/{len(fl)}: {f}')
-        #         #         self.append(Spectrum(filepath=f))
-
-        #         elif Path(filepath).is_file():
-        #             self.append(Spectrum(filepath=filepath))
-        #         else:
-        #             raise ValueError(f'cannot read dirpath.\dirpath: {dirpath}')
-        
-        # save dirpath
-        self.dirpath = dirpath
 
         if verbose: print('Done!')
 
@@ -5036,7 +4907,11 @@ class Spectra(metaclass=_Meta):
                     else:
                         # extract name and value
                         name = line[1:-1].split(':')[0].strip()
-                        value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
+                        try:
+                            value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
+                        except:
+                            value = str(':'.join(line[1:-1].split(':')[1:])).strip()
+                        
                         try:
                             setattr(self, name, value)
                         except Exception as e:
@@ -5264,7 +5139,7 @@ class Spectra(metaclass=_Meta):
         self._length = len(self.x)
 
     # persistent modifiers
-    def interp(self, crop=True, x=None, start=None, stop=None, num=None, step=None):
+    def interp(self, crop=False, x=None, start=None, stop=None, num=None, step=None):
         """Interpolate data.
 
         Args:
@@ -5473,9 +5348,9 @@ class Spectra(metaclass=_Meta):
 
         update_function must be a function of type:
 
-            def update_function(ss):
-                plt.title(ss.__i)
-                ss[ss.__i].plot(color='black', marker='o')
+            def update_function(ss, __i):
+                plt.title(__i)
+                ss[__i].plot(color='black', marker='o')
             
         note that the attr __i can be used to index the spectra.
 
@@ -6244,6 +6119,9 @@ class Spectra(metaclass=_Meta):
         temp = self._extract(ranges)
         return self._transfer_attributes(temp)
 
+    def copy(self):
+        return copy.deepcopy(self)
+    
     def concatenate(self):
         """Return spectrum of concatenate spectra.
         
@@ -6256,6 +6134,13 @@ class Spectra(metaclass=_Meta):
         s = Spectrum(x=x, y=y)
         s = self._transfer_attributes(s)
         return self._transfer_attributes_from_each_spectrum(s)
+
+    def calculate_integral(self, x=None):
+        y = [sum(s.y) for s in self]
+
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return s
 
     def calculate_sum(self, ranges=None):
         """Returns Spectrum object with the sum of all spectra.
@@ -6336,6 +6221,9 @@ class Spectra(metaclass=_Meta):
         return popt, model, R2
 
     # peaks
+    def copy_peaks_from_spectra(self):
+        self.peaks.copy_from_spectra(self)
+
     def find_peaks(self, prominence=None, width=4, moving_average_window=8, ranges=None):
         """Find peaks recursively. Wrapper for `scipy.signal.find_peaks()`_.
 
@@ -6363,7 +6251,7 @@ class Spectra(metaclass=_Meta):
             # if verbose: print('='*20)
             # if verbose: print('\n')
 
-    def fit_peaks(self, method='least_squares', ranges=None, verbose=False):
+    def fit_peaks(self, yerr=None, method='least_squares', ranges=None, verbose=False):
         """Fit peaks recursively. Wrapper for `scipy.optimize.curve_fit()`_.
 
         Args:
@@ -6389,13 +6277,22 @@ class Spectra(metaclass=_Meta):
 
         .. _scipy.optimize.curve_fit(): https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
         """
-        if verbose: print('Fitting.\n')
-        for i in range(len(self)):
-            # if verbose: print(f'spectrum {i} ===============================')
-            self[i].fit_peaks(method=method, ranges=ranges)
-            if verbose: print(f'spectrum {i}: done')
-            # if verbose: print('='*20)
-            # if verbose: print('\n')
+        if ranges is None:
+            temp = self
+        else:
+            temp = self._extract(ranges=ranges)
+        xs = [s.x for s in temp]
+        ys = [s.y for s in temp]
+
+        self.peaks.fit(xs=xs, ys=ys, method=method)
+
+        # if verbose: print('Fitting.\n')
+        # for i in range(len(self)):
+        #     # if verbose: print(f'spectrum {i} ===============================')
+        #     self[i].fit_peaks(yerr=yerr, method=method, ranges=ranges)
+        #     if verbose: print(f'spectrum {i}: done')
+        #     # if verbose: print('='*20)
+        #     # if verbose: print('\n')
 
 
 

@@ -143,7 +143,7 @@ def _unpack_attrs_xas(s):
     """Makes ADRESS relevant XAS scan parameters more readable."""
 
     # polarization
-    if s.Polarization == 1:
+    if s.Polarization == '1':
         s.pol = 'LV'
     else:
         s.pol = 'LH'
@@ -175,9 +175,10 @@ def _read_1(filepath, type_='spectrum'):
     # get metadata
     nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
 
-    # get scan number
+    # modified date
+    nd['date'] = br.get_modified_date(filepath)
 
-
+    # data
     if type_.lower() in ['spectrum', 's']:
         # spectrum
         s    = br.Spectrum(f['entry']['analysis']['spectrum'][:])
@@ -186,6 +187,11 @@ def _read_1(filepath, type_='spectrum'):
         for attr in nd:
             setattr(s, attr, nd[attr])
         _unpack_attrs(s)
+
+        # label
+        s.xlabel = 'bins'
+        s.ylabel = 'rixs'
+
         return s
     elif type_.lower() in ['photon events', 'pe']:
         # get array size
@@ -244,6 +250,13 @@ def _read_xas(filepath):
     _unpack_attrs_xas(TEY)
     _unpack_attrs_xas(TFY)
     _unpack_attrs_xas(RMU)
+
+    # labels
+    for s in (TEY, TFY, RMU):
+        s.xlabel = 'energy'
+    TEY.ylabel = 'TEY'
+    TFY.ylabel = 'TFY'
+    RMU.ylabel = 'RMU'
 
     return TEY, TFY, RMU
 
@@ -507,6 +520,7 @@ def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref_spectrum=Non
             ss.align()
             s = ss.sum
             s.calib = calib
+        s.xlabel = 'energy'
     else:
         ss.align()
         s = ss.sum
@@ -553,6 +567,7 @@ def rebinning(folderpath, prefix, scan, nbins, curvature, calib=None, zero_mode=
             ss.align()
             s = ss.sum
             s.calib = calib
+        s.xlabel = 'energy'
     else:
         ss.align()
         s = ss.sum

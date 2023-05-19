@@ -157,7 +157,7 @@ def filelist(dirpath='.', string='*'):
     return [x for _,x in sorted(zip(temp2,temp))]
 
 
-def parsed_filelist(dirpath='.', string='*', ref=0, type='int'):
+def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='list'):
     """Returns a filelist organized in a dictionary.
 
     I searches for numbers (float and int) within the filenames (or foldernames)
@@ -167,11 +167,14 @@ def parsed_filelist(dirpath='.', string='*', ref=0, type='int'):
         dirpath (str or pathlib.Path, optional): directory path.
         string (str, optional): string to filter filenames.
         ref (int, optional): index of the reference number to be used as key.
-        type (string, optional): if 'int', dict keys are transformed in integers.
+        _type (string, optional): if 'int', dict keys are transformed in integers.
             If 'float', dict keys are transformed into float.
 
     Returns:
-        Dictionary. Dict keys are some number found in filename.
+        if return type is 'list'
+            returns a list
+        if return type is 'dict'
+            ordered Dictionary. Dict keys are some number found in filename.
 
     See Also:
         :py:func:`filelist`
@@ -189,7 +192,7 @@ def parsed_filelist(dirpath='.', string='*', ref=0, type='int'):
             n = []
             for catch in re.finditer(p, filepath.with_suffix('').name):
                 n.append(catch[0])
-            if type=='int':
+            if _type=='int':
                 temp[int(float((n[ref])))] = filepath
             else:
                 temp[float(n[ref])] = filepath
@@ -203,7 +206,12 @@ def parsed_filelist(dirpath='.', string='*', ref=0, type='int'):
     for key in a:
         parsed_folder[key] = temp[key]
 
-    return parsed_folder
+    if return_type == 'list':
+        return list(parsed_folder.values())
+    elif return_type == 'dict':
+        return parsed_folder
+    else:
+        raise ValueError('return_type not valid')
 
 
 def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
@@ -588,3 +596,7 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
         return datadict
     else:
         return data
+
+def get_modified_date(filepath):
+    """Return modified date of filepath in a datetime object."""
+    return datetime.datetime.fromtimestamp((filepath).stat().st_mtime)

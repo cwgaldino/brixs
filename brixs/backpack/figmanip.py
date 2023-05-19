@@ -109,8 +109,12 @@ def bring2top():
 
     This function was not tested for all available matplotlib backends.
     """
+    # fig = plt.gcf()
+    # fig.canvas.manager.window.raise_()
+
     backend = matplotlib.get_backend()
     if backend.startswith(('Qt5', 'qt5', 'QT5')):
+
         from PyQt5 import QtCore
         window = plt.get_current_fig_manager().window
         window.setWindowFlags(window.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
@@ -262,21 +266,7 @@ def maximize():
             return (0, 0)
 
 
-def figure(**kwargs):
-    """Create figure object.
-
-    This command is the same as ``plt.figure()``, but is attaches the function
-    :py:func:`onclick` to the figure so everytime you click on the figure, it
-    calls :py:func:`onclick`.
-
-    Args:
-        **kwargs: kwargs are passed to ``plt.figure()``.
-
-    See Also:
-        :py:func:`onclick`
-    """   
-    # open figure and initialize event callbacks
-    fig = plt.figure(**kwargs)
+def _fix_figure(fig, **kwargs):
     cid1 = fig.canvas.mpl_connect('button_press_event', onclick)
     # cid2 = fig.canvas.mpl_connect('resize_event', onmove)
 
@@ -295,32 +285,50 @@ def figure(**kwargs):
         if br.settings.FIGURE_SIZE is not None:
             # kwargs['figsize'] = br.settings.FIGURE_SIZE
             set_window_size(br.settings.FIGURE_SIZE)
-    
-    # grid
-    if br.settings.FIGURE_GRID != (1, 1) and br.settings.FIGURE_GRID:
-        rows    = br.settings.FIGURE_GRID[0]
-        columns = br.settings.FIGURE_GRID[1]
 
-        if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
-            count  = br.settings._figure_count - 1
-            row    = int((count/columns)%rows)
-            column = count%columns
+        # grid
+        if br.settings.FIGURE_GRID != (1, 1) and br.settings.FIGURE_GRID:
+            rows    = br.settings.FIGURE_GRID[0]
+            columns = br.settings.FIGURE_GRID[1]
 
-            if br.settings.FIGURE_SIZE is None:
-                height, width = get_window_size()
-            else:
-                height  = br.settings.FIGURE_SIZE[0]
-                width = br.settings.FIGURE_SIZE[1]
+            if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
+                count  = br.settings._figure_count - 1
+                row    = int((count/columns)%rows)
+                column = count%columns
 
-            position = (br.settings.FIGURE_POSITION[0]+row*(height+br.settings.FIGURE_GRID_OFFSET[0]), br.settings.FIGURE_POSITION[1]+column*(width+br.settings.FIGURE_GRID_OFFSET[1]))
-            # print(br.settings.FIGURE_POSITION)
-            # print(position)
-            set_window_position(position)
+                if br.settings.FIGURE_SIZE is None:
+                    height, width = get_window_size()
+                else:
+                    height = br.settings.FIGURE_SIZE[0]
+                    width  = br.settings.FIGURE_SIZE[1]
 
-            br.settings._figure_count += 1
-    else:
-        set_window_position()
-        br.settings._figure_count = 0
+                position = (br.settings.FIGURE_POSITION[0]+row*(height+br.settings.FIGURE_GRID_OFFSET[0]), br.settings.FIGURE_POSITION[1]+column*(width+br.settings.FIGURE_GRID_OFFSET[1]))
+                set_window_position(position)
+
+                br.settings._figure_count += 1
+        else:
+            set_window_position()
+            br.settings._figure_count = 0
+    return fig
+
+def figure(**kwargs):
+    """Create figure object.
+
+    This command is the same as ``plt.figure()``, but is attaches the function
+    :py:func:`onclick` to the figure so everytime you click on the figure, it
+    calls :py:func:`onclick`.
+
+    If figsize is passed as an argument, grid is disabled.
+
+    Args:
+        **kwargs: kwargs are passed to ``plt.figure()``.
+
+    See Also:
+        :py:func:`onclick`
+    """   
+    # open figure and initialize event callbacks
+    fig = plt.figure(**kwargs)
+    fig = _fix_figure(fig, **kwargs)
     return fig
 
 
@@ -760,7 +768,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         n_ticks = kwargs.pop('n_ticks')
         if n_ticks is None:
             if 'ticks_sep' in kwargs:
-                ticks_sep = kwargs['ticks_sep']
+                ticks_sep = kwargs.pop('ticks_sep')
                 if ticks_sep is None:
                     n_ticks = len(ticks_showing)
                 else:
@@ -794,8 +802,7 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
     else:
         pad = None
     
-    if len(kwargs.keys()) > 0:
-        raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
+    
 
     # ticks
     if use_sep:
@@ -833,9 +840,10 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
             min_lim = ticks[0] - (ticks[1]-ticks[0])*pad
             max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad
 
+
     # decimal places to show
     if 'n_decimal_places' in kwargs:
-        n_decimal_places2 = kwargs['n_decimal_places']
+        n_decimal_places2 = kwargs.pop('n_decimal_places')
         if n_decimal_places2 is None:
             n_decimal_places2 = 0
             for n in ticks:
@@ -846,6 +854,11 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         for n in ticks:
             if n_decimal_places(n)>n_decimal_places2:
                 n_decimal_places2 = n_decimal_places(n)
+
+    if len(kwargs.keys()) > 0:
+        raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
+
+
 
     # applying changes ======================
     s = '{' + f'0:.{n_decimal_places2}f' + '}'
@@ -1040,6 +1053,105 @@ def hlines(x, xmin=None, xmax=None, colors=None, linestyles='solid', label='', a
         xmax = ax.get_xlim()[1]
 
     ax.hlines(x=x, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
+
+def gridspec(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None, width_ratios=None, height_ratios=None):
+
+    # ratios
+    if width_ratios is None:
+        width_ratios=[1]*ncols
+    if height_ratios is None:
+        height_ratios=[1]*nrows
+    
+    if hspace is None:
+        hspace = .3
+    if wspace is None:
+        wspace = .2
+
+    if sharex:
+        hspace = 0
+    if sharey:
+        wspace = 0
+
+    gs = matplotlib.gridspec.GridSpec(nrows, ncols,
+                        height_ratios=height_ratios,
+                        width_ratios=width_ratios,
+                        hspace=hspace,
+                        wspace=wspace)
+
+    axes = list()
+    for i in range(0, ncols*nrows):
+        axes.append(plt.gcf().add_subplot(gs[i]))
+    
+    return axes
+
+def subplots(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None, width_ratios=None, height_ratios=None, gridspec_kw=None, **fig_kw):
+
+    class myarray(list):
+        def remove_label_from_shared_axis(self, sharex=None, sharey=None):
+            nrows = axes.nrows
+            ncols = axes.ncols
+            if sharex is None:
+                sharex = axes.sharex
+            if sharey is None:
+                sharey = axes.sharey
+            if sharey:
+                keep = np.arange(0, nrows*ncols, ncols)
+                print(keep)
+                for i in range(nrows*ncols):
+                    if i not in keep:
+                        self[i].yaxis.label.set_visible(False)
+            if sharex:
+                for i in range(0, (nrows-1)*ncols):
+                    self[i].xaxis.label.set_visible(False)
+    
+    axes = myarray([0]*(ncols*nrows))
+    axes.nrows  = nrows
+    axes.ncols  = ncols
+    axes.sharex = sharex
+    axes.sharey = sharey
+
+    # ratios
+    if width_ratios is None:
+        width_ratios=[1]*ncols
+    if height_ratios is None:
+        height_ratios=[1]*nrows
+    
+    if hspace is None:
+        hspace = .3
+    if wspace is None:
+        wspace = .3
+
+    if sharex:
+        hspace = 0
+    if sharey:
+        wspace = 0
+
+    # gridspec_kw
+    if gridspec_kw is None:
+        gridspec_kw = {}
+    if 'wspace' not in gridspec_kw:
+        gridspec_kw['wspace'] = wspace 
+    if 'hspace' not in gridspec_kw:
+        gridspec_kw['hspace'] = hspace 
+    if 'width_ratios' not in gridspec_kw:
+        gridspec_kw['width_ratios'] = width_ratios 
+    if 'height_ratios' not in gridspec_kw:
+        gridspec_kw['height_ratios'] = height_ratios 
+    if 'wspace' not in gridspec_kw:
+        gridspec_kw['wspace'] = hspace 
+
+    fig, _axes = plt.subplots(nrows, ncols, 
+                              sharex=sharex,
+                              sharey=sharey,
+                              gridspec_kw=gridspec_kw, **fig_kw)
+    fig = _fix_figure(fig, **fig_kw)
+
+    del gridspec_kw
+
+    for i, ax in enumerate(br.flatten(_axes)):
+        axes[i] = ax
+
+    return fig, axes
 
 
 def ax_box2fig_box(ax, points):

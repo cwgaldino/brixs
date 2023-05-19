@@ -37,127 +37,81 @@ decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
 
 
 # %% Peaks =====================================================================
-class Peak(lmfit.Parameters):
+class Peaks(lmfit.Parameters):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        # when init, avoid run update_area_amp()
-        self._enable_update_area_amp = False
+        self.next_index = 0
 
-        # index
-        if 'index' in kwargs:
-            self._index = kwargs.pop('index')
+    @property
+    def spectrum(self):
+        return self.calculate_spectrum()
+    @spectrum.setter
+    def spectrum(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectrum.deleter
+    def spectrum(self):
+            raise AttributeError('Cannot delete object.')
+
+    @property
+    def spectra(self):
+        return self.calculate_spectra()
+    @spectra.setter
+    def spectra(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectra.deleter
+    def spectra(self):
+            raise AttributeError('Cannot delete object.')
+
+    def append(self, amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None):
+        index = self.next_index
+
+        if area is None and amp is not None:
+            self.add(f'amp_{index}', value=amp, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+        elif amp is None and area is not None:
+            self.add(f'area_{index}', value=area, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
         else:
-            self._index = 0
-
-        # initial definitions
-        self._use_area  = False
-        self._step      = None
-        self._asymmetry = False
-        # self._use_peak  = True
-        # self.bkg        = ''
-
-        # parameters
-        self.add(f'amp_{self.index}',  value=0)
-        self.add(f'area_{self.index}', value=0, vary=False)
-        self.add(f'c_{self.index}',    value=0)
-        self.add(f'w_{self.index}',    value=0, min=0)
-        self.add(f'w1_{self.index}',   value=0, min=0, vary=False)
-        self.add(f'w2_{self.index}',   value=0, min=0, vary=False)
-        self.add(f'm_{self.index}',    value=0, min=0, max=1)
-        self.add(f'm1_{self.index}',   value=0, min=0, max=1, vary=False)
-        self.add(f'm2_{self.index}',   value=0, min=0, max=1, vary=False)
-
-        # use area
-        if 'use_area' in kwargs:
-            self.use_area = kwargs.pop('use_area')
-        # asymmetry
-        if 'asymmetry' in kwargs:
-            self.asymmetry = kwargs.pop('asymmetry')
+            raise ValueError('amp or area not defined')
         
+        if c is not None:
+            self.add(f'c_{index}',   value=c,   vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+        else:
+            raise ValueError('c not defined')
 
+        if w is not None:
+            self.add(f'w_{index}', value=w, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+            self.add(f'm_{index}', value=m, vary=False, min=0, max=1, expr=None, brute_step=None)
+        elif w1 is not None and w2 is not None:
+            self.add(f'w1_{index}', value=w1, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+            self.add(f'w2_{index}', value=w2, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+            self.add(f'm1_{index}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
+            self.add(f'm2_{index}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
+        else:
+            raise ValueError('Either w or (w1 and w2) must be defined')
 
-        # values
-        if 'amp' in kwargs:
-            self['amp'].value  = kwargs.pop('amp')
-        if 'area' in kwargs:
-            self['area'].value = kwargs.pop('area')
-        if 'c' in kwargs:
-            self['c'].value   = kwargs.pop('c')
-        if 'w' in kwargs:
-            self['w'].value   = kwargs.pop('w')
-        if 'w1' in kwargs:
-            self['w1'].value  = kwargs.pop('w1')
-        if 'w2' in kwargs:
-            self['w2'].value  = kwargs.pop('w2')
-        if 'm' in kwargs:
-            self['m'].value   = kwargs.pop('m')
-        if 'm1' in kwargs:
-            self['m1']  = kwargs.pop('m1')
-        if 'm2' in kwargs:
-            self['m2']  = kwargs.pop('m2')
-
-        # modifiers
-        if 'shift' in kwargs:
-            self._shift = kwargs.pop('shift')
-        else:
-            self._shift = 0
-        if 'shift_interp' in kwargs:
-            self._shift_interp = kwargs.pop('shift_interp')
-        else:
-            self._shift_interp = 0
-        if 'shift_roll' in kwargs:
-            # step
-            if 'step' in kwargs:
-                self._step = kwargs.pop('step')
-                if self.step is not None:
-                    self._shift_roll = kwargs.pop('shift_roll')*self._step
-                else:
-                    self._shift_roll = 0
-            else:
-                self._shift_roll = 0
-        else:
-            if 'step' in kwargs:
-                self._step = kwargs.pop('step')
-            self._shift_roll = 0
-        if 'calib' in kwargs:
-            self._calib = kwargs.pop('calib')
-        else:
-            self._calib = 1
-        if 'offset' in kwargs:
-            self._offset = kwargs.pop('offset')
-        else:
-            self._offset = 0
-        if 'factor' in kwargs:
-            self._factor = kwargs.pop('factor')
-        else:
-            self._factor = 1
-
-        # check
-        self._enable_update_area_amp = True
-        self.update_area_amp()
+        self.next_index += 1
 
     def add(self, name, value=None, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None):
-        # check if name is valid
-        if not name.startswith(tuple(names)):
-            raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
-        
+        # # check if name is valid
+        # if not name.startswith(tuple(names)):
+        #     raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
+
         # add
         super().add(name, value=value, vary=vary, min=min, max=max, expr=expr, brute_step=brute_step)
 
     def __setitem__(self, name, value):
-        # check if name is valid
-        if not name.startswith(tuple(names)):
-            raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
+        # # check if name is valid
+        # if not name.startswith(tuple(names)):
+        #     raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
 
-        # area and amp
-        if self._enable_update_area_amp:
-            if self.use_area:
-                if name == 'amp':
-                    raise ValueError('amp cannot be edited if Peak.use_area is True.\nUse Peak.update_area_amp()\nOr change Peak.use_area to False.')
-            else:
-                if name == 'area':
-                    raise ValueError('area cannot be edited if Peak.use_area is False.\nUse Peak.update_area_amp().\nOr change Peak.use_area to True.')
+        # # area and amp
+        # if self._enable_update_area_amp:
+        #     if self.use_area:
+        #         if name == 'amp':
+        #             raise ValueError('amp cannot be edited if Peak.use_area is True.\nUse Peak.update_area_amp()\nOr change Peak.use_area to False.')
+        #     else:
+        #         if name == 'area':
+        #             raise ValueError('area cannot be edited if Peak.use_area is False.\nUse Peak.update_area_amp().\nOr change Peak.use_area to True.')
         
         # set values
         super().__setitem__(name, value)
@@ -166,37 +120,511 @@ class Peak(lmfit.Parameters):
         #     self['w1'].value = self['w']/2
         #     self['w2'].value = self['w']/2
 
-        # check
-        if self._enable_update_area_amp:
-            self.update_area_amp()
+        # # check
+        # if self._enable_update_area_amp:
+        #     self.update_area_amp()
 
     def __getitem__(self, name):
-        if name in names:
-            name = name + f'_{self.index}'
-        return super().__getitem__(name)
-
-    # support
-    def _find_suitable_x(self):
-        if self.asymmetry:
-            w = self['w1'].value + self['w2'].value
+        if isinstance(name, int):
+            return self.get_params_with_index(i=name)
         else:
-            w = self['w'].value
+            if name in ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']:
+                if self.length() == 1:
+                    index = self.get_indexes()[0]
+                    name = name + f'_{index}'
+                else:
+                    raise ValueError(f'This list has multiple peaks, please, identify the peak number')
+            if name in self:
+                return super().__getitem__(name)
+            elif name.startswith('area'):
+                index = name.split('_')[1]
+                return lmfit.Parameter(name=name, value=self.calculate_area(i=index), vary=False)
+            elif name.startswith('amp'):
+                index = name.split('_')[1]
+                return lmfit.Parameter(name=name, value=self.calculate_amp(i=index), vary=False)
+            elif name.startswith('w'):
+                index = name.split('_')[1]
+                return lmfit.Parameter(name=name, value=self.calculate_w(i=index), vary=False)
+            else:
+                raise ValueError(f'Cannot find parameter: {name}')
 
-        if w == 0:
-            w = self['c'].value*0.1
-        if w == 0:
-            w = 1
+    def __delitem__(self, i):
+        names = self._get_with_index(i=i)
+        for name in names:
+            del self[name]
+    
+    def length(self):
+        return len(self.get_indexes())
+    
+    # support
+    def copy(self, *args, **kwargs):
+        i = None
+        if 'i' in kwargs:
+            i = kwargs['i']
+        elif len(args) > 0:
+            if isinstance(args[0], int):
+                i = args[0]
+            elif isinstance(args[0], Peaks):
+                self.clear()
+                for name in args[0]:
+                    self[name] = copy.deepcopy(args[0][name])
+                return
+        elif len(args) == 0:
+            pass
+        else:
+            raise ValueError('input not recognized')
+        
+        peaks = Peaks()
+        if i is not None:
+            names = self._get_with_index(i=i)
+        else:
+            names = list(self.keys())
+        for name in names:
+            peaks[name] = copy.deepcopy(self[name])
+        return peaks
+    
+    def _get_with_index(self, i):
+        """return list of names with index i"""
+        final = []
+        for name in self:
+            index = int(name.split('_')[1])
+            if index == i:
+                final.append(name)
+        return final
+    
+    def get_params_with_index(self, i):
+        names = self._get_with_index(i=i)
+        final = {}
+        for name in names:
+            final[name.split('_')[0]] = self[name]
+        return final
 
-        vmin = self['c'].value-10*w
-        vmax = self['c'].value+10*w
+    def split_params(self):
+        indexes = self.get_indexes()
+        peaks = {}
+        for i in indexes:
+            peaks[i] = self.get_params_with_index(i)
+        return peaks
 
-        if vmin == 0 and vmax == 0:
-            vmin = -10
-            vmax = 10
-        num = int((vmax-vmin)/w*20)+1
-        return np.linspace(vmin, vmax, num)
+    def get_indexes(self):
+        """return list of all indexes."""
+        final = []
+        for name in self:
+            index = int(name.split('_')[1])
+            if index not in final:
+                final.append(index) 
+        return final
 
-    # attributes and properties
+    def is_asymmetric(self, i):
+        if f'w1_{i}' in self and f'w2_{i}' in self:
+            return True
+        elif f'w_{i}' in self:
+            return False
+        else:
+            raise ValueError(f'w not found for i={i}')
+    
+    def use_area(self, i):
+        if f'area_{i}' in self:
+            return True
+        elif f'amp_{i}' in self:
+            return False
+        else:
+            raise ValueError(f'area/amp not found for i={i}')
+    
+    def _find_suitable_x(self, i=None):
+        if i is None:
+            vmin  = []
+            vmax  = []
+            step  = []
+
+            for i in self.get_indexes():
+                temp = self._find_suitable_x(i=i)
+                vmin.append(min(temp))
+                vmax.append(max(temp))
+                step.append(abs(temp[1]-temp[0]))
+            return np.arange(min(vmin), max(vmax), min(step))
+        else:
+            # get width
+            if self.is_asymmetric(i):
+                w = self[f'w1_{i}'].value + self[f'w2_{i}'].value
+                m = max([self[f'm1_{i}'].value, self[f'm2_{i}'].value])
+            else:
+                w = self[f'w_{i}'].value
+                m = self[f'm_{i}'].value
+
+            if w == 0:
+                w = self[f'c_{i}'].value*0.1
+            if w == 0:
+                w = 1
+
+            vmin = self[f'c_{i}'].value - w * (m*4 + 4)
+            vmax = self[f'c_{i}'].value + w * (m*4 + 4)
+
+            if vmin == 0 and vmax == 0:
+                vmin = -10
+                vmax = 10
+
+            return np.arange(vmin, vmax, w/20)
+
+    # save and load (TODO)*****
+    def save(self, filepath='./Untitled.txt', check_overwrite=False):
+        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user want to overwrite file.
+
+        Returns:
+            None
+
+        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
+        """
+        filepath = Path(filepath)
+        # check overwrite
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                        pass
+                    else:
+                        warnings.warn('File not saved because user did not allow overwriting.')
+                        return
+                else:
+                    warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
+                    filepath = filepath/'Untitled.txt'
+
+        string2save = ''
+        for peak in self:
+            string2save += peak._string2save()
+            string2save += '\nend_of_peak\n'
+
+        with open(str(filepath), 'w') as file:
+            file.write(string2save)
+
+    def load(self, filepath):
+        """Load peak from a text file. Wrapper for `json.load()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first decompressed.
+
+        Returns:
+            None
+
+        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
+        """
+        filepath = Path(filepath)
+
+        # remove all peaks
+        for i in range(len(self)):
+            self.remove(0)
+
+        with open(str(filepath), 'r') as file:
+            try:
+                peaks_str = file.read().split('end_of_peak')
+                for peak_str in peaks_str:
+                    temp = br.Peak(amp=0, c=0, fwhm=1)
+                    obj = json.loads(peak_str)
+                    temp._obj_decode(obj)
+                    self.append(temp)
+            except json.JSONDecodeError as e:
+                if peak_str == '\n':
+                    pass
+                else:
+                    raise e
+
+    # basic
+    def remove(self, i):
+        """Remove peak.
+
+        Args:
+            key (int or list): peaks to be removed.
+
+        Returns:
+            None
+        """
+        for name in self._get_with_index(i=i):
+            del self[name]
+
+    def clear(self):
+        super().clear()
+        self.next_index = 0
+
+    # plot and visualization
+    def plot(self, i=None, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            offset (number, optional): defines a vertical offset. Default is 0.
+            shift (number, optional): horizontal shift value. Default is 0.
+            factor (number, optional): multiplicative factor on the y axis.
+                Default is 1.
+            calib (number, optional): multiplicative factor on the x axis.
+                Default is 1.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+
+        Returns:
+            `ErrorbarContainer`_
+
+        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        """
+        if ax is None:
+            ax = plt
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
+                br.figure()
+
+        if i is None:
+            for i in self.get_indexes():
+                self.plot(i=i, ax=ax, offset=offset, shift=shift, factor=factor, calib=calib, **kwargs)
+        else:
+            # data
+            c    = self[f'c_{i}'].value
+            amp  = self.calculate_amp(i)
+            xerr = self.calculate_w(i)/2
+
+            if 'lw' not in kwargs and 'linewidth' not in kwargs:
+                kwargs['lw'] = 0
+            if 'elinewidth' not in kwargs :
+                kwargs['elinewidth'] = 2
+            if 'marker' not in kwargs :
+                kwargs['marker'] = 'o'
+            if 'markersize' not in kwargs and 'ms' not in kwargs:
+                kwargs['markersize'] = 5
+
+            return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
+
+    # extractors
+    def split_peaks(self):
+        """return a dict with type Peaks."""
+        indexes = self.get_indexes()
+        peaks = {}
+        for i in indexes:
+            peaks[i] = Peaks()
+            temp = self.get_params_with_index(i)
+            for param in temp:
+                temp[param] = {'name':param + '_0',  
+                               'value':temp[param].value, 
+                               'min':temp[param].min, 
+                               'max':temp[param].max,}
+                peaks[i].add(**temp[param])
+        return peaks
+    
+    def calculate_spectrum(self, i=None, x=None):
+        """Return peak curve.
+
+        Args:
+            x (list, optional): x values to which the curve will be calculated.
+                If None, a suitable x, with at least 20 points within the peak,
+                will be constructed.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        if x is None:
+            x = self._find_suitable_x(i=i)
+        f = self.model(i=i)
+
+        s = br.Spectrum(x=x, y=f(x))
+
+        # # copy modifiers
+        # s._shift  = self.shift
+        # # s._shift_roll    = self.shift_roll  # cannot copy shift_roll because step might be different
+        # s._shift_interp  = self.shift_interp
+        # s._factor = self.factor
+        # s._calib  = self.calib
+        # s._offset = self.offset
+        return s
+
+    def calculate_spectra(self, x=None):
+        """Return each peak spectrum separately.
+
+        Args:
+            x (list, optional): x values to which the curve will be calculated.
+                If None, a suitable x will be constructed.
+
+        Returns:
+            :py:class:`Spectra`.
+        """
+        if x is None:
+            x = self._find_suitable_x(i=i)
+
+        indexes = self.get_indexes()
+        n_peaks = len(indexes)
+
+        if n_peaks > 0:
+            ss = br.Spectra(n_peaks)
+            for j, i in enumerate(indexes):
+                ss[i] = self.calculate_spectrum(i=i, x=x)
+            return ss
+        else:
+            raise ValueError('No peaks defined.')
+    
+    # calculation and info
+    def _model_str(self, i=None):
+        """Returns string for building peak function.
+
+        Returns:
+            function f(x) as string
+        """
+        if i is None:
+            final = ''
+            for i in self.get_indexes():
+                final += self._model_str(i) + ' + '
+            
+            return final[:-3]
+
+        if self.is_asymmetric(i):
+            if self.use_area(i):
+                return f"np.heaviside(c_{i}-x, 0)*br.voigt_area_fwhm(x, area_{i}, c_{i}, w1_{i},  m1_{i}) + np.heaviside(x-c_{i}, 0)*br.voigt_area_fwhm(x, area_{i}, c_{i},  w2_{i},  m2_{i}) + dirac_delta(x, amp_{i}, c_{i})" 
+            else:
+                return f"np.heaviside(c_{i}-x, 0)*br.voigt_fwhm(x, amp_{i}, c_{i}, w1_{i},  m1_{i}) + np.heaviside(x-c_{i}, 0)*br.voigt_fwhm(x, amp_{i}, c_{i},  w2_{i},  m2_{i}) + dirac_delta(x, amp_{i}, c_{i})" 
+        else:
+            if self.is_asymmetric(i):
+                return f"br.voigt_area_fwhm(x, area_{i}, c_{i}, w_{i}, m_{i})"
+            else:
+                return f"br.voigt_fwhm(x, amp_{i}, c_{i}, w_{i}, m_{i})"
+
+    def _generate_residual_function(self, x, y, yerr=None, i=None):
+        # params = self
+        if yerr is None:
+            def residual(params, x, y):
+                # for name in params:
+                #     eval(f'{name} = self[{name}]')
+                model = params.model(i=i)
+                # pvals = params.valuesdict()
+                # model = eval(model_str)
+                return model(x)-y
+            return residual
+        
+        else:
+            def residual(params, x, y, yerr):
+                model = params.model(i=i)
+                # pdict = params.valuesdict()
+                # model = eval(model_str)
+                return (model-y)/yerr
+            return residual
+        
+    def model(self, i=None):
+        """Returns a function f(x) for the peak."""
+        var_str = ''
+        if i is None:
+            for name in self:
+                var_str += f'{name} = self["{name}"].value' + ', '
+        else:
+            for name in self._get_with_index(i=i):
+                var_str += f'{name} = self["{name}"].value' + ', '
+
+        model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i=i)}'
+        return eval(model_str)
+
+    def calculate_area(self, i):
+        """Updates the area amp values.
+
+        if use_area = True, amp is updated based on the area.
+        if use_area = False, area is updated based on the amp.
+
+        Only necessary if amp and area values are changed by hand.        
+        """
+        if self.use_area(i=i):
+            return self[f'area_{i}']
+        else:
+            if self.is_asymmetric(i=i):
+                c1 = self[f'm1_{i}'].value/np.pi + (1-self[f'm1_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                c2 = self[f'm2_{i}'].value/np.pi + (1-self[f'm2_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'amp_{i}'].value * (self[f'w1_{i}'].value*c1 + self[f'w2_{i}'].value*c2)/2
+            else:
+                c = self[f'm_{i}'].value/np.pi + (1-self[f'm_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'amp_{i}'].value * self[f'w_{i}'].value * c
+
+    def calculate_amp(self, i):
+        """Updates the area amp values.
+
+        if use_area = True, amp is updated based on the area.
+        if use_area = False, area is updated based on the amp.
+
+        Only necessary if amp and area values are changed by hand.        
+        """
+        if self.use_area(i=i) == False:
+            return self[f'amp_{i}']
+        else:
+            if self.is_asymmetric(i=i):
+                c1 = self[f'm1_{i}'].value/np.pi + (1-self[f'm1_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                c2 = self[f'm2_{i}'].value/np.pi + (1-self[f'm2_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'area_{i}'].value * 2 /(self[f'w1_{i}'].value*c1 + self[f'w2_{i}'].value*c2)
+            else:
+                c = self[f'm_{i}'].value/np.pi + (1-self[f'm_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'area_{i}'].value/self[f'w_{i}'].value/c
+
+    def calculate_w(self, i):
+        if self.is_asymmetric(i):
+            return self[f'w1_{i}'].value + self[f'w2_{i}'].value
+        else:
+            return self[f'w_{i}'].value
+
+    def fit(self, x, y, yerr=None, i=None, method='least_squares', return_fitted_peaks=False):
+        """output, peaks = fit()
+        
+        I think x and y must be monotonic.
+        """
+        residual = self._generate_residual_function(x=x, y=y, yerr=yerr, i=i)
+        if yerr is None:
+            out = lmfit.minimize(residual, method=method, params=self, args=(x, y))
+        else:
+            out = lmfit.minimize(residual, method=method, params=self, args=(x, y, yerr))
+
+        # return peaks2
+        if return_fitted_peaks:
+            return out, out.params
+        else:
+            for name in self:
+                self[name] = out.params[name]
+            return out
+    
+    def find(self, x, y, prominence=5, width=4, moving_average_window=8):
+        """I think x and y must be monotonic and uniform."""
+        # check width and moving_average_window
+        if width < 1:
+            raise ValueError('width must be 1 or higher.')
+        if isinstance(width, int) == False:
+            if width.is_integer() == False:
+                raise ValueError('width must be an integer.')
+        if moving_average_window < 1:
+            raise ValueError('moving_average_window must be 1 or higher.')
+        if isinstance(moving_average_window, int) == False:
+            if moving_average_window.is_integer() == False:
+                raise ValueError('moving_average_window must be an integer.')
+            
+        # data smoothing
+        if moving_average_window > 1:
+            y2 = br.moving_average(y, moving_average_window)
+            x2 = br.moving_average(x, moving_average_window)
+        else:
+            x2 = x
+            y2 = y
+
+        # parameters
+        if prominence is None:
+            prominence = (max(y2)-min(y2))*0.1
+        else:
+            prominence = (max(y2)-min(y2))*prominence/100
+
+        try:
+            peaks, d = find_peaks(y2, prominence=prominence, width=width)
+            assert len(peaks) > 0, 'No peaks found.'
+            self.clear()
+            for i in range(len(peaks)):
+                amp = d['prominences'][i]+max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
+                c = x2[peaks[i]]
+                w = abs(d['widths'][i]*np.mean(np.diff(x)))
+
+                self.append(amp=amp, c=c, w=w)
+        except IndexError:
+            pass
+
+    # %% attributes and properties  (TODO)*****
     @property
     def calib(self):
         return self._calib
@@ -269,93 +697,7 @@ class Peak(lmfit.Parameters):
     def step(self):
         raise AttributeError('Cannot delete object.')
 
-    @property
-    def use_area(self):
-        return self._use_area
-    @use_area.setter
-    def use_area(self, value):
-        assert isinstance(value, bool), 'value must be True or False.'
-        self._use_area = value
-        if value:
-            for item in ['area']:
-                self[item+f'_{self.index}'].vary = True 
-            for item in ['amp']:
-                self[item+f'_{self.index}'].vary = False
-        else:
-            for item in ['area']:
-                self[item+f'_{self.index}'].vary = False 
-            for item in ['amp']:
-                self[item+f'_{self.index}'].vary = True
-    @use_area.deleter
-    def use_area(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def asymmetry(self):
-        return self._asymmetry
-    @asymmetry.setter
-    def asymmetry(self, value):
-        assert isinstance(value, bool), 'value must be True or False.'
-        self._asymmetry = value
-        if value:
-            for item in ['w1', 'w2', 'm1', 'm1']:
-                self[item+f'_{self.index}'].vary = True 
-            for item in ['w', 'm']:
-                self[item+f'_{self.index}'].vary = False
-        else:
-            for item in ['w1', 'w2', 'm1', 'm1']:
-                self[item+f'_{self.index}'].vary = False 
-            for item in ['w', 'm']:
-                self[item+f'_{self.index}'].vary = True
-    @asymmetry.deleter
-    def asymmetry(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def use_peak(self):
-        return self._use_peak
-    @use_peak.setter
-    def use_peak(self, value):
-        assert isinstance(value, bool), 'value must be True or False.'
-        self._use_peak = value
-    @use_peak.deleter
-    def use_peak(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def index(self):
-        return self._index
-    @index.setter
-    def index(self, value):
-        assert isinstance(value, int), 'value must be int.'
-        if self._index != value:
-            self._enable_update_area_amp = False
-            for name in names:
-                # self[name].name = name+f'_{value}'
-                old_name = name+f'_{self._index}'
-                self.add(name+f'_{value}', value=self[old_name].value, 
-                                        min=self[old_name].min, 
-                                        max=self[old_name].max, 
-                                        vary=self[old_name].vary, 
-                                        expr=self[old_name].expr)
-                del self[old_name]
-            self._index = value
-            self._enable_update_area_amp = True
-    @index.deleter
-    def index(self):
-            raise AttributeError('Cannot delete object.')
-
-    @property
-    def spectrum(self):
-        return self.calculate_spectrum()
-    @spectrum.setter
-    def spectrum(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @spectrum.deleter
-    def spectrum(self):
-            raise AttributeError('Cannot delete object.')
-
-    # modifiers
+    # modifiers  (TODO)*****
     def set_calib(self, value, type_='relative'):
         """Set calibration value.
 
@@ -479,99 +821,8 @@ class Peak(lmfit.Parameters):
         # check
         self.update_area_amp()
 
-    # calculation and info
-    def update_area_amp(self):
-        """Updates the area amp values.
-
-        if use_area = True, amp is updated based on the area.
-        if use_area = False, area is updated based on the amp.
-
-        Only necessary if amp and area values are changed by hand.        
-        """
-        if self.asymmetry:
-            c1 = self['m1'].value/np.pi + (1-self['m1'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            c2 = self['m2'].value/np.pi + (1-self['m2'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            if self.use_area:
-                self['amp'].value = self['area'].value * 2 /(self['w1'].value*c1 + self['w2'].value*c2)
-            else:
-                self['area'].value = self['amp'].value * (self['w1'].value*c1 + self['w2'].value*c2)/2
-        else:
-            c = self['m'].value/np.pi + (1-self['m'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-            if self.use_area:
-                self['amp'].value = self['area'].value/self['w'].value/c
-            else:
-                self['area'].value = self['amp'].value * self['w'].value * c
-
-    # plot and visualization
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optional): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-
-        Returns:
-            `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        self.update_area_amp()
-
-        # data
-        c = self['c'].value
-        amp = self['amp'].value
-        xerr = self['w'].value/2
-
-        if 'lw' not in kwargs and 'linewidth' not in kwargs:
-            kwargs['lw'] = 0
-        if 'elinewidth' not in kwargs :
-            kwargs['elinewidth'] = 2
-        if 'marker' not in kwargs :
-            kwargs['marker'] = 'o'
-        if 'markersize' not in kwargs and 'ms' not in kwargs:
-            kwargs['markersize'] = 5
-
-        return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
-
-    # extractors
-    def calculate_spectrum(self, x=None):
-        """Return peak curve.
-
-        Args:
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x, with at least 20 points within the peak,
-                will be constructed.
-
-        Returns:
-            :py:class:`Spectrum`.
-        """
-        if x is None:
-            x = self._find_suitable_x()
-        f = self.model()
-        s = br.Spectrum(x=x, y=f(x))
-
-        # copy modifiers
-        s._shift  = self.shift
-        # s._shift_roll    = self.shift_roll  # cannot copy shift_roll because step might be different
-        s._shift_interp  = self.shift_interp
-        s._factor = self.factor
-        s._calib  = self.calib
-        s._offset = self.offset
-        return s
-
-    def _split_peaks(self):
+    # extractors  (TODO)*****
+    def _split_params(self):
         # index list
         indexes = []
         for key in self.keys():
@@ -597,45 +848,7 @@ class Peak(lmfit.Parameters):
         
         return peaks2
 
-    def copy(self):
-        temp = Peak()
-        temp.index = self.index
-        for key in self:
-            temp[key].value = self[key].value
-            temp[key].min   = self[key].min
-            temp[key].max   = self[key].max
-            temp[key].vary  = self[key].vary
-            temp[key].expr  = self[key].expr
-        return temp
-    
-    # calculation and info
-    def _model_str(self):
-        """Returns string for building peak function.
-
-        Returns:
-            function f(x) as string
-        """
-        i = self.index
-
-        if self.asymmetry:
-            if self.use_area:
-                return f"np.heaviside(parvals['c_{i}']-x, 0)*br.voigt_area_fwhm(x, parvals['area_{i}'], parvals['c_{i}'], parvals['w1_{i}'],  parvals['m1_{i}']) + np.heaviside(x-parvals['c_{i}'], 0)*br.voigt_area_fwhm(x, parvals['area_{i}'], parvals['c_{i}'],  parvals['w2_{i}'],  parvals['m2_{i}']) + dirac_delta(x, parvals['amp_{i}'], parvals['c_{i}'])" 
-            else:
-                return f"np.heaviside(parvals['c_{i}']-x, 0)*br.voigt_fwhm(x, parvals['amp_{i}'], parvals['c_{i}'], parvals['w1_{i}'],  parvals['m1_{i}']) + np.heaviside(x-parvals['c_{i}'], 0)*br.voigt_fwhm(x, parvals['amp_{i}'], parvals['c_{i}'],  parvals['w2_{i}'],  parvals['m2_{i}']) + dirac_delta(x, parvals['amp_{i}'], parvals['c_{i}'])" 
-        else:
-            if self.use_area:
-                return f"br.voigt_area_fwhm(x, parvals['area_{i}'], parvals['c_{i}'], parvals['w_{i}'], parvals['m_{i}'])"
-            else:
-                return f"br.voigt_fwhm(x, parvals['amp_{i}'], parvals['c_{i}'], parvals['w_{i}'], parvals['m_{i}'])"
-
-    def model(self):
-        """Returns a function f(x) for the peak."""
-        parvals = self.valuesdict()
-        model_str = f'lambda x, parvals: {self._model_str()}'
-        final = eval(model_str)
-        return lambda x: final(x, parvals)
-
-    #############
+    # #############  (TODO)*****
 
     def _string2save(self):
         """String used for saving peak to a file."""
@@ -723,307 +936,391 @@ class Peak(lmfit.Parameters):
             obj = json.load(file)
         self._obj_decode(obj)
 
-    # OBSOLETE
 
-    def set_bounds(self, **kwargs):
-        """Set percentage wise bounds.
-
-        Args:
-
-
-        Return:
-            None
-        """
-        if 'type_' in kwargs:
-            type_ = kwargs.pop('type_')
-            if type_.startswith('a'):
-                type_ = 'additive'
-            elif type_.startswith('m'):
-                type_ = 'multiplicative'
-            elif type_.startswith('p'):
-                type_ = 'percentage'
-            else:
-                raise ValueError(f'type_={type} not valid.\nValid type_s are: additive and multiplicative')
-
-        if any([item not in self._store for item in kwargs.keys()]):
-            for key in kwargs:
-                if key not in self._store:
-                    raise AttributeError(f'{key} is not a valid attribute.')
-
-        for parameter in ['amp', 'c']:
-            if parameter in kwargs:
-                if kwargs[parameter] is None:
-                    self.bounds[parameter] = [-np.inf, np.inf]
-                elif isinstance(kwargs[parameter], Iterable):
-                    if type_ == 'additive':
-                        self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
-                    elif type_ == 'multiplicative':
-                        assert self[parameter] != 0,      f'bounds cannot be set via multiplicative factor for parameter "{parameter}", because its value is zero'
-                        if self[parameter] < 0:
-                            assert kwargs[parameter][1] <= 1, f'For negative values, the second bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                            assert kwargs[parameter][0] >= 1, f'For negative values, the first bound multiplicative factor must be higher than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                            self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
-                        else:
-                            assert kwargs[parameter][0] <= 1, f'For positive values, the first bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                            assert kwargs[parameter][1] >= 1, f'For positive values, the second bound multiplicative factor must be higher than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                            self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
-                    else:
-                        assert self[parameter] != 0,      f'bounds cannot be set via percentage wise factor because the parameter "{parameter}" is zero'
-                        if self[parameter] < 0:
-                            self.bounds[parameter] = [self[parameter]+self[parameter]*kwargs[parameter][0]/100, self[parameter]-self[parameter]*kwargs[parameter][-1]/100]
-                        else:
-                            self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
-                else:
-                    assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
-                    if type_ == 'additive':
-                        self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
-                    elif type_ == 'multiplicative':
-                        raise ValueError(f'Value must be a tuple for type_ = multiplicative, not a number')
-                    else:
-                        if self[parameter] < 0:
-                            self.bounds[parameter] = [self[parameter]+self[parameter]*kwargs[parameter]/100, self[parameter]-self[parameter]*kwargs[parameter]/100]
-                        else:
-                            self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter]/100, self[parameter]+self[parameter]*kwargs[parameter]/100]
-                assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
-
-        for parameter in ['fwhm', 'fwhm1', 'fwhm2']:
-            if parameter in kwargs:
-                if kwargs[parameter] is None:
-                    self.bounds[parameter] = [0, np.inf]
-                elif isinstance(kwargs[parameter], Iterable):
-                    if type_ == 'additive':
-                        self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
-                    elif type_ == 'multiplicative':
-                        assert self[parameter] != 0,      f'bounds cannot be set via multiplicative factor for parameter "{parameter}", because its value is zero'
-                        assert kwargs[parameter][0] <= 1, f'The first bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                        assert kwargs[parameter][1] >= 1, f'The second bound multiplicative factor must be higher than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                        self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
-                    else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
-                else:
-                    assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
-                    if type_ == 'additive':
-                        self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
-                    elif type_ == 'multiplicative':
-                        raise ValueError(f'Value must be a tuple for type_ = multiplicative, not a number')
-                    else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter]/100, self[parameter]+self[parameter]*kwargs[parameter]/100]
-                assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
-
-                if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
-
-        for parameter in ['m', 'm1', 'm2']:
-            if parameter in kwargs:
-                if kwargs[parameter] is None:
-                    self.bounds[parameter] = [0, 1]
-                elif isinstance(kwargs[parameter], Iterable):
-                    if type_ == 'additive':
-                        self.bounds[parameter] = [self[parameter]-kwargs[parameter][0], self[parameter]+kwargs[parameter][-1]]
-                    elif type_ == 'multiplicative':
-                        assert self[parameter] != 0,      f'bounds cannot be set via multiplicative factor for parameter "{parameter}", because its value is zero'
-                        assert kwargs[parameter][0] <= 1, f'The first bound multiplicative factor must be less than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                        assert kwargs[parameter][1] >= 1, f'The second bound multiplicative factor must be higher than 1./nParameter: {parameter}/nParameter value: {self[parameter]}/nBound multiplicative factor: {kwargs[parameter]}'
-                        self.bounds[parameter] = [self[parameter]*kwargs[parameter][0], self[parameter]*kwargs[parameter][-1]]
-                    else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter][0]/100, self[parameter]+self[parameter]*kwargs[parameter][-1]/100]
-                else:
-                    assert kwargs[parameter] > 0, f'{parameter} cannot be negative or zero.'
-                    if type_ == 'additive':
-                        self.bounds[parameter] = [self[parameter]-kwargs[parameter], self[parameter]+kwargs[parameter]]
-                    elif type_ == 'multiplicative':
-                        raise ValueError(f'Value must be a tuple for type_ = multiplicative, not a number')
-                    else:
-                        self.bounds[parameter] = [self[parameter]-self[parameter]*kwargs[parameter]/100, self[parameter]+self[parameter]*kwargs[parameter]/100]
-                if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
-                if self.bounds[parameter][1] > 1: self.bounds[parameter][1] = 1
-                assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'{parameter} value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
-
-        # amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
-        #     maximum multiplication factor for boundary values. For amp, the
-        #     bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
-        #     For c, bounds are set c-fwhm*c_bound[0] and c+fwhm*c_bound[1].
-        #     Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
-        #     and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
-        #     less than zero, the minimum fwhm boundary is set to zero as it
-        #     cannot be negative.
-
-    def build_guess(self, asymmetry=None, fixed=None):
-        """Returns initial guess parameter for fitting.
-
-        Args:
-            asymmetry (bool, optional): Overwrites the Peak.asymmetry parameter.
-                If True, the returned peak function will require two
-                fwhm values, one for each half of the peak.
-            fixed (bool, optional): Overwrites the Peak.fixed_m parameter.
-                If False, m will be a required as an input
-                argument on the returned peak function. Default is fixed m with
-                value 0.
-
-        Returns:
-            three lists: p0, bounds_min, bounds_max
-        """
-        p0           = []
-        bounds_min   = []
-        bounds_max   = []
-
-        # decode (for fitting purposes)
-        decode_fixed = {}  # dictionary with parameter and value that will not be varied in a fit
-        decode_free  = []  # parameters that shall be varied in a fit
-
-        if asymmetry is None:
-            asymmetry = self.asymmetry
-
-        if fixed is None:
-            fixed = self.fixed
-        self._check_fixed(fixed)
-
-        for parameter in ['amp', 'c']:
-            if parameter not in fixed:
-                assert self.bounds[parameter][1] != self.bounds[parameter][0], 'Minimum boundary cannot be equal to the maximum.\namp_bounds = ' + str(self.bounds[parameter])
-                assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'Parameter ({parameter}) value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
-
-                p0.append(self[parameter])
-                bounds_min.append(self.bounds[parameter][0])
-                bounds_max.append(self.bounds[parameter][1])
-                decode_free.append(parameter)
-            else:
-                decode_fixed[parameter] = self[parameter]
-
-        if asymmetry:
-            if 'fwhm' not in fixed:
-                for parameter in ['fwhm1', 'fwhm2']:
-                    assert self.bounds[parameter][1] != self.bounds[parameter][0], 'Minimum boundary cannot be equal to the maximum.\namp_bounds = ' + str(self.bounds[parameter])
-                    assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'Parameter ({parameter}) value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
-
-                if 'm' not in fixed:
-                    for parameter in ['m1', 'm2']:
-                        if self.bounds[parameter][0] < 0: self.bounds[parameter][0] = 0
-                        if self.bounds[parameter][1] > 1: self.bounds[parameter][1] = 1
-                        assert self[parameter] >= self.bounds[parameter][0] and self[parameter] <= self.bounds[parameter][1], f'Parameter ({parameter}) value ('+ str(self[parameter]) +') is out of bounds.\nbounds = '+ str(self.bounds[parameter])
-
-                    for parameter in ['fwhm1', 'm1', 'fwhm2', 'm2']:
-                        p0.append(self[parameter])
-                        bounds_min.append(self.bounds[parameter][0])
-                        bounds_max.append(self.bounds[parameter][1])
-                        decode_free.append(parameter)
-                else:
-                    for parameter in ['fwhm1', 'fwhm2']:
-                        p0.append(self[parameter])
-                        bounds_min.append(self.bounds[parameter][0])
-                        bounds_max.append(self.bounds[parameter][1])
-                        decode_free.append(parameter)
-                    for parameter in ['m1', 'm2']:
-                        decode_fixed[parameter] = self[parameter]
-            else:
-                if 'm' not in fixed:
-                    for parameter in ['m1', 'm2']:
-                        p0.append(self[parameter])
-                        bounds_min.append(self.bounds[parameter][0])
-                        bounds_max.append(self.bounds[parameter][1])
-                        decode_free.append(parameter)
-                    for parameter in ['fwhm1', 'fwhm2']:
-                        decode_fixed[parameter] = self[parameter]
-                else:
-                    for parameter in ['fwhm1', 'm1', 'fwhm2', 'm2']:
-                        decode_fixed[parameter] = self[parameter]
-        else:
-            if 'fwhm' not in fixed:
-                if self.bounds['fwhm'][0] < 0: self.bounds['fwhm'][0] = 0
-                assert self['fwhm'] >= self.bounds['fwhm'][0] and self['fwhm'] <= self.bounds['fwhm'][1], f'fwhm value ('+ str(self['fwhm']) +') is out of bounds.\nbounds = '+ str(self.bounds['fwhm'])
-
-                if 'm' not in fixed:
-                    if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
-                    if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
-                    assert self['m'] >= self.bounds['m'][0] and self['m'] <= self.bounds['m'][1], f'm value ('+ str(self['m']) +') is out of bounds.\nbounds = '+ str(self.bounds['m'])
-
-                    for parameter in ['fwhm', 'm']:
-                        p0.append(self[parameter])
-                        bounds_min.append(self.bounds[parameter][0])
-                        bounds_max.append(self.bounds[parameter][1])
-                        decode_free.append(parameter)
-                else:
-                    p0.append(self['fwhm'])
-                    bounds_min.append(self.bounds['fwhm'][0])
-                    bounds_max.append(self.bounds['fwhm'][1])
-                    decode_free.append('fwhm')
-                    decode_fixed['m'] = self['m']
-            else:
-                if 'm' not in fixed:
-                    if self.bounds['m'][0] < 0: self.bounds['m'][0] = 0
-                    if self.bounds['m'][1] > 1: self.bounds['m'][1] = 1
-                    assert self['m'] >= self.bounds['m'][0] and self['m'] <= self.bounds['m'][1], f'm value ('+ str(self['m']) +') is out of bounds.\nbounds = '+ str(self.bounds['m'])
-
-                    p0.append(self['m'])
-                    bounds_min.append(self.bounds['m'][0])
-                    bounds_max.append(self.bounds['m'][1])
-                    decode_free.append('m')
-                else:
-                    for parameter in ['fwhm', 'm']:
-                        decode_fixed[parameter] = self[parameter]
-
-        # decode function
-        def decode(popt, psigma=None):
-            peak  = {}
-            peak.update(decode_fixed)
-
-            # set initial error to zero
-            if psigma is not None:
-                error = {}
-                for parameter in peak:
-                    error[parameter] = 0
-
-            # put parameters from p0 to a dictionary (peak)
-            for i, parameter in enumerate(decode_free):
-                peak[parameter]  = popt[decode_free.index(parameter)]
-                if psigma is not None:
-                    error[parameter] = psigma[decode_free.index(parameter)]
-
-            # create peak object
-            peak = Peak(**peak)
-            if psigma is not None:
-                peak.error.update(error)
-            peak.asymmetry = copy.copy(self.asymmetry)
-            peak.fixed     = copy.copy(self.fixed)
-            peak.bounds    = copy.copy(self.bounds)
-            return peak
-
-        return p0, bounds_min, bounds_max, decode
-
-    def build_model_str(self, fixed=None, idx=0):
-        """Returns instructions for building peak functions.
-
-        Args:
-            asymmetry (bool): if True, the returned peak function will require two
-                fwhm values, one for each half of the peak.
-            fixed_m (False or number): m is the amount of lorentzian
-                contribution for a peak. If False, m will be a required as an input
-                argument on the returned peak function.
-            idx (int, optional): number to be inprinted in the string
-
-        Returns:
-            function f(x), function f(x) as string, argument list as string
-        """
-        if fixed is None:
-            fixed = self.fixed
-
-        temp = {key:self[key] for key in fixed}
-        temp['idx'] = idx
-        temp['asymmetry'] = self.asymmetry
-        f_str, args_str = build_model_str(**temp)
-
-        return f_str, args_str
-
-    def build_model(self, fixed=None, idx=0):
-        if fixed is None:
-            fixed = self.fixed
-
-        temp = {key:self[key] for key in fixed}
-        temp['idx'] = idx
-        temp['asymmetry'] = self.asymmetry
-        return build_model(**temp)
 
 # %%
-class Peaks(MutableMapping):
+class Collection(lmfit.Parameters):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+        self.next_index = 0
+
+        if 'data' in kwargs:
+            data = kwargs['data']
+        elif len(args) == 1:
+            data = args[0]
+        else:
+            data = args
+
+        # append peaks
+        for peaks in data:
+            self.append(peaks)        
+    
+    def __getitem__(self, name):
+        if type(name) == int:
+            return self.split_peaks_per_spectrum()[name]
+        
+        elif type(name) == str:
+            if len(name.split('_')) == 2:
+                return self.get_values(attr=name)
+            if len(name.split('_')) == 3:
+                if name in self:
+                    return super().__getitem__(name)
+                else:
+                    raise ValueError(f'Cannot find parameter: {name}')
+    
+    def length(self):
+        return len(self._get_indexes_i2())
+    
+    # basic
+    # def append(self, peaks):
+    #     temp = peaks.copy()
+    #     for name in temp:
+    #         temp[name].set(expr='')
+    #         self[name + f'_{i}'] = temp[name]
+
+    #     for name in peaks:
+    #         self[name + f'_{self.next_index}'] = peaks[name]
+    #     self.next_index += 1 
+
+
+    # support   
+    def copy(self, *args):
+        if len(args) == 0:
+            return copy.deepcopy(self)
+        elif len(args) == 1:
+            if isinstance(args[0], Collection):
+                raise NotImplementedError('sorry, not implemented')
+        else:
+            raise ValueError('input not recognized')
+    
+    def copy_from_spectra(self, ss):
+        for i, s in enumerate(ss):
+            temp = s.peaks.copy()
+            for name in temp:
+                temp[name].set(expr='')
+                self[name + f'_{i}'] = temp[name]
+
+    def copy_to_spectra(self, ss):
+        temp = self.copy()
+        for par in temp:
+            temp[par].set(expr='')
+
+        for i2, s in enumerate(ss):
+            s.peaks.clear()
+            names = temp._get_with_index(i2=i2)
+            for name in names:
+                _name = '_'.join(name.split('_')[:2])
+                s.peaks[_name] = temp[name]
+
+    def _get_indexes_i2(self):
+        """return list of all indexes i2."""
+        final = []
+        for name in self:
+            index = int(name.split('_')[2])
+            if index not in final:
+                final.append(index) 
+        return final
+
+    def _get_indexes_i1(self, i2):
+        """return list of all indexes i1 for a specific i2."""
+        final = []
+        for name in self:
+            split = name.split('_')
+            _i1 = int(split[1])
+            _i2 = int(split[2])
+            if _i1 not in final and _i2 == i2:
+                final.append(_i1) 
+        return final
+
+    def _get_with_index(self, i1=None, i2=None):
+        """Return list of names with i2."""
+        assert i1 is not None or i2 is not None, 'i1 and i2 cannot both be None'
+        
+        final = []
+        if i1 is None:
+            for name in self:
+                split = name.split('_')
+                # _i1 = int(split[1])
+                _i2 = int(split[2])
+                if _i2 == i2:
+                    final.append(name)    
+        elif i2 is None:
+            for name in self:
+                split = name.split('_')
+                _i1 = int(split[1])
+                # _i2 = int(split[2])
+                if _i1 == i1:
+                    final.append(name)
+        else:
+            for name in self:
+                split = name.split('_')
+                _i1 = int(split[1])
+                _i2 = int(split[2])
+                if _i1 == i1 and _i2 == i2:
+                    final.append(name)
+        return final
+
+    def get_params(self, attr, i1=None):
+        final = []
+        if i1 is None:
+            split = attr.split('_')
+            i1 = split[1]
+            attr = split[0]
+
+        for i2 in self._get_indexes_i2():
+            name = attr + f"_{i1}" + f"_{i2}"
+            if name in self:
+                final.append(self[name])
+            else:
+                raise ValueError(f'Cannot find parameter: {name}')
+        return final
+
+    def split_peaks_per_spectrum(self):
+        temp = self.copy()
+        for par in temp:
+            temp[par].set(expr='')
+
+        final = {}
+        for i2 in self._get_indexes_i2():
+            final[i2] = Peaks()
+            for i1 in self._get_indexes_i1(i2=i2):
+                names = self._get_with_index(i1=i1, i2=i2)
+                for name in names:
+                    _name = '_'.join(name.split('_')[:2])
+                    final[i2][_name] = temp[name] 
+        return final
+    
+        
+
+    def _get_params_with_index(self, i1, i2):
+        """Return peaks with all names with i2."""
+        names = self._get_with_index(i1=i1, i2=i2)
+        final = {}
+        for name in names:
+            final[name.split('_')[0]] = self[name]
+        return final
+
+    def is_asymmetric(self, i1, i2):
+        if f'w1_{i1}_{i2}' in self and f'w2_{i1}_{i2}' in self:
+            return True
+        elif f'w_{i1}_{i2}' in self:
+            return False
+        else:
+            raise ValueError(f'w not found for i1={i1}, i2={i2}')
+    
+    def use_area(self, i1, i2):
+        if f'area_{i1}_{i2}' in self:
+            return True
+        elif f'amp_{i1}_{i2}' in self:
+            return False
+        else:
+            raise ValueError(f'amp/area not found for i1={i1}, i2={i2}')
+   
+    def get_values(self, attr, i1=None):
+        final = []
+        if i1 is None:
+            i1 = attr.split('_')[1]
+            for i2 in self._get_indexes_i2():
+                name = attr + f"_{i2}"
+                if name in self:
+                    final.append(self[name].value)
+                elif name.startswith('area'):
+                    final.append(self.calculate_area(i1=i1, i2=i2))
+                elif name.startswith('amp'):
+                    final.append(self.calculate_amp(i1=i1, i2=i2))
+                elif name.startswith('w'):
+                    final.append(self.calculate_w(i1=i1, i2=i2))
+                else:
+                    raise ValueError(f'Cannot find parameter: {name}')
+        else:
+            for i2 in self._get_indexes_i2():
+                name = attr + f"_{i1}" + f"_{i2}"
+                if name in self:
+                    final.append(self[name].value)
+                elif name.startswith('area'):
+                    final.append(self.calculate_area(i1=i1, i2=i2))
+                elif name.startswith('amp'):
+                    final.append(self.calculate_amp(i1=i1, i2=i2))
+                elif name.startswith('w'):
+                    final.append(self.calculate_w(i1=i1, i2=i2))
+                else:
+                    raise ValueError(f'Cannot find parameter: {name}')
+        return final
+    
+    def _find_suitable_x(self, i2, i1=None):
+        if i1 is None:
+            vmin  = []
+            vmax  = []
+            step  = []
+
+            for i1 in self._get_indexes_i1(i2=i2):
+                temp = self._find_suitable_x(i2=i2, i1=i1)
+                vmin.append(min(temp))
+                vmax.append(max(temp))
+                step.append(abs(temp[1]-temp[0]))
+            return np.arange(min(vmin), max(vmax), min(step))
+        else:
+            # get width
+            if self.is_asymmetric(i1=i1, i2=i2):
+                w = self[f'w1_{i1}_{i2}'].value + self[f'w2_{i1}_{i2}'].value
+                m = max([self[f'm1_{i1}_{i2}'].value, self[f'm2_{i1}_{i2}'].value])
+            else:
+                w = self[f'w_{i1}_{i2}'].value
+                m = self[f'm_{i1}_{i2}'].value
+
+            if w == 0:
+                w = self[f'c_{i1}_{i2}'].value*0.1
+            if w == 0:
+                w = 1
+
+            vmin = self[f'c_{i1}_{i2}'].value - w * (m*4 + 4)
+            vmax = self[f'c_{i1}_{i2}'].value + w * (m*4 + 4)
+
+            if vmin == 0 and vmax == 0:
+                vmin = -10
+                vmax = 10
+
+            return np.arange(vmin, vmax, w/20)
+        
+    # calculation and info
+    def calculate_spectrum(self, i2, i1=None, x=None):
+        """Return peak curve.
+
+        Args:
+            x (list, optional): x values to which the curve will be calculated.
+                If None, a suitable x, with at least 20 points within the peak,
+                will be constructed.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        if x is None:
+            x = self._find_suitable_x(i2=i2, i1=i1)
+        f = self.model(i2=i2, i1=i1)
+
+        s = br.Spectrum(x=x, y=f(x))
+        return s
+    
+    def calculate_area(self, i1, i2):
+        """Updates the area amp values.
+
+        if use_area = True, amp is updated based on the area.
+        if use_area = False, area is updated based on the amp.
+
+        Only necessary if amp and area values are changed by hand.        
+        """
+        if self.use_area(i1=i1, i2=i2):
+            return self[f'area_{i1}_{i2}']
+        else:
+            if self.is_asymmetric(i1=i1, i2=i2):
+                c1 = self[f'm1_{i1}_{i2}'].value/np.pi + (1-self[f'm1_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                c2 = self[f'm2_{i1}_{i2}'].value/np.pi + (1-self[f'm2_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'amp_{i1}_{i2}'].value * (self[f'w1_{i1}_{i2}'].value*c1 + self[f'w2_{i1}_{i2}'].value*c2)/2
+            else:
+                c = self[f'm_{i1}_{i2}'].value/np.pi + (1-self[f'm_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'amp_{i1}_{i2}'].value * self[f'w_{i1}_{i2}'].value * c
+
+    def calculate_amp(self, i1, i2):
+        """Updates the area amp values.
+
+        if use_area = True, amp is updated based on the area.
+        if use_area = False, area is updated based on the amp.
+
+        Only necessary if amp and area values are changed by hand.        
+        """
+        if self.use_area(i1=i1, i2=i2) == False:
+            return self[f'amp_{i1}_{i2}']
+        else:
+            if self.is_asymmetric(i1=i1, i2=i2):
+                c1 = self[f'm1_{i1}_{i2}'].value/np.pi + (1-self[f'm1_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                c2 = self[f'm2_{i1}_{i2}'].value/np.pi + (1-self[f'm2_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'area_{i1}_{i2}'].value * 2 /(self[f'w1_{i1}_{i2}'].value*c1 + self[f'w2_{i1}_{i2}'].value*c2)
+            else:
+                c = self[f'm_{i1}_{i2}'].value/np.pi + (1-self[f'm_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                return self[f'area_{i1}_{i2}'].value/self[f'w_{i1}_{i2}'].value/c
+
+    def calculate_w(self, i1, i2):
+        if self.is_asymmetric(i1=i1, i2=i2):
+            return self[f'w1_{i1}_{i2}'].value + self[f'w2_{i1}_{i2}'].value
+        else:
+            return self[f'w_{i1}_{i2}'].value
+
+    def _model_str(self, i2, i1=None):
+        """Returns string for building peak function.
+
+        i1
+
+        Returns:
+            function f(x) as string
+        """
+        if i1 is None:
+            final = ''
+            for i1 in self._get_indexes_i1(i2=i2):
+                final += self._model_str(i1=i1, i2=i2) + ' + '
+            return final[:-3]
+
+        if self.is_asymmetric(i1=i1, i2=i2):
+            if self.use_area(i1=i1, i2=i2):
+                return f"np.heaviside(c_{i1}_{i2}-x, 0)*br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2}, w1_{i1}_{i2},  m1_{i1}_{i2}) + np.heaviside(x-c_{i1}_{i2}, 0)*br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2},  w2_{i1}_{i2},  m2_{i1}_{i2}) + dirac_delta(x, amp_{i1}_{i2}, c_{i1}_{i2})" 
+            else:
+                return f"np.heaviside(c_{i1}_{i2}-x, 0)*br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2}, w1_{i1}_{i2},  m1_{i1}_{i2}) + np.heaviside(x-c_{i1}_{i2}, 0)*br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2},  w2_{i1}_{i2},  m2_{i1}_{i2}) + dirac_delta(x, amp_{i1}_{i2}, c_{i1}_{i2})" 
+        else:
+            if self.is_asymmetric(i1=i1, i2=i2):
+                return f"br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2}, w_{i1}_{i2}, m_{i1}_{i2})"
+            else:
+                return f"br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2}, w_{i1}_{i2}, m_{i1}_{i2})"
+
+    def model(self, i2, i1=None):
+        """Returns a function f(x) for the peak."""
+        var_str = ''
+        for name in self._get_with_index(i1=i1, i2=i2):
+            var_str += f'{name} = self["{name}"].value' + ', '
+
+        model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i1=i1, i2=i2)}'
+        return eval(model_str)
+    
+    def _generate_residual_function(self, yerr=None):
+
+        def residual(params, xs, ys):
+            residual = []
+
+            # make residual per data set
+            for i2, x in enumerate(xs):
+                residual.append(ys[i2] - params.model(i2=i2)(x))
+
+            residual = np.concatenate(residual).ravel()
+            return residual
+
+        return residual
+    
+    def fit(self, xs, ys, yerr=None, method='least_squares', return_fitted_peaks=False):
+        """output, peaks = fit()
+        
+        I think x and y must be monotonic.
+        """
+        residual = self._generate_residual_function(yerr=yerr)
+        if yerr is None:
+            out = lmfit.minimize(residual, method=method, params=self, kws={'xs':xs, 'ys':ys})
+        else:
+            raise NotImplementedError('sorry, not implemented yet')
+            # out = lmfit.minimize(residual, method=method, params=self, args=(x, y, yerr))
+
+        # return peaks2
+        if return_fitted_peaks:
+            return out, out.params
+        else:
+            for name in self:
+                self[name] = out.params[name]
+            return out
+    
+
+
+# %%
+
+
+# %%
+class Peak(MutableMapping):
     """A special dictionary for saving peaks.
 
     Data can be passed as positional argument. The other arguments can only be
@@ -1162,589 +1459,7 @@ class Peaks(MutableMapping):
         for i in range(len(self)):
             self[i].index = i
 
-    def _find_suitable_x(self):
-        vmin  = []
-        vmax  = []
-        step  = []
-        for peak in self:
-            temp = peak._find_suitable_x()
-            vmin.append(min(temp))
-            vmax.append(max(temp))
-            step.append(abs(temp[1]-temp[0]))
-        num = int((max(vmax)-min(vmin))/max(step))+1
-        return np.linspace(min(vmin), max(vmax), num)
-
-    # attributes and properties
-    @property
-    def calib(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].calib
-        return temp
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            # print(type(self[i]))
-            temp[i] = self[i].shift
-        return temp
-    @shift.setter
-    def shift(self, value):
-        self.set_shifts(value, mode='x')
-    @shift.deleter
-    def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_roll(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift_roll
-        return temp
-    @shift_roll.setter
-    def shift_roll(self, value):
-        self.set_shifts(value, mode='roll')
-    @shift_roll.deleter
-    def shift_roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_interp(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift_interp
-        return temp
-    @shift_interp.setter
-    def shift_interp(self, value):
-        self.set_shifts(value, mode='interp')
-    @shift_interp.deleter
-    def shift_interp(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offset(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].offset
-        return temp
-    @offset.setter
-    def offset(self, value):
-        self.set_offsets(value)
-    @offset.deleter
-    def offset(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factor(self):
-        # return self._factor
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].factor
-        return temp
-    @factor.setter
-    def factor(self, value):
-        self.set_factors(value)
-    @factor.deleter
-    def factor(self):
-            raise AttributeError('Cannot delete object.')
-
-    @property
-    def spectrum(self):
-        return self.calculate_spectrum()
-    @spectrum.setter
-    def spectrum(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @spectrum.deleter
-    def spectrum(self):
-            raise AttributeError('Cannot delete object.')
-
-    @property
-    def spectra(self):
-        return self.calculate_spectra()
-    @spectra.setter
-    def spectra(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @spectra.deleter
-    def spectra(self):
-            raise AttributeError('Cannot delete object.')
-
-    # save and load
-    def save(self, filepath='./Untitled.txt', check_overwrite=False):
-        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-            check_overwrite (bool, optional): if True, it will check if file exists
-                and ask if user want to overwrite file.
-
-        Returns:
-            None
-
-        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
-        """
-        filepath = Path(filepath)
-        # check overwrite
-        if check_overwrite:
-            if filepath.exists() == True:
-                if filepath.is_file() == True:
-                    if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
-                        pass
-                    else:
-                        warnings.warn('File not saved because user did not allow overwriting.')
-                        return
-                else:
-                    warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
-                    filepath = filepath/'Untitled.txt'
-
-        string2save = ''
-        for peak in self:
-            string2save += peak._string2save()
-            string2save += '\nend_of_peak\n'
-
-        with open(str(filepath), 'w') as file:
-            file.write(string2save)
-
-    def load(self, filepath):
-        """Load peak from a text file. Wrapper for `json.load()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
-
-        Returns:
-            None
-
-        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
-        """
-        filepath = Path(filepath)
-
-        # remove all peaks
-        for i in range(len(self)):
-            self.remove(0)
-
-        with open(str(filepath), 'r') as file:
-            try:
-                peaks_str = file.read().split('end_of_peak')
-                for peak_str in peaks_str:
-                    temp = br.Peak(amp=0, c=0, fwhm=1)
-                    obj = json.loads(peak_str)
-                    temp._obj_decode(obj)
-                    self.append(temp)
-            except json.JSONDecodeError as e:
-                if peak_str == '\n':
-                    pass
-                else:
-                    raise e
-
-    # basic
-    def append(self, value):
-        """Append peak.
-
-        Args:
-            value (Peak or dict): peak to be appended.
-
-        Returns:
-            None
-        """
-        # value.pretty_print()
-        assert isinstance(value, Peak), 'Only type br.Peak can be appended.'
-        next_index = len(self)
-        value.index = next_index
-        self._store.append(value)
-        
-
-        # update modifiers
-        self._store[-1]._shift         = self.shift[0]
-        self._store[-1]._shift_roll    = self.shift_roll[0]
-        self._store[-1]._shift_interp  = self.shift_interp[0]
-        self._store[-1]._calib   = self.calib[0]
-        self._store[-1]._offset  = self.offset[0]
-        self._store[-1]._factor  = self.factor[0]
-
-        # # check
-        # self.reorder()
-
-    def remove(self, key):
-        """Remove peak.
-
-        Args:
-            key (int or list): peaks to be removed.
-
-        Returns:
-            None
-        """
-        del self._store[key]
-
-    def clear(self):
-        while len(self) > 0:
-            self.remove(0)
-
-    # modifiers
-    def set_calib(self, value, type_='relative'):
-        """Set calibration value.
-
-        Args:
-            value (number): calibration value (x-coordinates will be multiplied
-                by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for i in range(len(self)):
-            self[i].set_calib(value=value[i], type_=type_)
-
-    def set_shifts(self, value, mode, type_='relative'):
-        """Set shift value.
-
-        Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for i in range(len(self)):
-            self[i].set_shift(value=value[i], mode=mode, type_=type_)
-
-    def set_offsets(self, value, type_='relative'):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for i in range(len(self)):
-            self[i].set_offset(value=value[i], type_=type_)
-
-    def set_factors(self, value, type_='relative'):
-        """Set y multiplicative factor.
-
-        if value is a list, type_ is applied. if value is a number, type_ is set to relative.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for i in range(len(self)):
-            self[i].set_factor(value=value[i], type_=type_)
-
-    # plot and visualization
-    def pretty_print(self):
-        for peak in self:
-            print(f'Index: {peak.index}')
-            peak.pretty_print()
-            print('\n')
-
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optional): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-
-        Returns:
-            list with `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-               
-        elif type(ax) == str:
-            raise ValueError(f'ax parameter cannot be type str ("{ax}").')
-
-        r = [None]*len(self)
-        for i in range(len(self)):
-            r[i] = self[i].plot(ax=ax, offset=offset, shift=shift, factor=factor, **kwargs)
-            plt.text(self[i]['c'].value*calib+shift, self[i]['amp'].value*factor+offset, i, fontsize=14)
-        return r
-
-    # calculation and info
-    def _model_str(self):
-        for i in range(len(self)):
-            if i == 0:
-                model_str = self[i]._model_str() + '+'
-            else:
-                model_str += self[i]._model_str() + '+'
-        return model_str[:-1]
-   
-    def model(self):
-        """Returns a function f(x) for the peak."""
-        parvals = self._add_peaks().valuesdict()        
-        model_str = f'lambda x, parvals: {self._model_str()}'
-        final = eval(model_str)
-        return lambda x: final(x, parvals)
-
-    def generate_residual_function(self, x, y):
-        model_str = self._model_str()  
-        p = self._add_peaks()
-
-        def residual(p, x, y):
-            parvals = p.valuesdict()
-            model = eval(model_str)
-            return model-y
-        
-        return residual
-    
-    def fit(self, x, y, method='least_squares', return_fitted_peaks=False):
-        """output, peaks = fit()
-        
-        I think x and y must be monotonic.
-        """
-        residual = self.generate_residual_function(x, y)
-        out = lmfit.minimize(residual, method=method, params=self._add_peaks(), args=(x, y))
-        peaks2 = out.params._split_peaks()
-        # return peaks2
-        if return_fitted_peaks:
-            return out, peaks2
-        else:
-            for i in range(len(self)):
-                for key in self[i]:
-                    self[i][key].value = peaks2[i][key].value
-            return out
-    
-    def find(self, x, y, prominence=5, width=4, moving_average_window=8):
-        """I think x and y must be monotonic and uniform."""
-        # check width and moving_average_window
-        if width < 1:
-            raise ValueError('width must be 1 or higher.')
-        if isinstance(width, int) == False:
-            if width.is_integer() == False:
-                raise ValueError('width must be an integer.')
-        if moving_average_window < 1:
-            raise ValueError('moving_average_window must be 1 or higher.')
-        if isinstance(moving_average_window, int) == False:
-            if moving_average_window.is_integer() == False:
-                raise ValueError('moving_average_window must be an integer.')
-            
-        # data smoothing
-        if moving_average_window > 1:
-            y2 = br.moving_average(y, moving_average_window)
-            x2 = br.moving_average(x, moving_average_window)
-        else:
-            x2 = x
-            y2 = y
-
-        # parameters
-        if prominence is None:
-            prominence = (max(y2)-min(y2))*0.1
-        else:
-            prominence = (max(y2)-min(y2))*prominence/100
-
-        try:
-            peaks, d = find_peaks(y2, prominence=prominence, width=width)
-            assert len(peaks) > 0, 'No peaks found.'
-            self.clear()
-            for i in range(len(peaks)):
-                amp = d['prominences'][i]+max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
-                c = x2[peaks[i]]
-                w = abs(d['widths'][i]*np.mean(np.diff(x)))
-
-                self.append(Peak(amp=amp, c=c, w=w, step=self.step,
-                                                    shift=self.shift, 
-                                                    shift_interp=self.shift_interp,
-                                                    shift_roll=self.shift_roll,
-                                                    shift_offset=self.offset,
-                                                    shift_calib=self.calib,
-                                                    shift_factor=self.factor))
-        except IndexError:
-            pass
-
-    # extractors
-    def _add_peaks(self):
-        for i in range(len(self)):
-            if i == 0:
-                p = self[i].copy()
-            else:
-                p += self[i].copy()
-        return p
-    
-    def calculate_spectra(self, x=None):
-        """Return each peak spectrum separately.
-
-        Args:
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x will be constructed.
-
-        Returns:
-            :py:class:`Spectra`.
-        """
-        if len(self) > 0:
-            if x is None:
-                x = self._find_suitable_x()
-
-            ss = br.Spectra(n=len(self))
-            for i in range(len(self)):
-                ss[i] = self[i].calculate_spectrum(x=x)
-            return ss
-        else:
-            raise ValueError('No peaks defined.')
-
-    def calculate_spectrum(self, x=None):
-        """Return the spectrum with all peaks summed up.
-
-        Args:
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x will be constructed.
-
-        Returns:
-            :py:class:`Spectrum`.
-        """
-        ss = self.calculate_spectra(x=x)
-        s = br.Spectrum(x=ss[0].x, y=np.zeros(len(ss[0].x)))
-        for s1 in ss:
-            s += s1
-        return s
-    
-    def copy(self):
-        temp = Peaks()
-        for peak in self:
-            temp.append(peak.copy())
-        return temp
-
-    # OBSOLETE  
-    def copy2(self, value):
-        if isinstance(value, Peaks):
-            calib  = self.calib
-            shift  = self.shift
-            offset = self.offset
-            factor = self.factor
-
-            # modifiers must be the same 
-            # in case you have a different number of peaks between the current obj
-            # and the one you are coping from.
-            if all_equal(calib) == False:
-                raise RuntimeError('calib have different values for different peaks. All values must be the same.')
-            if all_equal(shift) == False:
-                raise RuntimeError('shift have different values for different peaks. All values must be the same.')
-            if all_equal(offset) == False:
-                raise RuntimeError('offset have different values for different peaks. All values must be the same.')
-            if all_equal(factor) == False:
-                raise RuntimeError('factor have different values for different peaks. All values must be the same.')
-
-            self._store = copy.deepcopy(value._store)
-            for peak in self:
-                peak._calib  = calib
-                peak._shift  = shift
-                peak._offset = offset
-                peak._factor = factor
-        else:
-            raise ValueError('obj to copy must be of type br.Peaks.')
-
-    def set_bounds(self, **kwargs):
-        """Set percentage wise bounds.
-
-        Args:
-
-
-        Return:
-            None
-        """
-        for peak in self:
-            peak.set_bounds(**kwargs)
-
-    def build_guess(self):
-        p0         = []
-        bounds_min = []
-        bounds_max = []
-
-        decode_func = []
-        decode_len  = []
-
-        for p in self:
-            p0_temp, bounds_min_temp, bounds_max_temp, decode_temp = p.build_guess()
-            p0         = p0 + p0_temp
-            bounds_min = bounds_min + bounds_min_temp
-            bounds_max = bounds_max + bounds_max_temp
-            decode_len.append(len(p0_temp))
-            decode_func.append(decode_temp)
-
-
-        def decode(popt, psigma=None):
-            peaks = Peaks()
-
-            cumulative_len_list = [sum(decode_len[0:x:1]) for x in range(0, len(decode_len)+1)]
-            popt = [popt[cumulative_len_list[i]:cumulative_len_list[i+1]] for i in range(0, len(cumulative_len_list)-1)]
-            if psigma is not None:
-                psigma = [psigma[cumulative_len_list[i]:cumulative_len_list[i+1]] for i in range(0, len(cumulative_len_list)-1)]
-
-            for i in range(len(decode_func)):
-                if psigma is not None:
-                    peaks.append(decode_func[i](popt[i], psigma[i]))
-                else:
-                    peaks.append(decode_func[i](popt[i]))
-            return peaks
-
-        return p0, bounds_min, bounds_max, decode
-
-    def build_model_str(self):
-        f_str = ''
-        args_str = ''
-
-        for idx, p in enumerate(self):
-            f_str_temp, args_str_temp = p.build_model_str(idx=idx)
-            f_str = f_str + f_str_temp + ' + '
-            args_str  = args_str  + args_str_temp  + ', '
-
-        return f_str[:-3], args_str[:-2]
-
-    def build_model(self):
-        f_str, args_str = self.build_model_str()
-        # print(f_str)
-        # print(args_str)
-        model_str = f'lambda x, {args_str}: {f_str}'
-        return eval(model_str)
-
-# %%
-class Collection(MutableMapping):
+class _Collection(MutableMapping):
 
     def __init__(self, *args, **kwargs):
         # core
@@ -1791,10 +1506,17 @@ class Collection(MutableMapping):
                 raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
             n_peaks = [len(peaks) for peaks in self]
             if all_equal(n_peaks) == False:
-                print('WARNING: number of peaks is different between spectra')
+                raise ValueError(f'Number of peaks is different between spectra.\nNumber of peaks: {n_peaks}')
             if max(n_peaks) == 0:
                 return {}
             else:
+                # final = []
+                # for j in range(max(n_peaks)):
+                #     if j <= 
+                #         temp = [peaks[j][key].value for peaks in self]
+                #     else:
+                #         pass
+                # return final
                 return [[peaks[j][key].value for peaks in self] for j in range(max(n_peaks))]
         else:
             raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
@@ -2097,170 +1819,3 @@ class Collection(MutableMapping):
         for i in range(len(self)):
             r[i] = self[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
         return r
-
-    # OBSOLETE ##############################
-    @property
-    def calib(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].calib
-        return temp
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift
-        return temp
-    @shift.setter
-    def shift(self, value):
-        self.set_shifts(value)
-    @shift.deleter
-    def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offset(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].offset
-        return temp
-    @offset.setter
-    def offset(self, value):
-        self.set_offsets(value)
-    @offset.deleter
-    def offset(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factor(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].factor
-        return temp
-    @factor.setter
-    def factor(self, value):
-        self.set_factors(value)
-    @factor.deleter
-    def factor(self):
-            raise AttributeError('Cannot delete object.')
-
-    # basic
-    def append(self, value):
-        """Append peak. Peak order is reassigned.
-
-        Args:
-            value (Peak or dict): peak to be appended.
-
-        Returns:
-            None
-        """
-        if isinstance(value, Peaks):
-            # print('here')
-            self._store.append(value)
-        else:
-            raise ValueError('value must be a brixs.Peaks object')
-
-    def remove(self, key):
-        """Remove peak. Peak order is reassigned.
-
-        Args:
-            key (int or list): peaks to be removed.
-
-        Returns:
-            None
-        """
-        if isinstance(key, Iterable):
-            key = [self._check_key(k) for k in key]
-            key = br.sort(key)[::-1]
-            if has_duplicates(key):
-                raise ValueError('list has duplicated peaks')
-            for k in key:
-                del self._store[k]
-        else:
-            del self._store[key]
-
-    # modifiers
-    def set_calib(self, value, type_='relative'):
-        """Set calibration value.
-
-        Args:
-            value (number): calibration value (x-coordinates will be multiplied
-                by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_calib(value=value, type_=type_)
-
-    def set_shifts(self, value, type_='relative'):
-        """Set shift value.
-
-        Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_shifts(value=value, type_=type_)
-
-    def set_offsets(self, value, type_='relative'):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_offsets(value=value, type_=type_)
-
-    def set_factors(self, value, type_='relative'):
-        """Set y multiplicative factor.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        # check if value is a number
-        if isinstance(value, Iterable) == False:
-            value = [value]*len(self)
-
-        # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
-
-        for peaks in self._store:
-            peaks.set_factors(value=value, type_=type_)
