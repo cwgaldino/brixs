@@ -2623,7 +2623,6 @@ class Spectrum(metaclass=_Meta):
 '_shift_interp', '_step', '_monotonicity', '_peaks']
         return [key for key in self.__dict__.keys() if key not in default_attrs]
 
-
     # attributes and properties
     @property
     def data(self):
@@ -2889,12 +2888,12 @@ class Spectrum(metaclass=_Meta):
                 elif isinstance(temp[name], str):
                     temp2 = str(temp[name]).replace('\n','\\n')
                     header += f'{name}: \"{temp2}\"'  + '\n'
-                elif isinstance(temp[name], Iterable):
-                    header += f'{name}: {list(temp[name])}'  + '\n'
-                elif isinstance(temp[name], dict):
+                elif isinstance(temp[name], dict) or isinstance(temp[name], MutableMapping):
                     if verbose:
                         type_ = str(type(temp[name]))
-                        print(r'Warning: Cannot save attr of type: ' + type_ + r'.\attr: '+ name + r'.\nTo turn off this warning, set verbose to False.')
+                        print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
+                elif isinstance(temp[name], Iterable):
+                    header += f'{name}: {list(temp[name])}'  + '\n'
                 elif isinstance(temp[name], numbers.Number):
                     tosave = str(temp[name])
                     if tosave[-1] == '\n':
@@ -3200,7 +3199,7 @@ class Spectrum(metaclass=_Meta):
         # self._reset_modifiers()
         #special
         # self.peaks.clear()
-        self.peaks.set_calib(value=value, type_=type_)
+        # self.peaks.set_calib(value=value, type_=type_)
 
     def set_shift(self, value, mode, type_='absolute'):
         """Set shift value.
@@ -3287,7 +3286,7 @@ class Spectrum(metaclass=_Meta):
             raise ValueError(f'Invalid mode. Valid options are `roll`, `x`, `interp`.')
 
         # special
-        self.peaks.set_shifts(value=value, mode=mode, type_=type_)
+        # self.peaks.set_shift(value=value, mode=mode, type_=type_)
 
     def set_offset(self, value, type_='absolute'):
         """Set offset value.
@@ -3312,7 +3311,7 @@ class Spectrum(metaclass=_Meta):
             self._offset = value
 
         # special
-        self.peaks.set_offsets(value=value, type_=type_)
+        # self.peaks.set_offset(value=value, type_=type_)
 
     def set_factor(self, value, type_='absolute'):
         """Set y multiplicative factor.
@@ -3342,7 +3341,7 @@ class Spectrum(metaclass=_Meta):
             self._factor = value
 
         # special
-        self.peaks.set_factors(value=value, type_=type_)
+        # self.peaks.set_factor(value=value, type_=type_)
 
 
     def floor(self, value=None, n=20, ranges=None):
@@ -4264,7 +4263,7 @@ class Spectra(metaclass=_Meta):
 
     def get_user_defined_attrs(self):
         """return attrs that are user defined."""
-        default_attrs =  ['_data', '_dirpath', '_filepath', '_calculated_shifts', '_calculated_factors', 
+        default_attrs =  ['_data', '_dirpath', '_filepath', '_peaks', '_calculated_shifts', '_calculated_factors', 
 '_calculated_offsets', '_calculated_calib', '_monotonicity', '_x', '_step', '_length']
         return [key for key in self.__dict__.keys() if key not in default_attrs]
     

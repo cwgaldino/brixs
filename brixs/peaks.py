@@ -805,21 +805,22 @@ class Peaks(lmfit.Parameters):
         Returns:
             None
         """
-        # is relative?
-        if type_ in relative:
-            value = self.factor * value
+        pass
+        # # is relative?
+        # if type_ in relative:
+        #     value = self.factor * value
 
-        if self.factor != value:
-            if self.factor != 1:
-                self['amp'].value  = self['amp'].value * self.factor**-1
-                self['area'].value = self['area'].value * self.factor**-1
-            if value != 1:
-                self['amp'].value  = self['amp'].value * value
-                self['area'].value = self['area'].value * value
-            self._factor = value
+        # if self.factor != value:
+        #     if self.factor != 1:
+        #         self['amp'].value  = self['amp'].value * self.factor**-1
+        #         self['area'].value = self['area'].value * self.factor**-1
+        #     if value != 1:
+        #         self['amp'].value  = self['amp'].value * value
+        #         self['area'].value = self['area'].value * value
+        #     self._factor = value
 
-        # check
-        self.update_area_amp()
+        # # check
+        # self.update_area_amp()
 
     # extractors  (TODO)*****
     def _split_params(self):
