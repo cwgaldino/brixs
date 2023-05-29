@@ -184,7 +184,17 @@ class Peaks(lmfit.Parameters):
         return peaks
     
     def _get_with_index(self, i):
-        """return list of names with index i"""
+        """return list of names with index i
+        if i is negative, gets indexes from high to low
+        """
+        if i < 0:
+            try: 
+                i = np.sort(self.get_indexes())[i]
+            except IndexError:
+                raise AssertionError(f'index {i} does not exist\nPeak indexes available: {self.get_indexes()}')
+            
+        assert i in self.get_indexes(), f'index {i} does not exist\nPeak indexes available: {self.get_indexes()}'
+
         final = []
         for name in self:
             index = int(name.split('_')[1])
