@@ -7,9 +7,7 @@
     Image
     PhotonEvents
     Spectrum
-    Spectra
-
-test issue
+    Spectra    
 """
 
 # IDEAS:
@@ -2081,7 +2079,7 @@ class PhotonEvents(metaclass=_Meta):
         # save filepath
         self.filepath = str(filepath)
 
-    def plot(self, ax=None, **kwargs):
+    def plot(self, ax=None, set_limits=True, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
 
         The limits of the plot is also set to the size of the detector (given in
@@ -2089,6 +2087,8 @@ class PhotonEvents(metaclass=_Meta):
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
+            set_limits (book, optional): if True, it sets the plot limits 
+            accordingly to pe.shape
 
         If not specified, the following parameters are passed to `matplotlib.pyplot.scatter()`_:
 
@@ -2105,16 +2105,6 @@ class PhotonEvents(metaclass=_Meta):
             ax = plt
             if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
-                if settings.FIGURE_POSITION is not None:
-                    try:
-                        set_window_position(settings.FIGURE_POSITION)
-                    except:
-                        pass
-            elif plt.get_fignums() == [] and settings.FIGURE_POSITION is not None:
-                try:
-                    set_window_position(settings.FIGURE_POSITION)
-                except:
-                    pass
 
         # kwargs
         if 's' not in kwargs:
@@ -2124,8 +2114,13 @@ class PhotonEvents(metaclass=_Meta):
         pos = ax.scatter(self.data[:, 0], self.data[:, 1], **kwargs)
 
         # set limits
-        ax.xlim(0, self.shape[1])
-        ax.ylim(0, self.shape[0])
+        if set_limits:
+            try:
+                ax.xlim(0, self.shape[1])
+                ax.ylim(0, self.shape[0])
+            except AttributeError:
+                ax.set_xlim(0, self.shape[1])
+                ax.set_ylim(0, self.shape[0])
 
         return pos
 
@@ -3857,6 +3852,7 @@ class Spectrum(metaclass=_Meta):
             ax = plt
             if settings.FIGURE_FORCE_NEW_WINDOW:
                 figure()
+
         x = (x*calib) + shift
         y = y*factor + offset
 

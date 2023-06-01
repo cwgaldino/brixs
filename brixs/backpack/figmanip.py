@@ -1054,34 +1054,70 @@ def hlines(x, xmin=None, xmax=None, colors=None, linestyles='solid', label='', a
 
     ax.hlines(x=x, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
 
-def gridspec(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None, width_ratios=None, height_ratios=None):
+import types
+def gridspec(nrows, ncols, instructions=None):
+    """instructions = row_init, row_final, col_init, col_final, hspace, wspace"""
+    fig = plt.gcf()
 
-    # ratios
-    if width_ratios is None:
-        width_ratios=[1]*ncols
-    if height_ratios is None:
-        height_ratios=[1]*nrows
-    
-    if hspace is None:
-        hspace = .3
-    if wspace is None:
-        wspace = .2
+    if instructions is None:
+        instructions = []
+        for row in range(nrows):
+            for col in range(ncols):
+                instructions.append((row, row, col, col, None, None))
 
-    if sharex:
-        hspace = 0
-    if sharey:
-        wspace = 0
+    axes = []
+    for instruc in instructions:
+        row_init  = instruc[0]
+        row_final = instruc[1]
+        col_init  = instruc[2]
+        col_final = instruc[3]
+        hspace    = instruc[4]
+        wspace    = instruc[5]
 
-    gs = matplotlib.gridspec.GridSpec(nrows, ncols,
-                        height_ratios=height_ratios,
-                        width_ratios=width_ratios,
-                        hspace=hspace,
-                        wspace=wspace)
+        if row_final is None:
+            row_final = nrows-1
+        if col_final is None:
+            col_final = ncols-1
 
-    axes = list()
-    for i in range(0, ncols*nrows):
-        axes.append(plt.gcf().add_subplot(gs[i]))
-    
+        if hspace is None:
+            hspace = .3
+        if wspace is None:
+            wspace = .2
+
+        gs = fig.add_gridspec(nrows, ncols, hspace=hspace, wspace=wspace)
+        axes.append(fig.add_subplot(gs[row_init:row_final+1, col_init:col_final+1]))
+
+
+        def _remove_xticklabels(self):
+            self.tick_params(axis='x', labelbottom=False)
+        def _remove_yticklabels(self):
+            self.tick_params(axis='y', labelbottom=False)
+        def _remove_xticks(self, top=True, bottom=True):
+            if bottom: bottom = False
+            if top:    top    = False
+            self.tick_params(axis='x', which='major', top=top, bottom=bottom)
+            self.tick_params(axis='x', which='minor', top=top, bottom=bottom)
+        def _remove_yticks(self, left=True, right=True):
+            if left:  left  = False
+            if right: right = False
+            self.tick_params(axis='y', which='major', left=left, right=right)
+            self.tick_params(axis='y', which='minor', left=left, right=right)
+        def _remove_spline(self, left=False, right=False, top=False, bottom=False):
+            if left:
+                self.spines['left'].set_visible(False)
+            if right:
+                self.spines['right'].set_visible(False)
+            if top:
+                self.spines['top'].set_visible(False)
+            if bottom:
+                self.spines['bottom'].set_visible(False)
+        for ax in axes:
+            ax.remove_xticklabels = types.MethodType(_remove_xticklabels, ax)
+            ax.remove_yticklabels = types.MethodType(_remove_yticklabels, ax)
+            ax.remove_xticks = types.MethodType(_remove_xticks, ax)
+            ax.remove_yticks = types.MethodType(_remove_yticks, ax)
+            ax.remove_spline = types.MethodType(_remove_spline, ax)
+
     return axes
 
 def subplots(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None, width_ratios=None, height_ratios=None, gridspec_kw=None, **fig_kw):
