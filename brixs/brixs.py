@@ -1244,9 +1244,9 @@ class Image(metaclass=_Meta):
 
         assert self.y_edges is not None, 'y_edges cannot be None.'
         if mode == 'edges':
-            plt.vlines(self.x_edges, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
+            ax.vlines(self.x_edges, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
         elif mode == 'centers':
-            plt.vlines(self.x_centers, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
+            ax.vlines(self.x_centers, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
         else:
             raise AttributeError('mode must be either `edges` or `centers`.')
     
@@ -1259,12 +1259,13 @@ class Image(metaclass=_Meta):
 
         assert self.x_edges is not None, 'x_edges cannot be None.'
         if mode == 'edges':
-            plt.hlines(self.y_edges, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
+            ax.hlines(self.y_edges, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
         elif mode == 'centers':
-            plt.hlines(self.y_centers, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
+            ax.hlines(self.y_centers, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
         else:
             raise AttributeError('mode must be either `edges` or `centers`.')
 
+    #
     def possible_nbins(self):
         """return possible values for nbins in the y (nrows) and x (ncols) directions."""
         return np.sort(list(factors(self.shape[0]))), np.sort(list(factors(self.shape[1])))
@@ -3686,6 +3687,14 @@ class Spectrum(metaclass=_Meta):
             stop = max(self.x)
         self._x, self._y  = extract(self.x, self.y, (start, stop))
 
+    def switch(self):
+        """Switch x and y axis"""
+        x = self.x
+        y = self.y
+
+        self.x = y
+        self.y = x
+
     # extractors
     def _extract(self, ranges):
         """Same as extract(), but attrs are not copied"""
@@ -5224,6 +5233,11 @@ class Spectra(metaclass=_Meta):
         # check
         self._restart_check_attr()
         # self._restart_calculated_modifiers()
+
+    def switch(self):
+        """Switch x and y axis"""
+        for s in self:
+            s.switch()
 
     # plot and visualization
     def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, **kwargs):
