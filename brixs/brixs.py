@@ -2537,6 +2537,10 @@ class Spectrum(metaclass=_Meta):
     def __truediv__(self, object):
         return self.__div__(object)
 
+    def __iter__(self):
+        for y in self.y:
+            yield y
+
     # support
     def _sort_args(self, args, kwargs):
         """checks initial arguments.
@@ -2684,7 +2688,7 @@ class Spectrum(metaclass=_Meta):
             assert len(value) == len(self.x), f'Length of y array (len={len(value)}) you are trying to set is not compatible with current length of the x array (len={len(self.x)}).'
         else:
             self._x = np.arange(0, len(value))
-            self._y = np.array(value, dtype='float')
+        self._y = np.array(value, dtype='float')
         # check
         # self.step         = None
         # self.monotonicity = None
@@ -3689,8 +3693,8 @@ class Spectrum(metaclass=_Meta):
 
     def switch(self):
         """Switch x and y axis"""
-        x = self.x
-        y = self.y
+        x = copy.deepcopy(self.x)
+        y = copy.deepcopy(self.y)
 
         self.x = y
         self.y = x
@@ -4139,13 +4143,6 @@ class Spectra(metaclass=_Meta):
 
     def __repr__(self):
         return str({i:val for i, val in enumerate(self.data)})[1:-1].replace(', ', '\n')
-
-    def __next__(self):
-        result = self.data[self._index]
-        self._index +=1
-        return result
-        # End of Iteration
-        raise StopIteration
 
     def __getitem__(self, item):
         if isinstance(item, int):
