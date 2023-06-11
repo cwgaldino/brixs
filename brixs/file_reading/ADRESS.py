@@ -443,7 +443,7 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
     if scans is None:
         scans = np.arange(start_scan, stop_scan+1)
 
-    # rebinning
+    # rebinning and read data
     if nbins is not None:
         sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
         for i, scan in enumerate(scans):

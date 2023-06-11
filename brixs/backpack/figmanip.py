@@ -1043,7 +1043,7 @@ def vlines(x, ymin=None, ymax=None, colors=None, linestyles='solid', label='', a
 
     ax.vlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, label=label, **kwargs)
 
-def hlines(x, xmin=None, xmax=None, colors=None, linestyles='solid', label='', ax=None, **kwargs):
+def hlines(y, xmin=None, xmax=None, colors=None, linestyles='solid', label='', ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
@@ -1052,7 +1052,7 @@ def hlines(x, xmin=None, xmax=None, colors=None, linestyles='solid', label='', a
     if xmax is None:
         xmax = ax.get_xlim()[1]
 
-    ax.hlines(x=x, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
+    ax.hlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
 
 import types
 def gridspec(nrows, ncols, instructions=None):

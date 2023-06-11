@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import lmfit
 from scipy.signal import find_peaks
 from collections.abc import Iterable, MutableMapping
-# import json
+import numbers
 
 # backpack
 from .backpack.filemanip import filelist
@@ -64,38 +64,60 @@ class Peaks(lmfit.Parameters):
             raise AttributeError('Cannot delete object.')
 
     def append(self, amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None):
-        index = self.next_index
+        # define index
+        indexes = self.get_indexes()
+        if indexes == []:
+            index = 0
+        else:
+            index = max(indexes) + 1
 
-        if area is None and amp is not None:
+        # check parameters
+        assert area is not None or amp is not None, 'amp or area not defined'
+        assert c is not None, 'c not defined'
+        assert w is not None or (w1 is not None and w2 is not None), 'Either w or (w1 and w2) must be defined'
+
+        assert area is None or isinstance(area, numbers.Number), 'area must be a number'
+        assert amp is None or isinstance(amp, numbers.Number), 'amp must be a number'
+        assert c is None or isinstance(c, numbers.Number), 'c must be a number'
+        assert w is None or isinstance(w, numbers.Number), 'w must be a number'
+        assert w1 is None or isinstance(w1, numbers.Number), 'w1 must be a number'
+        assert w2 is None or isinstance(w2, numbers.Number), 'w2 must be a number'
+        assert m is None or isinstance(m, numbers.Number), 'm must be a number'
+        assert m1 is None or isinstance(m1, numbers.Number), 'm1 must be a number'
+        assert m2 is None or isinstance(m2, numbers.Number), 'm2 must be a number'
+
+        if isinstance(w, numbers.Number):
+            assert w >= 0, 'w must be positive'
+        if isinstance(w1, numbers.Number):
+            assert w1 >= 0, 'w1 must be positive'
+        if isinstance(w2, numbers.Number):
+            assert w2 >= 0, 'w2 must be positive'
+
+        if isinstance(m, numbers.Number):
+            assert m <= 1 and m >= 0, 'm must be positive less than 1'
+        if isinstance(m1, numbers.Number):
+            assert m1 <= 1 and m1 >= 0, 'm1 must be positive less than 1'
+        if isinstance(m2, numbers.Number):
+            assert m2 <= 1 and m2 >= 0, 'm2 must be positive less than 1'
+
+        # add peak
+        if area is None:
             self.add(f'amp_{index}', value=amp, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-        elif amp is None and area is not None:
+        else:
             self.add(f'area_{index}', value=area, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-        else:
-            raise ValueError('amp or area not defined')
-        
-        if c is not None:
-            self.add(f'c_{index}',   value=c,   vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-        else:
-            raise ValueError('c not defined')
 
-        if w is not None:
-            self.add(f'w_{index}', value=w, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-            self.add(f'm_{index}', value=m, vary=False, min=0, max=1, expr=None, brute_step=None)
-        elif w1 is not None and w2 is not None:
+        self.add(f'c_{index}',   value=c,   vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+
+        if w1 is not None and w2 is not None:
             self.add(f'w1_{index}', value=w1, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
             self.add(f'w2_{index}', value=w2, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
             self.add(f'm1_{index}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
-            self.add(f'm2_{index}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
+            self.add(f'm2_{index}', value=m2, vary=False, min=0, max=1, expr=None, brute_step=None)
         else:
-            raise ValueError('Either w or (w1 and w2) must be defined')
-
-        self.next_index += 1
+            self.add(f'w_{index}', value=w, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+            self.add(f'm_{index}', value=m, vary=False, min=0, max=1, expr=None, brute_step=None)
 
     def add(self, name, value=None, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None):
-        # # check if name is valid
-        # if not name.startswith(tuple(names)):
-        #     raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
-
         # add
         super().add(name, value=value, vary=vary, min=min, max=max, expr=expr, brute_step=brute_step)
 
@@ -148,11 +170,14 @@ class Peaks(lmfit.Parameters):
             else:
                 raise ValueError(f'Cannot find parameter: {name}')
 
-    def __delitem__(self, i):
-        names = self._get_with_index(i=i)
-        for name in names:
-            del self[name]
-    
+    # def __delitem__(self, i):
+    #     if isinstance(i, int):
+    #         names = self._get_with_index(i=i)
+    #         for name in names:
+    #             del self[name]
+    #     else:
+    #         del self[i]
+
     def length(self):
         return len(self.get_indexes())
     
@@ -349,17 +374,61 @@ class Peaks(lmfit.Parameters):
         """Remove peak.
 
         Args:
-            key (int or list): peaks to be removed.
+            key (int): peaks to be removed.
 
         Returns:
             None
         """
-        for name in self._get_with_index(i=i):
+        names = self._get_with_index(i=i)
+        for name in names:
             del self[name]
 
     def clear(self):
+        """Erase all peaks."""
         super().clear()
         self.next_index = 0
+
+    def replace_index(self, i, i_new):
+        """Change the index of a peak."""
+        # check i exists
+
+        # check i_new is int
+
+        # get params
+        params = self.get_params_with_index(i)
+
+        # create new
+        for p in params:
+            name_new = params[p].name.split('_')[0] + '_' + str(i_new)
+            self.add(name=name_new, 
+                     value=params[p].value, 
+                     vary=params[p].vary, 
+                     min=params[p].min, 
+                     max=params[p].max, 
+                     expr=params[p].expr, 
+                     brute_step=params[p].brute_step)
+        
+        # delete old
+        self.remove(i)
+
+    def fix_indexes(self):
+        """Fix indexes so they start from zero."""
+        indexes = self.get_indexes()
+        final = len(indexes)
+        
+        # replace indexes
+        for i_new, index in enumerate(np.sort(indexes)):
+            if i_new != index:
+                self.replace_index(index, i_new)
+
+        # remove
+        for index in self.get_indexes():
+            if index >= final:
+                self.remove(index)
+
+    def reorder(self, attr='c'):
+        """Change peak indexes based on the position of the peak or other attr."""
+        raise NotImplementedError('sorry, not implemented yet.')
 
     # plot and visualization
     def plot(self, i=None, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
@@ -579,6 +648,7 @@ class Peaks(lmfit.Parameters):
         
         I think x and y must be monotonic.
         """
+        self.check_feasibility()
         residual = self._generate_residual_function(x=x, y=y, yerr=yerr, i=i)
         if yerr is None:
             out = lmfit.minimize(residual, method=method, params=self, args=(x, y))
@@ -633,6 +703,17 @@ class Peaks(lmfit.Parameters):
                 self.append(amp=amp, c=c, w=w)
         except IndexError:
             pass
+
+    def check_feasibility(self):
+        """Check if start values are within boundaries."""
+        for p in self:
+            value = self[p].value
+            vmax  = self[p].max
+            vmin  = self[p].min
+
+            if value > vmax or value < vmin:
+                raise ValueError(f'Start value for parameter {p} is out of bounds\nbound max = {vmax}\nstart value = {value}\nbound min = {vmin}')
+
 
     # %% attributes and properties  (TODO)*****
     @property
@@ -972,6 +1053,8 @@ class Collection(lmfit.Parameters):
             return self.split_peaks_per_spectrum()[name]
         
         elif type(name) == str:
+            if len(name.split('_')) == 1:
+                raise NotImplementedError('sorry, calling __getitem___ like this is not implemented yet.')
             if len(name.split('_')) == 2:
                 return self.get_values(attr=name)
             if len(name.split('_')) == 3:
@@ -982,18 +1065,67 @@ class Collection(lmfit.Parameters):
     
     def length(self):
         return len(self._get_indexes_i2())
-    
-    # basic
-    # def append(self, peaks):
-    #     temp = peaks.copy()
-    #     for name in temp:
-    #         temp[name].set(expr='')
-    #         self[name + f'_{i}'] = temp[name]
 
-    #     for name in peaks:
-    #         self[name + f'_{self.next_index}'] = peaks[name]
-    #     self.next_index += 1 
+    def append(self, i2='all', amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None):
 
+        # check parameters
+        assert area is not None or amp is not None, 'amp or area not defined'
+        assert c is not None, 'c not defined'
+        assert w is not None or (w1 is not None and w2 is not None), 'Either w or (w1 and w2) must be defined'
+
+        assert area is None or isinstance(area, numbers.Number), 'area must be a number'
+        assert amp is None or isinstance(amp, numbers.Number), 'amp must be a number'
+        assert c is None or isinstance(c, numbers.Number), 'c must be a number'
+        assert w is None or isinstance(w, numbers.Number), 'w must be a number'
+        assert w1 is None or isinstance(w1, numbers.Number), 'w1 must be a number'
+        assert w2 is None or isinstance(w2, numbers.Number), 'w2 must be a number'
+        assert m is None or isinstance(m, numbers.Number), 'm must be a number'
+        assert m1 is None or isinstance(m1, numbers.Number), 'm1 must be a number'
+        assert m2 is None or isinstance(m2, numbers.Number), 'm2 must be a number'
+
+        if isinstance(w, numbers.Number):
+            assert w >= 0, 'w must be positive'
+        if isinstance(w1, numbers.Number):
+            assert w1 >= 0, 'w1 must be positive'
+        if isinstance(w2, numbers.Number):
+            assert w2 >= 0, 'w2 must be positive'
+
+        if isinstance(m, numbers.Number):
+            assert m <= 1 and m >= 0, 'm must be positive less than 1'
+        if isinstance(m1, numbers.Number):
+            assert m1 <= 1 and m1 >= 0, 'm1 must be positive less than 1'
+        if isinstance(m2, numbers.Number):
+            assert m2 <= 1 and m2 >= 0, 'm2 must be positive less than 1'
+
+        # run
+        if i2 == 'all':
+            for i2 in self._get_indexes_i2():
+                self.append(i2=i2, amp=amp, c=c, w=w, w1=w1, w2=w2, m=m, m1=m1, m2=m2, area=area)
+            return
+        else:
+            # define index
+            indexes_i1 = self._get_indexes_i1(i2=i2)
+            if indexes_i1 == []:
+                i1 = 0
+            else:
+                i1 = max(indexes_i1) + 1
+
+            # add parameters
+            if area is None:
+                self.add(f'amp_{i1}_{i2}', value=amp, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            else:
+                self.add(f'area_{i1}_{i2}', value=area, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            
+            self.add(f'c_{i1}_{i2}',   value=c,   vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+
+            if w1 is not None and w2 is not None:
+                self.add(f'w1_{i1}_{i2}', value=w1, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+                self.add(f'w2_{i1}_{i2}', value=w2, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+                self.add(f'm1_{i1}_{i2}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
+                self.add(f'm2_{i1}_{i2}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
+            else:
+                self.add(f'w_{i1}_{i2}', value=w, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
+                self.add(f'm_{i1}_{i2}', value=m, vary=False, min=0, max=1, expr=None, brute_step=None)
 
     # support   
     def copy(self, *args):
@@ -1129,6 +1261,7 @@ class Collection(lmfit.Parameters):
             raise ValueError(f'amp/area not found for i1={i1}, i2={i2}')
    
     def get_values(self, attr, i1=None):
+        """returns a list with values of a peak for all spectra"""
         final = []
         if i1 is None:
             i1 = attr.split('_')[1]
@@ -1305,11 +1438,23 @@ class Collection(lmfit.Parameters):
 
         return residual
     
+    def check_feasibility(self):
+        """Check if start values are within boundaries."""
+        for p in self:
+            value = self[p].value
+            vmax  = self[p].max
+            vmin  = self[p].min
+
+            if value > vmax or value < vmin:
+                raise ValueError(f'Start value for parameter {p} is out of bounds\nbound max = {vmax}\nstart value = {value}\nbound min = {vmin}')
+
     def fit(self, xs, ys, yerr=None, method='least_squares', return_fitted_peaks=False):
         """output, peaks = fit()
         
         I think x and y must be monotonic.
         """
+        self.check_feasibility()
+
         residual = self._generate_residual_function(yerr=yerr)
         if yerr is None:
             out = lmfit.minimize(residual, method=method, params=self, kws={'xs':xs, 'ys':ys})
@@ -1324,509 +1469,4 @@ class Collection(lmfit.Parameters):
             for name in self:
                 self[name] = out.params[name]
             return out
-    
 
-
-# %%
-
-
-# %%
-class Peak(MutableMapping):
-    """A special dictionary for saving peaks.
-
-    Data can be passed as positional argument. The other arguments can only be
-        passed as keyword arguments.
-
-    Example:
-        .. code-block:: python
-
-            p1 = br.Peak(amp=1, c=0, fwhm=10)
-            p2 = br.Peak(amp=1, c=1, fwhm1=10, fwhm2=5)
-
-            ps = br.Peaks(p1, p2)
-            ps = br.Peaks([p1, p2])
-
-    Args:
-        data (list): can be passed as positional arguments
-        shift( number): initial shift value (does not have initial effect over the data).
-        calib (number): initial calibration value (does not have initial effect over the data).
-        offset( number): initial offset value (does not have initial effect over the data).
-        factor (number): initial multiplicative factor (does not have initial effect over the data).
-        *args: Peak objects
-    """
-
-    def __init__(self, *args, **kwargs):
-        # core
-        self._store = []
-
-        # sort
-        data, filepath = self._sort_args(args, kwargs)
-
-        # data
-        if data is not None:
-            if isinstance(data, Iterable):
-                for peak in data:
-                    self.append(peak)
-            else:
-                raise TypeError('data must be a list or tuple')
-        elif filepath is not None:
-            self.load(filepath)
-        
-    # basic
-    def __str__(self):
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
-        return str({i:peak for i, peak in enumerate(self._store)})#[1:-1].replace(', ', '\n\n')
- 
-
-    def __repr__(self):
-        return str({i:peak for i, peak in enumerate(self._store)})#[1:-1].replace(', ', '\n\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace('}, ', '}\n')
-        # return str({i:val for i, val in enumerate(self._store)})[1:-1].replace(', ', '\n\n')
-        # return str(self._store)
-
-    def __getitem__(self, key):
-        if isinstance(key, int):
-            return self._store[key]
-        elif isinstance(key, slice):
-            return Peaks(self._store[key])
-        else:
-            raise TypeError('Index must be int or a slice, not {}'.format(type(key).__name__))
-
-    def __setitem__(self, key, value):
-        if isinstance(key, int):
-            if isinstance(value, Peak):
-                self._store[key] = value
-            else:
-                raise TypeError('value must be br.Peak, not {}'.format(type(key).__name__))
-        else:
-            raise TypeError('Index must be int, not {}'.format(type(key).__name__))
-
-    def __delitem__(self, key):
-        del self._store[key]
-
-    def __iter__(self):
-        return iter(self._store)
-
-    def __len__(self):
-        return len(self._store)
-
-    # support
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finally
-            3) filepath. For example, if `data` and `filepath` are passed as
-            arguments, `filepath` is ignored.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath. If two data sets are passed, it will
-            assume one is the x coordinates and the next one is the y coordinates.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, x, y, filepath
-        """
-        if kwargs != {} and args != ():
-            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
-        if any([item not in ['data', 'filepath'] for item in kwargs.keys()]):
-            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `dirpath`, and `filepaths`\nInput attributes: {kwargs.keys()}')
-
-        data     = None
-        filepath = None
-        if 'data' in kwargs:
-            data = kwargs['data']
-        elif 'filepath' in kwargs:
-            filepath = kwargs['filepath']
-        elif len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = Path(args[0])
-            elif isinstance(args[0], Peak):
-                    data = [args[0], ]
-            elif isinstance(args[0], Iterable):
-                data = args[0]
-        elif len(args) > 1:
-            data = args
-        return data, filepath
-
-    def reorder(self):
-        """Change the order of the peaks in the list according to its position c."""
-        if self == []:
-            return
-        else:
-            l = len(self)
-            c = [0]*l
-            for i, peak in enumerate(self):
-                c[i] = peak['c'].value
-            if sum(1 for test in np.diff(c) if test < 0) > 0:
-                self._store = br.sort(c, self._store)
-        
-        # update index
-        for i in range(len(self)):
-            self[i].index = i
-
-class _Collection(MutableMapping):
-
-    def __init__(self, *args, **kwargs):
-        # core
-        self._store = []
-
-        # argument parsing
-        data, dirpath, filepaths = self._sort_args(args, kwargs)
-
-        # data
-        if data is not None:
-            if isinstance(data, Peaks):
-                self.append(data)
-            elif isinstance(data, Iterable):
-                for peaks in data:
-                    self.append(peaks)
-            else:
-                raise ValueError('data must be a list of type brixs.Peaks.')
-        elif dirpath is not None:
-            self.load(dirpath)
-        elif filepaths is not None:
-            self.load(filepaths)
-
-    # basic
-    def __str__(self):
-        # temp = str([val for i, val in enumerate(self._store)])[1:-1].replace('], [', ']\n=======\n[')
-        # return temp.replace('}, {', '}\n{')
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
-        return str(self._store)
-    
-    def __repr__(self):
-        return str(self._store)
-        # temp = str([val for i, val in enumerate(self._store)])[1:-1].replace('], [', ']\n=======\n[')
-        # return temp.replace('}, {', '}\n{')
-        # return str(self._store)
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace('}, ', '}\n=====\n')
-        # return str([val for i, val in enumerate(self._store)])[1:-1].replace(', ', '\n=======\n')
-
-    def __getitem__(self, key):
-        if type(key) == int:
-            return self._store[key]
-        
-        elif type(key) == str:
-            if key not in names:
-                raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-            n_peaks = [len(peaks) for peaks in self]
-            if all_equal(n_peaks) == False:
-                raise ValueError(f'Number of peaks is different between spectra.\nNumber of peaks: {n_peaks}')
-            if max(n_peaks) == 0:
-                return {}
-            else:
-                # final = []
-                # for j in range(max(n_peaks)):
-                #     if j <= 
-                #         temp = [peaks[j][key].value for peaks in self]
-                #     else:
-                #         pass
-                # return final
-                return [[peaks[j][key].value for peaks in self] for j in range(max(n_peaks))]
-        else:
-            raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-
-    def __setitem__(self, key, value):
-        print('nothing to set')
-        # if isinstance(value, Peaks):
-        #     self._store[key] = value
-        # else:
-        #     raise ValueError('value must be a brixs.Peaks object')
-
-    def __delitem__(self, key):
-        print('nothing to del')
-        # del self._store[key]
-
-    def __iter__(self):
-        return iter(self._store)
-
-    def __len__(self):
-        return len(self._store)
-
-    # support
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-         Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finally
-            3) filepath. For example, if `data` and `filepath` are passed as
-            arguments, `filepath` is ignored.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath. If two data sets are passed, it will
-            assume one is the x coordinates and the next one is the y coordinates.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, x, y, filepath
-        """
-        # print(kwargs)
-        # print(args)
-        if kwargs != {} and args != ():
-            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
-        if any([item not in ['data', 'dirpath'] for item in kwargs.keys()]):
-            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `dirpath`, and `filepaths`\nInput attributes: {kwargs.keys()}')
-
-        data      = None
-        dirpath   = None
-        filepaths = None
-        if 'data' in kwargs:
-            data = kwargs['data']
-        elif 'dirpath' in kwargs:
-            dirpath = kwargs['dirpath']
-        elif 'filepaths' in kwargs:
-            filepaths = kwargs['filepaths']
-        elif len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                temp = Path(args[0])
-                if temp.is_file():
-                    filepaths = [temp, ]
-                elif temp.is_dir():
-                    dirpath = temp
-                else:
-                    raise ValueError(f'cannot read dirpath or filepath.\nError: {dirpath}')
-            elif isinstance(args[0], Iterable):
-                if isinstance(args[0][0], str) or isinstance(args[0][0], Path):
-                    filepaths = [Path(x) for x in args[0]]
-                else:
-                    data = args[0]
-        elif len(args) > 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepaths = [Path(x) for x in args]
-            elif isinstance(args[0], Iterable):
-                data = args
-        return data, dirpath, filepaths
-
-    # save and load
-    def save(self, dirpath='./', prefix='peaks_', suffix='.dat', zfill=None, verbose=False, **kwargs):
-        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-            check_overwrite (bool, optional): if True, it will check if file exists
-                and ask if user want to overwrite file.
-
-        Returns:
-            None
-
-        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
-        """
-        dirpath = Path(dirpath)
-
-        # check if dirpath is a directory
-        assert dirpath.exists(), f'dirpath does not exists.\ndirpath: {dirpath}'
-        assert dirpath.is_dir(), f'dirpath is not a directory.\ndirpath: {dirpath}'
-
-        # set filenames
-        if zfill is None:
-            zfill = n_digits(len(self)-1)[0]
-
-        # saving
-        if verbose: print('saving files...')
-        for i, peaks in enumerate(self):
-            filename = f'{prefix}' + f'{i}'.zfill(zfill) + f'{suffix}'
-            if verbose:  print(f':{i}/{len(self)-1}: {filename}')
-            peaks.save(filepath=dirpath/filename, **kwargs)
-        if verbose: print('Done!')
-
-    def _load(self, dirpath, string='*', verbose=True):
-        """THIS FUNCTION WORKS, BUT IT DOES NOT WORK WELL ON A SPECTRA OBJECT.
-        
-        Load peak from a text file. Wrapper for `json.load()`_.
-
-        Args:
-            dirpath (string or path object, optional): filepath, list of 
-                filepaths (or folderpaths), or folderpath.
-                If filepath, peak is loaded from file and appended. 
-                If list, each filepath within the list is loaded.
-                If folderpath,
-                All files inside folder are loaded and peaks are appended.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
-            string (str, optional): file names without this string will be ignored.
-                Use '*' for matching anything. Default is '*'.
-            verbose (bool, optional): verbose. Default is True.
-
-
-        Returns:
-            None
-
-        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
-        """
-        # reset data
-        self._store     = []
-
-        # if dirpath is str
-        if isinstance(dirpath, str) or isinstance(dirpath, Path):
-            dirpath = Path(dirpath)
-            if dirpath.is_file():
-                if verbose: print('dirpath is a file')
-                if verbose: print('Loading...')
-                self.append(Peaks(filepath=dirpath))
-                if verbose: print('Done!')
-                return
-            elif dirpath.is_dir():
-                dirpath = [dirpath, ]
-            else:
-                raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
-
-        # if dirpath is iterable
-        if isinstance(dirpath, Iterable):
-            if verbose: print('Loading...')
-            for j, filepath in enumerate(dirpath):
-                if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
-                
-                if Path(filepath).is_dir():
-                    fl = filelist(dirpath=filepath, string=string)
-                    for i, f in enumerate(fl):
-                        if verbose: print(f'    {i+1}/{len(fl)}: {f}')
-                        self.append(Peaks(filepath=f))
-
-                elif Path(filepath).is_file():
-                    self.append(Peaks(filepath=filepath))
-                else:
-                    raise ValueError(f'cannot read filepath.\nfilepath: {dirpath}')
-        if verbose: print('Done!')
-        # print(self._store)
-
-    # calculation and info
-    def calculate_spectra(self, x=None):
-        ss = br.Spectra()
-        for peaks in self:
-            s = peaks.calculate_spectrum(x=x)
-            ss.append(s)
-        return ss
-
-    def errors(self, key):
-        if type(key) == int:
-            return self._store[key]
-        
-        elif type(key) == str:
-            if key not in names:
-                raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-            n_peaks = [len(peaks) for peaks in self]
-            if all_equal(n_peaks) == False:
-                print('WARNING: number of peaks is different between spectra')
-            if max(n_peaks) == 0:
-                return {}
-            else:
-                return [[peaks[j][key].stderr for peaks in self] for j in range(max(n_peaks))]
-        else:
-            raise KeyError(f"Collection indices must be integers or a peak attribute ({names})")
-        
-    # plotting and visualization
-    def pretty_print(self):
-        for i in range(len(self)):
-            print('='*5 + ' Spectrum ' + str(i) + ' ' + '='*5)
-            self[i].pretty_print()
-            print('\n')
-
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optionakl): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-
-        Returns:
-            dict with `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-        elif type(ax) == str:
-            raise ValueError(f'ax parameter cannot be type str ("{ax}").')
-        # elif type(ax) == module:
-        #     ax = plt
-
-        # percentage wise increment ====================
-        if 'vi' in kwargs and 'vertical_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: vertical increment/vi')
-        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
-            if 'vi' in kwargs:
-                vi = kwargs['vi']
-                del kwargs['vi']
-            if 'vertical_increment' in kwargs:
-                vi = kwargs['vertical_increment']
-                del kwargs['vertical_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].y) - min(self.data[i].y)
-            vi = max(temp)*factor*vi/100
-        else:
-            vi = 0
-
-        # percentage wise horizontal increment ====================
-        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
-        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
-            if 'hi' in kwargs:
-                hi = kwargs['hi']
-                del kwargs['hi']
-            if 'horizontal_increment' in kwargs:
-                hi = kwargs['horizontal_increment']
-                del kwargs['horizontal_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].x) - min(self.data[i].x)
-            hi = max(temp)*factor*hi/100
-        else:
-            hi = 0
-
-        # offset
-        if isinstance(offset, Iterable):
-            if len(offset) != len(self):
-                raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
-        else:
-            offset = [offset]*len(self)
-            for i in range(len(self)):
-                offset[i] = offset[i]+(vi*i)
-
-        # shift
-        if isinstance(shift, Iterable):
-            if len(shift) != len(self):
-                raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
-        else:
-            shift = [shift]*len(self)
-            for i in range(len(self)):
-                shift[i] = shift[i]+(hi*i)
-
-        # calib
-        if isinstance(calib, Iterable):
-            if len(calib) != len(self):
-                raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
-        else:
-            calib = [calib]*len(self)
-
-        # factor
-        if isinstance(factor, Iterable):
-            if len(factor) != len(self):
-                raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
-        else:
-            factor = [factor]*len(self)
-
-
-        # plot
-        r = [0]*len(self)
-        for i in range(len(self)):
-            r[i] = self[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
-        return r

@@ -9,17 +9,22 @@ from .model_functions import voigt_fwhm
 from functools import reduce
 
 
-def index(x, value):
-    """Returns the index of the element in array which is closest to value.
+def index(x, value, closest=True):
+    """Returns the first index of the element in array.
 
     Args:
         x (list or array): 1D array.
         value (float or int): value.
+        closest (book, optional): if True, returns the index of the element in 
+            array which is closest to value.
 
     Returns:
         index (int)
     """
-    return int(np.argmin(np.abs(np.array(x)-value)))
+    if closest:
+        return int(np.argmin(np.abs(np.array(x)-value)))
+    else:
+        return np.where(x == value)[0]
 
 def sort(ref, *args):
     """Returns sorted arrays based on a reference array.
