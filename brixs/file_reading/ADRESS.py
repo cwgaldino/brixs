@@ -112,7 +112,7 @@ def _unpack_attrs(s):
         params['pol'] = 'LH'
     
     # phi
-    params['phi'] = np.mean(s.SamplePhi)
+    params['phi'] = round(np.mean(s.SamplePhi), 2)
 
     # Temperature
     temp = s.SampleTemp
@@ -152,7 +152,7 @@ def _unpack_attrs_xas(s):
     s.th   = float(s.Manipulator_Theta[:-3])
     s.slit = float(s.Exit_slit[:-3])
 
-def _read_1(filepath, type_='spectrum'):
+def _read_1(filepath, type_='spectrum', keep_attr=False):
     """Read one file from ADRESS beamline.
 
     Args:
@@ -187,6 +187,9 @@ def _read_1(filepath, type_='spectrum'):
         for attr in nd:
             setattr(s, attr, nd[attr])
         _unpack_attrs(s)
+        if keep_attr == False:
+            for attr in nd:
+                delattr(s, attr)
 
         # label
         s.xlabel = 'bins'
@@ -451,7 +454,7 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
             for ccd in (0, 1, 2):
                 pes[ccd].set_shifts(p=curvature[ccd], axis=0)
                 s = pes[ccd].calculate_spectrum(nbins=nbins)
-                s.PhotonEnergy = pes[ccd].PhotonEnergy
+                s.E = pes[ccd].E
                 sss[ccd][i] = s
     else:
         # get data
@@ -464,7 +467,7 @@ def calib(folderpath, prefix, mode='cc', start_scan=None, stop_scan=None, scans=
     # get energies
     if energies is None:
         if start_energy is None and stop_energy is None:
-            energies = [np.mean(s.PhotonEnergy) for s in sss[0]]
+            energies = [np.mean(s.E) for s in sss[0]]
         else:
             energies = np.linspace(start_energy, stop_energy, len(scans))
     assert len(scans) == len(energies), f'number of energies ({len(energies)}) do not match the number of scans ({len(scans)})'
@@ -514,22 +517,27 @@ def final(folderpath, prefix, scan, calib=None, zero_mode=None, ref_spectrum=Non
             for i in range(len(ss)):
                 ss[i].calib = calib[i]
             ss.interp()
-            ss.align()
+            ss.align(ref_spectrum=0)
             s = ss.sum
         else:
-            ss.align()
+            ss.align(ref_spectrum=0)
             s = ss.sum
             s.calib = calib
         s.xlabel = 'energy'
     else:
-        ss.align()
+        ss.align(ref_spectrum=0)
         s = ss.sum
+    s.ylabel='rixs'
 
     # save attrs to final spectrum
     for attr in ss[0].get_user_defined_attrs():
-        value = br.flatten([getattr(ss[i], attr) for i in (0, 1, 2)])
-        setattr(s, attr, value)
-    _unpack_attrs(s)
+        # value = br.flatten([getattr(ss[i], attr) for i in (0, 1, 2)])
+        setattr(s, attr, getattr(ss[0], attr))
+        delattr(s, attr+'_0')
+        delattr(s, attr+'_1')
+        delattr(s, attr+'_2')
+    delattr(s, 'ccd')
+    # _unpack_attrs(s)
 
     # zero
     if zero_mode is not None:

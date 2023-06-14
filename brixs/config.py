@@ -35,6 +35,12 @@ class _settings():
         self.FIGURE_SIZE     = None
         self.FIGURE_DPI      = None
         
+        self.SAVE_CHECK_OVERWRITE = True
+
+        # not implemented yet
+        # self.SPECTRUM_DEFAULT_EXT      = None
+        # self.PHOTON_EVENTS_DEFAULT_EXT = None
+        # self.IMAGE_DEFAULT_EXT         = None
 
         # not implemented yet
         # self.FIGURE_UPDATE_POSITION   = False  # if True, open next figure with same position as the current figure

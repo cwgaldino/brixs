@@ -38,10 +38,12 @@ decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
 
 # %% Peaks =====================================================================
 class Peaks(lmfit.Parameters):
+    """m vary is false by default
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__()
-
-        self.next_index = 0
+        self._reset_modifiers()
 
     @property
     def spectrum(self):
@@ -170,14 +172,6 @@ class Peaks(lmfit.Parameters):
             else:
                 raise ValueError(f'Cannot find parameter: {name}')
 
-    # def __delitem__(self, i):
-    #     if isinstance(i, int):
-    #         names = self._get_with_index(i=i)
-    #         for name in names:
-    #             del self[name]
-    #     else:
-    #         del self[i]
-
     def length(self):
         return len(self.get_indexes())
     
@@ -201,14 +195,14 @@ class Peaks(lmfit.Parameters):
         
         peaks = Peaks()
         if i is not None:
-            names = self._get_with_index(i=i)
+            names = self._get_names_with_index(i=i)
         else:
             names = list(self.keys())
         for name in names:
             peaks[name] = copy.deepcopy(self[name])
         return peaks
     
-    def _get_with_index(self, i):
+    def _get_names_with_index(self, i):
         """return list of names with index i
         if i is negative, gets indexes from high to low
         """
@@ -228,7 +222,7 @@ class Peaks(lmfit.Parameters):
         return final
     
     def get_params_with_index(self, i):
-        names = self._get_with_index(i=i)
+        names = self._get_names_with_index(i=i)
         final = {}
         for name in names:
             final[name.split('_')[0]] = self[name]
@@ -379,14 +373,13 @@ class Peaks(lmfit.Parameters):
         Returns:
             None
         """
-        names = self._get_with_index(i=i)
+        names = self._get_names_with_index(i=i)
         for name in names:
             del self[name]
 
     def clear(self):
         """Erase all peaks."""
         super().clear()
-        self.next_index = 0
 
     def replace_index(self, i, i_new):
         """Change the index of a peak."""
@@ -593,7 +586,7 @@ class Peaks(lmfit.Parameters):
             for name in self:
                 var_str += f'{name} = self["{name}"].value' + ', '
         else:
-            for name in self._get_with_index(i=i):
+            for name in self._get_names_with_index(i=i):
                 var_str += f'{name} = self["{name}"].value' + ', '
 
         model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i=i)}'
@@ -715,7 +708,7 @@ class Peaks(lmfit.Parameters):
                 raise ValueError(f'Start value for parameter {p} is out of bounds\nbound max = {vmax}\nstart value = {value}\nbound min = {vmin}')
 
 
-    # %% attributes and properties  (TODO)*****
+    # %% attributes and properties
     @property
     def calib(self):
         return self._calib
@@ -731,31 +724,20 @@ class Peaks(lmfit.Parameters):
         return self._shift
     @shift.setter
     def shift(self, value):
-        self.set_shift(value, mode='x')
+        self.set_shift(value)
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def shift_roll(self):
-        return self._shift_roll
-    @shift_roll.setter
-    def shift_roll(self, value):
+    def roll(self):
+        return self._roll
+    @roll.setter
+    def roll(self, value):
         # raise AttributeError("Attribute is 'read only'. Cannot set attribute.\nPlease, use Spectrum.set_shifts(value, mode='roll').")
-        self.set_shift(value, mode='roll')
-    @shift_roll.deleter
-    def shift_roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift_interp(self):
-        return self._shift_interp
-    @shift_interp.setter
-    def shift_interp(self, value):
-        # raise AttributeError("Attribute is 'read only'. Cannot set attribute.\nPlease, use Spectrum.set_shifts(value, mode='interp').")
-        self.set_shift(value, mode='interp')
-    @shift_interp.deleter
-    def shift_interp(self):
+        self.set_roll(value)
+    @roll.deleter
+    def roll(self):
         raise AttributeError('Cannot delete object.')
 
     @property
@@ -788,7 +770,7 @@ class Peaks(lmfit.Parameters):
     def step(self):
         raise AttributeError('Cannot delete object.')
 
-    # modifiers  (TODO)*****
+    # modifiers
     def set_calib(self, value, type_='relative'):
         """Set calibration value.
 
@@ -806,24 +788,21 @@ class Peaks(lmfit.Parameters):
         # apply
         if self.calib != value:
             if self.calib != 1:
-                self['c'].value = self['c'].value*self.calib**-1
-                self['w'].value = abs(self['w'].value*self.calib**-1)
-                if self.asymmetry:
-                    self['w1'].value = abs(self['w1'].value*self.calib**-1)
-                    self['w2'].value = abs(self['w2'].value*self.calib**-1)
+                for name in self:
+                    if name.split('_')[0] == 'c':
+                        self[name].value = self[name].value*self.calib**-1
+                    elif name.split('_')[0] == 'w':
+                        self[name].value = abs(self[name].value*self.calib**-1)
             if value != 1:
-                self['c'].value = self['c'].value*value
-                self['w'].value = abs(self['w'].value*value)
-                if self.asymmetry:
-                    self['w1'].value = abs(self['w1'].value*value)
-                    self['w2'].value = abs(self['w2'].value*value)
+                for name in self:
+                    if name.split('_')[0] == 'c':
+                        self[name].value = self[name].value*value
+                    elif name.split('_')[0] == 'w':
+                        self[name].value = abs(self[name].value*value)
             self._calib = value
 
-            # check
-            self.update_area_amp()
-
-    def set_shift(self, value, mode, type_='relative'):
-        """Set shift value.
+    def set_roll(self, value, type_='relative'):
+        """Set roll value (compatible with Spectrum roll).
 
         Args:
             value (float or int): shift value (value will be added to x-coordinates).
@@ -833,34 +812,38 @@ class Peaks(lmfit.Parameters):
         """
         # is relative?
         if type_ in relative:
-            value = self.shift + value
+            value = self.roll + value
         
-        # apply
-        if mode in roll: 
-            value = self.step*value
+        # Fix step
+        value = self.step*value
 
-            if self.shift_roll != value:
-                if self.shift_roll != 0:
-                    self['c'].value = self['c'].value - self.shift_roll
-                if value != 0:
-                    self['c'].value = self['c'].value + value
-                self._shift_roll = value
-        elif mode in hard:
+        # apply
+        if self.roll != value:
+            if self.roll != 0:
+                for name in self:
+                    if name.split('_')[0] == 'c':
+                        self[name].value = self[name].value - self.roll
+            if value != 0:
+                for name in self:
+                    if name.split('_')[0] == 'c':
+                        self[name].value = self[name].value + value
+            self._roll = value
+            
+    def set_shift(self, value, type_='relative'):
+            # is relative?
+            if type_ in relative:
+                value = self.shift + value
+
             if self.shift != value:
                 if self.shift != 0:
-                    self['c'].value = self['c'].value - self.shift
+                    for name in self:
+                        if name.split('_')[0] == 'c':
+                            self[name].value = self[name].value - self.shift
                 if value != 0:
-                    self['c'].value = self['c'].value + value
+                    for name in self:
+                        if name.split('_')[0] == 'c':
+                            self[name].value = self[name].value + value
                 self._shift = value
-        elif mode in soft:
-            if self.shift_interp != value:
-                if self.shift_interp != 0:
-                    self['c'].value = self['c'].value - self.shift_interp
-                if value != 0:
-                    self['c'].value = self['c'].value + value
-                self._shift_interp = value
-        else:
-            raise ValueError(f'Invalid mode. Valid options are `roll`, `x`, `interp`.') 
 
     def set_offset(self, value, type_='relative'):
         """Set offset value.
@@ -871,20 +854,8 @@ class Peaks(lmfit.Parameters):
         Returns:
             None
         """
-        # is relative?
-        if type_ in relative:
-            value = self.offset + value
-
-        # apply
-        if self.offset != value:
-            if self.offset != 0:
-                self['amp'].value = self['amp'].value - self.offset
-            if value != 0:
-                self['amp'].value = self['amp'].value + value
-            self._offset = value
-
-        # check
-        self.update_area_amp()
+        # to fix offset we have to add a background option
+        pass
 
     def set_factor(self, value, type_='relative'):
         """Set y multiplicative factor.
@@ -897,50 +868,29 @@ class Peaks(lmfit.Parameters):
             None
         """
         pass
-        # # is relative?
-        # if type_ in relative:
-        #     value = self.factor * value
+        # is relative?
+        if type_ in relative:
+            value = self.factor * value
 
-        # if self.factor != value:
-        #     if self.factor != 1:
-        #         self['amp'].value  = self['amp'].value * self.factor**-1
-        #         self['area'].value = self['area'].value * self.factor**-1
-        #     if value != 1:
-        #         self['amp'].value  = self['amp'].value * value
-        #         self['area'].value = self['area'].value * value
-        #     self._factor = value
+        if self.factor != value:
+            if self.factor != 1:
+                for name in self:
+                        if name.split('_')[0] == 'amp' or name.split('_') == 'area':
+                            self[name].value  = self[name].value * self.factor**-1
+            if value != 1:
+                for name in self:
+                    if name.split('_')[0] == 'amp' or name.split('_') == 'area':
+                        self[name].value  = self[name].value * value
+            self._factor = value
 
-        # # check
-        # self.update_area_amp()
+    def _reset_modifiers(self):
+        self._factor = 1
+        self._offset = 0
+        self._calib  = 1
+        self._shift  = 0
+        self._roll   = 0
 
-    # extractors  (TODO)*****
-    def _split_params(self):
-        # index list
-        indexes = []
-        for key in self.keys():
-            index = int(key.split('_')[-1])
-            if index not in indexes:
-                indexes.append(index)
-        indexes = br.sort(indexes, indexes)
-
-        # allocation
-        peaks2 = Peaks()
-
-        # sort
-        for index in indexes:
-            peak = Peak()
-            peak.index = index
-            # peak.pretty_print()
-            for key in self.keys():
-                # print(index)
-                if index == int(key.split('_')[-1]):
-                    peak[key] = self[key]
-            # peak.pretty_print()
-            peaks2.append(peak)
-        
-        return peaks2
-
-    # #############  (TODO)*****
+    # save and load (TODO)*****
 
     def _string2save(self):
         """String used for saving peak to a file."""
@@ -1029,13 +979,10 @@ class Peaks(lmfit.Parameters):
         self._obj_decode(obj)
 
 
-
 # %%
 class Collection(lmfit.Parameters):
     def __init__(self, *args, **kwargs):
         super().__init__()
-
-        self.next_index = 0
 
         if 'data' in kwargs:
             data = kwargs['data']
@@ -1151,7 +1098,7 @@ class Collection(lmfit.Parameters):
 
         for i2, s in enumerate(ss):
             s.peaks.clear()
-            names = temp._get_with_index(i2=i2)
+            names = temp._get_names_with_index(i2=i2)
             for name in names:
                 _name = '_'.join(name.split('_')[:2])
                 s.peaks[_name] = temp[name]
@@ -1176,7 +1123,7 @@ class Collection(lmfit.Parameters):
                 final.append(_i1) 
         return final
 
-    def _get_with_index(self, i1=None, i2=None):
+    def _get_names_with_index(self, i1=None, i2=None):
         """Return list of names with i2."""
         assert i1 is not None or i2 is not None, 'i1 and i2 cannot both be None'
         
@@ -1228,7 +1175,7 @@ class Collection(lmfit.Parameters):
         for i2 in self._get_indexes_i2():
             final[i2] = Peaks()
             for i1 in self._get_indexes_i1(i2=i2):
-                names = self._get_with_index(i1=i1, i2=i2)
+                names = self._get_names_with_index(i1=i1, i2=i2)
                 for name in names:
                     _name = '_'.join(name.split('_')[:2])
                     final[i2][_name] = temp[name] 
@@ -1238,7 +1185,7 @@ class Collection(lmfit.Parameters):
 
     def _get_params_with_index(self, i1, i2):
         """Return peaks with all names with i2."""
-        names = self._get_with_index(i1=i1, i2=i2)
+        names = self._get_names_with_index(i1=i1, i2=i2)
         final = {}
         for name in names:
             final[name.split('_')[0]] = self[name]
@@ -1418,7 +1365,7 @@ class Collection(lmfit.Parameters):
     def model(self, i2, i1=None):
         """Returns a function f(x) for the peak."""
         var_str = ''
-        for name in self._get_with_index(i1=i1, i2=i2):
+        for name in self._get_names_with_index(i1=i1, i2=i2):
             var_str += f'{name} = self["{name}"].value' + ', '
 
         model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i1=i1, i2=i2)}'
