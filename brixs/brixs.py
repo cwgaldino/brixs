@@ -3033,9 +3033,12 @@ class Spectrum(metaclass=_Meta):
             if header:
                 for line in header:
                     if ':' not in line:
-                        temp = line.split(kwargs['delimiter'])
-                        self.xlabel = temp[kwargs['usecols'][0]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
-                        self.ylabel = temp[kwargs['usecols'][1]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
+                        try:
+                            temp = line.split(kwargs['delimiter'])
+                            self.xlabel = temp[kwargs['usecols'][0]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
+                            self.ylabel = temp[kwargs['usecols'][1]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
+                        except IndexError:
+                            pass
                     else:
                         # extract name and value
                         name = line[1:-1].split(':')[0].strip()
