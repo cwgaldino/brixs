@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Module for analysis of RIXS spectra.
+"""BRIXS is divided in four major classes: 
 
 .. autosummary::
 
@@ -9,18 +9,6 @@
     Spectrum
     Spectra    
 """
-
-# IDEAS:
-# - when you crop the data in Spectra, you modify the spectrum. There's no way to
-# go back (like we do with the shift and offset). Maybe figure a away to go back.
-#
-#
-# Todo:
-#     * flip() or transpose() method
-#     * noise_filter() method (remove cosmic rays)
-#     * save image as tiff
-#
-#
 
 # standard libraries
 import copy
@@ -34,12 +22,19 @@ from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # backpack
-from .backpack.filemanip import load_Comments, filelist
-from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes, derivative
-from .backpack.arraymanip import is_integer, all_equal, factors, flatten, check_monotonicity, fix_monotonicity
-from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
-from .backpack.interact import query
+# from .backpack.filemanip import load_Comments, filelist
+# from .backpack.arraymanip import index, moving_average, extract, shifted, sort, get_attributes, derivative
+# from .backpack.arraymanip import is_integer, all_equal, factors, flatten, check_monotonicity, fix_monotonicity
+# from .backpack.figmanip import n_digits, n_decimal_places, figure, set_window_position
+# from .backpack.interact import query
+# from .peaks import Peaks, Collection
+
+import brixs.backpack.filemanip as filemanip
+import brixs.backpack.arraymanip as arraymanip
+import brixs.backpack.figmanip as figmanip
+import brixs.backpack.interact as interact
 from .peaks import Peaks, Collection
+
 
 # common definitions ===========================================================
 from .config import settings
@@ -300,2169 +295,351 @@ def _check_ranges(ranges, vmin, vmax):
     return tuple(ranges)
 
 # BRIXS ========================================================================
-class Image(metaclass=_Meta):
-    """Image object.
+class Spectrum(metaclass=_Meta):
+    """Creates a ``spectrum`` object.
 
-    Args:
-        data (2D array, optional): Image.
-        filepath (string or path object, optional): filename or file handle.
-            If the filename ends in .gz, the file is automatically saved in
-            compressed gzip format. This is overwriten by data.
+    How to create a spectrum object:
+        s = br.Spectrum()
+
+        s = br.Spectrum(x, y)
+        s = br.Spectrum(x=x, y=y)
+
+        s = br.Spectrum(y)
+        s = br.Spectrum(y=y)
+
+        s = br.Spectrum(filepath=<filepath>)
+        s = br.Spectrum(<filepath>)
+
+    If only y data is passed, a dummy x-array will be set.
+
+    The filepath must point to a xy-type file. Comments must be marked with `#`
+    and columns must be separated by `,` (comma).
 
     Attributes:
-        data (2D np.array): This is where we store the Image.
-        vmin, vmax (float, read only): Minimum value in data.
-        shape (tuple, read only): Shape of data (vertical size, horizontal size).
-        x_centers, y_centers (np.array): pixel center labels.
-        x_edges, y_edges (np.array): pixel edges labels.
-        histogram (brixs.Spectrum): Data intensity histogram.
+        x (array): vector with x-coordinate values
+        y (array): vector with y-coordinate values
+        filepath ()
+        step (number or None, read only): step size of the x-array.
+        monotonicity (str or None, read only): monotonicity of the x-array.
+        peaks (lmfit.Parameters): each entry represents a peak.
 
-        nbins (tuple): Number of bins (number of rows, number of columns).
-        bins_size (tuple): Bins size (size of rows, size of columns).
-        reduced (brixs.Image, read only): Binned image.
+    Computed (read-only) attributes:
+        data
+        area
 
-        shifts_v, shifts_h (np.array): Shift values in the vertical and
-            horizontal direction.
-        p (np.array, read only): polynomial values returned by calculated_shifts().
-        f (function, read only): funcion returned by calculated_shifts().
-        calculated_shifts (brixs.Spectrum): Calculated shifts.
+    Write-only attributes:
+        calib
+        shift
+        roll
+        factor
+        offset
 
-        spectrum_v, spectrum_h (brixs.Spectrum): Spectrum obtained by integrating
-            pixels in the vertical and horizontal direction.
-        spectrum (brixs.Spectrum): same as spectrum_h.
-        columns, rows (brixs.Spectra): Spectra obtained from each pixel columns
-            or row.
-
-    Methods:
-        save()
-        load()
-
-        floor()
-        crop()
-
-        pcolormesh()
-        imshow()
-        plot()
-
-        binning()
-        calculate_histogram()
-        calculate_spectrum()
-        calculate_shifts()
-        set_shifts()
-        fix_curvature()
     """
-    # read only and non-removable arguments
-    _read_only = ['shape', 'vmin', 'vmax', 'reduced', 'calculated_shifts']
-    _non_removable = []
 
     def __init__(self, *args, **kwargs):
-        # besic attr
-        self._data      = None
-        self._vmin      = None
-        self._vmax      = None
-        self._shape     = None
-        self._x_centers = None
-        self._y_centers = None
-        self._x_edges   = None
-        self._y_edges   = None
+        """Initialize the object instance.
 
-        # binning attr
-        self._nbins      = np.array((-1, -1))
-        self._bins_size  = np.array((-1, -1))
-        self._reduced    = None
-
-        # shift attr
-        self._calculated_shifts = None
-        self._shifts_v = None
-        self._shifts_h = None
-
-        # set data
-        data, filepath = self._sort_args(args, kwargs)
-        if data is not None:
-            self.data = copy.deepcopy(data)
-        elif filepath is not None:
-            self.load(filepath)
-
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath.
-
+        Args:
+            x (list or array, optional): x values (1D list/array).
+            y (list or array, optional): y values (1D list/array).
+            filepath (str or pathlib.Path, optional): filepath to read.
+        
         Raises:
             AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, filepath
         """
-        # initial check
-        if kwargs != {} and args != ():
-            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `data`, and `filepath`.')
 
-        # initialization
-        data = None
-        filepath = None
+        ###########################
+        # Initializing attributes #
+        ###########################
+        # basic
+        self._x    = None
+        self._y    = None
+        self._filepath = ''
+
+        # check
+        self._step         = None
+        self._monotonicity = None
+
+        # special
+        self._peaks = Peaks()
+
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        error_message = 'Wrong input. Spectrum object cannot be created. Please, use one ' +\
+                        'of the examples below to create a spectrum object:\n' +\
+                        '\n' +\
+                        's = br.Spectrum()\n' +\
+                        '\n' +\
+                        's = br.Spectrum(x, y)\n' +\
+                        's = br.Spectrum(x=x, y=y)\n' +\
+                        '\n' +\
+                        's = br.Spectrum(y)\n' +\
+                        's = br.Spectrum(y=y)\n' +\
+                        '\n' +\
+                        's = br.Spectrum(filepath=<filepath>)\n' +\
+                        's = br.Spectrum(<filepath>)\n' +\
+                        '\n' +\
+                        'x and y must be a 1D array (or list) and filepath ' +\
+                        'must be a string or pathlib.Path object'
+        if kwargs != {} and args != ():
+            raise AttributeError(error_message)
+        if any([item not in ['x', 'y', 'filepath'] for item in kwargs.keys()]):
+            raise AttributeError(error_message)
+        if len(args) > 2 or len(kwargs) > 2:
+            raise AttributeError(error_message)
+        if 'x' in kwargs and 'y' not in kwargs:
+            raise AttributeError(error_message)
+        if ('x' in kwargs or 'y' in kwargs) and 'filepath' in kwargs:
+            raise AttributeError(error_message)
+
+        ################
+        # loading data #
+        ################
+        # if x is available, x must be set first.
+        # Otherwise, when y is set, it will create a fake x axis using np.arange()
 
         # keyword arguments
-        if 'data' in kwargs:
-            data = kwargs['data']
+        if 'y' in kwargs:
+            if 'x' in kwargs:
+                self.x = kwargs['x']
+            self.y = kwargs['y']
         if 'filepath' in kwargs:
-            filepath = kwargs['filepath']
+            self.load(kwargs['filepath'])
 
         # positional arguments
         if len(args) == 1:
             if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = args[0]
-            elif isinstance(args[0], Iterable):
-                data = args[0]
-        elif len(args) > 2:
-            raise AttributeError('brixs.Image() cannot figure out the data out of the arguments passed. Maybe use keyword arguments (data, filepath).')
-
-        return data, filepath
-
-    def _transfer_attributes(self, object):
-        """Transfer user defined attributes to output objects."""
-
-        # # list of attributes NOT to transfer
-        # do_not_transfer = ['_data', '_vmin', '_vmax', '_shape', 
-        #                    '_nbins', '_bins_size', 
-        #                    '_reduced', '_shifts_v', '_shifts_h', 
-        #                    '_p', '_f', '_calculated_shifts', 
-        #                    '_x_centers', '_y_centers', 
-        #                    '_x_edges', '_y_edges']
-        
-        # dict = get_attributes(self)
-        # for n in dict:
-        #     if n not in do_not_transfer:
-        #         object.__setattr__(n, self.__getattribute__(n))
-        # return object
-    
-        # copy user defined attributes
-        for attr in self.__dict__:
-            if attr.startswith('_') == False:
-                object.__setattr__(attr, self.__dict__[attr])
-
-        return object
-
-    def __len__(self):
-        if self._data is None:
-            return 0
-        else:
-            return len(self._data)
-
-    def __add__(self, object):
-        if isinstance(object, Image):
-            if self.shape == object.shape:
-                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
-                    dtype = 'int'
-                else:
-                    dtype = 'float'
-                final = Image(data=np.add(self.data, object.data, dtype=dtype))
-                return self._transfer_attributes(final)
+                self.load(args[0])
             else:
-                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
-        elif isinstance(object, (np.floating, float, int)):
-            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
-                dtype = 'int'
-            else:
-                dtype = 'float'
-            final = Image(data=np.add(self.data, object, dtype=dtype))
-            return self._transfer_attributes(final)
-        else:
-            raise ValueError(f'Cannot operate type {type(object)} with Image')
-
-    def __sub__(self, object):
-        if isinstance(object, Image):
-            if self.shape == object.shape:
-                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
-                    dtype = 'int'
-                else:
-                    dtype = 'float'
-                final = Image(data=np.subtract(self.data, object.data, dtype=dtype))
-                return self._transfer_attributes(final)
-            else:
-                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
-        elif isinstance(object, (np.floating, float, int)):
-            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
-                dtype = 'int'
-            else:
-                dtype = 'float'
-            final = Image(data=np.subtract(self.data, object, dtype=dtype))
-            return self._transfer_attributes(final)
-        else:
-            raise ValueError(f'Cannot operate type {type(object)} with Image')
-
-    def __mul__(self, object):
-        if isinstance(object, Image):
-            if self.shape == object.shape:
-                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
-                    dtype = 'int'
-                else:
-                    dtype = 'float'
-                final = Image(data=np.multiply(self.data, object.data, dtype=dtype))
-                return self._transfer_attributes(final)
-            else:
-                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
-        elif isinstance(object, (np.floating, float, int)):
-            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
-                dtype = 'int'
-            else:
-                dtype = 'float'
-            final = Image(data=np.multiply(self.data, object, dtype=dtype))
-            return self._transfer_attributes(final)
-        else:
-            raise ValueError(f'Cannot operate type {type(object)} with Image')
-
-    def __div__(self, object):
-        if isinstance(object, Image):
-            if self.shape == object.shape:
-                if 0 in object.data:
-                    raise ZeroDivisionError(f'Image contain zeros. Cannot divide by zero.')
-                else:
-                    dtype = 'float'
-                    final = Image(data=np.divide(self.data, object.data, dtype=dtype))
-                    # final = Image(data = self.data / object.data)
-                    return self._transfer_attributes(final)
-            else:
-                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
-        elif isinstance(object, (np.floating, float, int)):
-            if object == 0:
-                raise ZeroDivisionError(f'Cannot divide by zero.')
-            else:
-                dtype = 'float'
-                final = Image(data=np.divide(self.data, object, dtype=dtype))
-                return self._transfer_attributes(final)
-        else:
-            raise ValueError(f'Cannot operate type {type(object)} with type Image')
-
-    def __truediv__(self, object):
-        return self.__div__(object)
-
-
-    @property
-    def data(self):
-        return copy.deepcopy(self._data)
-    @data.setter
-    def data(self, value):
-        # basic attr
-        self._data  = np.array(value, dtype='float')
-        self._vmin  = min([min(x) for x in self.data])
-        self._vmax  = max([max(x) for x in self.data])
-        self._shape = (self.data.shape[0], self.data.shape[1])
-        self.x_centers = None
-        self.y_centers = None
-
-        # binning attr
-        self._nbins      = np.array((-1, -1))
-        self._bins_size  = np.array((-1, -1))
-        self._reduced    = None
-
-        # shift attr
-        self._calculated_shifts = None
-        self._shifts_v = np.zeros(self.data.shape[1])
-        self._shifts_h = np.zeros(self.data.shape[0])
-    @data.deleter
-    def data(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def x_centers(self):
-        return self._x_centers
-    @x_centers.setter
-    def x_centers(self, value):
-        if value is None:
-            value = np.arange(0, self.data.shape[1])
-        elif isinstance(value, Iterable):
-            if len(value) != self.shape[1]:
-                raise ValueError(f"Length of x must be the same as the number of pixels in the horizontal direction.\nNumber of pixels = {self.data.shape[1]}\nLength of the array = {len(value)}")
-        else:
-            raise ValueError(f"x must be None or an iterable (list, tuple, or 1D array)")
-        # self._x_centers = Spectrum(x=value, y=np.zeros(len(value)))
-        self._x_centers = np.array(value, dtype='float')
-        self._x_edges = None
-    @x_centers.deleter
-    def x_centers(self):
-        self._x_centers = np.arange(0, self.data.shape[1])
-
-    @property
-    def y_centers(self):
-        return self._y_centers
-    @y_centers.setter
-    def y_centers(self, value):
-        if value is None:
-            value = np.arange(0, self.data.shape[0])
-        elif isinstance(value, Iterable):
-            if len(value) != self.shape[0]:
-                raise ValueError(f"Length of y must be the same as the number of pixels in the vertical direction.\nNumber of pixels = {self.data.shape[0]}\nLength of the array = {len(value)}")
-        else:
-            raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
-        # self._y_centers = Spectrum(x=value, y=np.zeros(len(value)))
-        self._y_centers = np.array(value, dtype='float')
-        self._y_edges = None
-    @y_centers.deleter
-    def y_centers(self):
-        self._y_centers  = np.arange(0, self.data.shape[0])
-
-    @property
-    def x_edges(self):
-        return self._x_edges
-    @x_edges.setter
-    def x_edges(self, value):
-        if value is None:
-            self._x_edges = None
-            return
-        elif isinstance(value, Iterable):
-            if len(value) != self.shape[1]+1:
-                raise ValueError(f"Length of x_edges must be the same as the number of edges (number of pixels + 1) in the horizontal direction.\nNumber of edges = {self.data.shape[1]+1}\nLength of the array = {len(value)}")
-        else:
-            raise ValueError(f"x_edges must be None or an iterable (list, tuple, or 1D array)")
-        # self._x_edges   = Spectrum(x=value, y=np.zeros(len(value)))
-        self._x_edges   = np.array(value, dtype='float')
-        centers = moving_average(value, n=2)
-        # self._x_centers = Spectrum(x=centers, y=np.zeros(len(centers)))
-        self._x_centers = np.array(centers, dtype='float')
-    @x_edges.deleter
-    def x_edges(self):
-        self._x_edges = None
-
-    @property
-    def y_edges(self):
-        return self._y_edges
-    @y_edges.setter
-    def y_edges(self, value):
-        if value is None:
-            self._y_edges = None
-            return
-        elif isinstance(value, Iterable):
-            if len(value) != self.shape[0]+1:
-                raise ValueError(f"Length of y_edges must be the same as the number of edges (number of pixles + 1) in the vertical direction.\nNumber of edges = {self.data.shape[0]+1}\nLength of the array = {len(value)}")
-        else:
-            raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
-        # self._y_edges   = Spectrum(x=value, y=np.zeros(len(value)))
-        self._y_edges   = np.array(value, dtype='float')
-        centers = moving_average(value, n=2)
-        # self._y_centers = Spectrum(x=centers, y=np.zeros(len(centers)))
-        self._y_centers = np.array(centers, dtype='float')
-    @y_centers.deleter
-    def y_centers(self):
-        self._y_edges  = None
-
-    @property
-    def shifts_v(self):
-        return copy.deepcopy(self._shifts_v)
-    @shifts_v.setter
-    def shifts_v(self, value):
-        self.set_shifts(value=value, axis=0)
-    @shifts_v.deleter
-    def shifts_v(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shifts_h(self):
-        return copy.deepcopy(self._shifts_h)
-    @shifts_h.setter
-    def shifts_h(self, value):
-        self.set_shifts(value=value, axis=1)
-    @shifts_h.deleter
-    def shifts_h(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def nbins(self):
-        return self._nbins
-    @nbins.setter
-    def nbins(self, value):
-        if type(value) != str:
-            self.binning(nbins=value)
-        elif value == 'guess':
-            raise NotImplementedError('not implemented yet')
-        elif value == 'possible':
-            print(f"The {self.shape[1]} pixels in a row is evenly divisible by: {np.sort(list(factors(self.shape[1])))}\nThe {self.shape[0]} pixels in a column is evenly divisible by: {np.sort(list(factors(self.shape[0])))}")
-        else:
-            raise ValueError("Not a valid option of `nbins`.\nValid options are: 'guess', a number, a tuple, or a list.")
-    @nbins.deleter
-    def nbins(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def bins_size(self):
-        return self._bins_size
-    @bins_size.setter
-    def bins_size(self, value):
-        self.binning(bins_size=value)
-    @bins_size.deleter
-    def bins_size(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def histogram(self):
-        return self.calculate_histogram()
-    @histogram.setter
-    def histogram(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @histogram.deleter
-    def histogram(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def columns(self):
-        ss = Spectra(n=self.shape[1])
-        for i in range(self.shape[1]):
-            ss[i] = Spectrum(x=self.y_centers, y=self.data[:, i])
-        return ss
-    @columns.setter
-    def columns(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @columns.deleter
-    def columns(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def rows(self):
-        ss = Spectra(n=self.shape[0])
-        for i in range(self.shape[0]):
-            ss[i] = Spectrum(x=self.x_centers, y=self.data[i, :])
-        return ss
-    @rows.setter
-    def rows(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @rows.deleter
-    def rows(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def spectrum(self):
-        return self.spectrum_h
-    @spectrum.setter
-    def spectrum(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @spectrum.deleter
-    def spectrum(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def spectrum_v(self):
-        return self.calculate_spectrum(axis=0)
-    @spectrum_v.setter
-    def spectrum_v(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @spectrum_v.deleter
-    def spectrum_v(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def spectrum_h(self):
-        return self.calculate_spectrum(axis=1)
-    @spectrum_h.setter
-    def spectrum_h(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @spectrum_h.deleter
-    def spectrum_h(self):
-        raise AttributeError('Cannot delete object.')
-
-
-    def save(self, filepath=None, only_data=False,  check_overwrite=None, **kwargs):
-        r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format. If None, filepath can be inferred from a
-                user defined attr 'im.filepath'. Default is None.  Last used 
-                filepath is saved to im.filepath.
-            only_data (bool, optional): If True, header and footer are ignored and
-                only data is saved to the file.
-            check_overwrite (bool, optional): if True, it will check if file exists
-                and ask if user wants to overwrite file.
-            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
-
-        If not specified, the following parameters are passed to `numpy.savetxt()`_:
-
-        Args:
-            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
-                sequence of formats. See numpy's documentation for more information.
-                If not specified, best fmt is calculated based on the
-                number of decimal places of the data. Specifying fmt makes the code
-                runs a little faster (not much tough, but it might make a difference
-                if saving a lot of files).
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (", ").
-            newline (str, optional): String or character separating lines.
-                Default is ``\n``.
-            header (bool, optional): String that will be written at the beginning of the file.
-                Note that, object attributes will be saved at the beginning of the file.
-                If only_data=True, header and footer is ignored.
-            comments (str, optional): String that will be prepended to the
-                header and footer strings, to mark them as comments. Default is "# ".
-
-        Returns:
-            None
-
-        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
-        """
-        # filepath
-        if filepath is None:
-            try: 
-                filepath = Path(self.filepath)
-            except AttributeError:
-                raise TypeError("Missing 1 required argument: 'filepath'")
-        
-        # check overwrite
-        if check_overwrite is None:
-            check_overwrite = settings.SAVE_CHECK_OVERWRITE
-        if check_overwrite:
-            if filepath.exists() == True:
-                if filepath.is_file() == True:
-                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
-                        pass
-                    else:
-                        return
-                else:
-                    raise AttributeError('filepath not pointing to a file.')
-                
-        # kwargs
-        if 'fmt' not in kwargs: # pick best format
-            decimal = max([n_decimal_places(x) for x in flatten(self._data)])
-            kwargs['fmt'] = f'%.{decimal}f'
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
-
-        # save
-        if only_data:
-            if 'header' in kwargs:
-                del kwargs['header']
-            if 'footer' in kwargs:
-                del kwargs['footer']
-            np.savetxt(Path(filepath), self._data, **kwargs)
-        else:
-            if 'header' not in kwargs:
-                kwargs['header'] = ''
-            else:
-                kwargs['header'] += '\n'
-            dict = get_attributes(self)
-            kwargs['header'] += '==== brixs Image ===='  + '\n'
-            for n in dict:
-                if n not in ['_data', '_reduced', '_calculated_shifts', '_histogram', '_spectrum_h', '_spectrum_v',]:
-                    if isinstance(dict[n], Iterable):
-                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
-                    else:
-                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
-            np.savetxt(Path(filepath), self._data, **kwargs)
-
-        # save filepath
-        self.filepath = filepath
-
-    def load(self, filepath, **kwargs):
-        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first 
-                decompressed. Last used filepath is saved to im.filepath.
-
-        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
-
-        Args:
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (', ').
-            comments (str, optional): The character used to indicate the start
-                of a comment. Default is ``# ``. Attributes picked up
-                from the header will be loaded too.
-
-        Returns:
-            None
-
-        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
-        """
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
-
-        # read data
-        data = np.genfromtxt(Path(filepath), **kwargs)
-        self.data = data
-
-        # read header
-        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-        attr_start = 0
-        binning_flag = False  # check if data needs binning
-
-        # find where attributes listing starts
-        for i, line in enumerate(header):
-            if '==== brixs Image ====' in line:
-                attr_start = i
-                break
-            attr_start = -1
-
-        # read attributes
-        if attr_start != -1:
-            for i, line in enumerate(header[attr_start+1:-1]):
-
-                # extract name and value
-                name = line[1:-1].split(':')[0].strip()
-                value = eval(line[1:-1].split(':')[1].strip())
-
-
-                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
-                if name in ['_nbins']:
-                    if value[0] > 0 and value[1] > 0:
-                        binning_flag = True
-                elif name in ['_bins_size']:
-                    if value[0] > 0 and value[1] > 0:
-                        binning_flag = True
-                ### DEALING WITH OTHER ATTRIBUTES ###
-                elif name not in ['_vmin', '_vmax', '_shape']:  # except these attrs
-                    try:
-                        setattr(self, name, value)
-                    except Exception as e:
-                        print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
-
-        ### RUN ###
-        if binning_flag:
-            try:
-                self.binning(nbins=self.nbins, bins_size=self.bins_size)
-            except:
-                pass
-        
-        # save filepath
-        self.filepath = str(filepath)
-
-    def get_user_defined_attrs(self):
-        """return attrs that are user defined."""
-        default_attrs =  ['_data', '_vmin', '_vmax', '_shape', 
-                           '_nbins', '_bins_size', 
-                           '_reduced', '_shifts_v', '_shifts_h', 
-                           '_calculated_shifts', 
-                           '_x_centers', '_y_centers', 
-                           '_x_edges', '_y_edges']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
-
-    # plot and visualization
-    def pcolormesh(self, ax=None, colorbar=False, **kwargs):
-        """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            colorbar (bool, optional): if True, colorbar is shown on the right side.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.pcolormesh()`_.
-
-        If not specified, the following parameters are passed to `matplotlib.pyplot.pcolormesh()`_:
-
-        Args:
-            cmap: The Colormap instance. Default is 'jet'.
-            vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                calculated and vmin is set on the position of the maximum.
-            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
-                calculated and vmax is set to the value where the :del:` integral of the
-                intensity histogram is 0.998 of the total integral after vmin.`
-                intensity drops below 0.01 % of the maximum.
-                **THIS MIGHT CHANGE IN THE FUTURE**.
-
-        Returns:
-            `matplotlib.collections.QuadMesh`_
-
-        .. _matplotlib.pyplot.pcolormesh(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html
-        .. _matplotlib.collections.QuadMesh: https://matplotlib.org/3.5.0/api/collections_api.html#matplotlib.collections.QuadMesh
-        """
-        # initialization
-        divider = False
-        if ax is not None and colorbar is True:
-            divider = True 
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        # kwargs
-        if 'cmap' not in kwargs:
-            kwargs['cmap'] = 'jet'
-        if 'vmin' not in kwargs:
-            kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
-        if 'vmax' not in kwargs:
-            # vamx is set when histogram drops below 0.01% of the max
-            x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
-            y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
-            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > max(y2fit)*0.0001])  # clean zeros
-            kwargs['vmax'] = data2fit[-1, 0]
-
-        # fix monotonicity of labels x
-        if check_monotonicity(self.x_centers) != 1:
-            x, ordering = fix_monotonicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
-            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
-            ordering = [int(i) for i in ordering]
-            data = copy.deepcopy(self.data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data[:, i] = self.data[:, ordering[i]]
-        else:
-                # check if x_edges is defined
-            if self.x_edges is not None and self.y_edges is not None:
-                x = self.x_edges
-            else:
-                x = self.x_centers
-            data = self.data
-
-        # fix monotonicity of labels y
-        if check_monotonicity(self.y_centers) != 1:
-            y, ordering = fix_monotonicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
-            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
-            ordering = [int(i) for i in ordering]
-            data2 = copy.deepcopy(data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data2[i, :] = data[ordering[i], :]
-        else:
-            # check if y_edges is defined
-            if self.x_edges is not None and self.y_edges is not None:
-                y = self.y_edges
-            else:
-                y = self.y_centers
-            data2 = data
-
-        # plot
-        X, Y = np.meshgrid(x, y)
-        pos = ax.pcolormesh(X, Y, data2, **kwargs)
-
-        # colorbar
-        if colorbar:
-            if divider:
-                divider = make_axes_locatable(ax)
-                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
-                plt.colorbar(pos, cax=ax_cb)
-            else:
-                plt.colorbar(pos, aspect=50)
-
-        return pos
-
-    def imshow(self, ax=None, colorbar=False, hindexes=False, vindexes=False, verbose=True, **kwargs):
-        """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
-
-        Warning:
-            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            colorbar (bool, optional): if True, colorbar is shown on the right side.
-            verbose (bool, optional): if True, a warning will show up if data
-                has iregular pixel sizes. Default is true.
-            hindexes, vindexes (bool, optional): If True, the index number of a
-                pixel column/row will be ploted. Default is False.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
-
-        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
-
-        Args:
-            cmap: The Colormap instance. Default is 'jet'.
-            aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
-                an aspect ratio of 1 will be used (pixels will be square).
-            origin: Location of the [0, 0] index. default is 'lower'.
-            interpolation: The interpolation method used. Default is 'none'.
-                Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
-                'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
-                'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
-                'sinc', 'lanczos', 'blackman'.
-            extent: minimun and maximum x and y values. Default will be given by
-                the Image.x and Image.y attributes.
-            vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                calculated and vmin is set on the position of the maximum.
-            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
-                calculated and vmax is set to the value where the :del:` integral of the
-                intensity histogram is 0.998 of the total integral after vmin.`
-                intensity drops below 0.01 % of the maximum.
-                **THIS MIGHT CHANGE IN THE FUTURE**.
-
-        Returns:
-            `matplotlib.image.AxesImage`_
-
-        .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
-        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
-        """
-        # initialization
-        divider = False
-        if ax is not None and colorbar is True:
-            divider = True 
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        # default arguments
-        if 'cmap' not in kwargs:
-            kwargs['cmap'] = 'jet'
-        if 'aspect' not in kwargs:
-            kwargs['aspect'] = 'auto'
-        if 'origin' not in kwargs:
-            kwargs['origin'] = 'lower'
-        if 'interpolation' not in kwargs:
-            kwargs['interpolation'] = 'none'
-        if 'vmin' not in kwargs:
-            kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
-        if 'vmax' not in kwargs:
-            # vamx is set when histogram drops below 0.01% of the max
-            x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
-            y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
-            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > abs(max(y2fit)*0.0001)])  # clean zeros
-
-            try:
-                kwargs['vmax'] = data2fit[-1, 0]
-            except IndexError:  # in case the max of y is too high
-                kwargs['vmin'] = self.vmin
-                kwargs['vmax'] = self.vmax
-
-
-        # # x and y
-        # assert check_monotonicity(self.x) == 1, f'x axis (Image.x) must be increasingly monotonic.\nData cannot be plotted by Image.imshow().\nPlease, use Image.plot() or set Image.x = None\nx: {self.x}'
-        # assert check_monotonicity(self.y) == 1, f'y axis (Image.y) must be increasingly monotonic.\nData cannot be plotted by Image.imshow().\nPlease, use Image.plot() or set Image.y = None\ny: {self.y}'
-        # x = np.linspace(self.x[0], self.x[-1], len(self.x))
-        # y = np.linspace(self.y[0], self.y[-1], len(self.y))
-        # if 'extent' not in kwargs:
-        #     kwargs['extent'] = [x[0], x[-1], y[0], y[-1]]
-
-        # fix monotonic of labels x
-        if check_monotonicity(self.x_centers) != 1:
-            x, ordering = fix_monotonicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
-            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
-            ordering = [int(i) for i in ordering]
-            data = copy.deepcopy(self.data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data[:, i] = self.data[:, ordering[i]]
-                extent_x = [min(x), max(x)]
-        else:
-            # check if x_edges is defined
-            if self.x_edges is not None:
-                x = self.x_edges
-                extent_x = [min(x), max(x)]
-            else:
-                x = self.x_centers
-                x = np.linspace(x[0], x[-1], len(x))
-                dx  = np.mean(np.diff(x))
-                extent_x = [x[0]-dx/2, x[-1]+dx/2]
-            data = self.data
-
-        # fix monotonic of labels y
-        if check_monotonicity(self.y_centers) != 1:
-            y, ordering = fix_monotonicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
-            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
-            ordering = [int(i) for i in ordering]
-            data2 = copy.deepcopy(data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data2[i, :] = data[ordering[i], :]
-            extent_y = [min(y), max(y)]
-        else:
-            # check if y_edges is defined
-            if self.y_edges is not None:
-                y = self.y_edges
-                extent_y = [min(y), max(y)]
-            else:
-                y = self.y_centers
-                y = np.linspace(y[0], y[-1], len(y))
-                dy  = np.mean(np.diff(y))
-                extent_y = [y[0]-dy/2, y[-1]+dy/2]
-
-            data2 = data
-
-        if 'extent' not in kwargs:
-            kwargs['extent'] = np.append(extent_x, extent_y)
-
-        # check irregular spacing (issues a warning)
-        if verbose:
-            sx = Spectrum(x=self.x_centers, y=self.x_centers)
-            sy = Spectrum(x=self.y_centers, y=self.y_centers)
-            try:
-                sx.check_step()
-                sy.check_step()
-            except ValueError:
-                print('Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
-
-        # plot
-        pos = ax.imshow(data2, **kwargs)
-
-        # column label
-        if hindexes:
-            for i in range(self.data.shape[1]):
-                plt.text(self.x_centers[i], self.y_centers[-1], i, ha='center')
-        if vindexes:
-            for i in range(self.data.shape[0]):
-                plt.text(self.y_centers[i], self.x_centers[-1], i, va='center')
-
-        # colorbar
-        if colorbar:
-            if divider:
-                divider = make_axes_locatable(ax)
-                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
-                plt.colorbar(pos, cax=ax_cb)
-            else:
-                plt.colorbar(pos, aspect=50)
-
-        return pos
-
-    def plot(self, *args, **kwargs):
-        """Same as Image.imshow.
-
-        See:
-            :py:func:`Image.imshow` """
-        return self.imshow(*args, **kwargs)
-
-    def vlines(self, ax=None, mode='edges', *args, **kwargs):
-        """edges or centers"""
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        assert self.y_edges is not None, 'y_edges cannot be None.'
-        if mode == 'edges':
-            ax.vlines(self.x_edges, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
-        elif mode == 'centers':
-            ax.vlines(self.x_centers, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
-        else:
-            raise AttributeError('mode must be either `edges` or `centers`.')
-    
-    def hlines(self, ax=None, mode='edges', *args, **kwargs):
-        """edges or centers"""
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        assert self.x_edges is not None, 'x_edges cannot be None.'
-        if mode == 'edges':
-            ax.hlines(self.y_edges, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
-        elif mode == 'centers':
-            ax.hlines(self.y_centers, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
-        else:
-            raise AttributeError('mode must be either `edges` or `centers`.')
-
-    #
-    def possible_nbins(self):
-        """return possible values for nbins in the y (nrows) and x (ncols) directions."""
-        return np.sort(list(factors(self.shape[0]))), np.sort(list(factors(self.shape[1])))
-
-    def binning(self, *args, **kwargs):
-        """Compute the 2D histogram of the data (binning of the data).
-
-        Args:
-            nbins (int or tuple, optional): number of bins. If one value is given,
-                this is used for both x and y directions. If two values are given,
-                they are used separetely for the number of rows and number of
-                columns, respectively. If the number of pixels in the image
-                cannot be divided by the selected number of bins, it will raise an error.
-                ``bins_size`` is calculated.
-            bins_size (int or tuple, optional): size of the bins. This overwrites
-                the argument ``bins``. If one value is given,
-                it is used for both x and y directions. If two values are given,
-                they are used separetely for rows and columns size, respectively.
-                If number of pixels cannot be divided by ``bins_size``, the value of
-                ``bins_size`` will be recalculated to the closest possible value.
-                ``nbins`` is calculated.
-
-        Example:
-            .. code-block:: python
-
-                nbins = 10       # (10 rows, 10 columns)
-                nbins = (10)     # (10 rows, 10 columns)
-                nbins = (10, 5)  # (10 rows, 5 columns)
-
-        Returns:
-            binned image
-        """
-        kwargs['shape']        = self.shape
-        kwargs['factor_check'] = True
-        _nbins, _bins_size = _bins_interpreter(*args, **kwargs)
-        # reduced = Image(np.add.reduceat(np.add.reduceat(self._data,            np.arange(0, self.shape[0], _bins_size[0]), axis=0),             np.arange(0, self.shape[1], _bins_size[1]), axis=1))
-        # reduced = Image(np.add.reduceat(np.add.reduceat(self._data, map(float, np.arange(0, self.shape[0], _bins_size[0])), axis=0), map(float, np.arange(0, self.shape[1], _bins_size[1]), axis=1)))
-        reduced = Image(np.add.reduceat(np.add.reduceat(self._data, list(map(float, np.arange(0, self.shape[0], _bins_size[0]))), axis=0), list(map(float, np.arange(0, self.shape[1], _bins_size[1]))), axis=1))
-
-        _x_edges   = np.arange(0, self.shape[1]+_bins_size[1]/2, _bins_size[1])
-        _y_edges   = np.arange(0, self.shape[0]+_bins_size[0]/2, _bins_size[0])
-        # _x_centers = moving_average(_x_edges, n=2)
-        # _y_centers = moving_average(_y_edges, n=2)
-
-        # saving
-        self._nbins     = _nbins
-        self._bins_size = _bins_size
-        self._reduced   = reduced
-        # self.reduced._x_centers = _x_centers
-        # self.reduced._y_centers = _y_centers
-        self.reduced.x_edges   = _x_edges
-        self.reduced.y_edges   = _y_edges
-
-        return self.reduced
-
-    def calculate_histogram(self, **kwargs):
-        """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
-
-        If not specified, the following parameters are passed to `numpy.histogram()`_:
-
-        Args:
-            bins (int or tuple, optional): number of bins. If not specified, it will
-                be set to 1000. If 1000 is too high (maximum value of the histogram
-                is less than 5 % of the total integrated intensity) bins will be
-                reduced 10 by 10 until the criteria is satisfied.
-
-        Returns
-            brixs.Spectrum
-
-        .. _numpy.histogram(): https://numpy.org/doc/stable/reference/generated/numpy.histogram.html
-        """
-        if 'bins' not in kwargs:
-            kwargs['bins'] = 1000
-            hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
-            while max(hist) < self.shape[0]*self.shape[1]*0.05:
-                kwargs['bins'] -= 10
-                hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
-                if kwargs['bins'] < 50:
-                    break
-        else:
-            hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
-        x = moving_average(bin_edges, 2)
-        s = Spectrum(x=x, y=hist)
-        return s
-
-    def calculate_spectrum(self, axis=1):
-        """Integrate data in one direction (sum columns or rows).
-
-        Args:
-            axis (int or string, optional): Axis along which elements are integrated.
-                By default, data is integrated in the horizontal direction.
-
-        Returns:
-            :py:class:`Spectrum`.
-        """
-        axis = _axis_interpreter(axis)
-
-        if axis == 0:
-            return Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
-        elif axis == 1:
-            return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
-
-    def calculate_shifts(self, axis=0, mode='cc', limit_size=1000):
-        self.calculate_rolls(axis=axis, mode=mode, limit_size=limit_size)
-        # axis = _axis_interpreter(axis)
-
-        # # select axis
-        # if axis == 0:
-        #     if limit_size:
-        #         if len(self.x_centers) > limit_size:
-        #             raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-        #     ss = self.columns
-        #     centers = self.x_centers
-        # elif axis == 1:
-        #     if limit_size:
-        #         if len(self.rows) > limit_size:
-        #             raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
-        #     ss = self.rows
-        #     centers = self.y_centers
-
-        # # peaks
-        # if mode == 'fitted peaks' or mode == 'peaks':
-        #     ss.fit_peak()
-
-        # # calculate
-        # ss.calculate_shifts(mode=mode)
-        # if mode in cc:
-        #     self._calculated_shifts = ss.calculated_shifts
-        #     self.calculated_shifts.factor = ss.step
-        # else:
-        #     self._calculated_shifts = ss.calculated_shifts
-        #     self._calculated_shifts.y = [int(round(y)) for y in self._calculated_shifts.y]
-        # self._calculated_shifts.x = centers
-
-    def calculate_rolls(self, axis=0, mode='cc', limit_size=1000):
-        """Calculate intensity misalignments via cross-correlation.
-
-        Args:
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
-            mode (string, optional): method used to calculate the shifts.
-                The current options are: 'cross-correlation' ('cc').
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images.
-                Default is 1000. Set to False to bypass this limit.
-
-        Returns:
-            None
-        """
-        axis = _axis_interpreter(axis)
-
-        # select axis
-        if axis == 0:
-            if limit_size:
-                if len(self.x_centers) > limit_size:
-                    raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-            ss = self.columns
-            centers = self.x_centers
-        elif axis == 1:
-            if limit_size:
-                if len(self.rows) > limit_size:
-                    raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
-            ss = self.rows
-            centers = self.y_centers
-
-        # peaks
-        if mode == 'fitted peaks' or mode == 'peaks':
-            ss.fit_peak()
-
-        # calculate
-        ss.calculate_rolls(mode=mode)
-        # if mode in cc:
-        self._calculated_shifts = ss.calculated_rolls
-        self.calculated_shifts.factor = ss.step
-        # else:
-        #     self._calculated_shifts = ss.calculated_rolls
-        #     self._calculated_shifts.y = [int(round(y)) for y in self._calculated_shifts.y]
-        self._calculated_shifts.x = centers
-
-    def set_shifts(self, value=None, p=None, f=None, axis=0, type_='absolute'):
-        """Roll array of pixels along a given axis.
-
-        Elements that roll beyond the edge are NOT re-introduced at the first.
-        They are lost. This might change in the future.
-
-        Args:
-            value (int or tuple): The number of pixels by which the data are shifted.
-                If a tuple, then it must be of the same size as the number of
-                columns (``for axis=0``) or rows (``for axis=1``). If elements are
-                not int, it will rounded to an integer value.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
-
-        Returns:
-            None
-        """
-        axis = _axis_interpreter(axis)
-
-        # calculate value if necessary =========================================
-        if value is not None:
-            pass
-        elif p is not None:
-            if axis == 0:
-                value = np.polyval(p, self.x_centers)
-            elif axis == 1:
-                value = np.polyval(p, self.y_centers)
-        elif p is not None:
-            if axis == 0:
-                value = f(self.x_centers)
-            elif axis == 1:
-                value = f(self.y_centers)
-
-        if type_ in relative:
-            if axis == 0:
-                value = self.shifts_v + value
-            elif axis == 1:
-                value = self.shifts_h + value
-
-        # shift is absolute!!!!!!!!! Works ==============================
-        if axis == 0:
-            if isinstance(value, Iterable):
-                assert len(value) == self.shape[1], f'Number of values must be the same as the number of columns ({self.shape[1]})'
-                value = [round(k) for k in value]
-            else:
-                value = [int(round(value))]*self.shape[1]
-
-            # undo last shift
-            for i, v in enumerate(self._shifts_v):
-                if v != 0:
-                    temp = Spectrum(self._data[:, i])
-                    temp.roll = -v
-                    self._data[:, i] = temp.y
-                    self._shifts_v[i] = 0
-
-            # apply shift
-            for i, v in enumerate(value):
-                if v != 0:
-                    temp = Spectrum(self._data[:, i])
-                    temp.roll = v
-                    self._data[:, i] = temp.y
-                    self._shifts_v[i] = v
-        elif axis == 1:
-            if isinstance(value, Iterable):
-                assert len(value) == self.shape[0], f'Number of values must be the same as the number of rows ({self.shape[0]})'
-                value = [round(v) for v in value]
-            else:
-                value = [int(round(value))]*self.shape[0]
-
-            # undo last shift
-            for i, h in enumerate(self._shifts_h):
-                if h != 0:
-                    temp = Spectrum(self._data[i, :])
-                    temp.roll = -h
-                    self._data[i, :] = temp.y
-                    self._shifts_h[i] = 0
-
-            # apply shift
-            for i, h in enumerate(value):
-                if h != 0:
-                    temp = Spectrum(self._data[i, :])
-                    temp.roll = h
-                    self._data[i, :] = temp.y
-                    self._shifts_h[i] = h
-
-        # if self.reduced is not None:
-        #     self.binning(nbins=self.nbins)
-        self._reduced = None
-
-    def fix_curvature(self, deg=2, axis=0, mode='cc'):
-        """Fix curvature.
-
-        Args:
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical direction.
-
-        Returns:
-            None
-        """
-        axis = _axis_interpreter(axis)
-
-        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
-
-        # calculate shifts
-        self.reduced.floor()
-        self.calculate_shifts(axis=axis, mode=mode)
-
-        p, f = self.calculated_shifts.polyfit(deg=deg)
-        self._p = p
-        self._f = f
-
-        self.set_shifts(p=p, axis=axis)
-
-
-    def floor(self, x=0, y=0, n=30, nx=None, ny=None):
-        """Set background intensity to zero.
-
-        Args:
-            x, y (int, optional): x and y position to sample background intensity.
-            n, nx, ny (int, optional): size of the pixel window around x, y.
-
-        Returns:
-            None
-        """
-        assert x >= 0 and is_integer(x) and x<self.shape[1], f'x must be a positive integer smaller than {self.shape[1]}.'
-        assert y >= 0 and is_integer(y) and y<self.shape[0], f'y must be a positive integer smaller than {self.shape[0]}.'
-
-        # sorting n
-        if nx is None: nx = n
-        if ny is None: ny = n
-
-        # check if x falls inside the image
-        if x-nx/2 >= 0 and x+nx/2 < self.shape[1]:
-            x_start = x-nx/2
-            x_stop  = x+nx/2
-        elif x-nx/2 < 0:
-            x_start = 0
-            x_stop = x+nx/2-(x-nx/2)
-        elif x+n/2 >= self.shape[1]:
-            x_start = x-nx/2-(x+nx/2-self.shape[1])
-            x_stop  = self.shape[1]-1
-        else:
-            raise ValueError('Averaging range falls outside of the image. Please, change x or n.')
-
-        # check if y falls inside the image
-        if y-ny/2 >= 0 and y+ny/2 < self.shape[0]:
-            y_start = y-ny/2
-            y_stop  = y+ny/2
-        elif y-nx/2 < 0:
-            y_start = 0
-            y_stop = y+ny/2-(y-ny/2)
-        elif y+n/2 >= self.shape[0]:
-            y_start = y-ny/2-(y+ny/2-self.shape[0])
-            y_stop  = self.shape[0]-1
-        else:
-            raise ValueError('Averaging range falls outside of the image. Please, change y or n.')
-
-        self._data -= np.mean(self._data[int(y_start):int(y_stop), int(x_start):int(x_stop)]).astype(self.data.dtype)
-        self._vmin = min([min(x) for x in self.data])
-        self._vmax = max([max(x) for x in self.data])
-
-    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
-        """Crop Image.
-
-        Args:
-            x_start, x_stop, y_start, y_stop (int): pixel range. start is
-                inclusive and stop is exclusive. Use None to to indicate the
-                edge of the image.
-
-        Returns:
-            croped image
-        """
-        # check if None
-        if x_start is None: x_start = 0
-        if x_stop is None:  x_stop = self.shape[1]
-        if y_start is None: y_start = 0
-        if y_stop is None:  y_stop = self.shape[0]
-
-        # verification
-        assert x_start >= 0 and x_start<=self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
-        assert is_integer(x_start), f'x_start must be an integer.'
-        assert x_stop  >= 0 and x_stop<=self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
-        assert is_integer(x_stop),  f'x_stop must be an integer.'
-        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-
-        assert y_start >= 0 and y_start<=self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
-        assert is_integer(y_start), f'y_start must be an integer.'
-        assert y_stop  >= 0 and y_stop<=self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
-        assert is_integer(y_stop), f'y_stop must be an integer.'
-        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
-
-        # crop
-        final = Image(data=self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)])
-        return self._transfer_attributes(final)
-
-
-class PhotonEvents(metaclass=_Meta):
-    """Photon events object.
-
-    Args:
-        data (list or array): two (x, y) or three (x, y, intensity) list or array with
-            photon events.
-        filepath (string or path object, optional): filename or file handle.
-            If the filename ends in .gz, the file is automatically saved in
-            compressed gzip format. This is overwriten by data.
-        shape (tuple, optional): Shape of data (maximum vertical size, maximum horizontal size).
-        x, y, I (list or array): data columns.
-
-    Attributes:
-        data (2D array): This is where we store the Image.
-        shape (tuple): Shape of data (vertical size, horizontal size).
-        x, y, I (1D array): x, y, and intensity arrays.
-
-        nbins (tuple): Number of bins (number of rows, number of columns).
-        bins_size (tuple): Bins size (size of rows, size of columns).
-        reduced (brixs.Image): Binned image.
-
-        calculated_shifts (brixs.Spectrum): Calculated shifts.
-        p (list): Polynomial coefficients of the fitted shift values.
-        f (function): Function f(x) of the fitted shift values.
-
-    Methods:
-        save()
-        load()
-        plot()
-        binning()
-        calculate_histogram()
-        calculate_spectrum()
-        floor()
-        calculate_shifts()
-        set_shifts()
-        fix_curvature()
-
-    """
-
-    _read_only = ['reduced', 'calculated_shifts']
-
-    def __init__(self, *args, **kwargs):
-        # argument parsing
-        data, filepath, shape = self._sort_args(args, kwargs)
-
-        # basic attr
-        self._data  = None
-        self._shape = [None, None]
-
-        # binning attr
-        self._nbins      = np.array((-1, -1))
-        self._bins_size  = np.array((-1, -1))
-        self._reduced    = None
-
-        # shifts
-        self._calculated_shifts = None
-        self._shifts = None
-
-        # set data
-        if data is not None:
-            self.data = copy.deepcopy(data)
-        elif filepath is not None:
-            self.load(filepath)
-        if shape != (None, None):
-            self.shape = shape
-
-    @property
-    def data(self):
-        return copy.deepcopy(self._data)
-    @data.setter
-    def data(self, value):
-        # basic attr
-        if value.shape[1] == 3:
-            self._data = np.array([event for event in np.array(value, dtype='float') if not event[2]<=0])
-        elif value.shape[1] == 2:
-            data = np.array(value, dtype='float')
-            self._data = np.c_[data, np.ones(data.shape[0])]
-        else:
-            raise ValueError("Data must have 2 or 3 columns.")
-
-        # set shape
-        if self.shape[0] is None:
-            self._shape[0] = max(self.data[:, 1])
-        elif max(self.data[:, 1]) > self._shape[0]:
-            self._shape[0] = max(self.data[:, 1])
-        if self.shape[1] is None:
-            self._shape[0] = max(self.data[:, 0])
-        elif max(self.data[:, 0]) > self._shape[1]:
-            self._shape[1] = max(self.data[:, 0])
-
-        # binning attr
-        self._nbins      = np.array((-1, -1))
-        self._bins_size  = np.array((-1, -1))
-        self._reduced    = None
-
-        # shift attr
-        self._calculated_shifts = None
-        self._shifts = None
-    @data.deleter
-    def data(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shape(self):
-        return copy.deepcopy(self._shape)
-    @shape.setter
-    def shape(self, value):
-        if isinstance(value, Iterable):
-            if len(value) == 2:
-                if value[0] is None:
-                    value[0] = max(self.data[:, 1])
-                if value[1] is None:
-                    value[1] = max(self.data[:, 0])
-                if value[0] < 0 or value[1] < 0:
-                    raise ValueError('Shape cannot be negative.')
-                self._shape = value
-            else:
-                raise ValueError(f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}')
-        else:
-            raise ValueError(f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}')
-    @shape.deleter
-    def shape(self):
-        raise AttributeError('Cannot delete object.')
-
+                self.y = args[0]
+        elif len(args) == 2:
+            self.x = args[0]
+            self.y = args[1]
+
+    ##############
+    # attributes #
+    ##############
     @property
     def x(self):
-        return copy.deepcopy(self._data[:, 0])
+        return self._x
     @x.setter
     def x(self, value):
-        raise AttributeError('Cannot set object. This might change in the future.')
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        # check type
+        if not isinstance(value, Iterable):
+            raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
+    
+        # check if iterable is made of numbers
+        try:
+            _ = sum(value)
+        except:
+            raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+        
+        # check length
+        if self.y is not None:
+            assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
+       
+        #################
+        # set attribute #
+        #################
+        self._x = np.array(value, dtype='float')
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        self.step         = None
+        self.monotonicity = None
+
+        ############################
+        # reset special attributes #
+        ############################
+        self.peaks.clear()
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
 
     @property
     def y(self):
-        return copy.deepcopy(self._data[:, 1])
+        return self._y
     @y.setter
     def y(self, value):
-        raise AttributeError('Cannot set object. This might change in the future.')
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        # check type
+        if not isinstance(value, Iterable):
+            raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
+    
+        # check if iterable is made of numbers
+        try:
+            _ = sum(value)
+        except:
+            raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+        
+        # check length
+        if self.x is not None:
+            assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
+        else:
+            self._x = np.arange(0, len(value))
+
+        #################
+        # set attribute #
+        #################
+        self._y = np.array(value, dtype='float')
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        # self.step         = None
+        # self.monotonicity = None
+
+        ############################
+        # reset special attributes #
+        ############################
+        self.peaks.clear()
     @y.deleter
     def y(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def I(self):
-        return copy.deepcopy(self._data[:, 2])
-    @I.setter
-    def I(self, value):
-        raise AttributeError('Cannot set object. This might change in the future.')
-    @I.deleter
-    def I(self):
+    def filepath(self):
+        return self._filepath
+    @filepath.setter
+    def filepath(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, Path):
+            self._filepath = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nFilepath can only be str or pathlib.Path type.')
+    @filepath.deleter
+    def filepath(self):
+        raise AttributeError('Cannot delete object.')   
+
+    @property
+    def step(self):
+        return self._step
+    @step.setter
+    def step(self, value):
+        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
+        if value is None:
+            self._step = None
+            self._roll = 0
+
+            # special
+            self.peaks._step  = None
+        else:
+            raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
+    @step.deleter
+    def step(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def monotonicity(self):
+        return self._monotonicity
+    @monotonicity.setter
+    def monotonicity(self, value):
+        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
+        if value is None:
+            self._monotonicity = None
+        else:
+            raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
+    @monotonicity.deleter
+    def monotonicity(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def peaks(self):
+        return self._peaks
+    @peaks.setter
+    def peaks(self, value):
+        raise AttributeError('Attribute is "read only".')
+    @peaks.deleter
+    def peaks(self):
+        raise AttributeError('Cannot delete object.')
+
+    ###################################
+    # computed (read-only) attributes #
+    ###################################
+    @property
+    def data(self):
+        return np.vstack((self.x, self.y)).transpose()
+    @data.setter
+    def data(self, value):
+        raise AttributeError('Attribute is "read only".')
+    @data.deleter
+    def data(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def nbins(self):
-        return self._nbins
-    @nbins.setter
-    def nbins(self, value):
-        if type(value) != str:
-            self.binning(nbins=value)
-        # elif value == 'guess':
-        #     guess_bins = self.guess_bins()
-        #     self.bins = guess_bins
-        else:
-            raise ValueError("Not a valid option of `nbins`.\nValid options are: a number, a tuple, or a list.")
-    @nbins.deleter
-    def nbins(self):
+    def area(self):
+        return self.calculate_area()
+    @area.setter
+    def area(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @area.deleter
+    def area(self):
+        raise AttributeError('Cannot delete object.')
+
+    #########################
+    # write-only attributes #
+    #########################
+    @property
+    def calib(self):
+        pass
+    @calib.setter
+    def calib(self, value):
+        self.set_calib(value)
+    @calib.deleter
+    def calib(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def bins_size(self):
-        return self._bins_size
-    @bins_size.setter
-    def bins_size(self, value):
-        self.binning(bins_size=value)
-    @bins_size.deleter
-    def bins_size(self):
+    def shift(self):
+        pass
+    @shift.setter
+    def shift(self, value):
+        self.set_shift(value)
+    @shift.deleter
+    def shift(self):
         raise AttributeError('Cannot delete object.')
 
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, filepath, shape
-        """
-        # initial check
-        if kwargs != {} and args != ():
-            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `x`, `y`, `I`, `shape`, `data`, and `filepath`.')
-
-        # initialization
-        data     = None
-        filepath = None
-        x        = None
-        y        = None
-        I        = None
-        shape    = (None, None)
-        error = 'brixs.PhotonEvents() cannot figure out the data out of the arguments passed.\nMaybe use keyword arguments.\nValid arguments: x, y, I, shape, data, filepath.'
-
-        # keyword arguments
-        if 'data' in kwargs:
-            data = kwargs['data']
-        if 'x' in kwargs:
-            x = kwargs['x']
-        if 'y' in kwargs:
-            y = kwargs['y']
-        if 'I' in kwargs:
-            I = kwargs['I']
-        if 'shape' in kwargs:
-            shape = kwargs['shape']
-        if 'data' in kwargs:
-            data = kwargs['data']
-        if 'filepath' in kwargs:
-            filepath = kwargs['filepath']
-
-        if x is not None and y is not None and data is None:
-            assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
-            data = np.c_[np.array(x), np.array(y)]
-            if I is not None:
-                assert len(x) == len(I), f'x, y and I must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}\nLength of I = {len(I)}.'
-                data = np.c_[data, np.array(I)]
-
-
-        # positional arguments
-        if len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = Path(args[0])
-            else:
-                data = args[0]
-        elif len(args) == 2:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = Path(args[0])
-                shape = list(args[1])
-                assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
-            else:
-                if len(args[0]) == len(args[1]):
-                    x = args[0]
-                    y = args[1]
-                    assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
-                    data = np.c_[np.array(x), np.array(y)]
-                else:
-                    data = args[0]
-                    shape = list(args[1])
-                    assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
-        elif len(args) == 3:
-            if len(args[0]) == len(args[1]):
-                x = args[0]
-                y = args[1]
-                assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
-                data = np.c_[np.array(x), np.array(y)]
-                if len(args[0]) == len(args[2]):
-                    I = args[2]
-                    data = np.c_[data, np.array(I)]
-                else:
-                    shape = args[2]
-                    assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
-        elif len(args) == 4:
-            x = args[0]
-            y = args[1]
-            assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
-            data = np.c_[np.array(x), np.array(y)]
-            I = args[2]
-            assert len(x) == len(I), f'x, y and I must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}\nLength of I = {len(I)}.'
-            data = np.c_[data, np.array(I)]
-            shape = args[3]
-            assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
-        elif len(args) > 4:
-            raise AttributeError(error)
-
-        return data, filepath, shape
-
-    def __len__(self):
-        if self._data is None:
-            return 0
-        else:
-            return len(self._data[:, 0])
-
-    def get_user_defined_attrs(self):
-        """return attrs that are user defined."""
-        default_attrs =  ['_data', '_shape', 
-                           '_nbins', '_bins_size', 
-                           '_reduced', '_shifts',
-                           '_calculated_shifts']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
-    
-    def save(self, filepath=None, only_data=False,  check_overwrite=None, **kwargs):
-        r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format. If None, filepath can be inferred from a
-                user defined attr 'im.filepath'. Default is None.  Last used 
-                filepath is saved to pe.filepath.
-            only_data (bool, optional): If True, header and footer are ignored and
-                only data is saved to the file.
-            check_overwrite (bool, optional): if True, it will check if file exists
-                and ask if user wants to overwrite file.
-            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
-
-        If not specified, the following parameters are passed to `numpy.savetxt()`_:
-
-        Args:
-            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
-                sequence of formats. See numpy's documentation for more information.
-                If not specified, best fmt is calculated based on the
-                number of decimal places of the data. Specifing fmt makes the code
-                runs a little faster (not much tough, but it might make a difference
-                if saving a lot of files).
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (", ").
-            newline (str, optional): String or character separating lines.
-                Default is ``\n``.
-            header (bool, optional): String that will be written at the beginning of the file.
-                Note that, object attributes will be saved at the beginning of the file.
-                If only_data=True, header and footer is ignored.
-            comments (str, optional): String that will be prepended to the
-                header and footer strings, to mark them as comments. Default is "# ".
-
-        Returns:
-            None
-
-        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
-        """
-        # filepath
-        if filepath is None:
-            try: 
-                filepath = Path(self.filepath)
-            except AttributeError:
-                raise TypeError("Missing 1 required argument: 'filepath'")
-
-        # check overwrite
-        if check_overwrite is None:
-            check_overwrite = settings.SAVE_CHECK_OVERWRITE
-        if check_overwrite:
-            if filepath.exists() == True:
-                if filepath.is_file() == True:
-                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
-                        pass
-                    else:
-                        return
-                else:
-                    raise AttributeError('filepath not pointing to a file.')
-                
-        # kwargs
-        if 'fmt' not in kwargs: # pick best format
-            decimal = max([n_decimal_places(x) for x in flatten(self._data)])
-            kwargs['fmt'] = f'%.{decimal}f'
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
-
-        # save
-        if only_data:
-            if 'header' in kwargs:
-                del kwargs['header']
-            if 'footer' in kwargs:
-                del kwargs['footer']
-            np.savetxt(Path(filepath), self._data, **kwargs)
-        else:
-            if 'header' not in kwargs:
-                kwargs['header'] = ''
-            else:
-                kwargs['header'] += '\n'
-            dict = get_attributes(self)
-            kwargs['header'] += '==== brixs PhotonEvents ===='  + '\n'
-            for n in dict:
-                if n not in ['_data', '_x', '_y', '_I', '_reduced', '_calculated_shifts', '_f', '_shifts']:
-                    if isinstance(dict[n], Iterable):
-                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
-                    else:
-                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
-            np.savetxt(Path(filepath), self._data, **kwargs)
-
-        # save filepath
-        self.filepath = filepath
-
-    def load(self, filepath, **kwargs):
-        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first 
-                decompressed. Last used filepath is saved to pe.filepath.
-
-        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
-
-        Args:
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (', ').
-            comments (str, optional): The character used to indicate the start
-                of a comment. Default is ``# ``. Attributes picked up
-                from the header will be loaded too.
-
-        Returns:
-            None
-
-        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
-        """
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
-
-        # read data
-        data = np.genfromtxt(Path(filepath), **kwargs)
-        self.data = data
-
-        # read header
-        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-        attr_start = 0
-        binning_flag = False  # check if data needs binning
-
-        # find where attributes listing starts
-        for i, line in enumerate(header):
-            if '==== brixs PhotonEvents ====' in line:
-                attr_start = i
-                break
-            attr_start = -1
-
-        # read attributes
-        if attr_start != -1:
-            for i, line in enumerate(header[attr_start+1:-1]):
-
-                # extract name and value
-                name = line[1:-1].split(':')[0].strip()
-                value = eval(line[1:-1].split(':')[1].strip())
-
-
-                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
-                if name in ['_nbins']:
-                    if value[0] > 0 and value[1] > 0:
-                        binning_flag = True
-                elif name in ['_bins_size']:
-                    if value[0] > 0 and value[1] > 0:
-                        binning_flag = True
-                ### DEALING WITH OTHER ATTRIBUTES ###
-                elif name not in []:  # except these attrs
-                    try:
-                        setattr(self, name, value)
-                    except Exception as e:
-                        print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
-
-        ### RUN ###
-        if binning_flag:
-            try:
-                self.binning(nbins=self.nbins, bins_size=self.bins_size)
-            except:
-                pass
-
-        # save filepath
-        self.filepath = str(filepath)
-
-    def plot(self, ax=None, set_limits=True, **kwargs):
-        """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
-
-        The limits of the plot is also set to the size of the detector (given in
-            the attribute ``shape``.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            set_limits (book, optional): if True, it sets the plot limits 
-            accordingly to pe.shape
-
-        If not specified, the following parameters are passed to `matplotlib.pyplot.scatter()`_:
-
-        Args:
-            s: The marker size in points**2. Default is 0.1.
-
-        Returns:
-            `matplotlib.image.AxesImage`_
-
-        .. _matplotlib.pyplot.scatter(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.scatter.html
-        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
-        """
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-        # kwargs
-        if 's' not in kwargs:
-            kwargs['s'] = 0.1
-
-        # plot
-        pos = ax.scatter(self.data[:, 0], self.data[:, 1], **kwargs)
-
-        # set limits
-        if set_limits:
-            try:
-                ax.xlim(0, self.shape[1])
-                ax.ylim(0, self.shape[0])
-            except AttributeError:
-                ax.set_xlim(0, self.shape[1])
-                ax.set_ylim(0, self.shape[0])
-
-        return pos
-
-    def binning(self, *args, **kwargs):
-        """Compute the 2D histogram of the data (binning of the data).
-
-        Args:
-            nbins (int or tuple, optional): number of bins. If one value is given,
-                this is used for both x and y directions. If two values are given,
-                they are used separetely for the number of rows and number of
-                columns, respectively. ``bins_size`` is calculated.
-            bins_size (int or tuple, optional): size of the bins. This overwrites
-                the argument ``bins``. If one value is given,
-                it is used for both x and y directions. If two values are given,
-                they are used separetely for rows and columns size, respectively.
-                ``nbins`` is calculated.
-
-        Example:
-            .. code-block:: python
-
-                nbins = 10       # (10 rows, 10 columns)
-                nbins = (10)     # (10 rows, 10 columns)
-                nbins = (10, 5)  # (10 rows, 5 columns)
-
-        Returns:
-            None
-        """
-        kwargs['shape']        = self.shape
-        kwargs['factor_check'] = False
-        _nbins, _bins_size = _bins_interpreter(*args, **kwargs)
-
-        temp, _x_edges, _y_edges = np.histogram2d(self.data[:, 0],
-                                                            self.data[:, 1],
-                                                            bins=_nbins[::-1],
-                                                             weights=self.data[:, 2],
-                                                             range=((0, self.shape[1]), (0, self.shape[0]))
-                                                            )
-        self._reduced   = Image(temp.transpose())
-        self.reduced._x_centers = moving_average(_x_edges, n=2)
-        self.reduced._y_centers = moving_average(_y_edges, n=2)
-        self.reduced._x_edges = _x_edges
-        self.reduced._y_edges = _y_edges
-        self._nbins     = _nbins
-        self._bins_size = _bins_size
-        return
-
-    def calculate_spectrum(self, nbins=None, bins_size=None, axis=1, xaxis='bins'):
-        """Integrate data in one direction (sum columns or rows).
-
-        Args:
-            nbins (int, optional): number of bins. nbins overwrites bins_size. The
-                nbins of the opposite axis is automatically set to 1.
-            bins_size (int or tuple, optional): size of the bins.
-            axis (int or string, optional): Axis along which elements are integrated.
-                By default, data is integrated in the horizontal direction.
-
-        Returns:
-            :py:class:`Spectrum`.
-        """
-        axis = _axis_interpreter(axis)
-
-        temp = PhotonEvents(data=self.data, shape=self.shape)
-        temp.binning(nbins=nbins, bins_size=bins_size)
-        s = temp.reduced.calculate_spectrum(axis=axis)
-        return s
-
-    def calculate_shifts(self, axis=0):
-        """For now, the only mode tested is cc"""
-        self.calculate_rolls(axis=axis)
-    
-    def calculate_rolls(self, axis=0):
-        """For now, the only mode tested is cc"""
-        axis = _axis_interpreter(axis)
-        mode = 'cc'
-        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use PhotonEvents.binning()'
-
-        self.reduced.calculate_shifts(axis=axis, mode=mode)
-
-        if mode in cc:
-            if axis == 0:
-                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y#*self.bins_size[0]
-            elif axis == 1:
-                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y#*self.bins_size[1]
-        self._calculated_shifts = self.reduced.calculated_shifts
-
-    def transform(self, f):
-        """Changes the values of x, y based on a function.
-
-        Args:
-            f (function): function ``x, y = f(x, y)`` that takes as input the
-                position of a photon event and returns its corrected values.
-
-        Example:
-            f = lambda x, y: (x, y**2)
-
-        Returns:
-            None
-        """
-        self._data[:, 0], self._data[:, 1] = f(self.data[:, 0], self.data[:, 1])
-
-    def set_shifts(self, value=None, p=None, f=None, axis=0):
-        """assuming calculation mode = 'cc'
-        value
-        p
-        f
-        axis=0 or 1
-        """
-        axis = _axis_interpreter(axis)
-
-        if value is not None:
-            if isinstance(value, Iterable) == False:
-                value = [value]*len(self)
-            assert len(value) == len(self), f'value must have the same length as the data\nLength of the data = {len(self)}.'
-
-            if axis == 0:
-                self._data[:, 1] = self.data[:, 1] + value
-                self._shifts = Spectrum(x=self.data[:, 0], y=value)
-            elif axis == 1:
-                self._data[:, 0] = self.data[:, 0] + value
-                self._shifts = Spectrum(x=self.data[:, 1], y=value)
-        elif p is not None:
-            if axis == 0:
-                self._data[:, 1] = self.data[:, 1] + np.polyval(p, self.data[:, 0])
-            elif axis == 1:
-                self._data[:, 0] = self.data[:, 0] + np.polyval(p, self.data[:, 1])
-            self._p = p
-        elif f is not None:
-            if axis == 0:
-                self._data[:, 1] = self.data[:, 1] + f(self.data[:, 0])
-            elif axis == 1:
-                self._data[:, 0] = self.data[:, 0] + f(self.data[:, 1])
-            self._f = f
-
-    def fix_curvature(self, deg=2, axis=0):
-        """mode = 'cc'
-        
-        return popt
-        """
-        axis = _axis_interpreter(axis)
-
-        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
-
-        # self.reduced.floor()
-        self.calculate_shifts(axis=axis)
-
-        popt, model, r2 = self.calculated_shifts.polyfit(deg=deg)
-
-        # set shifts
-        self.set_shifts(p=popt)
-
-        return popt, model, r2
-
-    #
-    # def guess_bins(self, bins_initial=(9, 100), bins_step=(1, 50), max_x_iter=3, max_iter=1000, mode='cross-correlation', ranges=None):
-    #     """
-    #     Args:
-    #         max_x_iter (int, optional): every iteration the algorithm calculates
-    #             the offsets for different x_bins. Sometimes, subsequant x_bins
-    #             will give the same result (i.e., same number of equal offsets).
-    #             The algorithm will keep trying max_x_iter different x_bins until
-    #             finaly change to a different y_bins.
-    #         max_iter (int, optional): maximum number of different binnigs to try.
-    #     """
-    #     # offset parameters
-    #     ref = int(bins_initial[0]/2)
-    #
-    #     # inital iteration
-    #     # temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
-    #     # temp.bins = bins_initial
-    #     # temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
-    #     diff = [0, 0]
-    #     diff_sum = sum(diff)
-    #
-    #     # bins_initial[0] -= 1
-    #     x_counter = 0
-    #     total_counter = 0
-    #     bins = (bins_initial[0], bins_initial[1])
-    #     while 0 in diff and total_counter < max_iter:
-    #         temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
-    #         temp.bins = bins
-    #         temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
-    #         diff = np.diff(temp.offsets)
-    #
-    #         if x_counter < max_x_iter-1:
-    #             if diff_sum == sum(diff):
-    #                 bins = (bins[0]+bins_step[0], bins[1])
-    #                 x_counter += 1
-    #         else:
-    #             bins = (bins_initial[0], bins[1]+bins_step[1])
-    #             x_counter = 0
-    #
-    #         diff_sum = sum(diff)
-    #         total_counter += 1
-    #     if total_counter >= max_iter:
-    #         raise RuntimeError('cannot find solution.')
-    #     else:
-    #         return temp.bins
-    #
-    # def best_bins(self, y_bins=None, x_bins=None, deg=2, spectrum_bins=6000, **kwargs):
-    #
-    #     if y_bins is None:
-    #         y_bins = [100, 150, 300, 400, 600, 1000, 1500, 2500, 5000, 6000, 8000, 12000, 15000]
-    #
-    #     if x_bins is None:
-    #         x_bins = [3, 5, 7, 9, 12, 15, 20, 30, 60]
-    #
-    #     # bins_old = self.bins
-    #
-    #     fwhm = {y_bin: {x_bin:None for x_bin in x_bins} for y_bin in y_bins}
-    #     best_bins = (0, 0)
-    #     best = 10000
-    #     print(f'Starting iteration...')
-    #     for i, y_bin in enumerate(y_bins):
-    #         print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}.')
-    #         for x_bin in x_bins:
-    #             temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
-    #             temp.bins = (x_bin, y_bin)
-    #             # print(self.bins)
-    #             temp.calculate_offsets(ref=int(temp.bins[0]/2))
-    #             temp.fit_offsets(deg=deg)
-    #             temp.offsets_correction()
-    #             s = temp.calculate_spectrum(bins=spectrum_bins)
-    #             try:
-    #                 s.guess_elastic_peak(**kwargs)
-    #                 fwhm[y_bin][x_bin] = s.elastic_fwhm
-    #                 if s.elastic_fwhm < best:
-    #                     best_bins = (x_bin, y_bin)
-    #                     best = s.elastic_fwhm
-    #             except RuntimeError:
-    #                 pass
-    #
-    #
-    #     print(f'Done. Best bins is {best_bins}.')
-    #
-    #     return best_bins, best, fwhm
-    #
-    # def best_bins_for_spectrum(self, y_bins=None, **kwargs):
-    #
-    #     if y_bins is None:
-    #         y_bins = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000]
-    #
-    #     fwhm = {y_bin: None for y_bin in y_bins}
-    #     best = 10000
-    #     print(f'Starting iteration...')
-    #     for i, y_bin in enumerate(y_bins):
-    #         print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}')
-    #         s = self.calculate_spectrum(bins=y_bin, mode='length')
-    #         try:
-    #             s.guess_elastic_peak(**kwargs)
-    #             fwhm[y_bin] = s.elastic_fwhm
-    #             if s.elastic_fwhm < best:
-    #                 best_bins = (1, y_bin)
-    #                 best = s.elastic_fwhm
-    #         except RuntimeError:
-    #             fwhm[y_bin] = -1
-    #
-    #
-    #     return best_bins, best, fwhm
-
-
-class Spectrum(metaclass=_Meta):
-    """Creates a ``spectrum`` class type object to deal with (x, y) data types.
-
-    The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
-    3) filepath. For example, if `data` and `filepath` are passed as arguments,
-    `filepath` is ignored.
-
-    Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-    For positional arguments, if one data set is passed, it assumes it is
-    `data`. If this one argument is of type string or Pathlib.Path, it
-    assumes it is a filepath. If two data sets are passed, it will
-    assume one is the x coordinates and the next one is the y coordinates.
-
-    Args:
-        data (list or array, optional): two column list (or array).
-        x (list or array, optional): x values (1D list/array). Overwrites `data`.
-        y (list or array, optional): y values (1D list/array). Overwrites `data`.
-
-    Attributes:
-        data (array): three column array (x, y, and intensity)
-        x (array): vector with x-coordinate values
-        y (array): vector with y-coordinate values
-        step (number, read only): step size for x-coordinates.
-        shift (number): shift value (value will be added to x-coordinates).
-        calib (number): calibration value (x-coordinates will be multiplied by this value).
-        offset( number): offset value (value will be added to y-coordinates).
-        factor (number): multiplicative factor (y-coordinates will be multiplied by this value).
-        peaks (dict): each entry represents a peak.
-
-
-
-    Note, peaks can be copyed around without need of deepcopy.
-    """
-    # read only and non-removable arguments
-    # _read_only = ['step', 'monotonicity',  'R2', 'fit', 'residue', 'guess', 'pcov']
-    _read_only = []
-    _non_removable = []
-
-    def __init__(self, *args, **kwargs):
-        # basic
-        self._x    = None
-        self._y    = None
-        self._xlabel   = ''
-        self._ylabel   = ''
-        self._filepath = ''
-
-        # modifiers
-        self._reset_modifiers()
-
-        # check
-        self._step         = None
-        self._monotonicity = None
-
-        # peaks
-        self._peaks = Peaks()
-
-        # sorting data
-        data, x, y, filepath = self._sort_args(args, kwargs)
-        if data is not None:
-            self.data = data
-        elif filepath is not None:
-            self.load(filepath)
-        elif y is not None:
-            if x is None:
-                x = np.arange(0, len(y))
-                self.data = np.vstack((x, y)).transpose()
-            else:
-                if len(x) == len(y):
-                    self.data = np.vstack((x, y)).transpose()
-                else:
-                    raise ValueError('x and y data are not the same length.')
-        else:
-            self._x = None
-            self._y = None
-
-    # basic
+    @property
+    def roll(self):
+        pass
+    @roll.setter
+    def roll(self, value):
+        self.set_roll(value)
+    @roll.deleter
+    def roll(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def offset(self):
+        pass
+    @offset.setter
+    def offset(self, value):
+        self.set_offset(value)
+    @offset.deleter
+    def offset(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def factor(self):
+        pass
+    @factor.setter
+    def factor(self, value):
+        self.set_factor(value)
+    @factor.deleter
+    def factor(self):
+        raise AttributeError('Cannot delete object.')
+
+    #################
+    # magic methods #
+    #################
     def __len__(self):
         if self.x is None:
             return 0
@@ -2542,319 +719,17 @@ class Spectrum(metaclass=_Meta):
         for y in self.y:
             yield y
 
-    # support
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-        Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath. If two data sets are passed, it will
-            assume one is the x coordinates and the next one is the y coordinates.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, x, y, filepath
-        """
-        # initial check
-        if kwargs != {} and args != ():
-            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
-        if any([item not in ['data', 'x', 'y', 'filepath'] for item in kwargs.keys()]):
-            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `x`, `y`, and `filepath`\nInput attributes: {kwargs.keys()}')
-
-        # initialization
-        data = None
-        x    = None
-        y    = None
-        filepath = None
-
-        # keyword arguments
-        if 'data' in kwargs:
-            data = kwargs['data']
-        if 'y' in kwargs:
-            if 'x' in kwargs:
-                x = kwargs['x']
-            else:
-                x = None
-            y = kwargs['y']
-        elif 'x' in kwargs:
-            raise AttributeError('cannot seem to find y data.')
-        if 'filepath' in kwargs:
-            filepath = kwargs['filepath']
-
-        # positional arguments
-        if len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                filepath = args[0]
-            elif isinstance(args[0], Iterable):
-                data = args[0]
-        elif len(args) == 2:
-            x = args[0]
-            y = args[1]
-        elif len(args) > 2:
-            raise AttributeError('brixs.Spectrum() cannot figure out the data out of the arguments passed. Maybe use key word arguments (x, y, data, filepath).')
-
-        return data, x, y, filepath
-
-    def _reset_modifiers(self):
-        self._factor = 1
-        self._offset = 0
-        self._calib  = 1
-        self._shift  = 0
-        self._roll   = 0
-
-    def _transfer_attributes(self, object):
-        """Transfer user defined attributes to output objects."""
-        
-        # copy user defined attributes
-        for attr in self.get_user_defined_attrs():
-            object.__setattr__(attr, self.__dict__[attr])
-
-        # copy other attrs
-        for attr in ['_xlabel', '_ylabel']:
-            object.__setattr__(attr, self.__dict__[attr])
-        
-        return object
-
-    def get_user_defined_attrs(self):
+    ###########
+    # support #
+    ###########
+    def _get_user_attrs(self):
         """return attrs that are user defined."""
-        default_attrs =  ['_x', '_y', '_xlabel', '_ylabel', '_filepath', 
-                          '_factor', '_offset', '_calib', '_shift', '_roll', 
-                          '_step', '_monotonicity', '_peaks']
+        default_attrs =  ['_x', '_y', '_filepath', '_step', '_monotonicity', '_peaks']
         return [key for key in self.__dict__.keys() if key not in default_attrs]
 
-    # attributes and properties
-    @property
-    def data(self):
-        return np.vstack((self.x, self.y)).transpose()
-    @data.setter
-    def data(self, value):
-        try:
-            value = np.array(value, dtype='float')
-            if value is None:
-                raise ValueError('No data to load.')
-            elif value.shape[1] == 1:   # one column data (list)
-                self._x = np.arange(0, len(value), dtype='float')
-                self._y = np.array(value, dtype='float')
-            elif value.shape[1] != 2:
-                value = value.transpose()
-                if value.shape[1] != 2:
-                    raise ValueError('Data must have two columns (x, y).')
-                else:
-                    self._x = value[:, 0]
-                    self._y = value[:, 1]
-            else:
-                self._x = value[:, 0]
-                self._y = value[:, 1]
-        except IndexError:  # one column data (list)
-            self._x = np.arange(0, len(value), dtype='float')
-            self._y = np.array(value, dtype='float')
-        # check
-        self.step         = None
-        self.monotonicity = None
-        self._reset_modifiers()
-        #special
-        self.peaks.clear()
-    @data.deleter
-    def data(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def x(self):
-        return self._x
-    @x.setter
-    def x(self, value):
-        if self.y is not None:
-            assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
-        self._x = np.array(value, dtype='float')
-        # check
-        self.step         = None
-        self.monotonicity = None
-        self._reset_modifiers()
-        #special
-        self.peaks.clear()
-    @x.deleter
-    def x(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def y(self):
-        return self._y
-    @y.setter
-    def y(self, value):
-        if self.x is not None:
-            assert len(value) == len(self.x), f'Length of y array (len={len(value)}) you are trying to set is not compatible with current length of the x array (len={len(self.x)}).'
-        else:
-            self._x = np.arange(0, len(value))
-        self._y = np.array(value, dtype='float')
-        # check
-        # self.step         = None
-        # self.monotonicity = None
-        self._reset_modifiers()
-        #special
-        self.peaks.clear()
-    @y.deleter
-    def y(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def calib(self):
-        return self._calib
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift(self):
-        return self._shift
-    @shift.setter
-    def shift(self, value):
-        self.set_shift(value)
-    @shift.deleter
-    def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def roll(self):
-        return self._roll
-    @roll.setter
-    def roll(self, value):
-        self.set_roll(value)
-    @roll.deleter
-    def roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offset(self):
-        return self._offset
-    @offset.setter
-    def offset(self, value):
-        self.set_offset(value)
-    @offset.deleter
-    def offset(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factor(self):
-        return self._factor
-    @factor.setter
-    def factor(self, value):
-        self.set_factor(value)
-    @factor.deleter
-    def factor(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def peaks(self):
-        return self._peaks
-    @peaks.setter
-    def peaks(self, value):
-        raise AttributeError('Attribute is "read only".')
-    @peaks.deleter
-    def peaks(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def area(self):
-        return self.calculate_area()
-    @area.setter
-    def area(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @area.deleter
-    def area(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def xlabel(self):
-        return self._xlabel
-    @xlabel.setter
-    def xlabel(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str):
-            forbidden = [':', '#', '\n', '\r']
-            if np.sum([x in value for x in forbidden]):
-                raise ValueError(f'xlabel cannot contain the following characters: {forbidden}')
-            self._xlabel = str(value)
-        else:
-            raise TypeError('Invalid type for xlabel\nxlabel must be a string.')
-    @xlabel.deleter
-    def xlabel(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def ylabel(self):
-        return self._ylabel
-    @ylabel.setter
-    def ylabel(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str):
-            forbidden = [':', '#', '\n', '\r']
-            if np.sum([x in value for x in forbidden]):
-                raise ValueError(f'xlabel cannot contain the following characters: {forbidden}')
-            self._ylabel = str(value)
-        else:
-            raise TypeError('Invalid type for ylabel\nylabel must be a string.')
-    @ylabel.deleter
-    def ylabel(self):
-        raise AttributeError('Cannot delete object.')   
-    
-    @property
-    def filepath(self):
-        return self._filepath
-    @filepath.setter
-    def filepath(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str) or isinstance(value, Path):
-            self._filepath = value
-        else:
-            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nFilepath can only be str or pathlib.Path type.')
-    @filepath.deleter
-    def filepath(self):
-        raise AttributeError('Cannot delete object.')   
-
-    @property
-    def step(self):
-        return self._step
-    @step.setter
-    def step(self, value):
-        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
-        if value is None:
-            self._step = None
-            self._roll = 0
-
-            # special
-            self.peaks._step  = None
-        else:
-            raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
-    @step.deleter
-    def step(self):
-        raise AttributeError('Cannot delete object.')
-    
-    @property
-    def monotonicity(self):
-        return self._monotonicity
-    @monotonicity.setter
-    def monotonicity(self, value):
-        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
-        if value is None:
-            self._monotonicity = None
-        else:
-            raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
-    @monotonicity.deleter
-    def monotonicity(self):
-        raise AttributeError('Cannot delete object.')
-    
-
-    # save and load
+    #################
+    # save and load #
+    #################
     def _header(self, verbose):
         """Gather attrs to be saved to a file."""
         header = ''
@@ -3054,7 +929,9 @@ class Spectrum(metaclass=_Meta):
         # save filepath
         self.filepath = str(filepath)
 
-    # check
+    #################
+    # check methods #
+    #################
     def check_step(self, max_error=None):
         """Checks vector uniformity of the x-coordinates.
 
@@ -3131,7 +1008,7 @@ class Spectrum(metaclass=_Meta):
                 self.check_monotonicity()
             except ValueError:
                 unqa, ID, counts = np.unique(self.x, return_inverse=True, return_counts=True)
-                self.data        = np.column_stack(( unqa , np.bincount(ID,self.y)/counts ))
+                self.data        = np.column_stack((unqa, np.bincount(ID,self.y)/counts))
                 # check
                 self.check_monotonicity()
             
@@ -3148,86 +1025,61 @@ class Spectrum(metaclass=_Meta):
         #special
         # self.peaks.clear()
 
-    # modifiers
-    def set_calib(self, value, type_='absolute'):
+    ##################
+    # base modifiers #
+    ##################
+    def set_calib(self, value):
         """Set calibration value.
 
         Args:
             value (number): calibration value (x-coordinates will be multiplied
                 by this value).
-            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
         """
+        ###################################
+        # asserting validity of the input #
+        ###################################
         # calib cannot be zero
         if value == 0:
             raise ValueError('cannot set calib = 0.0')
 
-        # is relative?
-        if type_ in relative:
-            value = self.calib * value
+        #######
+        # run #
+        #######
+        self._x = self.x*value
 
-        # apply calibration
-        if self.calib != value:
-            if self.calib != 1:
-                self._x = self.x*self.calib**-1
-            if value != 1:
-                self._x = self.x*value
-            self._calib = value
-
-        # check
+        ##########################
+        # reset check attributes #
+        ##########################
         self.step         = None
         self.monotonicity = None
-        # self._reset_modifiers()
 
-        #special
-        # self.peaks.clear()
-        self.peaks.set_calib(value=value, type_=type_)
+        ###############
+        # fix special #
+        ###############
+        self.peaks.set_calib(value=value)
 
-    def set_shift(self, value, type_='absolute'):
+    def set_shift(self, value):
         """Set shift value.
 
         Adds a value to the x-coordinates. y-coordinates are fully preserved.
 
         Args:
             value (float or int): shift value (value will be added to x-coordinates).
-            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
-
-        Warning:
-            It is always better to use ``mode='hard'`` or ``'roll'`` since the form of y is fully
-            preserved (no interpolation). After applying a shift using the ``mode='interp'``,
-            one can apply a
-            'inverse' shift to retrieve the original data. The diference between the retrieved
-            y data and the original data will give an ideia of the information loss
-            caused by the interpolation. Also, multiple shifts using interp may cause
-            built up of data loss. It's not drastic if data is suficiently well
-            resolved, but it should be avoided.
         """
-        # is relative?
-        if type_ in relative:
-            value = self.shift + value
+        self._x += value
 
-        # apply shift
-        if self.shift != value:
-            if self.shift != 0:
-                self._x, self._y = shifted(self.x, self.y, value=-self._shift, mode='x')
-            if value != 0:
-                self._x, self._y = shifted(self.x, self.y, value=value, mode='x')
-            self._shift = value
+        ###############
+        # fix special #
+        ###############
+        self.peaks.set_shift(value=value)
 
-        # check
-        # self.step         = None
-        # self.monotonicity = None
-        # self._reset_modifiers()
-
-        # special
-        self.peaks.set_shift(value=value, type_=type_)
-
-    def set_roll(self, value, type_='absolute'):
+    def set_roll(self, value):
         """Set roll value.
 
         Roll array elements for the x-coordinates. Elements that roll beyond the
@@ -3235,12 +1087,14 @@ class Spectrum(metaclass=_Meta):
         preserved.
 
         Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-            type_ (string, optional): either 'absolute' (default) or 'relative'.
+            value (float or int): roll value.
 
         Returns:
             None
         """
+        ###################################
+        # asserting validity of the input #
+        ###################################
         # x axis must be uniform if mode is roll
         if self.step is None:
             try:
@@ -3249,85 +1103,59 @@ class Spectrum(metaclass=_Meta):
                 raise ValueError(f'Cannot roll data, because x-coordinates are not uniform. Use s.interp() to make data uniform.\nOr shift data using s.set_shift()')
 
         # value must be an integer
-        if is_integer(value) == False:
+        if arraymanip.is_integer(value) == False:
             raise ValueError('roll value must be an integer.')
+        
+        #######
+        # run #
+        #######
+        self._y = np.roll(self.y, int(value))
 
-        # is relative?
-        if type_ in relative:
-            value = self.roll + value
+        ###############
+        # fix special #
+        ###############
+        self.peaks.set_roll(value=value)
 
-        # apply shift
-        if self.roll != value:
-            if self.roll != 0:  # undo last shift
-                self._x, self._y = shifted(self.x, self.y, value=-self.roll, mode='roll')
-            if value != 0:
-                self._x, self._y = shifted(self.x, self.y, value=value, mode='roll')
-            self._roll = value
-
-        # check
-        # self.step         = None
-        # self.monotonicity = None
-        # self._reset_modifiers()
-
-        # special
-        self.peaks.set_roll(value=value, type_=type_)
-
-    def set_offset(self, value, type_='absolute'):
+    def set_offset(self, value):
         """Set offset value.
 
         Args:
             value (value): offset value (value will be added to y-coordinates).
-            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
         """
-        # is relative
-        if type_ in relative:
-            value = self.offset + value
+        self._y = self.y + value
 
-        # apply offset
-        if self.offset != value:
-            if self.offset != 0:
-                self._y = self.y - self.offset
-            if value != 0:
-                self._y = self.y + value
-            self._offset = value
+        ###############
+        # fix special #
+        ###############
+        self.peaks.set_offset(value=value)
 
-        # special
-        self.peaks.set_offset(value=value, type_=type_)
-
-    def set_factor(self, value, type_='absolute'):
+    def set_factor(self, value):
         """Set y multiplicative factor.
 
         Args:
             value (number): multiplicative factor (y-coordinates will be
                 multiplied by this value).
-            type_ (string, optional): either 'absolute' (default) or 'relative'.
 
         Returns:
             None
         """
-        # check
-        if value == 0:
-            raise ValueError('cannot set factor = 0.')
+        # # check
+        # if value == 0:
+        #     raise ValueError('cannot set factor = 0.')
 
-        # is relative
-        if type_ in relative:
-            value = self.factor * value
+        self._y = self.y*value
 
-        # apply factor
-        if self.factor != value:
-            if self.factor != 1:
-                self._y = self.y*self.factor**-1
-            if value != 1:
-                self._y = self.y*value
-            self._factor = value
+        ###############
+        # fix special #
+        ###############
+        self.peaks.set_factor(value=value)
 
-        # special
-        self.peaks.set_factor(value=value, type_=type_)
-
-
+    #############
+    # modifiers #
+    #############
     def floor(self, value=None, n=20, ranges=None):
         """Sets zero value for y-coordinates (shifts data verticaly).
 
@@ -3491,7 +1319,6 @@ class Spectrum(metaclass=_Meta):
         # apply shift
         self.set_shift(value, shift_mode=shift_mode, type_='relative')
 
-    # persistent modifiers
     def interp(self, x=None, start=None, stop=None, num=None, step=None):
         """Interpolate data.
 
@@ -3681,7 +1508,9 @@ class Spectrum(metaclass=_Meta):
         self.x = y
         self.y = x
 
-    # extractors
+    ##############
+    # extractors #
+    ##############
     def _extract(self, ranges):
         """Same as extract(), but attrs are not copied"""
         ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
@@ -3746,13 +1575,6 @@ class Spectrum(metaclass=_Meta):
         
         s = Spectrum(x=x, y=y)
 
-        # modifiers
-        s._offset = self.offset
-        s._factor = self.factor
-        s._calib  = self.calib
-        s._shift  = self.shift
-        s._roll   = self.roll
-
         # special
         s._peaks        = self.peaks
 
@@ -3795,7 +1617,9 @@ class Spectrum(metaclass=_Meta):
     def copy(self):
         return copy.deepcopy(self)
     
-    # calculation and info
+    ########################
+    # calculation and info #
+    ########################
     def calculate_area(self):
         """Returns the calculated area under the curve. Wrapper for `numpy.trapz()`_.
 
@@ -3818,8 +1642,10 @@ class Spectrum(metaclass=_Meta):
     def get_y(self, x, closest=True):
         """Return the y value for a given x."""
         return self.y[index(self.x, x, closest=closest)]
-        
-    # plot and visualization
+
+    ##########################        
+    # plot and visualization #
+    ##########################        
     def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, ranges=None, switch=False, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
@@ -3868,7 +1694,9 @@ class Spectrum(metaclass=_Meta):
         
         return ax.plot(x, y, **kwargs)
 
-    # Peaks
+    ###########
+    # Special #
+    ###########
     def find_peaks(self, prominence=None, width=4, moving_average_window=8, ranges=None):
         """Find peaks. Wrapper for `scipy.signal.find_peaks()`_.
 
@@ -4005,41 +1833,9 @@ class Spectrum(metaclass=_Meta):
         # self.guess = 
         return self.peaks.fit(x, y, yerr=yerr, method=method, return_fitted_peaks=False)
 
-    # OBSOLET
-    def apply_correction(self, f):
-        """Changes the values of x, y based on a function.
 
-        Warning:
-            All attributes are set to the default values.
 
-        Example:
-            f = lambda x, y: (x, y**2)
 
-        Args:
-            f (function): function ``x, y = f(x, y)`` that takes as input the
-                position of a photon event and returns its corrected values.
-
-        Returns:
-            None
-        """
-        # core ================================
-        self._x, self._y = f(self.x, self.y)
-        self._data[:, 0] = self._x
-        self._data[:, 1] = self._y
-
-        # modifiers
-        self._factor = 1
-        self._offset = 0
-        self._calib  = 1
-        self._shift  = 0
-        self._roll   = 0
-
-        # check
-        self._step         = None
-        self._monotonicity = None
-
-        # peaks
-        self.peaks.clear()
 
 
 class Spectra(metaclass=_Meta):
@@ -6644,3 +4440,2089 @@ class Spectra(metaclass=_Meta):
 
         if verbose: print('Done!')
 # %%
+
+
+class Image(metaclass=_Meta):
+    """Image object.
+
+    Args:
+        data (2D array, optional): Image.
+        filepath (string or path object, optional): filename or file handle.
+            If the filename ends in .gz, the file is automatically saved in
+            compressed gzip format. This is overwritten by data.
+
+    Attributes:
+        data (2D np.array): This is where we store the Image.
+        vmin, vmax (float, read only): Minimum value in data.
+        shape (tuple, read only): Shape of data (vertical size, horizontal size).
+        x_centers, y_centers (np.array): pixel center labels.
+        x_edges, y_edges (np.array): pixel edges labels.
+        histogram (brixs.Spectrum): Data intensity histogram.
+
+        nbins (tuple): Number of bins (number of rows, number of columns).
+        bins_size (tuple): Bins size (size of rows, size of columns).
+        reduced (brixs.Image, read only): Binned image.
+
+        shifts_v, shifts_h (np.array): Shift values in the vertical and
+            horizontal direction.
+        p (np.array, read only): polynomial values returned by calculated_shifts().
+        f (function, read only): funcion returned by calculated_shifts().
+        calculated_shifts (brixs.Spectrum): Calculated shifts.
+
+        spectrum_v, spectrum_h (brixs.Spectrum): Spectrum obtained by integrating
+            pixels in the vertical and horizontal direction.
+        spectrum (brixs.Spectrum): same as spectrum_h.
+        columns, rows (brixs.Spectra): Spectra obtained from each pixel columns
+            or row.
+
+    Methods:
+        save()
+        load()
+
+        floor()
+        crop()
+
+        pcolormesh()
+        imshow()
+        plot()
+
+        binning()
+        calculate_histogram()
+        calculate_spectrum()
+        calculate_shifts()
+        set_shifts()
+        fix_curvature()
+    """
+    # read only and non-removable arguments
+    _read_only = ['shape', 'vmin', 'vmax', 'reduced', 'calculated_shifts']
+    _non_removable = []
+
+    def __init__(self, *args, **kwargs):
+        # besic attr
+        self._data      = None
+        self._vmin      = None
+        self._vmax      = None
+        self._shape     = None
+        self._x_centers = None
+        self._y_centers = None
+        self._x_edges   = None
+        self._y_edges   = None
+
+        # binning attr
+        self._nbins      = np.array((-1, -1))
+        self._bins_size  = np.array((-1, -1))
+        self._reduced    = None
+
+        # shift attr
+        self._calculated_shifts = None
+        self._shifts_v = None
+        self._shifts_h = None
+
+        # set data
+        data, filepath = self._sort_args(args, kwargs)
+        if data is not None:
+            self.data = copy.deepcopy(data)
+        elif filepath is not None:
+            self.load(filepath)
+
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
+
+        Keyword arguments (kwargs) cannot be mixed with positional arguments.
+
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath.
+
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, filepath
+        """
+        # initial check
+        if kwargs != {} and args != ():
+            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `data`, and `filepath`.')
+
+        # initialization
+        data = None
+        filepath = None
+
+        # keyword arguments
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = args[0]
+            elif isinstance(args[0], Iterable):
+                data = args[0]
+        elif len(args) > 2:
+            raise AttributeError('brixs.Image() cannot figure out the data out of the arguments passed. Maybe use keyword arguments (data, filepath).')
+
+        return data, filepath
+
+    def _transfer_attributes(self, object):
+        """Transfer user defined attributes to output objects."""
+
+        # # list of attributes NOT to transfer
+        # do_not_transfer = ['_data', '_vmin', '_vmax', '_shape', 
+        #                    '_nbins', '_bins_size', 
+        #                    '_reduced', '_shifts_v', '_shifts_h', 
+        #                    '_p', '_f', '_calculated_shifts', 
+        #                    '_x_centers', '_y_centers', 
+        #                    '_x_edges', '_y_edges']
+        
+        # dict = get_attributes(self)
+        # for n in dict:
+        #     if n not in do_not_transfer:
+        #         object.__setattr__(n, self.__getattribute__(n))
+        # return object
+    
+        # copy user defined attributes
+        for attr in self.__dict__:
+            if attr.startswith('_') == False:
+                object.__setattr__(attr, self.__dict__[attr])
+
+        return object
+
+    def __len__(self):
+        if self._data is None:
+            return 0
+        else:
+            return len(self._data)
+
+    def __add__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
+                    dtype = 'int'
+                else:
+                    dtype = 'float'
+                final = Image(data=np.add(self.data, object.data, dtype=dtype))
+                return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+            final = Image(data=np.add(self.data, object, dtype=dtype))
+            return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with Image')
+
+    def __sub__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
+                    dtype = 'int'
+                else:
+                    dtype = 'float'
+                final = Image(data=np.subtract(self.data, object.data, dtype=dtype))
+                return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+            final = Image(data=np.subtract(self.data, object, dtype=dtype))
+            return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with Image')
+
+    def __mul__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                if np.issubdtype(self.data.dtype, np.integer) and np.issubdtype(object.data.dtype, np.integer):
+                    dtype = 'int'
+                else:
+                    dtype = 'float'
+                final = Image(data=np.multiply(self.data, object.data, dtype=dtype))
+                return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            if np.issubdtype(self.data.dtype, np.integer) and isinstance(object, (np.floating, float))==False:
+                dtype = 'int'
+            else:
+                dtype = 'float'
+            final = Image(data=np.multiply(self.data, object, dtype=dtype))
+            return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with Image')
+
+    def __div__(self, object):
+        if isinstance(object, Image):
+            if self.shape == object.shape:
+                if 0 in object.data:
+                    raise ZeroDivisionError(f'Image contain zeros. Cannot divide by zero.')
+                else:
+                    dtype = 'float'
+                    final = Image(data=np.divide(self.data, object.data, dtype=dtype))
+                    # final = Image(data = self.data / object.data)
+                    return self._transfer_attributes(final)
+            else:
+                raise ValueError(f'Shape is different.\nShape 1: {self.shape}\nShape 2: {im.shape}')
+        elif isinstance(object, (np.floating, float, int)):
+            if object == 0:
+                raise ZeroDivisionError(f'Cannot divide by zero.')
+            else:
+                dtype = 'float'
+                final = Image(data=np.divide(self.data, object, dtype=dtype))
+                return self._transfer_attributes(final)
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with type Image')
+
+    def __truediv__(self, object):
+        return self.__div__(object)
+
+
+    @property
+    def data(self):
+        return copy.deepcopy(self._data)
+    @data.setter
+    def data(self, value):
+        # basic attr
+        self._data  = np.array(value, dtype='float')
+        self._vmin  = min([min(x) for x in self.data])
+        self._vmax  = max([max(x) for x in self.data])
+        self._shape = (self.data.shape[0], self.data.shape[1])
+        self.x_centers = None
+        self.y_centers = None
+
+        # binning attr
+        self._nbins      = np.array((-1, -1))
+        self._bins_size  = np.array((-1, -1))
+        self._reduced    = None
+
+        # shift attr
+        self._calculated_shifts = None
+        self._shifts_v = np.zeros(self.data.shape[1])
+        self._shifts_h = np.zeros(self.data.shape[0])
+    @data.deleter
+    def data(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def x_centers(self):
+        return self._x_centers
+    @x_centers.setter
+    def x_centers(self, value):
+        if value is None:
+            value = np.arange(0, self.data.shape[1])
+        elif isinstance(value, Iterable):
+            if len(value) != self.shape[1]:
+                raise ValueError(f"Length of x must be the same as the number of pixels in the horizontal direction.\nNumber of pixels = {self.data.shape[1]}\nLength of the array = {len(value)}")
+        else:
+            raise ValueError(f"x must be None or an iterable (list, tuple, or 1D array)")
+        # self._x_centers = Spectrum(x=value, y=np.zeros(len(value)))
+        self._x_centers = np.array(value, dtype='float')
+        self._x_edges = None
+    @x_centers.deleter
+    def x_centers(self):
+        self._x_centers = np.arange(0, self.data.shape[1])
+
+    @property
+    def y_centers(self):
+        return self._y_centers
+    @y_centers.setter
+    def y_centers(self, value):
+        if value is None:
+            value = np.arange(0, self.data.shape[0])
+        elif isinstance(value, Iterable):
+            if len(value) != self.shape[0]:
+                raise ValueError(f"Length of y must be the same as the number of pixels in the vertical direction.\nNumber of pixels = {self.data.shape[0]}\nLength of the array = {len(value)}")
+        else:
+            raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
+        # self._y_centers = Spectrum(x=value, y=np.zeros(len(value)))
+        self._y_centers = np.array(value, dtype='float')
+        self._y_edges = None
+    @y_centers.deleter
+    def y_centers(self):
+        self._y_centers  = np.arange(0, self.data.shape[0])
+
+    @property
+    def x_edges(self):
+        return self._x_edges
+    @x_edges.setter
+    def x_edges(self, value):
+        if value is None:
+            self._x_edges = None
+            return
+        elif isinstance(value, Iterable):
+            if len(value) != self.shape[1]+1:
+                raise ValueError(f"Length of x_edges must be the same as the number of edges (number of pixels + 1) in the horizontal direction.\nNumber of edges = {self.data.shape[1]+1}\nLength of the array = {len(value)}")
+        else:
+            raise ValueError(f"x_edges must be None or an iterable (list, tuple, or 1D array)")
+        # self._x_edges   = Spectrum(x=value, y=np.zeros(len(value)))
+        self._x_edges   = np.array(value, dtype='float')
+        centers = moving_average(value, n=2)
+        # self._x_centers = Spectrum(x=centers, y=np.zeros(len(centers)))
+        self._x_centers = np.array(centers, dtype='float')
+    @x_edges.deleter
+    def x_edges(self):
+        self._x_edges = None
+
+    @property
+    def y_edges(self):
+        return self._y_edges
+    @y_edges.setter
+    def y_edges(self, value):
+        if value is None:
+            self._y_edges = None
+            return
+        elif isinstance(value, Iterable):
+            if len(value) != self.shape[0]+1:
+                raise ValueError(f"Length of y_edges must be the same as the number of edges (number of pixles + 1) in the vertical direction.\nNumber of edges = {self.data.shape[0]+1}\nLength of the array = {len(value)}")
+        else:
+            raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
+        # self._y_edges   = Spectrum(x=value, y=np.zeros(len(value)))
+        self._y_edges   = np.array(value, dtype='float')
+        centers = moving_average(value, n=2)
+        # self._y_centers = Spectrum(x=centers, y=np.zeros(len(centers)))
+        self._y_centers = np.array(centers, dtype='float')
+    @y_centers.deleter
+    def y_centers(self):
+        self._y_edges  = None
+
+    @property
+    def shifts_v(self):
+        return copy.deepcopy(self._shifts_v)
+    @shifts_v.setter
+    def shifts_v(self, value):
+        self.set_shifts(value=value, axis=0)
+    @shifts_v.deleter
+    def shifts_v(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def shifts_h(self):
+        return copy.deepcopy(self._shifts_h)
+    @shifts_h.setter
+    def shifts_h(self, value):
+        self.set_shifts(value=value, axis=1)
+    @shifts_h.deleter
+    def shifts_h(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def nbins(self):
+        return self._nbins
+    @nbins.setter
+    def nbins(self, value):
+        if type(value) != str:
+            self.binning(nbins=value)
+        elif value == 'guess':
+            raise NotImplementedError('not implemented yet')
+        elif value == 'possible':
+            print(f"The {self.shape[1]} pixels in a row is evenly divisible by: {np.sort(list(factors(self.shape[1])))}\nThe {self.shape[0]} pixels in a column is evenly divisible by: {np.sort(list(factors(self.shape[0])))}")
+        else:
+            raise ValueError("Not a valid option of `nbins`.\nValid options are: 'guess', a number, a tuple, or a list.")
+    @nbins.deleter
+    def nbins(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def bins_size(self):
+        return self._bins_size
+    @bins_size.setter
+    def bins_size(self, value):
+        self.binning(bins_size=value)
+    @bins_size.deleter
+    def bins_size(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def histogram(self):
+        return self.calculate_histogram()
+    @histogram.setter
+    def histogram(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @histogram.deleter
+    def histogram(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def columns(self):
+        ss = Spectra(n=self.shape[1])
+        for i in range(self.shape[1]):
+            ss[i] = Spectrum(x=self.y_centers, y=self.data[:, i])
+        return ss
+    @columns.setter
+    def columns(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @columns.deleter
+    def columns(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def rows(self):
+        ss = Spectra(n=self.shape[0])
+        for i in range(self.shape[0]):
+            ss[i] = Spectrum(x=self.x_centers, y=self.data[i, :])
+        return ss
+    @rows.setter
+    def rows(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @rows.deleter
+    def rows(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def spectrum(self):
+        return self.spectrum_h
+    @spectrum.setter
+    def spectrum(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectrum.deleter
+    def spectrum(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def spectrum_v(self):
+        return self.calculate_spectrum(axis=0)
+    @spectrum_v.setter
+    def spectrum_v(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectrum_v.deleter
+    def spectrum_v(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def spectrum_h(self):
+        return self.calculate_spectrum(axis=1)
+    @spectrum_h.setter
+    def spectrum_h(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @spectrum_h.deleter
+    def spectrum_h(self):
+        raise AttributeError('Cannot delete object.')
+
+
+    def save(self, filepath=None, only_data=False,  check_overwrite=None, **kwargs):
+        r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename ends in .gz, the file is automatically saved in
+                compressed gzip format. If None, filepath can be inferred from a
+                user defined attr 'im.filepath'. Default is None.  Last used 
+                filepath is saved to im.filepath.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is saved to the file.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
+
+        If not specified, the following parameters are passed to `numpy.savetxt()`_:
+
+        Args:
+            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
+                sequence of formats. See numpy's documentation for more information.
+                If not specified, best fmt is calculated based on the
+                number of decimal places of the data. Specifying fmt makes the code
+                runs a little faster (not much tough, but it might make a difference
+                if saving a lot of files).
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (", ").
+            newline (str, optional): String or character separating lines.
+                Default is ``\n``.
+            header (bool, optional): String that will be written at the beginning of the file.
+                Note that, object attributes will be saved at the beginning of the file.
+                If only_data=True, header and footer is ignored.
+            comments (str, optional): String that will be prepended to the
+                header and footer strings, to mark them as comments. Default is "# ".
+
+        Returns:
+            None
+
+        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
+        """
+        # filepath
+        if filepath is None:
+            try: 
+                filepath = Path(self.filepath)
+            except AttributeError:
+                raise TypeError("Missing 1 required argument: 'filepath'")
+        
+        # check overwrite
+        if check_overwrite is None:
+            check_overwrite = settings.SAVE_CHECK_OVERWRITE
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+                
+        # kwargs
+        if 'fmt' not in kwargs: # pick best format
+            decimal = max([n_decimal_places(x) for x in flatten(self._data)])
+            kwargs['fmt'] = f'%.{decimal}f'
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'newline' not in kwargs:
+            kwargs['newline'] = '\n'
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
+        # save
+        if only_data:
+            if 'header' in kwargs:
+                del kwargs['header']
+            if 'footer' in kwargs:
+                del kwargs['footer']
+            np.savetxt(Path(filepath), self._data, **kwargs)
+        else:
+            if 'header' not in kwargs:
+                kwargs['header'] = ''
+            else:
+                kwargs['header'] += '\n'
+            dict = get_attributes(self)
+            kwargs['header'] += '==== brixs Image ===='  + '\n'
+            for n in dict:
+                if n not in ['_data', '_reduced', '_calculated_shifts', '_histogram', '_spectrum_h', '_spectrum_v',]:
+                    if isinstance(dict[n], Iterable):
+                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
+                    else:
+                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
+            np.savetxt(Path(filepath), self._data, **kwargs)
+
+        # save filepath
+        self.filepath = filepath
+
+    def load(self, filepath, **kwargs):
+        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first 
+                decompressed. Last used filepath is saved to im.filepath.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (', ').
+            comments (str, optional): The character used to indicate the start
+                of a comment. Default is ``# ``. Attributes picked up
+                from the header will be loaded too.
+
+        Returns:
+            None
+
+        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
+        """
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
+        # read data
+        data = np.genfromtxt(Path(filepath), **kwargs)
+        self.data = data
+
+        # read header
+        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+        attr_start = 0
+        binning_flag = False  # check if data needs binning
+
+        # find where attributes listing starts
+        for i, line in enumerate(header):
+            if '==== brixs Image ====' in line:
+                attr_start = i
+                break
+            attr_start = -1
+
+        # read attributes
+        if attr_start != -1:
+            for i, line in enumerate(header[attr_start+1:-1]):
+
+                # extract name and value
+                name = line[1:-1].split(':')[0].strip()
+                value = eval(line[1:-1].split(':')[1].strip())
+
+
+                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+                if name in ['_nbins']:
+                    if value[0] > 0 and value[1] > 0:
+                        binning_flag = True
+                elif name in ['_bins_size']:
+                    if value[0] > 0 and value[1] > 0:
+                        binning_flag = True
+                ### DEALING WITH OTHER ATTRIBUTES ###
+                elif name not in ['_vmin', '_vmax', '_shape']:  # except these attrs
+                    try:
+                        setattr(self, name, value)
+                    except Exception as e:
+                        print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+
+        ### RUN ###
+        if binning_flag:
+            try:
+                self.binning(nbins=self.nbins, bins_size=self.bins_size)
+            except:
+                pass
+        
+        # save filepath
+        self.filepath = str(filepath)
+
+    def get_user_defined_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_data', '_vmin', '_vmax', '_shape', 
+                           '_nbins', '_bins_size', 
+                           '_reduced', '_shifts_v', '_shifts_h', 
+                           '_calculated_shifts', 
+                           '_x_centers', '_y_centers', 
+                           '_x_edges', '_y_edges']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+
+    # plot and visualization
+    def pcolormesh(self, ax=None, colorbar=False, **kwargs):
+        """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.pcolormesh()`_.
+
+        If not specified, the following parameters are passed to `matplotlib.pyplot.pcolormesh()`_:
+
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
+                calculated and vmax is set to the value where the :del:` integral of the
+                intensity histogram is 0.998 of the total integral after vmin.`
+                intensity drops below 0.01 % of the maximum.
+                **THIS MIGHT CHANGE IN THE FUTURE**.
+
+        Returns:
+            `matplotlib.collections.QuadMesh`_
+
+        .. _matplotlib.pyplot.pcolormesh(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html
+        .. _matplotlib.collections.QuadMesh: https://matplotlib.org/3.5.0/api/collections_api.html#matplotlib.collections.QuadMesh
+        """
+        # initialization
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True 
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+        # kwargs
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'vmin' not in kwargs:
+            kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
+        if 'vmax' not in kwargs:
+            # vamx is set when histogram drops below 0.01% of the max
+            x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
+            y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
+            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > max(y2fit)*0.0001])  # clean zeros
+            kwargs['vmax'] = data2fit[-1, 0]
+
+        # fix monotonicity of labels x
+        if check_monotonicity(self.x_centers) != 1:
+            x, ordering = fix_monotonicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
+            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
+            ordering = [int(i) for i in ordering]
+            data = copy.deepcopy(self.data)
+            for i in ordering:
+                if i != ordering[i]:
+                    data[:, i] = self.data[:, ordering[i]]
+        else:
+                # check if x_edges is defined
+            if self.x_edges is not None and self.y_edges is not None:
+                x = self.x_edges
+            else:
+                x = self.x_centers
+            data = self.data
+
+        # fix monotonicity of labels y
+        if check_monotonicity(self.y_centers) != 1:
+            y, ordering = fix_monotonicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
+            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
+            ordering = [int(i) for i in ordering]
+            data2 = copy.deepcopy(data)
+            for i in ordering:
+                if i != ordering[i]:
+                    data2[i, :] = data[ordering[i], :]
+        else:
+            # check if y_edges is defined
+            if self.x_edges is not None and self.y_edges is not None:
+                y = self.y_edges
+            else:
+                y = self.y_centers
+            data2 = data
+
+        # plot
+        X, Y = np.meshgrid(x, y)
+        pos = ax.pcolormesh(X, Y, data2, **kwargs)
+
+        # colorbar
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
+
+        return pos
+
+    def imshow(self, ax=None, colorbar=False, hindexes=False, vindexes=False, verbose=True, **kwargs):
+        """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
+
+        Warning:
+            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+            verbose (bool, optional): if True, a warning will show up if data
+                has iregular pixel sizes. Default is true.
+            hindexes, vindexes (bool, optional): If True, the index number of a
+                pixel column/row will be ploted. Default is False.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
+
+        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
+
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
+                an aspect ratio of 1 will be used (pixels will be square).
+            origin: Location of the [0, 0] index. default is 'lower'.
+            interpolation: The interpolation method used. Default is 'none'.
+                Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
+                'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
+                'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
+                'sinc', 'lanczos', 'blackman'.
+            extent: minimun and maximum x and y values. Default will be given by
+                the Image.x and Image.y attributes.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
+                calculated and vmax is set to the value where the :del:` integral of the
+                intensity histogram is 0.998 of the total integral after vmin.`
+                intensity drops below 0.01 % of the maximum.
+                **THIS MIGHT CHANGE IN THE FUTURE**.
+
+        Returns:
+            `matplotlib.image.AxesImage`_
+
+        .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
+        """
+        # initialization
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True 
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+        # default arguments
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'aspect' not in kwargs:
+            kwargs['aspect'] = 'auto'
+        if 'origin' not in kwargs:
+            kwargs['origin'] = 'lower'
+        if 'interpolation' not in kwargs:
+            kwargs['interpolation'] = 'none'
+        if 'vmin' not in kwargs:
+            kwargs['vmin'] = self.histogram.x[np.argmax(self.histogram.y)]
+        if 'vmax' not in kwargs:
+            # vamx is set when histogram drops below 0.01% of the max
+            x2fit = self.histogram.x[np.argmax(self.histogram.y)+1:]
+            y2fit = self.histogram.y[np.argmax(self.histogram.y)+1:]
+            data2fit = np.array([[i, j] for i, j in zip(x2fit, y2fit) if j > abs(max(y2fit)*0.0001)])  # clean zeros
+
+            try:
+                kwargs['vmax'] = data2fit[-1, 0]
+            except IndexError:  # in case the max of y is too high
+                kwargs['vmin'] = self.vmin
+                kwargs['vmax'] = self.vmax
+
+
+        # # x and y
+        # assert check_monotonicity(self.x) == 1, f'x axis (Image.x) must be increasingly monotonic.\nData cannot be plotted by Image.imshow().\nPlease, use Image.plot() or set Image.x = None\nx: {self.x}'
+        # assert check_monotonicity(self.y) == 1, f'y axis (Image.y) must be increasingly monotonic.\nData cannot be plotted by Image.imshow().\nPlease, use Image.plot() or set Image.y = None\ny: {self.y}'
+        # x = np.linspace(self.x[0], self.x[-1], len(self.x))
+        # y = np.linspace(self.y[0], self.y[-1], len(self.y))
+        # if 'extent' not in kwargs:
+        #     kwargs['extent'] = [x[0], x[-1], y[0], y[-1]]
+
+        # fix monotonic of labels x
+        if check_monotonicity(self.x_centers) != 1:
+            x, ordering = fix_monotonicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
+            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
+            ordering = [int(i) for i in ordering]
+            data = copy.deepcopy(self.data)
+            for i in ordering:
+                if i != ordering[i]:
+                    data[:, i] = self.data[:, ordering[i]]
+                extent_x = [min(x), max(x)]
+        else:
+            # check if x_edges is defined
+            if self.x_edges is not None:
+                x = self.x_edges
+                extent_x = [min(x), max(x)]
+            else:
+                x = self.x_centers
+                x = np.linspace(x[0], x[-1], len(x))
+                dx  = np.mean(np.diff(x))
+                extent_x = [x[0]-dx/2, x[-1]+dx/2]
+            data = self.data
+
+        # fix monotonic of labels y
+        if check_monotonicity(self.y_centers) != 1:
+            y, ordering = fix_monotonicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
+            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
+            ordering = [int(i) for i in ordering]
+            data2 = copy.deepcopy(data)
+            for i in ordering:
+                if i != ordering[i]:
+                    data2[i, :] = data[ordering[i], :]
+            extent_y = [min(y), max(y)]
+        else:
+            # check if y_edges is defined
+            if self.y_edges is not None:
+                y = self.y_edges
+                extent_y = [min(y), max(y)]
+            else:
+                y = self.y_centers
+                y = np.linspace(y[0], y[-1], len(y))
+                dy  = np.mean(np.diff(y))
+                extent_y = [y[0]-dy/2, y[-1]+dy/2]
+
+            data2 = data
+
+        if 'extent' not in kwargs:
+            kwargs['extent'] = np.append(extent_x, extent_y)
+
+        # check irregular spacing (issues a warning)
+        if verbose:
+            sx = Spectrum(x=self.x_centers, y=self.x_centers)
+            sy = Spectrum(x=self.y_centers, y=self.y_centers)
+            try:
+                sx.check_step()
+                sy.check_step()
+            except ValueError:
+                print('Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
+
+        # plot
+        pos = ax.imshow(data2, **kwargs)
+
+        # column label
+        if hindexes:
+            for i in range(self.data.shape[1]):
+                plt.text(self.x_centers[i], self.y_centers[-1], i, ha='center')
+        if vindexes:
+            for i in range(self.data.shape[0]):
+                plt.text(self.y_centers[i], self.x_centers[-1], i, va='center')
+
+        # colorbar
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
+
+        return pos
+
+    def plot(self, *args, **kwargs):
+        """Same as Image.imshow.
+
+        See:
+            :py:func:`Image.imshow` """
+        return self.imshow(*args, **kwargs)
+
+    def vlines(self, ax=None, mode='edges', *args, **kwargs):
+        """edges or centers"""
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+        assert self.y_edges is not None, 'y_edges cannot be None.'
+        if mode == 'edges':
+            ax.vlines(self.x_edges, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
+        elif mode == 'centers':
+            ax.vlines(self.x_centers, self.y_edges[0], self.y_edges[-1], *args, **kwargs)
+        else:
+            raise AttributeError('mode must be either `edges` or `centers`.')
+    
+    def hlines(self, ax=None, mode='edges', *args, **kwargs):
+        """edges or centers"""
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+        assert self.x_edges is not None, 'x_edges cannot be None.'
+        if mode == 'edges':
+            ax.hlines(self.y_edges, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
+        elif mode == 'centers':
+            ax.hlines(self.y_centers, self.x_edges[0], self.x_edges[-1], *args, **kwargs)
+        else:
+            raise AttributeError('mode must be either `edges` or `centers`.')
+
+    #
+    def possible_nbins(self):
+        """return possible values for nbins in the y (nrows) and x (ncols) directions."""
+        return np.sort(list(factors(self.shape[0]))), np.sort(list(factors(self.shape[1])))
+
+    def binning(self, *args, **kwargs):
+        """Compute the 2D histogram of the data (binning of the data).
+
+        Args:
+            nbins (int or tuple, optional): number of bins. If one value is given,
+                this is used for both x and y directions. If two values are given,
+                they are used separetely for the number of rows and number of
+                columns, respectively. If the number of pixels in the image
+                cannot be divided by the selected number of bins, it will raise an error.
+                ``bins_size`` is calculated.
+            bins_size (int or tuple, optional): size of the bins. This overwrites
+                the argument ``bins``. If one value is given,
+                it is used for both x and y directions. If two values are given,
+                they are used separetely for rows and columns size, respectively.
+                If number of pixels cannot be divided by ``bins_size``, the value of
+                ``bins_size`` will be recalculated to the closest possible value.
+                ``nbins`` is calculated.
+
+        Example:
+            .. code-block:: python
+
+                nbins = 10       # (10 rows, 10 columns)
+                nbins = (10)     # (10 rows, 10 columns)
+                nbins = (10, 5)  # (10 rows, 5 columns)
+
+        Returns:
+            binned image
+        """
+        kwargs['shape']        = self.shape
+        kwargs['factor_check'] = True
+        _nbins, _bins_size = _bins_interpreter(*args, **kwargs)
+        # reduced = Image(np.add.reduceat(np.add.reduceat(self._data,            np.arange(0, self.shape[0], _bins_size[0]), axis=0),             np.arange(0, self.shape[1], _bins_size[1]), axis=1))
+        # reduced = Image(np.add.reduceat(np.add.reduceat(self._data, map(float, np.arange(0, self.shape[0], _bins_size[0])), axis=0), map(float, np.arange(0, self.shape[1], _bins_size[1]), axis=1)))
+        reduced = Image(np.add.reduceat(np.add.reduceat(self._data, list(map(float, np.arange(0, self.shape[0], _bins_size[0]))), axis=0), list(map(float, np.arange(0, self.shape[1], _bins_size[1]))), axis=1))
+
+        _x_edges   = np.arange(0, self.shape[1]+_bins_size[1]/2, _bins_size[1])
+        _y_edges   = np.arange(0, self.shape[0]+_bins_size[0]/2, _bins_size[0])
+        # _x_centers = moving_average(_x_edges, n=2)
+        # _y_centers = moving_average(_y_edges, n=2)
+
+        # saving
+        self._nbins     = _nbins
+        self._bins_size = _bins_size
+        self._reduced   = reduced
+        # self.reduced._x_centers = _x_centers
+        # self.reduced._y_centers = _y_centers
+        self.reduced.x_edges   = _x_edges
+        self.reduced.y_edges   = _y_edges
+
+        return self.reduced
+
+    def calculate_histogram(self, **kwargs):
+        """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
+
+        If not specified, the following parameters are passed to `numpy.histogram()`_:
+
+        Args:
+            bins (int or tuple, optional): number of bins. If not specified, it will
+                be set to 1000. If 1000 is too high (maximum value of the histogram
+                is less than 5 % of the total integrated intensity) bins will be
+                reduced 10 by 10 until the criteria is satisfied.
+
+        Returns
+            brixs.Spectrum
+
+        .. _numpy.histogram(): https://numpy.org/doc/stable/reference/generated/numpy.histogram.html
+        """
+        if 'bins' not in kwargs:
+            kwargs['bins'] = 1000
+            hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
+            while max(hist) < self.shape[0]*self.shape[1]*0.05:
+                kwargs['bins'] -= 10
+                hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
+                if kwargs['bins'] < 50:
+                    break
+        else:
+            hist, bin_edges = np.histogram(flatten(self._data), **kwargs)
+        x = moving_average(bin_edges, 2)
+        s = Spectrum(x=x, y=hist)
+        return s
+
+    def calculate_spectrum(self, axis=1):
+        """Integrate data in one direction (sum columns or rows).
+
+        Args:
+            axis (int or string, optional): Axis along which elements are integrated.
+                By default, data is integrated in the horizontal direction.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        axis = _axis_interpreter(axis)
+
+        if axis == 0:
+            return Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
+        elif axis == 1:
+            return Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
+
+    def calculate_shifts(self, axis=0, mode='cc', limit_size=1000):
+        self.calculate_rolls(axis=axis, mode=mode, limit_size=limit_size)
+        # axis = _axis_interpreter(axis)
+
+        # # select axis
+        # if axis == 0:
+        #     if limit_size:
+        #         if len(self.x_centers) > limit_size:
+        #             raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
+        #     ss = self.columns
+        #     centers = self.x_centers
+        # elif axis == 1:
+        #     if limit_size:
+        #         if len(self.rows) > limit_size:
+        #             raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
+        #     ss = self.rows
+        #     centers = self.y_centers
+
+        # # peaks
+        # if mode == 'fitted peaks' or mode == 'peaks':
+        #     ss.fit_peak()
+
+        # # calculate
+        # ss.calculate_shifts(mode=mode)
+        # if mode in cc:
+        #     self._calculated_shifts = ss.calculated_shifts
+        #     self.calculated_shifts.factor = ss.step
+        # else:
+        #     self._calculated_shifts = ss.calculated_shifts
+        #     self._calculated_shifts.y = [int(round(y)) for y in self._calculated_shifts.y]
+        # self._calculated_shifts.x = centers
+
+    def calculate_rolls(self, axis=0, mode='cc', limit_size=1000):
+        """Calculate intensity misalignments via cross-correlation.
+
+        Args:
+            axis (int or string, optional): Axis along which elements are shifted.
+                By default, data is shifted in the vertical (0) direction.
+            mode (string, optional): method used to calculate the shifts.
+                The current options are: 'cross-correlation' ('cc').
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images.
+                Default is 1000. Set to False to bypass this limit.
+
+        Returns:
+            None
+        """
+        axis = _axis_interpreter(axis)
+
+        # select axis
+        if axis == 0:
+            if limit_size:
+                if len(self.x_centers) > limit_size:
+                    raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
+            ss = self.columns
+            centers = self.x_centers
+        elif axis == 1:
+            if limit_size:
+                if len(self.rows) > limit_size:
+                    raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
+            ss = self.rows
+            centers = self.y_centers
+
+        # peaks
+        if mode == 'fitted peaks' or mode == 'peaks':
+            ss.fit_peak()
+
+        # calculate
+        ss.calculate_rolls(mode=mode)
+        # if mode in cc:
+        self._calculated_shifts = ss.calculated_rolls
+        self.calculated_shifts.factor = ss.step
+        # else:
+        #     self._calculated_shifts = ss.calculated_rolls
+        #     self._calculated_shifts.y = [int(round(y)) for y in self._calculated_shifts.y]
+        self._calculated_shifts.x = centers
+
+    def set_shifts(self, value=None, p=None, f=None, axis=0, type_='absolute'):
+        """Roll array of pixels along a given axis.
+
+        Elements that roll beyond the edge are NOT re-introduced at the first.
+        They are lost. This might change in the future.
+
+        Args:
+            value (int or tuple): The number of pixels by which the data are shifted.
+                If a tuple, then it must be of the same size as the number of
+                columns (``for axis=0``) or rows (``for axis=1``). If elements are
+                not int, it will rounded to an integer value.
+            axis (int or string, optional): Axis along which elements are shifted.
+                By default, data is shifted in the vertical (0) direction.
+
+        Returns:
+            None
+        """
+        axis = _axis_interpreter(axis)
+
+        # calculate value if necessary =========================================
+        if value is not None:
+            pass
+        elif p is not None:
+            if axis == 0:
+                value = np.polyval(p, self.x_centers)
+            elif axis == 1:
+                value = np.polyval(p, self.y_centers)
+        elif p is not None:
+            if axis == 0:
+                value = f(self.x_centers)
+            elif axis == 1:
+                value = f(self.y_centers)
+
+        if type_ in relative:
+            if axis == 0:
+                value = self.shifts_v + value
+            elif axis == 1:
+                value = self.shifts_h + value
+
+        # shift is absolute!!!!!!!!! Works ==============================
+        if axis == 0:
+            if isinstance(value, Iterable):
+                assert len(value) == self.shape[1], f'Number of values must be the same as the number of columns ({self.shape[1]})'
+                value = [round(k) for k in value]
+            else:
+                value = [int(round(value))]*self.shape[1]
+
+            # undo last shift
+            for i, v in enumerate(self._shifts_v):
+                if v != 0:
+                    temp = Spectrum(self._data[:, i])
+                    temp.roll = -v
+                    self._data[:, i] = temp.y
+                    self._shifts_v[i] = 0
+
+            # apply shift
+            for i, v in enumerate(value):
+                if v != 0:
+                    temp = Spectrum(self._data[:, i])
+                    temp.roll = v
+                    self._data[:, i] = temp.y
+                    self._shifts_v[i] = v
+        elif axis == 1:
+            if isinstance(value, Iterable):
+                assert len(value) == self.shape[0], f'Number of values must be the same as the number of rows ({self.shape[0]})'
+                value = [round(v) for v in value]
+            else:
+                value = [int(round(value))]*self.shape[0]
+
+            # undo last shift
+            for i, h in enumerate(self._shifts_h):
+                if h != 0:
+                    temp = Spectrum(self._data[i, :])
+                    temp.roll = -h
+                    self._data[i, :] = temp.y
+                    self._shifts_h[i] = 0
+
+            # apply shift
+            for i, h in enumerate(value):
+                if h != 0:
+                    temp = Spectrum(self._data[i, :])
+                    temp.roll = h
+                    self._data[i, :] = temp.y
+                    self._shifts_h[i] = h
+
+        # if self.reduced is not None:
+        #     self.binning(nbins=self.nbins)
+        self._reduced = None
+
+    def fix_curvature(self, deg=2, axis=0, mode='cc'):
+        """Fix curvature.
+
+        Args:
+            axis (int or string, optional): Axis along which elements are shifted.
+                By default, data is shifted in the vertical direction.
+
+        Returns:
+            None
+        """
+        axis = _axis_interpreter(axis)
+
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
+
+        # calculate shifts
+        self.reduced.floor()
+        self.calculate_shifts(axis=axis, mode=mode)
+
+        p, f = self.calculated_shifts.polyfit(deg=deg)
+        self._p = p
+        self._f = f
+
+        self.set_shifts(p=p, axis=axis)
+
+
+    def floor(self, x=0, y=0, n=30, nx=None, ny=None):
+        """Set background intensity to zero.
+
+        Args:
+            x, y (int, optional): x and y position to sample background intensity.
+            n, nx, ny (int, optional): size of the pixel window around x, y.
+
+        Returns:
+            None
+        """
+        assert x >= 0 and is_integer(x) and x<self.shape[1], f'x must be a positive integer smaller than {self.shape[1]}.'
+        assert y >= 0 and is_integer(y) and y<self.shape[0], f'y must be a positive integer smaller than {self.shape[0]}.'
+
+        # sorting n
+        if nx is None: nx = n
+        if ny is None: ny = n
+
+        # check if x falls inside the image
+        if x-nx/2 >= 0 and x+nx/2 < self.shape[1]:
+            x_start = x-nx/2
+            x_stop  = x+nx/2
+        elif x-nx/2 < 0:
+            x_start = 0
+            x_stop = x+nx/2-(x-nx/2)
+        elif x+n/2 >= self.shape[1]:
+            x_start = x-nx/2-(x+nx/2-self.shape[1])
+            x_stop  = self.shape[1]-1
+        else:
+            raise ValueError('Averaging range falls outside of the image. Please, change x or n.')
+
+        # check if y falls inside the image
+        if y-ny/2 >= 0 and y+ny/2 < self.shape[0]:
+            y_start = y-ny/2
+            y_stop  = y+ny/2
+        elif y-nx/2 < 0:
+            y_start = 0
+            y_stop = y+ny/2-(y-ny/2)
+        elif y+n/2 >= self.shape[0]:
+            y_start = y-ny/2-(y+ny/2-self.shape[0])
+            y_stop  = self.shape[0]-1
+        else:
+            raise ValueError('Averaging range falls outside of the image. Please, change y or n.')
+
+        self._data -= np.mean(self._data[int(y_start):int(y_stop), int(x_start):int(x_stop)]).astype(self.data.dtype)
+        self._vmin = min([min(x) for x in self.data])
+        self._vmax = max([max(x) for x in self.data])
+
+    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Crop Image.
+
+        Args:
+            x_start, x_stop, y_start, y_stop (int): pixel range. start is
+                inclusive and stop is exclusive. Use None to to indicate the
+                edge of the image.
+
+        Returns:
+            croped image
+        """
+        # check if None
+        if x_start is None: x_start = 0
+        if x_stop is None:  x_stop = self.shape[1]
+        if y_start is None: y_start = 0
+        if y_stop is None:  y_stop = self.shape[0]
+
+        # verification
+        assert x_start >= 0 and x_start<=self.shape[1], f'x_start must be a positive integer smaller than {self.shape[1]}.'
+        assert is_integer(x_start), f'x_start must be an integer.'
+        assert x_stop  >= 0 and x_stop<=self.shape[1],  f'x_stop must be a positive integer smaller than {self.shape[1]}.'
+        assert is_integer(x_stop),  f'x_stop must be an integer.'
+        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+
+        assert y_start >= 0 and y_start<=self.shape[0], f'y_start must be a positive integer smaller than {self.shape[0]}.'
+        assert is_integer(y_start), f'y_start must be an integer.'
+        assert y_stop  >= 0 and y_stop<=self.shape[0],  f'y_stop must be a positive integer smaller than {self.shape[0]}.'
+        assert is_integer(y_stop), f'y_stop must be an integer.'
+        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
+
+        # crop
+        final = Image(data=self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)])
+        return self._transfer_attributes(final)
+
+
+class PhotonEvents(metaclass=_Meta):
+    """Photon events object.
+
+    Args:
+        data (list or array): two (x, y) or three (x, y, intensity) list or array with
+            photon events.
+        filepath (string or path object, optional): filename or file handle.
+            If the filename ends in .gz, the file is automatically saved in
+            compressed gzip format. This is overwriten by data.
+        shape (tuple, optional): Shape of data (maximum vertical size, maximum horizontal size).
+        x, y, I (list or array): data columns.
+
+    Attributes:
+        data (2D array): This is where we store the Image.
+        shape (tuple): Shape of data (vertical size, horizontal size).
+        x, y, I (1D array): x, y, and intensity arrays.
+
+        nbins (tuple): Number of bins (number of rows, number of columns).
+        bins_size (tuple): Bins size (size of rows, size of columns).
+        reduced (brixs.Image): Binned image.
+
+        calculated_shifts (brixs.Spectrum): Calculated shifts.
+        p (list): Polynomial coefficients of the fitted shift values.
+        f (function): Function f(x) of the fitted shift values.
+
+    Methods:
+        save()
+        load()
+        plot()
+        binning()
+        calculate_histogram()
+        calculate_spectrum()
+        floor()
+        calculate_shifts()
+        set_shifts()
+        fix_curvature()
+
+    """
+
+    _read_only = ['reduced', 'calculated_shifts']
+
+    def __init__(self, *args, **kwargs):
+        # argument parsing
+        data, filepath, shape = self._sort_args(args, kwargs)
+
+        # basic attr
+        self._data  = None
+        self._shape = [None, None]
+
+        # binning attr
+        self._nbins      = np.array((-1, -1))
+        self._bins_size  = np.array((-1, -1))
+        self._reduced    = None
+
+        # shifts
+        self._calculated_shifts = None
+        self._shifts = None
+
+        # set data
+        if data is not None:
+            self.data = copy.deepcopy(data)
+        elif filepath is not None:
+            self.load(filepath)
+        if shape != (None, None):
+            self.shape = shape
+
+    @property
+    def data(self):
+        return copy.deepcopy(self._data)
+    @data.setter
+    def data(self, value):
+        # basic attr
+        if value.shape[1] == 3:
+            self._data = np.array([event for event in np.array(value, dtype='float') if not event[2]<=0])
+        elif value.shape[1] == 2:
+            data = np.array(value, dtype='float')
+            self._data = np.c_[data, np.ones(data.shape[0])]
+        else:
+            raise ValueError("Data must have 2 or 3 columns.")
+
+        # set shape
+        if self.shape[0] is None:
+            self._shape[0] = max(self.data[:, 1])
+        elif max(self.data[:, 1]) > self._shape[0]:
+            self._shape[0] = max(self.data[:, 1])
+        if self.shape[1] is None:
+            self._shape[0] = max(self.data[:, 0])
+        elif max(self.data[:, 0]) > self._shape[1]:
+            self._shape[1] = max(self.data[:, 0])
+
+        # binning attr
+        self._nbins      = np.array((-1, -1))
+        self._bins_size  = np.array((-1, -1))
+        self._reduced    = None
+
+        # shift attr
+        self._calculated_shifts = None
+        self._shifts = None
+    @data.deleter
+    def data(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def shape(self):
+        return copy.deepcopy(self._shape)
+    @shape.setter
+    def shape(self, value):
+        if isinstance(value, Iterable):
+            if len(value) == 2:
+                if value[0] is None:
+                    value[0] = max(self.data[:, 1])
+                if value[1] is None:
+                    value[1] = max(self.data[:, 0])
+                if value[0] < 0 or value[1] < 0:
+                    raise ValueError('Shape cannot be negative.')
+                self._shape = value
+            else:
+                raise ValueError(f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}')
+        else:
+            raise ValueError(f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}')
+    @shape.deleter
+    def shape(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def x(self):
+        return copy.deepcopy(self._data[:, 0])
+    @x.setter
+    def x(self, value):
+        raise AttributeError('Cannot set object. This might change in the future.')
+    @x.deleter
+    def x(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def y(self):
+        return copy.deepcopy(self._data[:, 1])
+    @y.setter
+    def y(self, value):
+        raise AttributeError('Cannot set object. This might change in the future.')
+    @y.deleter
+    def y(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def I(self):
+        return copy.deepcopy(self._data[:, 2])
+    @I.setter
+    def I(self, value):
+        raise AttributeError('Cannot set object. This might change in the future.')
+    @I.deleter
+    def I(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def nbins(self):
+        return self._nbins
+    @nbins.setter
+    def nbins(self, value):
+        if type(value) != str:
+            self.binning(nbins=value)
+        # elif value == 'guess':
+        #     guess_bins = self.guess_bins()
+        #     self.bins = guess_bins
+        else:
+            raise ValueError("Not a valid option of `nbins`.\nValid options are: a number, a tuple, or a list.")
+    @nbins.deleter
+    def nbins(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def bins_size(self):
+        return self._bins_size
+    @bins_size.setter
+    def bins_size(self, value):
+        self.binning(bins_size=value)
+    @bins_size.deleter
+    def bins_size(self):
+        raise AttributeError('Cannot delete object.')
+
+    def _sort_args(self, args, kwargs):
+        """checks initial arguments.
+
+        Keyword arguments (kwargs) cannot be mixed with positional arguments.
+
+        For positional arguments, if one data set is passed, it assumes it is
+            `data`. If this one argument is of type string or Pathlib.Path, it
+            assumes it is a filepath.
+
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+
+        Returns:
+            data, filepath, shape
+        """
+        # initial check
+        if kwargs != {} and args != ():
+            raise AttributeError('Cannot mix keyword arguments with positional arguments. Keyword arguents are `x`, `y`, `I`, `shape`, `data`, and `filepath`.')
+
+        # initialization
+        data     = None
+        filepath = None
+        x        = None
+        y        = None
+        I        = None
+        shape    = (None, None)
+        error = 'brixs.PhotonEvents() cannot figure out the data out of the arguments passed.\nMaybe use keyword arguments.\nValid arguments: x, y, I, shape, data, filepath.'
+
+        # keyword arguments
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'x' in kwargs:
+            x = kwargs['x']
+        if 'y' in kwargs:
+            y = kwargs['y']
+        if 'I' in kwargs:
+            I = kwargs['I']
+        if 'shape' in kwargs:
+            shape = kwargs['shape']
+        if 'data' in kwargs:
+            data = kwargs['data']
+        if 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+
+        if x is not None and y is not None and data is None:
+            assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+            data = np.c_[np.array(x), np.array(y)]
+            if I is not None:
+                assert len(x) == len(I), f'x, y and I must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}\nLength of I = {len(I)}.'
+                data = np.c_[data, np.array(I)]
+
+
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = Path(args[0])
+            else:
+                data = args[0]
+        elif len(args) == 2:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                filepath = Path(args[0])
+                shape = list(args[1])
+                assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+            else:
+                if len(args[0]) == len(args[1]):
+                    x = args[0]
+                    y = args[1]
+                    assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+                    data = np.c_[np.array(x), np.array(y)]
+                else:
+                    data = args[0]
+                    shape = list(args[1])
+                    assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+        elif len(args) == 3:
+            if len(args[0]) == len(args[1]):
+                x = args[0]
+                y = args[1]
+                assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+                data = np.c_[np.array(x), np.array(y)]
+                if len(args[0]) == len(args[2]):
+                    I = args[2]
+                    data = np.c_[data, np.array(I)]
+                else:
+                    shape = args[2]
+                    assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+        elif len(args) == 4:
+            x = args[0]
+            y = args[1]
+            assert len(x) == len(y), f'x and y must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}.'
+            data = np.c_[np.array(x), np.array(y)]
+            I = args[2]
+            assert len(x) == len(I), f'x, y and I must have the same length.\nLength of x = {len(x)}\nLength of y = {len(y)}\nLength of I = {len(I)}.'
+            data = np.c_[data, np.array(I)]
+            shape = args[3]
+            assert len(shape) == 2, f'Shape must be a list or tuple (vertical size, horizontal size).\nInvalid shape: {value}'
+        elif len(args) > 4:
+            raise AttributeError(error)
+
+        return data, filepath, shape
+
+    def __len__(self):
+        if self._data is None:
+            return 0
+        else:
+            return len(self._data[:, 0])
+
+    def get_user_defined_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_data', '_shape', 
+                           '_nbins', '_bins_size', 
+                           '_reduced', '_shifts',
+                           '_calculated_shifts']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+    
+    def save(self, filepath=None, only_data=False,  check_overwrite=None, **kwargs):
+        r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename ends in .gz, the file is automatically saved in
+                compressed gzip format. If None, filepath can be inferred from a
+                user defined attr 'im.filepath'. Default is None.  Last used 
+                filepath is saved to pe.filepath.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is saved to the file.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            **kwargs: kwargs are passed to ``np.savetxt()`` that saves the data.
+
+        If not specified, the following parameters are passed to `numpy.savetxt()`_:
+
+        Args:
+            fmt (string, or list, optional): A single format (like ``%10.5f``), or a
+                sequence of formats. See numpy's documentation for more information.
+                If not specified, best fmt is calculated based on the
+                number of decimal places of the data. Specifing fmt makes the code
+                runs a little faster (not much tough, but it might make a difference
+                if saving a lot of files).
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (", ").
+            newline (str, optional): String or character separating lines.
+                Default is ``\n``.
+            header (bool, optional): String that will be written at the beginning of the file.
+                Note that, object attributes will be saved at the beginning of the file.
+                If only_data=True, header and footer is ignored.
+            comments (str, optional): String that will be prepended to the
+                header and footer strings, to mark them as comments. Default is "# ".
+
+        Returns:
+            None
+
+        .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
+        """
+        # filepath
+        if filepath is None:
+            try: 
+                filepath = Path(self.filepath)
+            except AttributeError:
+                raise TypeError("Missing 1 required argument: 'filepath'")
+
+        # check overwrite
+        if check_overwrite is None:
+            check_overwrite = settings.SAVE_CHECK_OVERWRITE
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+                
+        # kwargs
+        if 'fmt' not in kwargs: # pick best format
+            decimal = max([n_decimal_places(x) for x in flatten(self._data)])
+            kwargs['fmt'] = f'%.{decimal}f'
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'newline' not in kwargs:
+            kwargs['newline'] = '\n'
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
+        # save
+        if only_data:
+            if 'header' in kwargs:
+                del kwargs['header']
+            if 'footer' in kwargs:
+                del kwargs['footer']
+            np.savetxt(Path(filepath), self._data, **kwargs)
+        else:
+            if 'header' not in kwargs:
+                kwargs['header'] = ''
+            else:
+                kwargs['header'] += '\n'
+            dict = get_attributes(self)
+            kwargs['header'] += '==== brixs PhotonEvents ===='  + '\n'
+            for n in dict:
+                if n not in ['_data', '_x', '_y', '_I', '_reduced', '_calculated_shifts', '_f', '_shifts']:
+                    if isinstance(dict[n], Iterable):
+                        kwargs['header'] += f'{n}: {list(dict[n])}'  + '\n'
+                    else:
+                        kwargs['header'] += f'{n}: {dict[n]}'  + '\n'
+            np.savetxt(Path(filepath), self._data, **kwargs)
+
+        # save filepath
+        self.filepath = filepath
+
+    def load(self, filepath, **kwargs):
+        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first 
+                decompressed. Last used filepath is saved to pe.filepath.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (', ').
+            comments (str, optional): The character used to indicate the start
+                of a comment. Default is ``# ``. Attributes picked up
+                from the header will be loaded too.
+
+        Returns:
+            None
+
+        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
+        """
+        if 'delimiter' not in kwargs:
+            kwargs['delimiter'] = ', '
+        if 'comments' not in kwargs:
+            kwargs['comments'] = '# '
+
+        # read data
+        data = np.genfromtxt(Path(filepath), **kwargs)
+        self.data = data
+
+        # read header
+        header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+        attr_start = 0
+        binning_flag = False  # check if data needs binning
+
+        # find where attributes listing starts
+        for i, line in enumerate(header):
+            if '==== brixs PhotonEvents ====' in line:
+                attr_start = i
+                break
+            attr_start = -1
+
+        # read attributes
+        if attr_start != -1:
+            for i, line in enumerate(header[attr_start+1:-1]):
+
+                # extract name and value
+                name = line[1:-1].split(':')[0].strip()
+                value = eval(line[1:-1].split(':')[1].strip())
+
+
+                ### DEALING WITH ATTRIBUTES THAT NEED TO RUN SOMETHING ###
+                if name in ['_nbins']:
+                    if value[0] > 0 and value[1] > 0:
+                        binning_flag = True
+                elif name in ['_bins_size']:
+                    if value[0] > 0 and value[1] > 0:
+                        binning_flag = True
+                ### DEALING WITH OTHER ATTRIBUTES ###
+                elif name not in []:  # except these attrs
+                    try:
+                        setattr(self, name, value)
+                    except Exception as e:
+                        print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+
+        ### RUN ###
+        if binning_flag:
+            try:
+                self.binning(nbins=self.nbins, bins_size=self.bins_size)
+            except:
+                pass
+
+        # save filepath
+        self.filepath = str(filepath)
+
+    def plot(self, ax=None, set_limits=True, **kwargs):
+        """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
+
+        The limits of the plot is also set to the size of the detector (given in
+            the attribute ``shape``.
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            set_limits (book, optional): if True, it sets the plot limits 
+            accordingly to pe.shape
+
+        If not specified, the following parameters are passed to `matplotlib.pyplot.scatter()`_:
+
+        Args:
+            s: The marker size in points**2. Default is 0.1.
+
+        Returns:
+            `matplotlib.image.AxesImage`_
+
+        .. _matplotlib.pyplot.scatter(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.scatter.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
+        """
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+        # kwargs
+        if 's' not in kwargs:
+            kwargs['s'] = 0.1
+
+        # plot
+        pos = ax.scatter(self.data[:, 0], self.data[:, 1], **kwargs)
+
+        # set limits
+        if set_limits:
+            try:
+                ax.xlim(0, self.shape[1])
+                ax.ylim(0, self.shape[0])
+            except AttributeError:
+                ax.set_xlim(0, self.shape[1])
+                ax.set_ylim(0, self.shape[0])
+
+        return pos
+
+    def binning(self, *args, **kwargs):
+        """Compute the 2D histogram of the data (binning of the data).
+
+        Args:
+            nbins (int or tuple, optional): number of bins. If one value is given,
+                this is used for both x and y directions. If two values are given,
+                they are used separetely for the number of rows and number of
+                columns, respectively. ``bins_size`` is calculated.
+            bins_size (int or tuple, optional): size of the bins. This overwrites
+                the argument ``bins``. If one value is given,
+                it is used for both x and y directions. If two values are given,
+                they are used separetely for rows and columns size, respectively.
+                ``nbins`` is calculated.
+
+        Example:
+            .. code-block:: python
+
+                nbins = 10       # (10 rows, 10 columns)
+                nbins = (10)     # (10 rows, 10 columns)
+                nbins = (10, 5)  # (10 rows, 5 columns)
+
+        Returns:
+            None
+        """
+        kwargs['shape']        = self.shape
+        kwargs['factor_check'] = False
+        _nbins, _bins_size = _bins_interpreter(*args, **kwargs)
+
+        temp, _x_edges, _y_edges = np.histogram2d(self.data[:, 0],
+                                                            self.data[:, 1],
+                                                            bins=_nbins[::-1],
+                                                             weights=self.data[:, 2],
+                                                             range=((0, self.shape[1]), (0, self.shape[0]))
+                                                            )
+        self._reduced   = Image(temp.transpose())
+        self.reduced._x_centers = moving_average(_x_edges, n=2)
+        self.reduced._y_centers = moving_average(_y_edges, n=2)
+        self.reduced._x_edges = _x_edges
+        self.reduced._y_edges = _y_edges
+        self._nbins     = _nbins
+        self._bins_size = _bins_size
+        return
+
+    def calculate_spectrum(self, nbins=None, bins_size=None, axis=1, xaxis='bins'):
+        """Integrate data in one direction (sum columns or rows).
+
+        Args:
+            nbins (int, optional): number of bins. nbins overwrites bins_size. The
+                nbins of the opposite axis is automatically set to 1.
+            bins_size (int or tuple, optional): size of the bins.
+            axis (int or string, optional): Axis along which elements are integrated.
+                By default, data is integrated in the horizontal direction.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        axis = _axis_interpreter(axis)
+
+        temp = PhotonEvents(data=self.data, shape=self.shape)
+        temp.binning(nbins=nbins, bins_size=bins_size)
+        s = temp.reduced.calculate_spectrum(axis=axis)
+        return s
+
+    def calculate_shifts(self, axis=0):
+        """For now, the only mode tested is cc"""
+        self.calculate_rolls(axis=axis)
+    
+    def calculate_rolls(self, axis=0):
+        """For now, the only mode tested is cc"""
+        axis = _axis_interpreter(axis)
+        mode = 'cc'
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use PhotonEvents.binning()'
+
+        self.reduced.calculate_shifts(axis=axis, mode=mode)
+
+        if mode in cc:
+            if axis == 0:
+                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y#*self.bins_size[0]
+            elif axis == 1:
+                self.reduced.calculated_shifts._y = self.reduced.calculated_shifts.y#*self.bins_size[1]
+        self._calculated_shifts = self.reduced.calculated_shifts
+
+    def transform(self, f):
+        """Changes the values of x, y based on a function.
+
+        Args:
+            f (function): function ``x, y = f(x, y)`` that takes as input the
+                position of a photon event and returns its corrected values.
+
+        Example:
+            f = lambda x, y: (x, y**2)
+
+        Returns:
+            None
+        """
+        self._data[:, 0], self._data[:, 1] = f(self.data[:, 0], self.data[:, 1])
+
+    def set_shifts(self, value=None, p=None, f=None, axis=0):
+        """assuming calculation mode = 'cc'
+        value
+        p
+        f
+        axis=0 or 1
+        """
+        axis = _axis_interpreter(axis)
+
+        if value is not None:
+            if isinstance(value, Iterable) == False:
+                value = [value]*len(self)
+            assert len(value) == len(self), f'value must have the same length as the data\nLength of the data = {len(self)}.'
+
+            if axis == 0:
+                self._data[:, 1] = self.data[:, 1] + value
+                self._shifts = Spectrum(x=self.data[:, 0], y=value)
+            elif axis == 1:
+                self._data[:, 0] = self.data[:, 0] + value
+                self._shifts = Spectrum(x=self.data[:, 1], y=value)
+        elif p is not None:
+            if axis == 0:
+                self._data[:, 1] = self.data[:, 1] + np.polyval(p, self.data[:, 0])
+            elif axis == 1:
+                self._data[:, 0] = self.data[:, 0] + np.polyval(p, self.data[:, 1])
+            self._p = p
+        elif f is not None:
+            if axis == 0:
+                self._data[:, 1] = self.data[:, 1] + f(self.data[:, 0])
+            elif axis == 1:
+                self._data[:, 0] = self.data[:, 0] + f(self.data[:, 1])
+            self._f = f
+
+    def fix_curvature(self, deg=2, axis=0):
+        """mode = 'cc'
+        
+        return popt
+        """
+        axis = _axis_interpreter(axis)
+
+        assert self.reduced is not None, 'Image was not binned yet.\nPlease, use Image.binning()'
+
+        # self.reduced.floor()
+        self.calculate_shifts(axis=axis)
+
+        popt, model, r2 = self.calculated_shifts.polyfit(deg=deg)
+
+        # set shifts
+        self.set_shifts(p=popt)
+
+        return popt, model, r2
+
+    #
+    # def guess_bins(self, bins_initial=(9, 100), bins_step=(1, 50), max_x_iter=3, max_iter=1000, mode='cross-correlation', ranges=None):
+    #     """
+    #     Args:
+    #         max_x_iter (int, optional): every iteration the algorithm calculates
+    #             the offsets for different x_bins. Sometimes, subsequant x_bins
+    #             will give the same result (i.e., same number of equal offsets).
+    #             The algorithm will keep trying max_x_iter different x_bins until
+    #             finaly change to a different y_bins.
+    #         max_iter (int, optional): maximum number of different binnigs to try.
+    #     """
+    #     # offset parameters
+    #     ref = int(bins_initial[0]/2)
+    #
+    #     # inital iteration
+    #     # temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
+    #     # temp.bins = bins_initial
+    #     # temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
+    #     diff = [0, 0]
+    #     diff_sum = sum(diff)
+    #
+    #     # bins_initial[0] -= 1
+    #     x_counter = 0
+    #     total_counter = 0
+    #     bins = (bins_initial[0], bins_initial[1])
+    #     while 0 in diff and total_counter < max_iter:
+    #         temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
+    #         temp.bins = bins
+    #         temp.calculate_offsets(mode=mode, ranges=ranges, ref=ref)
+    #         diff = np.diff(temp.offsets)
+    #
+    #         if x_counter < max_x_iter-1:
+    #             if diff_sum == sum(diff):
+    #                 bins = (bins[0]+bins_step[0], bins[1])
+    #                 x_counter += 1
+    #         else:
+    #             bins = (bins_initial[0], bins[1]+bins_step[1])
+    #             x_counter = 0
+    #
+    #         diff_sum = sum(diff)
+    #         total_counter += 1
+    #     if total_counter >= max_iter:
+    #         raise RuntimeError('cannot find solution.')
+    #     else:
+    #         return temp.bins
+    #
+    # def best_bins(self, y_bins=None, x_bins=None, deg=2, spectrum_bins=6000, **kwargs):
+    #
+    #     if y_bins is None:
+    #         y_bins = [100, 150, 300, 400, 600, 1000, 1500, 2500, 5000, 6000, 8000, 12000, 15000]
+    #
+    #     if x_bins is None:
+    #         x_bins = [3, 5, 7, 9, 12, 15, 20, 30, 60]
+    #
+    #     # bins_old = self.bins
+    #
+    #     fwhm = {y_bin: {x_bin:None for x_bin in x_bins} for y_bin in y_bins}
+    #     best_bins = (0, 0)
+    #     best = 10000
+    #     print(f'Starting iteration...')
+    #     for i, y_bin in enumerate(y_bins):
+    #         print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}.')
+    #         for x_bin in x_bins:
+    #             temp = PhotonEvents(self.data, x_max=self.x_max, y_max=self.y_max)
+    #             temp.bins = (x_bin, y_bin)
+    #             # print(self.bins)
+    #             temp.calculate_offsets(ref=int(temp.bins[0]/2))
+    #             temp.fit_offsets(deg=deg)
+    #             temp.offsets_correction()
+    #             s = temp.calculate_spectrum(bins=spectrum_bins)
+    #             try:
+    #                 s.guess_elastic_peak(**kwargs)
+    #                 fwhm[y_bin][x_bin] = s.elastic_fwhm
+    #                 if s.elastic_fwhm < best:
+    #                     best_bins = (x_bin, y_bin)
+    #                     best = s.elastic_fwhm
+    #             except RuntimeError:
+    #                 pass
+    #
+    #
+    #     print(f'Done. Best bins is {best_bins}.')
+    #
+    #     return best_bins, best, fwhm
+    #
+    # def best_bins_for_spectrum(self, y_bins=None, **kwargs):
+    #
+    #     if y_bins is None:
+    #         y_bins = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000]
+    #
+    #     fwhm = {y_bin: None for y_bin in y_bins}
+    #     best = 10000
+    #     print(f'Starting iteration...')
+    #     for i, y_bin in enumerate(y_bins):
+    #         print(f'({i}/{len(y_bins)-1}) Trying y_bin = {y_bin}')
+    #         s = self.calculate_spectrum(bins=y_bin, mode='length')
+    #         try:
+    #             s.guess_elastic_peak(**kwargs)
+    #             fwhm[y_bin] = s.elastic_fwhm
+    #             if s.elastic_fwhm < best:
+    #                 best_bins = (1, y_bin)
+    #                 best = s.elastic_fwhm
+    #         except RuntimeError:
+    #             fwhm[y_bin] = -1
+    #
+    #
+    #     return best_bins, best, fwhm
