@@ -67,7 +67,7 @@ class Peaks(lmfit.Parameters):
 
     def append(self, amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None):
         # define index
-        indexes = self.get_indexes()
+        indexes = self.indexes()
         if indexes == []:
             index = 0
         else:
@@ -154,7 +154,7 @@ class Peaks(lmfit.Parameters):
         else:
             if name in ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']:
                 if self.length() == 1:
-                    index = self.get_indexes()[0]
+                    index = self.indexes()[0]
                     name = name + f'_{index}'
                 else:
                     raise ValueError(f'This list has multiple peaks, please, identify the peak number')
@@ -173,7 +173,7 @@ class Peaks(lmfit.Parameters):
                 raise ValueError(f'Cannot find parameter: {name}')
 
     def length(self):
-        return len(self.get_indexes())
+        return len(self.indexes())
     
     # support
     def copy(self, *args, **kwargs):
@@ -208,11 +208,11 @@ class Peaks(lmfit.Parameters):
         """
         if i < 0:
             try: 
-                i = np.sort(self.get_indexes())[i]
+                i = np.sort(self.indexes())[i]
             except IndexError:
-                raise AssertionError(f'index {i} does not exist\nPeak indexes available: {self.get_indexes()}')
+                raise AssertionError(f'index {i} does not exist\nPeak indexes available: {self.indexes()}')
             
-        assert i in self.get_indexes(), f'index {i} does not exist\nPeak indexes available: {self.get_indexes()}'
+        assert i in self.indexes(), f'index {i} does not exist\nPeak indexes available: {self.indexes()}'
 
         final = []
         for name in self:
@@ -229,13 +229,13 @@ class Peaks(lmfit.Parameters):
         return final
 
     def split_params(self):
-        indexes = self.get_indexes()
+        indexes = self.indexes()
         peaks = {}
         for i in indexes:
             peaks[i] = self.get_params_with_index(i)
         return peaks
 
-    def get_indexes(self):
+    def indexes(self):
         """return list of all indexes."""
         final = []
         for name in self:
@@ -266,7 +266,7 @@ class Peaks(lmfit.Parameters):
             vmax  = []
             step  = []
 
-            for i in self.get_indexes():
+            for i in self.indexes():
                 temp = self._find_suitable_x(i=i)
                 vmin.append(min(temp))
                 vmax.append(max(temp))
@@ -406,7 +406,7 @@ class Peaks(lmfit.Parameters):
 
     def fix_indexes(self):
         """Fix indexes so they start from zero."""
-        indexes = self.get_indexes()
+        indexes = self.indexes()
         final = len(indexes)
         
         # replace indexes
@@ -415,7 +415,7 @@ class Peaks(lmfit.Parameters):
                 self.replace_index(index, i_new)
 
         # remove
-        for index in self.get_indexes():
+        for index in self.indexes():
             if index >= final:
                 self.remove(index)
 
@@ -449,7 +449,7 @@ class Peaks(lmfit.Parameters):
                 br.figure()
 
         if i is None:
-            for i in self.get_indexes():
+            for i in self.indexes():
                 self.plot(i=i, ax=ax, offset=offset, shift=shift, factor=factor, calib=calib, **kwargs)
         else:
             # data
@@ -471,7 +471,7 @@ class Peaks(lmfit.Parameters):
     # extractors
     def split_peaks(self):
         """return a dict with type Peaks."""
-        indexes = self.get_indexes()
+        indexes = self.indexes()
         peaks = {}
         for i in indexes:
             peaks[i] = Peaks()
@@ -523,7 +523,7 @@ class Peaks(lmfit.Parameters):
         if x is None:
             x = self._find_suitable_x(i=i)
 
-        indexes = self.get_indexes()
+        indexes = self.indexes()
         n_peaks = len(indexes)
 
         if n_peaks > 0:
@@ -543,7 +543,7 @@ class Peaks(lmfit.Parameters):
         """
         if i is None:
             final = ''
-            for i in self.get_indexes():
+            for i in self.indexes():
                 final += self._model_str(i) + ' + '
             
             return final[:-3]

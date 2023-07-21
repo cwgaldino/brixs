@@ -20,61 +20,49 @@ else:
     plt.ion()
 
 # %% example ===================================================================
-
 x = np.linspace(-5, 5, 100)
 y = np.sin(x)
 
 s = br.Spectrum(x, y)
 
+plt.figure()
 s.plot()
 plt.show()
 
 # %% Initialization ============================================================
 # s = br.Spectrum(x, y)
 # s = br.Spectrum(y)
-# s = br.Spectrum(data)
 # s = br.Spectrum(filepath)
-
-arr = [x, y]
-s = br.Spectrum(data=arr)
-
-# also works if the array is inverted (transposed)
-arr2 = np.transpose(arr)
-s = br.Spectrum(data=arr2)
 
 s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
 
 # filepath must point to a two column txt or csv file
 # s = br.Spectrum('<filepath>')
 
-
 # %% data reading functions are defined for some beamlines =====================
-filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
-# filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
+filepath = Path(r'../fixtures/Cu_0005_d1.h5')
 s = br.ADRESS.read(filepath)
 
-
-# %% some attributes ===========================================================
+# some attributes
 print('x axis: ', s.x)
 print('y axis: ', s.y)
 print('Integrated area: ', s.area)
 
 # exclusive of ADRESS dataset
-print('experiment parameters: ' + str(s.nd.keys()))
-print(s.nd['SampleTheta'])
-print(s.nd['ExitSlit'])
+print(s.th)
+print(s.slit)
 
-
-# %% plotting functions ========================================================
-fig = br.backpack.figure()
+# plotting 
+fig = br.figure()  # br.figure is the same as plt.figure, but has additional functionality
 s.plot()
 
-# %% parameters can be set =====================================================
+# %% save and load =============================================================
+s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
+
+# parameters can be set
 s.temperature = 10
 print(s.temperature)
 
-
-# %% save and load =============================================================
 # save
 s.save(r'test.txt')
 
@@ -98,7 +86,7 @@ s_A = s_B - 2
 s_A = s_B * 2
 s_A = s_B / 2
 
-# parameters from the first term are transfered
+# parameters from the first term are transferred
 s_B.temperature = 10
 s_A = s_B + s_C
 print(s_A.temperature)
@@ -108,24 +96,24 @@ print(s_A.temperature)  # ERROR
 # %% check x axis ==============================================================
 s_A = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6], y=[1, 1, 1, 1, 1, 1, 1])
 print(s_A.step)
-s_A.check_step_x()
+s_A.check_step()
 print(s_A.step)
 s_A.check_monotonicity()
 print(s_A.monotonicity)
 
 s_A = br.Spectrum(x=[0, 2, 4, 6, 8, 10, 12], y=[1, 1, 1, 1, 1, 1, 1])
-s_A.check_step_x()
+s_A.check_step()
 print(s_A.step)
 s_A.check_monotonicity()
 print(s_A.monotonicity)
 
 s_A = br.Spectrum(x=[0, 1.1, 2, 2.3, 7, 10, 12], y=[1, 1, 1, 1, 1, 1, 1])
-s_A.check_step_x()  # ERROR
+s_A.check_step()  # ERROR
 s_A.check_monotonicity()
 print(s_A.monotonicity)
 
 s_A = br.Spectrum(x=[6, 5, 4, 3, 2, 1, 0], y=[1, 1, 1, 1, 1, 1, 1])
-s_A.check_step_x()
+s_A.check_step()
 print(s_A.step)
 s_A.check_monotonicity()
 print(s_A.monotonicity)
@@ -140,75 +128,50 @@ print(s_A.y)
 
 
 # %% modifiers =================================================================
-print(s.offset)       # additive factor, y axis
-print(s.factor)       # multiplicative factor, y axis
-print(s.calib)        # multiplicative factor, x axis
-print(s.shift)        # additive factor, x axis (see below)
-print(s.shift_roll)   # additive factor, x axis (see below)
-print(s.shift_interp) # additive factor, x axis (see below)
+s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
 
 # offset
-fig = br.backpack.figure()
+fig = br.figure()
 s.plot()
 s.set_offset(20)
-s.plot()
-
-# modifiers are absolute quantities
-s.set_offset(0)
 s.plot()
 
 # modifiers can be set via the attribute
 s.offset = 30
 s.plot()
 
-# for relative modifications use assignment operators
-s.offset -= 30
-s.plot()
-
-# or use argument type
-s.set_offset(10, type='relative')
-s.plot()
-
-
-# %% There are many ways of applying a shift in the x axis =====================
+# %% There are two ways of applying a shift in the x axis =====================
+s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
 
 # hard shift. Y axis is fully preserved, x is modified
 print('x axis before: ', s.x)
-fig = br.backpack.figure()
+fig = br.figure()
 s.plot(label='before')
-s.set_shift(500, mode='hard')
+s.set_shift(10)
 s.plot(label='after')
 plt.legend()
 print('x axis after: ', s.x)
-
-# soft shift. X axis is fully preserved, y axis is interpolated in a different position
-fig = br.backpack.figure()
-s.plot(label='before')
-s.set_shift(500, mode='soft')
-s.plot(label='after')
-plt.legend()
 
 # roll shift. both axis are preserved. Only integer shifts allowed.
 # Data is "rolled" in the array
 # The edges of the data became meaningless
 fig = br.backpack.figure()
 s.plot(label='before')
-s.set_shift(500, mode='roll')
+s.set_roll(3)
 s.plot(label='after')
 plt.legend()
 
 
 # %% manipulation ==============================================================
-area = s.calculate_area()
-
+s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
 s2 = copy.deepcopy(s)
 
 fig = br.backpack.figure()
 s.plot(label='initial')
-s2.interp(start=2000, stop=4000, num=2000)
+s2.interp(start=0, stop=10, num=100)
 s2.plot(label='interp')
 
-s2.crop(start=2500, stop=None)
+s2.crop(start=2, stop=None)
 s2.plot(label='crop')
 
 s2 = s2 + 50
@@ -219,134 +182,96 @@ s2.plot(label='floor')
 s2.flip()
 s2.plot(label='flip')
 
-s2.normalize(50, [-2920.68, -2912.48])
+s2.normalize(50, [-10, -9])
 s2.plot(label='nomalize')
 
-s3 = s.extract([[0, 1000], [2000, 3000], [5000, None]])
-s3.plot(label='extracted', marker='o', lw=0, ms=1)
-
-s3.zero()
-s3.plot(label='zero')
+s3 = s.copy([[0, 2], [5, 7], [9, None]])
+s3.plot(label='extracted', marker='o')
 
 plt.legend()
 
 
 # %% fit peak ==================================================================
-filepath = Path(r'../fixtures/ADRESS/Cu_0005_d1.h5')
+filepath = Path(r'../fixtures/Cu_0005_d1.h5')
 s = br.ADRESS.read(filepath)
 
 s.fit_peak()
-print(s.peaks)
-print(s.fit.peaks)
-print('fit R2: ' + str(s.R2))
+s.peaks.pretty_print()
 
-fig = br.backpack.figure()
+fig = br.figure()
 _ = s.plot(color='black', marker='o', lw=0)
-_ = s.fit.plot(color='red')
-s.peaks[0].plot()
-
+_ = s.peaks.spectrum.plot(color='red')
 
 # %% finding peaks =============================================================
-filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
+filepath = Path(r'../fixtures/Cu_0017_d1.h5')
 s = br.ADRESS.read(filepath)
 
-fig = br.backpack.figure()
+fig = br.figure()
 _ = s.plot(color='black')
 s.find_peaks()
 _ = s.peaks.plot()
-print(s.peaks)
+s.peaks.pretty_print()
 
 # reduced prominence
-fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
+fig = br.figure()
 _ = s.plot(color='black')
 s.find_peaks(prominence=2)
 _ = s.peaks.plot()
-print(s.peaks)
+s.peaks.pretty_print()
 
 # add peak by hand
-fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
+fig = br.figure()
 _ = s.plot(color='black')
 s.find_peaks()
-s.peaks.append({'amp':7.75, 'fwhm':200, 'c':3543})
+s.peaks.append(amp=7.75, w=200, c=3543)
 _ = s.peaks.plot()
-
-# split peak
-fig = br.backpack.figure()
-br.backpack.set_window_position(2048, 232)
-_ = s.plot(color='black')
-s.find_peaks(prominence=2)
-s.peaks.split(0)
-_ = s.peaks.plot()
-
 
 
 # %% fitting peaks =============================================================
-filepath = Path(r'../fixtures/ADRESS/Cu_0017_d1.h5')
+filepath = Path(r'../fixtures/Cu_0017_d1.h5')
 s = br.ADRESS.read(filepath)
 
 # find peaks
 s.find_peaks()
-s.peaks.append({'amp':7.75, 'fwhm':200, 'c':3543})
-s.peaks.split(1)
+s.peaks.append(amp=7.75, w=200, c=3543)
+s.peaks.append(amp=196.15, w=30, c=3884.5)
 
 # plot
-fig = br.backpack.figure()
+fig = br.figure()
 s.plot(color='black')
-_ = s.peaks.plot(color='green')
+s.peaks.plot()
+
+# reorder peaks
+# s.peaks.reorder()  # not implemented yet
 
 # set bounds
-s.peaks[1].bounds['c'] = (3861.62, 3931)
-s.peaks[2].bounds['c'] = (3871.95, 3931)
-s.peaks[2].bounds['amp'] = (0, 500)
+s.peaks[-1]['c'].max = 3895.4
+s.peaks[-1]['c'].min = 3873.7
 
-# fit
-s.fit_peaks()
-
-# plot
+# fit and plot
 fig = br.backpack.figure()
 s.plot(color='black')
-s.fit.plot(color='red')
-
-# fitted peaks parameters
-print(s.fit.peaks)
-
-# error, covariance matrix, and r squared
-print(s.fit.peaks[0].error)
-print(s.fit.peaks[1].error)
-print(s.fit.pcov)
-print(s.R2)
-
-# residue and initial guess
-fig = br.backpack.figure()
-s.plot(color='black', label='data')
-s.fit.plot(color='red', label='fit')
-s.guess.plot(color='blue', label='guess')
-s.residue.plot(color='green', label='residue')
-plt.title(f'R2: {s.fit.R2}')
+_ = s.peaks.spectrum.plot(color='green', label='guess')
+s.fit_peaks()
+s.peaks.spectrum.plot(color='red', label='fit')
 plt.legend()
 
+# fitted peaks 
+s.peaks.pretty_print()
+
+
+
+###############################################
+# Double check 
 # plot peak contributions
-fig = br.backpack.figure()
+fig = br.figure()
 s.plot(color='black')
-for peak in s.fit.peaks:
-    peak.spectrum.plot(color='red', lw=1)
+for i in s.peaks.indexes():
+    s.peaks[i].spectrum.plot(lw=1)
 
 # subtract peak contribution
-fig = br.backpack.figure()
+fig = br.figure()
 s.plot(color='black')
 s_elastic = s.fit.peaks[-1].calculate_spectrum(x=s.x)
 s_final = s-s_elastic
 s_final.plot(color='red')
-
-# if main data is modified via a modifier, peaks and fit are modified too
-s.shift  = 100
-s.offset = 100
-s.calib  = 100
-s.factor = 100
-
-fig = br.backpack.figure()
-s.plot(color='black')
-_ = s.peaks.plot(color='green')
-s.fit.plot(color='red')

@@ -263,36 +263,6 @@ def _bins_interpreter(*args, **kwargs):
 
     return nbins, bins_size
 
-def _check_ranges(ranges, vmin, vmax):
-    """check if ranges is the right format.
-
-    If any item of ranges is None, this item is replaced by the min or max
-        value of the data.
-    """
-    text = 'Ranges should be a pair (x_init1, x_final1) or a list of pairs like this: ((x_init1, x_final1), (x_init2, x_final2), ...)\nUse None to indicate the minimum or maximum x value of the data.'
-
-    # check format
-    if ranges is None:
-        ranges = ((vmin, vmax),)
-    elif isinstance(ranges, Iterable) == True:
-        if isinstance(ranges[0], Iterable) == False:
-                ranges = (ranges, )
-    else:
-        raise ValueError(text)
-
-    # check pairs
-    ranges = list(ranges)
-    for i in range(len(ranges)):
-        if len(ranges[i]) == 2:
-            if None in ranges[i]:
-                ranges[i] = list(ranges[i])
-                if ranges[i][0] is None:
-                     ranges[i][0] = vmin
-                if ranges[i][1] is None:
-                     ranges[i][1] = vmax
-        else:
-            raise ValueError(f'Ranges pair {r} is not a valid pair.\n'+text)
-    return tuple(ranges)
 
 # BRIXS ========================================================================
 class Spectrum(metaclass=_Meta):
@@ -318,23 +288,24 @@ class Spectrum(metaclass=_Meta):
     Attributes:
         x (array): vector with x-coordinate values
         y (array): vector with y-coordinate values
-        filepath ()
+        filepath (str or pathlib.Path): filepath associated with data.
         step (number or None, read only): step size of the x-array.
         monotonicity (str or None, read only): monotonicity of the x-array.
-        peaks (lmfit.Parameters): each entry represents a peak.
+        peaks (lmfit.Parameters): each entry represents a parameter of a peak.
 
     Computed (read-only) attributes:
-        data
-        area
+        data (array): 2 column data (x, y)
+        area (number): area under the curve.
 
     Write-only attributes:
-        calib
-        shift
-        roll
-        factor
-        offset
-
+        calib:  calls s.set_calib()
+        shift:  calls s.set_shift()
+        roll:   calls s.set_roll()
+        factor: calls s.set_factor()
+        offset: calls s.set_offset()
     """
+    _read_only     = ['step', 'monotonicity', 'peaks']
+    _non_removable = []
 
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
@@ -404,18 +375,23 @@ class Spectrum(metaclass=_Meta):
             if 'x' in kwargs:
                 self.x = kwargs['x']
             self.y = kwargs['y']
+            return
         if 'filepath' in kwargs:
             self.load(kwargs['filepath'])
+            return
 
         # positional arguments
         if len(args) == 1:
             if isinstance(args[0], str) or isinstance(args[0], Path):
                 self.load(args[0])
+                return
             else:
                 self.y = args[0]
+                return
         elif len(args) == 2:
             self.x = args[0]
             self.y = args[1]
+            return
 
     ##############
     # attributes #
@@ -450,8 +426,8 @@ class Spectrum(metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        self.step         = None
-        self.monotonicity = None
+        self._step         = None
+        self._monotonicity = None
 
         ############################
         # reset special attributes #
@@ -493,8 +469,8 @@ class Spectrum(metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        # self.step         = None
-        # self.monotonicity = None
+        # self._step         = None
+        # self._monotonicity = None
 
         ############################
         # reset special attributes #
@@ -519,46 +495,42 @@ class Spectrum(metaclass=_Meta):
     def filepath(self):
         raise AttributeError('Cannot delete object.')   
 
-    @property
-    def step(self):
-        return self._step
-    @step.setter
-    def step(self, value):
-        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
-        if value is None:
-            self._step = None
-            self._roll = 0
-
-            # special
-            self.peaks._step  = None
-        else:
-            raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
-    @step.deleter
-    def step(self):
+    # @property
+    # def step(self):
+    #     return self._step
+    # @step.setter
+    # def step(self, value):
+    #     # raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    #     if value is None:
+    #         self._step = None
+    #     else:
+    #         raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
+    # @step.deleter
+    # def step(self):
+    #     raise AttributeError('Cannot delete object.')
+    # 
+    # @property
+    # def monotonicity(self):
+    #     return self._monotonicity
+    # @monotonicity.setter
+    # def monotonicity(self, value):
+    #     # raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    #     if value is None:
+    #         self._monotonicity = None
+    #     else:
+    #         raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
+    # @monotonicity.deleter
+    # def monotonicity(self):
         raise AttributeError('Cannot delete object.')
     
-    @property
-    def monotonicity(self):
-        return self._monotonicity
-    @monotonicity.setter
-    def monotonicity(self, value):
-        # raise AttributeError('Attribute is "read only". Cannot set attribute.')
-        if value is None:
-            self._monotonicity = None
-        else:
-            raise AttributeError('Attribute is "read only". Cannot set attribute unless set to None.')
-    @monotonicity.deleter
-    def monotonicity(self):
-        raise AttributeError('Cannot delete object.')
-    
-    @property
-    def peaks(self):
-        return self._peaks
-    @peaks.setter
-    def peaks(self, value):
-        raise AttributeError('Attribute is "read only".')
-    @peaks.deleter
-    def peaks(self):
+    # @property
+    # def peaks(self):
+    #     return self._peaks
+    # @peaks.setter
+    # def peaks(self, value):
+    #     raise AttributeError('Attribute is "read only".')
+    # @peaks.deleter
+    # def peaks(self):
         raise AttributeError('Cannot delete object.')
 
     ###################################
@@ -654,12 +626,22 @@ class Spectrum(metaclass=_Meta):
             except ValueError:
                 raise ValueError('Cannot operate on spectra. x axis is different.\nMaybe try interpolating the x axis.')
             final = Spectrum(x=self.x, y=self.y + object.y)
-            return self._transfer_attributes(final)
+            
         elif isinstance(object, (np.floating, float, int)):
             final = Spectrum(x=self.x, y=self.y + object)
-            return self._transfer_attributes(final)
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Spectrum')
+        
+        ##################
+        # transfer attrs #
+        ##################
+        final.step = self.step
+        final.monotonicity = self.monotonicity
+
+        for attr in self._get_user_attrs():
+            final.__setattr__(attr, self.__dict__[attr])
+
+        return final
 
     def __sub__(self, object):
         if isinstance(object, Spectrum):
@@ -669,12 +651,21 @@ class Spectrum(metaclass=_Meta):
             except ValueError:
                 raise ValueError('Cannot operate on spectra. x axis is different.\nMaybe try interpolating the x axis.')
             final = Spectrum(x=self.x, y=self.y - object.y)
-            return self._transfer_attributes(final)
         elif isinstance(object, (np.floating, float, int)):
             final = Spectrum(x=self.x, y=self.y - object)
-            return self._transfer_attributes(final)
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Spectrum')
+        
+        ##################
+        # transfer attrs #
+        ##################
+        final.step = self.step
+        final.monotonicity = self.monotonicity
+        
+        for attr in self._get_user_attrs():
+            final.__setattr__(attr, self.__dict__[attr])
+
+        return final
 
     def __mul__(self, object):
         if isinstance(object, Spectrum):
@@ -684,12 +675,21 @@ class Spectrum(metaclass=_Meta):
             except ValueError:
                 raise ValueError('Cannot operate on spectra. x axis is different.\nMaybe try interpolating the x axis.')
             final = Spectrum(x=self.x, y=self.y * object.y)
-            return self._transfer_attributes(final)
         elif isinstance(object, (np.floating, float, int)):
             final = Spectrum(x=self.x, y=self.y * object)
-            return self._transfer_attributes(final)
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Spectrum')
+        
+        ##################
+        # transfer attrs #
+        ##################
+        final.step = self.step
+        final.monotonicity = self.monotonicity
+        
+        for attr in self._get_user_attrs():
+            final.__setattr__(attr, self.__dict__[attr])
+
+        return final
 
     def __div__(self, object):
         if isinstance(object, Spectrum):
@@ -702,23 +702,63 @@ class Spectrum(metaclass=_Meta):
                 raise ZeroDivisionError(f'y axis contain zeros. Cannot divide by zero.')
             else:
                 final = Spectrum(x=self.x, y=self.y/object.y)
-                return self._transfer_attributes(final)
         elif isinstance(object, (np.floating, float, int)):
             if object == 0:
                 raise ZeroDivisionError(f'Cannot divide by zero.')
             else:
                 final = Spectrum(x=self.x, y=self.y / object)
-                return self._transfer_attributes(final)
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Spectrum')
+        
+        ##################
+        # transfer attrs #
+        ##################
+        final.step = self.step
+        final.monotonicity = self.monotonicity
+        
+        for attr in self._get_user_attrs():
+            final.__setattr__(attr, self.__dict__[attr])
+
+        return final
 
     def __truediv__(self, object):
         return self.__div__(object)
 
     def __iter__(self):
+        # this is what makes possible max(s) and min(s)
         for y in self.y:
             yield y
 
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return self.x[item], self.y[item]
+        elif isinstance(item, slice):
+            x = self.x[item]
+            y = self.y[item]
+
+            s = Spectrum(x=x, y=y)
+
+            # transfer attrs
+            for attr in self._get_user_attrs():
+                s.__setattr__(attr, self.__dict__[attr])
+
+            return s
+        else:
+            raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
+
+    def __delitem__(self, item):
+        if isinstance(item, int) or isinstance(item, slice):
+            self._x = np.delete(self.x, item)
+            self._y = np.delete(self.y, item)
+
+            ##########################
+            # reset check attributes #
+            ##########################
+            self._step         = None
+            self._monotonicity = None
+        else:
+            raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
+        
     ###########
     # support #
     ###########
@@ -726,38 +766,110 @@ class Spectrum(metaclass=_Meta):
         """return attrs that are user defined."""
         default_attrs =  ['_x', '_y', '_filepath', '_step', '_monotonicity', '_peaks']
         return [key for key in self.__dict__.keys() if key not in default_attrs]
+    
+    def _validate_ranges(self, *args, **kwargs):
+        """Check if ranges is the right format.
+
+        Possible input formats are:
+
+        xi, xf
+        (xi, xf)
+        (xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3)
+        ((xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3))
+
+        Input can be passed as positional arguments or with the kwarg `ranges`.
+
+        If xi=None, this item is replaced by the min value of the dataset.
+        If xf=None, this item is replaced by the max value of the dataset.
+
+        Returns:
+            ranges in the following format:
+                ((xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3))
+        """
+        error_message = 'Wrong input. Please check ranges input.\n' +\
+                        'ranges should be a pair (x_init, x_final) or a list of pairs.\n' +\
+                        'See examples below:\n' +\
+                        '\n' +\
+                        'ranges = (x_init, x_final)\n' +\
+                        '\n' +\
+                        'ranges = ((x_init_1, x_final_1), (x_init_2, x_final_2), ...)\n' +\
+                        '\n' +\
+                        'Use None to indicate the minimum or maximum x value of the data.\n'
+        if kwargs != {} and args != ():
+            raise AttributeError(error_message)
+        if any([item not in ['ranges', ] for item in kwargs.keys()]):
+            raise AttributeError(error_message)
+        if 'ranges' in kwargs:
+            args = kwargs['ranges']
+
+        # get min and max range values
+        vmin = min(self.x)
+        vmax = max(self.x)
+
+        ##############
+        # fix format #
+        ##############
+        # empty input
+        if len(args) == 0:
+            return ((vmin, vmax),)
+        
+        # (xi, xf)
+        # ((xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3))
+        elif len(args) == 1:
+            if isinstance(args[0][0], Iterable):
+                if len(args[0][0]) == 2:
+                    args = args[0]
+                else:
+                    raise AttributeError(error_message)
+
+        # xi, xf
+        # (xi_, xf_1), (xi_2, xf_2)
+        elif len(args) == 2:
+            if isinstance(args[0], Iterable):
+                args = tuple(args)
+            else:
+                args = ((args), )
+
+        # (xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3)
+        for pair in args:
+            if len(pair) == 2:
+                if pair[0] == None: pair[0] = vmin
+                if pair[1] == None: pair[1] = vmax
+            else:
+                raise AttributeError(error_message)
+
+        return args
 
     #################
     # save and load #
     #################
-    def _header(self, verbose):
+    def _create_header(self, verbose=False):
         """Gather attrs to be saved to a file."""
         header = ''
-        temp = get_attributes(self)
-        for name in temp:
-            if name not in ['_x', '_y', '_peaks', '_xlabel', '_ylabel', '_filepath']:
-                if temp[name] is None:
-                    header += f'{name}: None'  + '\n'
-                elif isinstance(temp[name], str):
-                    temp2 = str(temp[name]).replace('\n','\\n')
-                    header += f'{name}: \"{temp2}\"'  + '\n'
-                elif isinstance(temp[name], dict) or isinstance(temp[name], MutableMapping):
-                    if verbose:
-                        type_ = str(type(temp[name]))
-                        print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
-                elif isinstance(temp[name], Iterable):
-                    header += f'{name}: {list(temp[name])}'  + '\n'
-                elif isinstance(temp[name], numbers.Number):
-                    tosave = str(temp[name])
-                    if tosave[-1] == '\n':
-                        tosave = tosave[:-1]
-                    header += f'{name}: {tosave}'  + '\n'
-                else:
-                    temp2 = str(temp[name]).replace('\n','\\n')
-                    header += f'{name}: \"{temp2}\"'  + '\n'
+        attrs = self._get_user_attrs()
+        for name in attrs:
+            if self.__dict__[name] is None:
+                header += f'{name}: None'  + '\n'
+            elif isinstance(self.__dict__[name], str):
+                temp2 = str(self.__dict__[name]).replace('\n','\\n')
+                header += f'{name}: \"{temp2}\"'  + '\n'
+            elif isinstance(self.__dict__[name], dict) or isinstance(self.__dict__[name], MutableMapping):
+                if verbose:
+                    type_ = str(type(self.__dict__[name]))
+                    print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
+            elif isinstance(self.__dict__[name], Iterable):
+                header += f'{name}: {list(self.__dict__[name])}'  + '\n'
+            elif isinstance(self.__dict__[name], numbers.Number):
+                tosave = str(self.__dict__[name])
+                if tosave[-1] == '\n':
+                    tosave = tosave[:-1]
+                header += f'{name}: {tosave}'  + '\n'
+            else:
+                temp2 = str(self.__dict__[name]).replace('\n','\\n')
+                header += f'{name}: \"{temp2}\"'  + '\n'
         return header[:-1]
 
-    def save(self, filepath=None, only_data=False, check_overwrite=None, verbose=True, **kwargs):
+    def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         User defined attr are saved in the header (except for dictionaries).
@@ -780,7 +892,7 @@ class Spectrum(metaclass=_Meta):
             fmt (string, or list, optional): A single format (like ``%10.5f``), or a
                 sequence of formats. See numpy's documentation for more information.
                 If not specified, best fmt is calculated based on the
-                number of decimal places of the data. Specifing fmt makes the code
+                number of decimal places of the data. Specifying fmt makes the code
                 runs a little faster (not much tough, but it might make a difference
                 if saving a lot of files).
             delimiter (str, optional): String or character separating columns.
@@ -812,7 +924,7 @@ class Spectrum(metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if interact.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -821,7 +933,7 @@ class Spectrum(metaclass=_Meta):
 
         # kwargs
         if 'fmt' not in kwargs: # pick best format
-            decimal = max([n_decimal_places(x) for x in flatten(self.data)])
+            decimal = max([figmanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
             kwargs['fmt'] = f'%.{decimal}f'
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
@@ -838,26 +950,23 @@ class Spectrum(metaclass=_Meta):
                 del kwargs['footer']
         else:
             if 'header' not in kwargs:
-                kwargs['header'] = self._header(verbose=verbose)
+                kwargs['header'] = self._create_header(verbose=verbose)
             else:
                 if kwargs['header'] == '':
-                    kwargs['header'] = self._header(verbose=verbose)
+                    kwargs['header'] = self._create_header(verbose=verbose)
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
-            
-            if self.xlabel != '' and self.ylabel != '':
-                kwargs['header'] += '\n' + self.xlabel + kwargs['delimiter'] + self.ylabel
         np.savetxt(Path(filepath), self.data, **kwargs)
 
         # save filepath
         self.filepath = str(filepath)
 
-    def load(self, filepath, only_data=False, verbose=True, **kwargs):
+    def load(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         This a very simple loading function that works well with two column text
         files. If file has more columns than two columns, the first two columns
-        will be loades. Use `usecols` to select columns, for example:
+        will be loaded. Use `usecols` to select columns, for example:
         
         usecols = (1, 4) 
 
@@ -870,6 +979,10 @@ class Spectrum(metaclass=_Meta):
                 decompressed. Last used filepath is saved to an attr s.filepath.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is loaded.
+            verbose (book, optional): Default is False. If True, it will print
+                an warning when attributes cannot be loaded from the file.
+            **kwargs: kwargs are passed to ``plt.genfromtxt()`` that loads the data.
+
 
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
@@ -879,6 +992,7 @@ class Spectrum(metaclass=_Meta):
             comments (str, optional): The character used to indicate the start
                 of a comment. Default is ``# ``. Attributes picked up
                 from the header will be loaded too.
+            usecols (tuple, optional): Default is (0, 1).
 
         Returns:
             None
@@ -902,18 +1016,26 @@ class Spectrum(metaclass=_Meta):
         self._x = x
         self._y = y
 
-        # read header
+        ##########################
+        # reset check attributes #
+        ##########################
+        self._step         = None
+        self._monotonicity = None
+
+        ############################
+        # reset special attributes #
+        ############################
+        self.peaks.clear()
+
+        ###############
+        # read header #
+        ###############
         if only_data is False:
-            header = load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            header = filemanip.load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
             if header:
                 for line in header:
                     if ':' not in line:
-                        try:
-                            temp = line.split(kwargs['delimiter'])
-                            self.xlabel = temp[kwargs['usecols'][0]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
-                            self.ylabel = temp[kwargs['usecols'][1]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
-                        except IndexError:
-                            pass
+                        pass
                     else:
                         # extract name and value
                         name = line[1:-1].split(':')[0].strip()
@@ -926,7 +1048,10 @@ class Spectrum(metaclass=_Meta):
                         except Exception as e:
                             if verbose:
                                 print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
-        # save filepath
+        
+        #################
+        # save filepath #
+        #################
         self.filepath = str(filepath)
 
     #################
@@ -948,7 +1073,7 @@ class Spectrum(metaclass=_Meta):
                 None
 
             Raises:
-                ValueError: If x-ccordinates are not uniform.
+                ValueError: If x-coordinates are not uniform.
         """
         if max_error is None:
             max_error = settings.MAX_ERROR_STEP_X
@@ -1008,7 +1133,10 @@ class Spectrum(metaclass=_Meta):
                 self.check_monotonicity()
             except ValueError:
                 unqa, ID, counts = np.unique(self.x, return_inverse=True, return_counts=True)
-                self.data        = np.column_stack((unqa, np.bincount(ID,self.y)/counts))
+                data        = np.column_stack((unqa, np.bincount(ID,self.y)/counts))
+                
+                self._x = data[:, 0]
+                self._y = data[:, 1]
                 # check
                 self.check_monotonicity()
             
@@ -1018,12 +1146,11 @@ class Spectrum(metaclass=_Meta):
             self._y = self.y[::-1]
         self.check_monotonicity()
 
-        # check
-        self.step         = None
-        # self.monotonicity = None
-        # self._reset_modifiers()
-        #special
-        # self.peaks.clear()
+        ##########################
+        # reset check attributes #
+        ##########################
+        self._step         = None
+        # self._monotonicity = None
 
     ##################
     # base modifiers #
@@ -1053,8 +1180,8 @@ class Spectrum(metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        self.step         = None
-        self.monotonicity = None
+        self._step         = None
+        self._monotonicity = None
 
         ###############
         # fix special #
@@ -1156,75 +1283,37 @@ class Spectrum(metaclass=_Meta):
     #############
     # modifiers #
     #############
-    def floor(self, value=None, n=20, ranges=None):
-        """Sets zero value for y-coordinates (shifts data verticaly).
+    def floor(self, *args, **kwargs):
+        """Sets zero value for y-coordinates.
 
-        use ranges = (None, None) to bring the avg of all data point to zero.
-
-        If data is monotonicaly, n will bring the avg of n point around value to
-        zero. If data is not monotonicaly, the datapoint at value is brought to
-        zero.
+        Usage:
+            s.floor(None, None)  # to bring the avg of all data points to zero.
+            s.floor((0, 10), (90, 100))  # Brings the avg between x=0 and 10 and between x=90 and 100 to zero
 
         Args:
-            value (number, optional): x-coordinate to set y-coordinate value as
-                zero. If `None`, the minium value of x is used.
-            n (int, optional): number of data points to average and setting to
-                zero. This only applies if data is monotonicaly.
             ranges (list, optional): Pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data.
                 The mean value of the y-coordinates inside the defined range
-                will be set to zero. This overwrites value and n.
+                will be set to zero.
 
         Returns:
             None
         """
-        if ranges is None:
-            if self.monotonicity is None:
-                try:
-                    self.check_monotonicity()
-                except ValueError:
-                    pass
-            
-            # value to index
-            if value is None:
-                i = index(self.x, min(self.x))
-            else:
-                i = index(self.x, value)
-
-            # calculate offset
-            if self.monotonicity in increasing or self.monotonicity in decreasing:
-                start = i-int(n/2)
-                end   = i+int(n/2)
-                if start < 0:
-                    end   = i+int(n/2)-start
-                    start = 0
-                if end > len(self.y)-1:
-                    start = i-int(n/2) - (end - len(self.y)-1)
-                    end   = len(self.y)-1
-                if start == end:
-                    end = start + 1
-                value2 = -np.mean(self.y[start:end])
-            else:
-                value2 = -self.y[i]
-        else:
-            ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-            _, y   = extract(self.x, self.y, ranges)
-            value2 = -np.mean(y)
-        self.set_offset(self.offset + value2)
+        temp  = self._extract(*args, **kwargs)
+        value = -np.mean(temp.y)
+        self.set_offset(value)
 
     def flip(self):
-        """Flip sign of x axis (via Spectrum.calib).
+        """Flip sign of x axis.
 
         Returns:
             None
         """
-        self.set_calib(value=-self.calib)
+        self.set_calib(value=-1)
 
-    def normalize(self, value=1, ranges=None):
+    def normalize(self, value=1, *args, **kwargs):
         """Set a factor such as the average y between ranges is equal to value.
-
-        It uses Spectra.set_factors().
 
         Args:
             value (number): value. Default is 1.
@@ -1239,11 +1328,8 @@ class Spectrum(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.calculate_factors`
         """
-        if ranges is None:
-            self.set_factor(self.factor*value/np.max(s.y))
-        else:
-            s = self.extract(ranges=ranges)
-            self.set_factor(self.factor*value/np.mean(s.y))
+        s = self._extract(*args, **kwargs)
+        self.set_factor(value/np.mean(s.y))
 
     def zero(self, mode='max', ref_spectrum=0, ref_peak=0, shift_mode='x'):
         """[EXPERIMENTAL] Uses Spectrum.set_shift() to shift a specified position to zero.
@@ -1337,10 +1423,6 @@ class Spectrum(metaclass=_Meta):
 
         Returns:
             None
-
-        Warning:
-            Spectrum.interp() will change data for good. There is no way to
-                recover the previous state of the array.
         """
         self.check_monotonicity()
         if self.monotonicity != 'increasing':
@@ -1357,30 +1439,34 @@ class Spectrum(metaclass=_Meta):
             if num is not None:
                 x = np.linspace(start, stop, num=num)
             else:
-                temp, _ = extract(self.x, self.y, (start, stop))
+                temp, _ = self._extract(self.x, self.y, (start, stop))
                 x = np.linspace(start, stop, num=len(temp))
 
         self._y = np.interp(x, self.x, self.y)
         self._x = x
 
         # check
-        self.step         = None
-        self.monotonicity = None
+        self._step         = None
+        self._monotonicity = None
         # self._reset_modifiers()
         #special
         # self.peaks.clear()
 
-    def remove(self, ranges):
-        """Remove data points inside range."""
-        ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-        self._x, self._y   = extract(self.x, self.y, ranges, invert=True)
+    def remove(self, *args, **kwargs):
+        """Remove datapoints within a range.
 
-        # check
-        self.step         = None
-        # self.monotonicity = None
-        # self._reset_modifiers()
-        #special
-        # self.peaks.clear()
+        Args:
+            ranges (list, optional): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+
+        Returns:
+            None
+        """
+        ranges = self._validate_ranges(*args, **kwargs)
+        x, y   = arraymanip.extract(self.x, self.y, ranges, invert=True)
+        self._x = x
+        self._y = y
 
     def makeover(self, ranges, mode='poly', deg=1, n=3):
         """[EXPERIMENTAL] Replace y data points inside range with averaged out data points nearby.
@@ -1481,7 +1567,7 @@ class Spectrum(metaclass=_Meta):
                     self._y[stop-i-1] = np.mean(self.y[stop-i:stop-i+n])
 
     def crop(self, start=None, stop=None):
-        """Crop data.
+        """Crop edges of the dataset.
 
         Args:
             start (number, optional): start x value. If None, the minimum value of
@@ -1494,11 +1580,18 @@ class Spectrum(metaclass=_Meta):
         """
         if start is None and stop is None:
             return
+        
         if start is None:
             start = min(self.x)
         if stop is None:
             stop = max(self.x)
-        self._x, self._y  = extract(self.x, self.y, (start, stop))
+        
+        if start <= min(self.x) and stop >= max(self.x):
+            return
+        
+        s = self._extract(start, stop)
+        self._x = s.x
+        self._y = s.y
 
     def switch(self):
         """Switch x and y axis"""
@@ -1511,34 +1604,72 @@ class Spectrum(metaclass=_Meta):
     ##############
     # extractors #
     ##############
-    def _extract(self, ranges):
-        """Same as extract(), but attrs are not copied"""
-        ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-        x, y   = extract(self.x, self.y, ranges)
+    def _extract(self, *args, **kwargs):
+        """Same as self.copy(), but attrs are NOT copied."""
+        ranges = self._validate_ranges(*args, **kwargs)
+        x, y   = arraymanip.extract(self.x, self.y, ranges)
         s      = Spectrum(x=x, y=y)
         return s
     
-    def extract(self, ranges):
-        """Return the extracted data range from full data.
+    def copy(self, *args, **kwargs):
+        """Return a copy of the data within a range.
+
+        Usage:
+            s2.copy(s1)     # s2 is now a copy of s1
+            s2 = s1.copy()  # s2 is now a copy of s2
+            s2 = s1.copy((0, 10), (90, 100))  # s2 will have only data between x=0 and 10 and between x=90 and 100
 
         Args:
-            ranges (list): a pair of values or a list of pairs. Each pair represents
+            s (Spectrum, optional): Spectrum is copied. See usage.
+            ranges (list, optional): a pair of values or a list of pairs. Each pair represents
                 the start and stop of a data range from x. Use None to indicate
                 the minimum or maximum x value of the data.
 
         Returns:
             :py:attr:`Spectrum`
         """
-        s = self._extract(ranges=ranges)
+        ##############################
+        # check if input is Spectrum #
+        ##############################
+        s = None
+        if 's' in kwargs:
+            s = kwargs['s']
+        elif len(args) == 1:
+            if isinstance(args[0], Spectrum):
+                s = args[0]
 
-        # modifiers
-        s._offset = self.offset
-        s._factor = self.factor
-        s._calib  = self.calib
-        s._shift  = self.shift
-        s._roll   = self.roll
+        ########################################
+        # if Spectrum is passed, copy Spectrum #
+        ########################################
+        if s is not None:
+            if isinstance(s, Spectrum):
+                self._x    = s.x
+                self._y    = s.y
+                self._filepath = s.filepath
+                self._step         = s.step
+                self._monotonicity = s.monotonicity
 
-        return self._transfer_attributes(s)
+                # special
+                self._peaks = s.peaks
+
+                # user defined attrs
+                for attr in self._get_user_attrs():
+                    self.__delattr__(attr)
+                for attr in s._get_user_attrs():
+                    self.__setattr__(attr, s.__dict__[attr])
+            else:
+                raise TypeError('Only type br.Spectrum can be copyied to type br.Spectrum')
+        #######################################
+        # Otherwise, a type ranges is assumed #
+        #######################################
+        else:
+            s = self._extract(*args, **kwargs)
+
+            # transfer attrs
+            for attr in self._get_user_attrs():
+                s.__setattr__(attr, self.__dict__[attr])
+
+        return s
 
     def derivative(self, order=1):
         """Returns the derivative of y-coordinates as a function of x-coordinates.
@@ -1549,17 +1680,14 @@ class Spectrum(metaclass=_Meta):
         Returns:
             Derivative spectrum
         """
-        x, y = derivative(self.x, self.y, order=order)
-        s = Spectrum(x=x, y=y)
+        x, y = arraymanip.derivative(self.x, self.y, order=order)
+        s    = Spectrum(x=x, y=y)
 
-        # modifiers
-        s._offset = self.offset
-        s._factor = self.factor
-        s._calib  = self.calib
-        s._shift  = self.shift
-        s._roll   = self.roll
+        # transfer attrs
+        for attr in self._get_user_attrs():
+            s.__setattr__(attr, self.__dict__[attr])
 
-        return self._transfer_attributes(s)
+        return s
     
     def smooth(self, n=8):
         """Returns the moving average of the data.
@@ -1570,15 +1698,80 @@ class Spectrum(metaclass=_Meta):
         Returns:
             spectrum of length given by (len(x)-n+1).
         """
-        x = moving_average(self.x, n=n)
-        y = moving_average(self.y, n=n)
-        
+        x = filemanip.moving_average(self.x, n=n)
+        y = filemanip.moving_average(self.y, n=n)
         s = Spectrum(x=x, y=y)
 
         # special
-        s._peaks        = self.peaks
+        s._peaks = self.peaks
 
-        return self._transfer_attributes(s)
+        # transfer attrs
+        for attr in self._get_user_attrs():
+            s.__setattr__(attr, self.__dict__[attr])
+
+        return s
+
+
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        self._step         = None
+        self._monotonicity = None
+
+    ########################
+    # calculation and info #
+    ########################
+    def calculate_area(self, *args, **kwargs):
+        """Returns the calculated area under the curve. Wrapper for `numpy.trapz()`_.
+
+        Usage:
+            s.calculate_area()  # returns the area for the whole dataset
+            s.calculate_area(0, 10)  # returns the area between x=0 and 10
+            s.calculate_area((0, 10), (90, 100))  # this works, but will 
+                tipically not return a desirable value, because the trapz()
+                algorithm will consider the area between 10 and 90 as a rectangle.
+                The corect approach in this case would be to calculated the area
+                between 0 and 10 and between 90 and 100 separetely.
+            area = s.calculate_area(0, 10) + s.calculate_area(90, 100)
+
+
+        Args:
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+
+        Returns:
+            number
+
+        .. _numpy.trapz(): https://numpy.org/doc/stable/reference/generated/numpy.trapz.html
+        """
+        if kwargs != {} or args != ():
+            s = self._extract(*args, **kwargs)
+        else:
+            s = self.copy()
+        return np.trapz(y=s.y, x=s.x)
+
+    def calculate_y_sum(self, *args, **kwargs):
+        """Returns sum of y elements within a range.
+        
+        Usage:
+            s.calculate_y_sum()  # returns the y sum for the whole dataset
+            s.calculate_y_sum((0, 10), (90, 100))  # returns the y sum from data beteen x=0 and 10 and between x=90 and 100
+
+        Args:
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+
+        Returns:
+            number
+        """
+        if kwargs != {} or args != ():
+            s = self._extract(*args, **kwargs)
+        else:
+            s = self.copy()
+        return sum(s.y)
 
     def polyfit(self, deg=2, ranges=None):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.
@@ -1604,44 +1797,29 @@ class Spectrum(metaclass=_Meta):
             x = self.x
             y = self.y
         else:
-            ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-            x, y   = extract(self.x, self.y, ranges)
+            s = self._extract(self.x, self.y, ranges)
+            x = s.x
+            y = s.y
 
         # fit
         popt  = np.polyfit(x, y, deg=deg)
         model = lambda x: np.polyval(popt, x)
-        R2 =  1- (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
+        R2 =  1 - (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
     
         return popt, model, R2
-
-    def copy(self):
-        return copy.deepcopy(self)
-    
-    ########################
-    # calculation and info #
-    ########################
-    def calculate_area(self):
-        """Returns the calculated area under the curve. Wrapper for `numpy.trapz()`_.
-
+   
+    def index(self, x, closest=True):
+        """Return the index value for a given x.
+        
+        Args:
+            x (number): x value.
+            closest (bool, optional): if True, x does not have to be exact and
+                the index which is closest to the x value is returned. 
+            
         Returns:
-            Number
-
-        .. _numpy.trapz(): https://numpy.org/doc/stable/reference/generated/numpy.trapz.html
+            int
         """
-        return np.trapz(y=self.y, x=self.x)
-
-    def calculate_integral(self, ranges=None):
-        """returns sum of y elements."""
-        if ranges is None:
-            s = self.copy()
-        else:
-            s = self.extract(ranges=ranges)
-
-        return sum(s.y)
-
-    def get_y(self, x, closest=True):
-        """Return the y value for a given x."""
-        return self.y[index(self.x, x, closest=closest)]
+        return filemanip.index(self.x, x, closest=closest)
 
     ##########################        
     # plot and visualization #
@@ -1659,6 +1837,10 @@ class Spectrum(metaclass=_Meta):
                 Default is 1.
             smooth (int, optional): number of points to average data (moving average).
                 Default is 1.
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+            switch (bool, optional): Switch x and y axis.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
 
         Returns:
@@ -1668,7 +1850,7 @@ class Spectrum(metaclass=_Meta):
         .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
         """
         if ranges is not None:
-            self = self.extract(ranges=ranges)
+            self = self._extract(ranges=ranges)
         x = self.x
         y = self.y
 
@@ -1680,7 +1862,7 @@ class Spectrum(metaclass=_Meta):
         if ax is None:
             ax = plt
             if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
+                figmanip.figure()
 
         x = (x*calib) + shift
         y = y*factor + offset
@@ -1689,15 +1871,27 @@ class Spectrum(metaclass=_Meta):
             kwargs['label'] = self.label
 
         if smooth > 1:
-            x = moving_average(x, int(smooth))
-            y = moving_average(y, int(smooth))
+            x = arraymanip.moving_average(x, int(smooth))
+            y = arraymanip.moving_average(y, int(smooth))
         
         return ax.plot(x, y, **kwargs)
+
+    def inspect(self):
+        """Plots data in a inspection window.
+
+        If the mouse pointer hovers over a datapoint, the index of this datapoint is showed.
+        """
+        raise NotImplementedError('This is not implemented yet.')
+
+    def metadata(self):
+        """Opens a windows with all user defined variables for inspection.
+        """
+        raise NotImplementedError('This is not implemented yet.')
 
     ###########
     # Special #
     ###########
-    def find_peaks(self, prominence=None, width=4, moving_average_window=8, ranges=None):
+    def find_peaks(self, prominence=None, width=4, moving_average_window=4, ranges=None):
         """Find peaks. Wrapper for `scipy.signal.find_peaks()`_.
 
         Sets :py:attr:`peaks` attribute.
@@ -1708,6 +1902,9 @@ class Spectrum(metaclass=_Meta):
             width (number, optional): minimum number of data points defining a peak.
             moving_average_window (int, optional): window size for smoothing the
                 data for finding peaks. Default is 4.
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
 
         Returns:
             None
@@ -1717,7 +1914,7 @@ class Spectrum(metaclass=_Meta):
         if ranges is None:
             s = self
         else:
-            s = self.extract(self.x, self.y, ranges)
+            s = self._extract(self.x, self.y, ranges)
 
         # check monotonicity
         if s.monotonicity is None:
@@ -1729,26 +1926,17 @@ class Spectrum(metaclass=_Meta):
 
         self.peaks.find(x=s.x, y=s.y, prominence=prominence, width=width, moving_average_window=moving_average_window)
 
-    def fit_peak(self, asymmetry=None, moving_average_window=8, ranges=None):
+    def fit_peak(self, asymmetry=None, moving_average_window=4, ranges=None):
         """Fits one peak. Initial guess is based on the maximum y value.
 
         Args:
             asymmetry (bool or dict, optional): if True, fits each half of the
                 with a different width.
-            fixed_m (False, number, or dict, optional): m is the amount of lorentzian
-                contribution for a peak. If False, m will be fitted for each peak.
-                If a number (from 0 to 1), this will be used as the value of m
-                (fixed m).
-            offset (bool, optional): if True, a offset value will be fitted.
-            amp_bounds, c_bounds, fwhm_bounds (tuple, optional): minimum and
-                maximum multiplication factor for boundary values. For amp, the
-                bounds are set between amp*amp_bounds[0] and amp*amp_bounds[1].
-                For c, bounds are set c+fwhm*c_bound[0] and c+fwhm*c_bound[1].
-                Finaly, for fwhm, the bounds are set between fwhm1*fwhm_bounds[0]
-                and fwhm1*fwhm_bounds[0]. Note that if fwhm1*fwhm_bounds[0] is
-                less than zero, the minimum fwhm boundary is set to zero as it
-                cannot be negative. If None, the data max and min limits will be
-                used.
+            moving_average_window (int, optional): window size for smoothing the
+                data for finding the peak. Default is 4.
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
 
         Returns:
             None
@@ -1757,16 +1945,16 @@ class Spectrum(metaclass=_Meta):
             x0 = self.x
             y0 = self.y
         else:
-            ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-            x0, y0 = extract(self.x, self.y, ranges)
+            ranges = self._validate_ranges(ranges)
+            x0, y0 = self._extract(self.x, self.y, ranges)
 
+        # asymmetry
         if asymmetry is None:
             asymmetry = False
 
         # smoothing
-        x = moving_average(x0, moving_average_window)
-        y = moving_average(y0, moving_average_window)
-        # plt.plot(x, y)
+        x = arraymanip.moving_average(x0, moving_average_window)
+        y = arraymanip.moving_average(y0, moving_average_window)
 
         # guess amp and c
         amp = max(y)
@@ -1774,13 +1962,13 @@ class Spectrum(metaclass=_Meta):
 
         # guess fwhm
         try:
-            w1 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][index(y[:np.argmax(y)][::-1], max(y)/2)]
+            w1 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][arraymanip.index(y[:np.argmax(y)][::-1], max(y)/2)]
         except ValueError:
-            w1 = x[np.argmax(y):][index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
+            w1 = x[np.argmax(y):][arraymanip.index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
         try:
-            w2 = x[np.argmax(y):][index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
+            w2 = x[np.argmax(y):][arraymanip.index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
         except ValueError:
-            w2 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][index(y[:np.argmax(y)][::-1], max(y)/2)]
+            w2 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][arraymanip.index(y[:np.argmax(y)][::-1], max(y)/2)]
         w = w1 + w2
 
         # x, y = derivative(moving_average(self.x, 10), moving_average(self.y, 10))
@@ -1799,88 +1987,73 @@ class Spectrum(metaclass=_Meta):
         self.fit_peaks(ranges=ranges)
 
     def fit_peaks(self, yerr=None, method='least_squares', ranges=None):
-        """Fit peaks. Wrapper for `scipy.optimize.curve_fit()`_.
+        """Fit peaks. Wrapper for `lmfit.minimize()`_.
 
         Args:
-            asymmetry (bool or dict, optional): if True, fits each half of the
-                with a different width.
-            fixed_m (False, number, or dict, optional): m is the amount of lorentzian
-                contribution for a peak. If False, m will be fitted for each peak.
-                If a number (from 0 to 1), this will be used as the value of m
-                (fixed m).
-            offset (bool, optional): if True, a offset value will be fitted.
+            yerr (array, optional): data uncertainty. 
+            method (str, optional): Name of the fitting method to use. See methods
+                available on `lmfit.minimize()`_ documentation.
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
 
         Returns:
             None
 
-        .. _scipy.optimize.curve_fit(): https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
+        .. _lmfit.minimize(): https://lmfit.github.io/lmfit-py/fitting.html
         """
         if ranges is None:
             self.check_monotonicity()
             x = self.x
             y = self.y
         else:
-            ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-            s = self.extract(ranges)
+            ranges = self._validate_ranges(ranges)
+            s = self._extract(ranges)
             s.check_monotonicity()
             x = s.x
             y = s.y
 
         # check if peaks is defined
         if len(self.peaks) == 0:
-            raise ValueError('No peaks to fit.\nRun Spectrum.find_peaks().')
+            raise ValueError('No peaks to fit.\nRun Spectrum.find_peaks() or set s.peaks manually.')
 
         # self.guess = 
         return self.peaks.fit(x, y, yerr=yerr, method=method, return_fitted_peaks=False)
 
 
-
-
-
-
 class Spectra(metaclass=_Meta):
-    """Returns a ``spectra`` class type object for dealing with many spectrum at a time.
+    """Returns a ``spectra`` object.
 
-    Args:
-        n (int, optional): when the number of spectra `n` is known, one can preallocate
-            the data array.
-        data (list or array, optional): list of :py:class:`spectrum` objects.
-            Overwrites ``n``.
-        dirpath (string, path object, or list): folderpath, folder handle,
-                or a list of filepaths. The list can be comprised of file and
-                folderpaths. All files inside a folder where string can be found
-                in the filename are imported. If the filename extension is .gz or .bz2,
-                the file is first decompressed.
+    How to create a spectra object:
+        ss = br.Spectra()
+
+        ss = br.Spectra(10)  # pre-allocation
+
+        ss = br.Spectra(s1, s2, ...)
+        ss = br.Spectra([s1, s2, ...])
+
+        ss = br.Spectra(folderpath=<folderpath>)
+        ss = br.Spectra(<folderpath>)
+
+        ss = br.Spectra(filepath=<filepath>)
+        ss = br.Spectra(<filepath>)
+
 
     Attributes:
         data (list of :py:attr:`Spectrum`): list with :py:attr:`Spectrum` objects.
+        folderpath (str or pathlib.Path): folderpath associated with data.
+        filepath (str or pathlib.Path): filepath associated with data.
         step (number, read only): step size for x-coordinates.
         length (number, read only): length of x-coordinates vector.
-        x (number, read only): x-coordinates (only applicable if x-coordinates
-            are the same for all spectra.
-        shifts (list of int): Calculated shifts as int. Must always have the same length as data.
-        shift_ref (number, read only): index of the spectrum used as reference
-            for shift calculation.
-        shift_ref_value (number, read only): value of the shift for the reference
-            spectrum, e.g.:
-                * if shift_calc_mode is 'peak'
-                    shift_ref_value returns the position of the elastic peak of the reference spectrum.
-                * if shift_calc_mode is 'cross-correlation'
-                    shift_ref_value returns the max value of the cross-correlation of the reference spectrum with itself.
-                * if shift_calc_mode is 'max'
-                    shift_ref_value returns the position of the maximum value of the reference spectrum.
-        shift_calc_mode (string, read only): mode used to calculate shifts.
-        shift_ranges (list, read only): data range used to calculate shifts.
-        disp_values (list, read only): value of the 'relative spectrum position'
-            for each spectrum. See :py:attr:`shift_ref_value`
-        disp_energies (number, read only): energy value associated with each spectrum.
-        disp_popt (number, read only): optimal parameters of the fit of
-            disp_values vs disp_energies.
-        disp_func (number, read only): function of the fitted curve.
-        disp (number, read only): final calculated dispersion.
-        sum (number, read only): spectrum resulting from the sumation of all spectra.
-    """
+        x (number, read only): x-coordinates.
+        monotonicity (str or None, read only): monotonicity of the x-array.
+        peaks (lmfit.Parameters): each entry represents a parameter of a peak.
 
+    Computed (read-only) attributes:
+
+    Write-only attributes:
+
+    """
     _read_only     = ['step', 'length', 'x', 'monotonicity',
                       'calculated_calib', 'calculated_factors',
                       'calculated_offsets', 'calculated_shifts',
@@ -1889,36 +2062,269 @@ class Spectra(metaclass=_Meta):
 
 
     def __init__(self, *args, **kwargs):
+        """Initialize the object instance.
+
+        Args:
+            n (int, optional): array preallocation.
+            data (list or array, optional): list of :py:class:`spectrum` objects.
+            folderpath (string, path object): folderpath.
+            filepath (str or pathlib.Path, optional): filepath to read.
+        
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+        """
+
+        ###########################
+        # Initializing attributes #
+        ###########################
         # basic
         self._data  = None
-        self._dirpath   = ''
-        self._filepath  = ''
+        self._folderpath = ''
+        self._filepath   = ''
+
+        # check
+        self._length       = None
+        self._step         = None
+        self._x            = None
+        self._monotonicity = None
+
+        # calculated values
+        self.calculated_calib   = None
+        self.calculated_factors = None
+        self.calculated_offsets = None
+        self.calculated_shifts  = None
+        self.calculated_rolls   = None
+
+        # special
         self._peaks = Collection()
 
-        # argument parsing
-        data, dirpath, fl, n = self._sort_args(args, kwargs)
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        error_message = 'Wrong input. Spectra object cannot be created. Please, use one ' +\
+                        'of the examples below to create a spectra object:\n' +\
+                        '\n' +\
+                        'ss = br.Spectra()\n' +\
+                        'ss = br.Spectra(10)    \# pre-allocation\n' +\
+                        'ss = br.Spectra(n=10)  \# pre-allocation\n' +\
+                        '\n' +\
+                        'ss = br.Spectra(s1, s2, ...)\n' +\
+                        'ss = br.Spectra([s1, s2, ...])\n' +\
+                        'ss = br.Spectra(data=[s1, s2, ...])\n' +\
+                        '\n' +\
+                        'ss = br.Spectra(folderpath=<folderpath>)\n' +\
+                        'ss = br.Spectra(<folderpath>)\n' +\
+                        '\n' +\
+                        'ss = br.Spectra(filepath=<filepath>)\n' +\
+                        'ss = br.Spectra(<filepath>)\n' +\
+                        '\n' +\
+                        's1, s2, ... must be Spectrum, filepath ' +\
+                        'must be a string or pathlib.Path object that points'  +\
+                        'to a file and folderpath to a folder'
+        if kwargs != {} and args != ():
+            raise AttributeError(error_message)
+        if any([item not in ['folderpath', 'n', 'data', 'filepath'] for item in kwargs.keys()]):
+            raise AttributeError(error_message)
+        if len(kwargs) >= 2:
+            raise AttributeError(error_message)
 
-        # sorting data
-        if data is not None:
-            self.data = data
-            # _restart_attr is builtin inside data
-        elif dirpath is not None:
-            self.load(dirpath)
-            # _restart_attr is builtin inside load
-        elif fl is not None:
-            self.load(fl) 
-        elif n is not None:
-            self._data     = [-1]*n
-            # check
-            self._restart_check_attr()
-            self._restart_calculated_modifiers()
-        else:
+
+        ################
+        # loading data #
+        ################
+        # keyword arguments
+        if 'folderpath' in kwargs:
+            self.load(kwargs['folderpath'])
+            return
+        elif 'filepath' in kwargs:
+            self.load(kwargs['filepath'])
+            return
+        elif 'n' in kwargs:
+            n = int(kwargs['n'])
+            self._data = [-1]*n
+            return
+        elif 'data' in kwargs:
+            self.data = kwargs['data']
+            return
+
+        # positional arguments
+        if len(args) == 0:
+            return
+        elif len(args) == 1:
+            if isinstance(args[0], int):
+                n = int(args[0])
+                self._data = [-1]*n
+                return
+            elif isinstance(args[0], str) or isinstance(args[0], Path):
+                self.load(args[0])
+                return
+            elif isinstance(args[0], Iterable):
+                self.data = args[0]
+                return
+            else:
+                raise AttributeError(error_message)
+        elif len(args) > 1:
+            self.data = args
+            return
+
+    ##############
+    # attributes #
+    ##############
+    @property
+    def data(self):
+        return self._data
+    @data.setter
+    def data(self, value):
+        if value is None:
             self._data = []
-            # check
-            self._restart_check_attr()
-            self._restart_calculated_modifiers()
+        else:
+            if isinstance(value, Iterable):
+                for i, s in enumerate(value):
+                    if isinstance(s, Spectrum) == False:
+                        raise ValueError(f'All entries must be of type brixs.spectrum.\nEntry {i} is of type {type(s)}')
+                # self._data = copy.deepcopy(value)
+                self._data = value
+            else:
+                raise ValueError('data must be a list.')
+        # check
+        self._restart_check_attr()
+        self._restart_calculated_modifiers()
+    @data.deleter
+    def data(self):
+        raise AttributeError('Cannot delete object.')
 
-    # Basic
+    @property
+    def folderpath(self):
+        return self._dirpath
+    @folderpath.setter
+    def folderpath(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, Path):
+            self._folderpath = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for folderpath\folderpath can only be str or pathlib.Path type.')
+    @folderpath.deleter
+    def folderpath(self):
+        raise AttributeError('Cannot delete object.')  
+    
+    @property
+    def filepath(self):
+        return self._filepath
+    @filepath.setter
+    def filepath(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, Path):
+            self._filepath = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nfilepath can only be str or pathlib.Path type.')
+    @filepath.deleter
+    def filepath(self):
+        raise AttributeError('Cannot delete object.')  
+    
+    ###################################
+    # computed (read-only) attributes #
+    ###################################
+    @property
+    def area(self):
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].area
+        return temp
+    @area.setter
+    def area(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @area.deleter
+    def area(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def sum(self):
+        return self.calculate_sum()
+    @sum.setter
+    def sum(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @sum.deleter
+    def sum(self):
+        raise AttributeError('Attribute cannot be deleted.')
+
+    @property
+    def average(self):
+        return self.calculate_average()
+    @average.setter
+    def average(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @average.deleter
+    def average(self):
+        raise AttributeError('Attribute cannot be deleted.')
+
+    @property
+    def map(self):
+        return self.calculate_map()
+    @map.setter
+    def map(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @map.deleter
+    def map(self):
+        raise AttributeError('Attribute cannot be deleted.')
+
+    #########################
+    # write-only attributes #
+    #########################
+    @property
+    def shifts(self):
+        pass
+    @shifts.setter
+    def shifts(self, value):
+        self.set_shifts(value=value)
+    @shifts.deleter
+    def shifts(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def rolls(self):
+        pass
+    @rolls.setter
+    def rolls(self, value):
+        self.set_rolls(value=value)
+    @rolls.deleter
+    def rolls(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def calib(self):
+        pass
+    @calib.setter
+    def calib(self, value):
+        self.set_calib(value)
+    @calib.deleter
+    def calib(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def factors(self):
+        pass
+    @factors.setter
+    def factors(self, value):
+        self.set_factors(value)
+    @factors.deleter
+    def factors(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def offsets(self):
+        pass
+    @offsets.setter
+    def offsets(self, value):
+        self.set_offsets(value)
+    @offsets.deleter
+    def offsets(self):
+        raise AttributeError('Cannot delete object.')
+
+    #################
+    # magic methods #
+    #################
     def __str__(self):
         return str({i:val for i, val in enumerate(self.data)})[1:-1].replace(', ', '\n')
 
@@ -1955,67 +2361,9 @@ class Spectra(metaclass=_Meta):
     def __delitem__(self, item):
         self.remove(item)
 
-    # Support
-    def _sort_args(self, args, kwargs):
-        """checks initial arguments.
-
-         Keyword arguments (kwargs) cannot be mixed with positional arguments.
-
-        The hierarchy for Keyword arguments is: 1) data, 2) y (and x), and finaly
-            3) filepath. For example, if `data` and `filepath` are passed as
-            arguments, `filepath` is ignored.
-
-        fl : filelist
-
-        For positional arguments, if one data set is passed, it assumes it is
-            `data`. If this one argument is of type string or Pathlib.Path, it
-            assumes it is a filepath. If two data sets are passed, it will
-            assume one is the x coordinates and the next one is the y coordinates.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-
-        Returns:
-            data, x, y, filepath
-        """
-        # print(kwargs)
-        # print(args)
-        if kwargs != {} and args != ():
-            raise AttributeError('cannot mix key word arguments with positional arguments. Key word arguents are `x`, `y`, `data`, and `filepath`.')
-        if any([item not in ['data', 'n', 'dirpath'] for item in kwargs.keys()]):
-            raise AttributeError(f'invalid attributes.\nValid atributes are `data`, `n`, and `dirpath`\nInput attributes: {kwargs.keys()}')
-
-        data = None
-        n    = None
-        dirpath = None
-        fl = None
-        if 'data' in kwargs:
-            data = kwargs['data']
-        elif 'dirpath' in kwargs:
-            dirpath = kwargs['dirpath']
-        elif 'fl' in kwargs:
-            fl = kwargs['fl']
-        elif 'n' in kwargs:
-            n = kwargs['n']
-        elif len(args) == 1:
-            if isinstance(args[0], int):
-                n = args[0]
-            elif isinstance(args[0], str) or isinstance(args[0], Path):
-                dirpath = args[0]
-            elif isinstance(args[0], Iterable):
-                if isinstance(args[0][0], str) or isinstance(args[0][0], Path):
-                    fl = args[0]
-                else:
-                    data = args[0]
-            elif isinstance(args[0], Spectrum):
-                data = [args[0], ]
-        elif len(args) > 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                fl = args
-            if isinstance(args[0], Spectrum):
-                data = args
-        return data, dirpath, fl, n
-
+    ###########
+    # support #
+    ###########
     def _restart_check_attr(self):
         """restart check attributes."""
         # check x attrs
@@ -2079,216 +2427,9 @@ class Spectra(metaclass=_Meta):
                 object.__setattr__(attr+f'_{j}', self[j].__dict__[attr])
         return object
 
-    # attributes and properties
-    @property
-    def data(self):
-        return self._data
-    @data.setter
-    def data(self, value):
-        if value is None:
-            self._data = []
-        else:
-            if isinstance(value, Iterable):
-                for i, s in enumerate(value):
-                    if isinstance(s, Spectrum) == False:
-                        raise ValueError(f'All entries must be of type brixs.spectrum.\nEntry {i} is of type {type(s)}')
-                # self._data = copy.deepcopy(value)
-                self._data = value
-            else:
-                raise ValueError('data must be a list.')
-
-        # check
-        self._restart_check_attr()
-        self._restart_calculated_modifiers()
-    @data.deleter
-    def data(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def area(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].area
-        return temp
-    @area.setter
-    def area(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @area.deleter
-    def area(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shifts(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].shift
-        return temp
-    @shifts.setter
-    def shifts(self, value):
-        self.set_shifts(value=value)
-    @shifts.deleter
-    def shifts(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def rolls(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].roll
-        return temp
-    @rolls.setter
-    def rolls(self, value):
-        self.set_rolls(value=value)
-    @rolls.deleter
-    def rolls(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def calib(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].calib
-        return temp
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factors(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].factor
-        return temp
-    @factors.setter
-    def factors(self, value):
-        self.set_factors(value)
-    @factors.deleter
-    def factors(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offsets(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].offset
-        return temp
-    @offsets.setter
-    def offsets(self, value):
-        self.set_offsets(value)
-    @offsets.deleter
-    def offsets(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def sum(self):
-        return self.calculate_sum()
-    @sum.setter
-    def sum(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @sum.deleter
-    def sum(self):
-        raise AttributeError('Attribute cannot be deleted.')
-
-    @property
-    def average(self):
-        return self.calculate_average()
-    @average.setter
-    def average(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @average.deleter
-    def average(self):
-        raise AttributeError('Attribute cannot be deleted.')
-
-    @property
-    def dirpath(self):
-        return self._dirpath
-    @dirpath.setter
-    def dirpath(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str) or isinstance(value, Path):
-            self._dirpath = value
-        else:
-            raise TypeError(r'Invalid type ' + str(type(value)) + 'for dirpath\ndirpath can only be str or pathlib.Path type.')
-    @dirpath.deleter
-    def dirpath(self):
-        raise AttributeError('Cannot delete object.')  
-    
-    @property
-    def filepath(self):
-        return self._filepath
-    @filepath.setter
-    def filepath(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str) or isinstance(value, Path):
-            self._filepath = value
-        else:
-            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nfilepath can only be str or pathlib.Path type.')
-    @filepath.deleter
-    def filepath(self):
-        raise AttributeError('Cannot delete object.')  
-    
-    @property
-    def xlabels(self):
-        return [s.xlabel for s in self]
-    @xlabels.setter
-    def xlabels(self, value):
-        if isinstance(value, str):
-            for s in self:
-                s.xlabel = value
-        elif isinstance(value, Iterable):
-            assert len(value) == len(self), f'Lenght of xlabels ({len(value)}) does not match with number of spectra ({len(self)})\nxlabels must be set to a string or a list with the same lenght as the number of spectra.' 
-            for i, s in enumerate(self):
-                s.xlabel = value[i]
-        else:
-            raise TypeError('Invalid type for xlabels\nxlabels must be a string of list of strings with the same length as the number of spectra.') 
-    @xlabels.deleter
-    def xlabels(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def ylabels(self):
-        return [s.ylabel for s in self]
-    @ylabels.setter
-    def ylabels(self, value):
-        if isinstance(value, str):
-            for s in self:
-                s.ylabel = value
-        elif isinstance(value, Iterable):
-            assert len(value) == len(self), f'Lenght of ylabels ({len(value)}) does not match with number of spectra ({len(self)})\nylabels must be set to a string or a list with the same lenght as the number of spectra.' 
-            for i, s in enumerate(self):
-                s.ylabel = value[i]
-        else:
-            raise TypeError('Invalid type for ylabel\nylabel must be a string of list of strings with the same length as the number of spectra.')
-    @ylabels.deleter
-    def ylabels(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def peaks(self):
-        return self._peaks#Collection([s.peaks for s in self])
-    @peaks.setter
-    def peaks(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @peaks.deleter
-    def peaks(self):
-        raise AttributeError('Attribute cannot be deleted.')
-
-    @property
-    def map(self):
-        return self.calculate_map()
-    @map.setter
-    def map(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @map.deleter
-    def map(self):
-        raise AttributeError('Attribute cannot be deleted.')
-
-    # basic
+    #########
+    # basic #
+    #########
     def append(self, *args, **kwargs):
         """[Not fully tested] Append spectrum to the spectrum list.
 
@@ -2393,8 +2534,10 @@ class Spectra(metaclass=_Meta):
             print(f'Spectrum number {i} have {attr}={temp[i]}')
                 
         return self[i]
-    
-    # save and load
+
+    #################
+    # save and load #
+    #################
     def save(self, dirpath=None, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, only_data=False, check_overwrite=None, verbose=True, **kwargs):
         r"""Save spectra. Wrapper for `numpy.savetxt()`_.
 
@@ -2721,7 +2864,9 @@ class Spectra(metaclass=_Meta):
         # save filepath
         self.filepath = str(filepath)
 
-    # check
+    #################
+    # check methods #
+    #################
     def check_monotonicity(self):
         """Sets monotonicity attribute to 'increasing' or 'decreasing'.
 
@@ -2939,294 +3084,9 @@ class Spectra(metaclass=_Meta):
         # update length
         self._length = len(self.x)
 
-    # persistent modifiers
-    def interp(self, crop=False, x=None, start=None, stop=None, num=None, step=None):
-        """Interpolate data.
-
-        Args:
-            x (list or array, optional): The x-coordinates at which to
-                evaluate the interpolated values. This overwrites all other arguments.
-            start (number, optional): The starting value of the sequence. If `None`,
-                the minium x value will be used.
-            stop (number, optional): The end value of the sequence. If `None`,
-                the maximum x value will be used.
-            num (int, optional): Number of samples to generate.
-            step (number, optional): Spacing between values. This overwrites ``num``.
-
-        None:
-            If none arguments is given, this function will adjust all spectra to
-            have the same x.
-
-        Returns:
-            None
-
-        Warning:
-            Spectra.interp() will change data for good. There is no way to
-                recover the previous state of the array.
-        """
-        if x is None:
-            if self.x is None:
-                if crop:
-                    if start is None:
-                        start = max([min(s.x) for s in self.data])
-                    if stop is None:
-                        stop = min([max(s.x) for s in self.data])
-                else:
-                    if start is None:
-                        start = min([min(s.x) for s in self.data])
-                    if stop is None:
-                        stop = max([max(s.x) for s in self.data])
-                if num is None:
-                    num = max([len(s.x) for s in self.data])
-            else:
-                if start is not None or stop is not None or num is not None or step is not None:
-                    if start is None:
-                        start = max(self.x)
-                    if stop is None:
-                        stop = min(self.x)
-                    if num is None:
-                        num = len(self.x)
-                else:
-                    return
-
-        for s in self:
-            s.interp(x=x, start=start, stop=stop, num=num, step=step)
-        # check
-        self._restart_check_attr()
-        # self._restart_calculated_modifiers()
-
-    def crop(self, start=None, stop=None):
-        """Crop data.
-
-        Args:
-            start (number, optional): start x value. If None, the minimum value of
-                x will be used.
-            stop (number, optional): final x value. If None, the maximum value of
-                x will be used.
-
-        Returns:
-            None
-        """
-        if self.x is None:
-            if start is None:
-                start = min(self.data[0].x)
-                for s in self.data:
-                    temp = min(s.x)
-                    if temp > start:
-                        start = temp
-            if stop is None:
-                stop = max(self.data[0].x)
-                for s in self.data:
-                    temp = max(s.x)
-                    if temp < stop:
-                        stop = temp
-            for s in self.data:
-                s.crop(start, stop)
-        elif start is not None or stop is not None:
-            for s in self.data:
-                s.crop(start, stop)
-        # check
-        self._restart_check_attr()
-        # self._restart_calculated_modifiers()
-
-    def switch(self):
-        """Switch x and y axis"""
-        for s in self:
-            s.switch()
-
-    # plot and visualization
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, switch=False, **kwargs):
-        """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number or list, optional): defines a vertical offset. Default is 0.
-            shift (number or list, optional): horizontal shift value. Default is 0.
-            factor (number or list, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number or list, optional): multiplicative factor on the x axis.
-                Default is 1.
-            smooth (int, optional): number of points to average data (moving average).
-                Default is 1.
-            vertical_increment or vi (number): vertical increment between curves
-                in terms of percentage of the maximum delta y.
-            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
-
-
-        Returns:
-            `Line2D`_ list, offsets list, shifts list
-
-        .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
-        .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
-        """
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figure()
-
-
-        # percentage wise vertical increment ====================
-        if 'vi' in kwargs and 'vertical_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: vertical increment and vi')
-        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
-            if 'vi' in kwargs:
-                vi = kwargs['vi']
-                del kwargs['vi']
-            if 'vertical_increment' in kwargs:
-                vi = kwargs['vertical_increment']
-                del kwargs['vertical_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = -(max(self.data[i].y) - min(self.data[i].y))
-            vi = max(temp)*factor*vi/100
-        else:
-            vi = 0
-
-        # percentage wise horizontal increment ====================
-        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
-        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
-            if 'hi' in kwargs:
-                hi = kwargs['hi']
-                del kwargs['hi']
-            if 'horizontal_increment' in kwargs:
-                hi = kwargs['horizontal_increment']
-                del kwargs['horizontal_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].x) - min(self.data[i].x)
-            hi = max(temp)*factor*hi/100
-        else:
-            hi = 0
-
-        # offset
-        if isinstance(offset, Iterable):
-            if len(offset) != len(self):
-                raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
-        else:
-            offset = [offset]*len(self)
-            for i in range(len(self)):
-                offset[i] = offset[i]+(vi*i)
-
-        # shift
-        if isinstance(shift, Iterable):
-            if len(shift) != len(self):
-                raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
-        else:
-            shift = [shift]*len(self)
-            for i in range(len(self)):
-                shift[i] = shift[i]+(hi*i)
-
-        # calib
-        if isinstance(calib, Iterable):
-            if len(calib) != len(self):
-                raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
-        else:
-            calib = [calib]*len(self)
-
-        # factor
-        if isinstance(factor, Iterable):
-            if len(factor) != len(self):
-                raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
-        else:
-            factor = [factor]*len(self)
-
-        # factor
-        if isinstance(smooth, Iterable):
-            if len(smooth) != len(self):
-                raise ValueError(f'smooth must be a number of a list with length compatible with the number of spectra.\nnumber of smooth: {len(factor)}\nnumber of spectra: {len(self)}')
-        else:
-            smooth = [smooth]*len(self)
-
-        # plot
-        # temp = [0]*len(self)
-        # for i in range(len(self)-1, -1, -1):
-        #     temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
-
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth[i], switch=switch, **kwargs)
-
-        return temp, offset, shift
-
-    def sequential_plot(self, xlim=None, ylim=None, update_function=None):
-        """plot where you can use arrows to flip trhough spectra.
-
-        update_function must be a function of type:
-
-            def update_function(ss, __i):
-                plt.title(__i)
-                ss[__i].plot(color='black', marker='o')
-            
-        note that the attr __i can be used to index the spectra.
-
-        """
-        self.__i = 0
-
-        # core update function
-        if update_function is None:
-            def _update(ss):
-                if self.__i >= len(self):
-                    self.__i = len(self) - 1
-                elif self.__i < 0:
-                    self.__i = 0
-
-                plt.title(self.__i)
-                ss[self.__i].plot(color='black', marker='o')
-                
-                if xlim is not None:
-                    plt.xlim(xlim)
-                if ylim is not None:
-                    plt.ylim(ylim)
-        else:
-            # add counter and xlim/ylim to update function
-            def _update(ss):
-                if self.__i >= len(self):
-                    self.__i = len(self) - 1
-                elif self.__i < 0:
-                    self.__i = 0
-
-                update_function(ss, __i=self.__i)
-                
-                if xlim is not None:
-                    plt.xlim(xlim)
-                if ylim is not None:
-                    plt.ylim(ylim)
-
-        # keyboard events
-        def keyboard(event, ss):
-            # print(event.key)
-            # print('keyboard')
-            # print(event.key)
-            if event.key == 'right':
-                self.__i = self.__i + 1
-
-                plt.cla()
-                _update(ss)
-                plt.draw()
-            elif event.key == 'left':
-                self.__i = self.__i - 1
-                
-                plt.cla()
-                _update(ss)
-                plt.draw()
-
-        # mouse events
-        def mouse(event):
-            """Mouse can be used with a keyboard key"""
-            # print('mouse')
-            # print(event.key)
-            # print(event.button)
-            pass
-
-        # plotting
-        fig = figure()
-        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
-        fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
-        _update(self)
-        return
-
-    # modifiers
+    ##################
+    # base modifiers #
+    ##################
     def set_shifts(self, value=None, type_='absolute'):
         """Shift data recursively.
 
@@ -3486,7 +3346,9 @@ class Spectra(metaclass=_Meta):
         # self._calculated_factors = None
         # self._calculated_offsets = None
 
-
+    #############
+    # modifiers #
+    #############
     def align(self, mode='cc', ref_spectrum='sequential', ref_value=None, ref_peak=0, ranges=None):
         """Uses calculate_shifts via cross-correlation and align spectra.
 
@@ -3524,7 +3386,6 @@ class Spectra(metaclass=_Meta):
         #             raise ValueError(text)
         #         elif self.calculated_shifts.mode in None:
         #             raise ValueError('calculated shifts not defined. Use Spectra.calculate_shifts().')
-
 
     def normalize(self, mode='cross-correlation', ref_spectrum=0, ref_value=None, ref_peak=0, ranges=None):
         """Uses Spectra.calculate_factors() and Spectra.set_factors() to normalize spectra.
@@ -3590,7 +3451,264 @@ class Spectra(metaclass=_Meta):
         self._calculated_shifts  = None
         self._calculated_calib  = None
 
-    # Calculate modifiers
+    def interp(self, crop=False, x=None, start=None, stop=None, num=None, step=None):
+        """Interpolate data.
+
+        Args:
+            x (list or array, optional): The x-coordinates at which to
+                evaluate the interpolated values. This overwrites all other arguments.
+            start (number, optional): The starting value of the sequence. If `None`,
+                the minium x value will be used.
+            stop (number, optional): The end value of the sequence. If `None`,
+                the maximum x value will be used.
+            num (int, optional): Number of samples to generate.
+            step (number, optional): Spacing between values. This overwrites ``num``.
+
+        None:
+            If none arguments is given, this function will adjust all spectra to
+            have the same x.
+
+        Returns:
+            None
+
+        Warning:
+            Spectra.interp() will change data for good. There is no way to
+                recover the previous state of the array.
+        """
+        if x is None:
+            if self.x is None:
+                if crop:
+                    if start is None:
+                        start = max([min(s.x) for s in self.data])
+                    if stop is None:
+                        stop = min([max(s.x) for s in self.data])
+                else:
+                    if start is None:
+                        start = min([min(s.x) for s in self.data])
+                    if stop is None:
+                        stop = max([max(s.x) for s in self.data])
+                if num is None:
+                    num = max([len(s.x) for s in self.data])
+            else:
+                if start is not None or stop is not None or num is not None or step is not None:
+                    if start is None:
+                        start = max(self.x)
+                    if stop is None:
+                        stop = min(self.x)
+                    if num is None:
+                        num = len(self.x)
+                else:
+                    return
+
+        for s in self:
+            s.interp(x=x, start=start, stop=stop, num=num, step=step)
+        # check
+        self._restart_check_attr()
+        # self._restart_calculated_modifiers()
+
+    def crop(self, start=None, stop=None):
+        """Crop data.
+
+        Args:
+            start (number, optional): start x value. If None, the minimum value of
+                x will be used.
+            stop (number, optional): final x value. If None, the maximum value of
+                x will be used.
+
+        Returns:
+            None
+        """
+        if self.x is None:
+            if start is None:
+                start = min(self.data[0].x)
+                for s in self.data:
+                    temp = min(s.x)
+                    if temp > start:
+                        start = temp
+            if stop is None:
+                stop = max(self.data[0].x)
+                for s in self.data:
+                    temp = max(s.x)
+                    if temp < stop:
+                        stop = temp
+            for s in self.data:
+                s.crop(start, stop)
+        elif start is not None or stop is not None:
+            for s in self.data:
+                s.crop(start, stop)
+        # check
+        self._restart_check_attr()
+        # self._restart_calculated_modifiers()
+
+    def switch(self):
+        """Switch x and y axis"""
+        for s in self:
+            s.switch()
+
+    ##############
+    # extractors #
+    ##############
+    def _extract(self, ranges):
+        """Same as extract(), but attributes are not copied to the new object."""
+
+        if isinstance(ranges, Iterable):
+            temp = Spectra(n=len(self))
+            for i, s in enumerate(self.data):
+                temp[i] = s.extract(ranges=ranges)
+        else:
+            raise ValueError(f'Ranges is not a valid value.\nRanges should be a pair (x_init1, x_final1) or a list of pairs like this: ((x_init1, x_final1), (x_init2, x_final2), ...)\nUse None to indicate the minimum or maximum x value of the data.')
+        return temp
+
+    def extract(self, ranges):
+        """Return the extracted data range from full data.
+
+        Args:
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+
+        Returns:
+            :py:attr:`Spectra`
+        """
+        temp = self._extract(ranges)
+        return self._transfer_attributes(temp)
+
+    def copy(self):
+        return copy.deepcopy(self)
+    
+    def concatenate(self):
+        """Return spectrum of concatenate spectra.
+        
+        User defined attr are saved to the summed spectrum. A number is 
+            added in front of the attr name indicating the index of the 
+            spectrum in which the attr was copied from.
+        """
+        x = np.concatenate([s.x for s in self.data])
+        y = np.concatenate([s.y for s in self.data])
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return self._transfer_attributes_from_each_spectrum(s)
+
+    def calculate_integral(self, x=None, ranges=None):
+        if ranges is None:
+            ss = self.copy()
+        else:
+            ss = self.extract(ranges=ranges)
+
+        y = [sum(s.y) for s in ss]
+
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return s
+
+    def calculate_sum(self, ranges=None):
+        """Returns Spectrum object with the sum of all spectra.
+
+        Returns:
+            :py:class:`Spectra` object.
+
+        Note:
+            All spectra must have the same x-coordinates. This is verified
+            before summing up the spectra.
+
+            User defined attr are saved to the summed spectrum. A number is 
+            added in front of the attr name indicating the index of the 
+            spectrum in which the attr was copied from.
+        """
+        # gather ys
+        x, ys = self._gather_ys(ranges=ranges)
+
+        # calculate sum
+        y = np.zeros(len(x))
+        for i in range(len(self)):
+            y += ys[:, i]
+
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return self._transfer_attributes_from_each_spectrum(s)
+
+    def calculate_average(self, ranges=None):
+        """Returns Spectrum object with the sum of all spectra.
+
+        Returns:
+            :py:class:`Spectra` object.
+
+        Note:
+            All spectra must have the same x-coordinates. This is verified
+            before summing up the spectra.
+
+            User defined attr are saved to the summed spectrum. A number is 
+            added in front of the attr name indicating the index of the 
+            spectrum in which the attr was copied from.
+        """
+        # gather ys
+        x, ys = self._gather_ys(ranges=ranges)
+
+        # calculate sum
+        y = np.zeros(len(x))
+        for i in range(len(self)):
+            y += ys[:, i]
+        y = y/len(self)
+
+        s = Spectrum(x=x, y=y)
+        s = self._transfer_attributes(s)
+        return self._transfer_attributes_from_each_spectrum(s)
+
+    def calculate_map(self, axis=0, ranges=None):
+        """Return image.
+
+        Args:
+            axis (int or string, optional): Axis along which x axis will be laid
+                down. By default, x axis will run across the vertical (0) direction.
+
+        Returns:
+            :py:class:`Image`.
+        """
+        axis = _axis_interpreter(axis)
+
+        # gather ys
+        y, ys = self._gather_ys(ranges=ranges)
+        x = None
+
+        if axis == 1:
+            ys = ys.transpose()
+            x = y
+            y = None
+
+        im = Image(data=ys)
+        im.x_centers = x
+        im.y_centers = y
+
+        im = self._transfer_attributes(im)
+        return self._transfer_attributes_from_each_spectrum(im)
+
+    def polyfit(self, deg=2, ranges=None):
+        """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
+
+        Args:
+            deg (int, optional): degree of the fitting polynomial. Default is 2.
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+                
+        Returns:
+            list with polynomial coefficients, highest power first.
+            list with Model function f(x).
+            list with R2.
+
+        .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
+        """
+        popt = [0]*len(self)
+        model = [0]*len(self)
+        R2 = [0]*len(self)
+        for i in range(len(self)):
+            popt[i], model[i], R2[i] = self[i].polyfit(deg=deg, ranges=ranges)
+
+        return popt, model, R2
+
+    ########################
+    # calculation and info #
+    ########################
     def calculate_shifts(self, mode='cross-correlation', ref_spectrum=0, ref_value=None, ref_peak=0, ranges=None):
         """Calculate how much spectra must be shifted to align with the first spectrum.
 
@@ -3972,166 +4090,203 @@ class Spectra(metaclass=_Meta):
 
         return 1/popt[0]
 
-    # Extractors
-    def _extract(self, ranges):
-        """Same as extract(), but attributes are not copied to the new object."""
+    ##########################        
+    # plot and visualization #
+    ##########################  
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, switch=False, **kwargs):
+        """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
 
-        if isinstance(ranges, Iterable):
-            temp = Spectra(n=len(self))
-            for i, s in enumerate(self.data):
-                temp[i] = s.extract(ranges=ranges)
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            offset (number or list, optional): defines a vertical offset. Default is 0.
+            shift (number or list, optional): horizontal shift value. Default is 0.
+            factor (number or list, optional): multiplicative factor on the y axis.
+                Default is 1.
+            calib (number or list, optional): multiplicative factor on the x axis.
+                Default is 1.
+            smooth (int, optional): number of points to average data (moving average).
+                Default is 1.
+            vertical_increment or vi (number): vertical increment between curves
+                in terms of percentage of the maximum delta y.
+            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
+
+
+        Returns:
+            `Line2D`_ list, offsets list, shifts list
+
+        .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
+        .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
+        """
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW:
+                figure()
+
+
+        # percentage wise vertical increment ====================
+        if 'vi' in kwargs and 'vertical_increment' in kwargs:
+            raise SyntaxError('keyword argument repeated: vertical increment and vi')
+        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
+            if 'vi' in kwargs:
+                vi = kwargs['vi']
+                del kwargs['vi']
+            if 'vertical_increment' in kwargs:
+                vi = kwargs['vertical_increment']
+                del kwargs['vertical_increment']
+            temp = [0]*len(self)
+            for i in range(len(self)):
+                temp[i] = -(max(self.data[i].y) - min(self.data[i].y))
+            vi = max(temp)*factor*vi/100
         else:
-            raise ValueError(f'Ranges is not a valid value.\nRanges should be a pair (x_init1, x_final1) or a list of pairs like this: ((x_init1, x_final1), (x_init2, x_final2), ...)\nUse None to indicate the minimum or maximum x value of the data.')
-        return temp
+            vi = 0
 
-    def extract(self, ranges):
-        """Return the extracted data range from full data.
-
-        Args:
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            :py:attr:`Spectra`
-        """
-        temp = self._extract(ranges)
-        return self._transfer_attributes(temp)
-
-    def copy(self):
-        return copy.deepcopy(self)
-    
-    def concatenate(self):
-        """Return spectrum of concatenate spectra.
-        
-        User defined attr are saved to the summed spectrum. A number is 
-            added in front of the attr name indicating the index of the 
-            spectrum in which the attr was copied from.
-        """
-        x = np.concatenate([s.x for s in self.data])
-        y = np.concatenate([s.y for s in self.data])
-        s = Spectrum(x=x, y=y)
-        s = self._transfer_attributes(s)
-        return self._transfer_attributes_from_each_spectrum(s)
-
-    def calculate_integral(self, x=None, ranges=None):
-        if ranges is None:
-            ss = self.copy()
+        # percentage wise horizontal increment ====================
+        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
+            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
+        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
+            if 'hi' in kwargs:
+                hi = kwargs['hi']
+                del kwargs['hi']
+            if 'horizontal_increment' in kwargs:
+                hi = kwargs['horizontal_increment']
+                del kwargs['horizontal_increment']
+            temp = [0]*len(self)
+            for i in range(len(self)):
+                temp[i] = max(self.data[i].x) - min(self.data[i].x)
+            hi = max(temp)*factor*hi/100
         else:
-            ss = self.extract(ranges=ranges)
+            hi = 0
 
-        y = [sum(s.y) for s in ss]
+        # offset
+        if isinstance(offset, Iterable):
+            if len(offset) != len(self):
+                raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
+        else:
+            offset = [offset]*len(self)
+            for i in range(len(self)):
+                offset[i] = offset[i]+(vi*i)
 
-        s = Spectrum(x=x, y=y)
-        s = self._transfer_attributes(s)
-        return s
+        # shift
+        if isinstance(shift, Iterable):
+            if len(shift) != len(self):
+                raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
+        else:
+            shift = [shift]*len(self)
+            for i in range(len(self)):
+                shift[i] = shift[i]+(hi*i)
 
-    def calculate_sum(self, ranges=None):
-        """Returns Spectrum object with the sum of all spectra.
+        # calib
+        if isinstance(calib, Iterable):
+            if len(calib) != len(self):
+                raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
+        else:
+            calib = [calib]*len(self)
 
-        Returns:
-            :py:class:`Spectra` object.
+        # factor
+        if isinstance(factor, Iterable):
+            if len(factor) != len(self):
+                raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
+        else:
+            factor = [factor]*len(self)
 
-        Note:
-            All spectra must have the same x-coordinates. This is verified
-            before summing up the spectra.
+        # factor
+        if isinstance(smooth, Iterable):
+            if len(smooth) != len(self):
+                raise ValueError(f'smooth must be a number of a list with length compatible with the number of spectra.\nnumber of smooth: {len(factor)}\nnumber of spectra: {len(self)}')
+        else:
+            smooth = [smooth]*len(self)
 
-            User defined attr are saved to the summed spectrum. A number is 
-            added in front of the attr name indicating the index of the 
-            spectrum in which the attr was copied from.
-        """
-        # gather ys
-        x, ys = self._gather_ys(ranges=ranges)
+        # plot
+        # temp = [0]*len(self)
+        # for i in range(len(self)-1, -1, -1):
+        #     temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
 
-        # calculate sum
-        y = np.zeros(len(x))
+        temp = [0]*len(self)
         for i in range(len(self)):
-            y += ys[:, i]
+            temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth[i], switch=switch, **kwargs)
 
-        s = Spectrum(x=x, y=y)
-        s = self._transfer_attributes(s)
-        return self._transfer_attributes_from_each_spectrum(s)
+        return temp, offset, shift
 
-    def calculate_average(self, ranges=None):
-        """Returns Spectrum object with the sum of all spectra.
+    def sequential_plot(self, xlim=None, ylim=None, update_function=None):
+        """plot where you can use arrows to flip trhough spectra.
 
-        Returns:
-            :py:class:`Spectra` object.
+        update_function must be a function of type:
 
-        Note:
-            All spectra must have the same x-coordinates. This is verified
-            before summing up the spectra.
+            def update_function(ss, __i):
+                plt.title(__i)
+                ss[__i].plot(color='black', marker='o')
+            
+        note that the attr __i can be used to index the spectra.
 
-            User defined attr are saved to the summed spectrum. A number is 
-            added in front of the attr name indicating the index of the 
-            spectrum in which the attr was copied from.
         """
-        # gather ys
-        x, ys = self._gather_ys(ranges=ranges)
+        self.__i = 0
 
-        # calculate sum
-        y = np.zeros(len(x))
-        for i in range(len(self)):
-            y += ys[:, i]
-        y = y/len(self)
+        # core update function
+        if update_function is None:
+            def _update(ss):
+                if self.__i >= len(self):
+                    self.__i = len(self) - 1
+                elif self.__i < 0:
+                    self.__i = 0
 
-        s = Spectrum(x=x, y=y)
-        s = self._transfer_attributes(s)
-        return self._transfer_attributes_from_each_spectrum(s)
-
-    def calculate_map(self, axis=0, ranges=None):
-        """Return image.
-
-        Args:
-            axis (int or string, optional): Axis along which x axis will be laid
-                down. By default, x axis will run across the vertical (0) direction.
-
-        Returns:
-            :py:class:`Image`.
-        """
-        axis = _axis_interpreter(axis)
-
-        # gather ys
-        y, ys = self._gather_ys(ranges=ranges)
-        x = None
-
-        if axis == 1:
-            ys = ys.transpose()
-            x = y
-            y = None
-
-        im = Image(data=ys)
-        im.x_centers = x
-        im.y_centers = y
-
-        im = self._transfer_attributes(im)
-        return self._transfer_attributes_from_each_spectrum(im)
-
-    def polyfit(self, deg=2, ranges=None):
-        """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
-
-        Args:
-            deg (int, optional): degree of the fitting polynomial. Default is 2.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
+                plt.title(self.__i)
+                ss[self.__i].plot(color='black', marker='o')
                 
-        Returns:
-            list with polynomial coefficients, highest power first.
-            list with Model function f(x).
-            list with R2.
+                if xlim is not None:
+                    plt.xlim(xlim)
+                if ylim is not None:
+                    plt.ylim(ylim)
+        else:
+            # add counter and xlim/ylim to update function
+            def _update(ss):
+                if self.__i >= len(self):
+                    self.__i = len(self) - 1
+                elif self.__i < 0:
+                    self.__i = 0
 
-        .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
-        """
-        popt = [0]*len(self)
-        model = [0]*len(self)
-        R2 = [0]*len(self)
-        for i in range(len(self)):
-            popt[i], model[i], R2[i] = self[i].polyfit(deg=deg, ranges=ranges)
+                update_function(ss, __i=self.__i)
+                
+                if xlim is not None:
+                    plt.xlim(xlim)
+                if ylim is not None:
+                    plt.ylim(ylim)
 
-        return popt, model, R2
+        # keyboard events
+        def keyboard(event, ss):
+            # print(event.key)
+            # print('keyboard')
+            # print(event.key)
+            if event.key == 'right':
+                self.__i = self.__i + 1
 
-    # peaks
+                plt.cla()
+                _update(ss)
+                plt.draw()
+            elif event.key == 'left':
+                self.__i = self.__i - 1
+                
+                plt.cla()
+                _update(ss)
+                plt.draw()
+
+        # mouse events
+        def mouse(event):
+            """Mouse can be used with a keyboard key"""
+            # print('mouse')
+            # print(event.key)
+            # print(event.button)
+            pass
+
+        # plotting
+        fig = figure()
+        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
+        fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
+        _update(self)
+        return
+
+    ###########
+    # Special #
+    ###########
     def copy_peaks_from_spectra(self):
         self.peaks.clear()
         self.peaks.copy_from_spectra(self)
@@ -4214,232 +4369,6 @@ class Spectra(metaclass=_Meta):
         ys = [s.y for s in temp]
 
         self.peaks.fit(xs=xs, ys=ys, method=method)
-
-
-    # OBSOLETE
-    def _check_fit(self):
-        """Check if all data has fit object. Raises an error."""
-        temp = [None for i in range(len(self))]
-        for i in range(len(self)):
-                temp[i] = self[i].fit
-        if None in temp:
-            raise RuntimeError(f'Fit is not defined for some spectra.\nList of fits: {temp}')
-
-    def _check_number_of_peaks_per_spectrum(self, fitted_peaks=False):
-        """Check if number of peaks for each spectrum is the same."""
-        if fitted_peaks:
-            peaks = self.fit.peaks
-        else:
-            peaks = self.peaks
-
-        temp = [len(peaks[i]) for i in range(len(peaks))]
-        if np.all(np.diff(temp) != 0) == True:
-            temp = str({i: temp[i] for i in range(len(temp))}).replace(', ', '\n').replace('{', '').replace('}', '')
-            print(f'number of peaks is different for different spectrum.\nCalculated values based on peaks might be wrong.\nNumber of peaks per spectrum:\n{temp}')
-
-    def get_errors(self):
-        """Return a list with peak errors data from all spectra.
-    
-        Returns:
-            list
-        """
-        peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
-        n_peaks = max([len(s.peaks) for s in self])
-        if n_peaks == 0:
-            return {}
-        return [{k: [s.peaks[peak].error[k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
-
-    def get_peaks(self, key='peak'):
-        """Return a list with peak data from all spectra.
-    
-        Args:
-            key (string, optional): if 'peaks', list is organized by peak
-                indices. If 'spectrum', list is organized by spectrum
-                indices.
-    
-        Returns:
-            list
-        """
-        if key.startswith('p'):
-            peaks_attr = ['amp', 'c', 'fwhm', 'fwhm1', 'fwhm2', 'm', 'm1', 'm2', 'area']
-            n_peaks = max([len(s.peaks) for s in self])
-            if n_peaks == 0:
-                return {}
-            return [{k: [s.peaks[peak][k] if peak in s.peaks else None for s in self] for k in peaks_attr} for peak in range(n_peaks)]
-        elif key.startswith('s'):
-            return [self[i].peaks for i in range(len(self))]
-        else:
-            raise ValueError(f"Ivalid key.\nPossible keys are: 'peak' (p) and 'spectrum' (s).")
-
-    def plot_peaks(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak positionfor all spectra.
-    
-        Wrapper for `matplotlib.pyplot.errorbar()`_.
-    
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number or list, optional): defines a vertical offset. Default is 0.
-            shift (number or list, optional): horizontal shift value. Default is 0.
-            factor (number or list, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number or list, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
-    
-        Returns:
-            list with dicts with `ErrorbarContainer`_ for each spectrum.
-    
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        """
-        if ax is None:
-            ax = plt
-    
-        # percentage wise increment ====================
-        if 'vi' in kwargs and 'vertical_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: vertical increment/vi')
-        elif 'vi' in kwargs or 'vertical_increment' in kwargs:
-            if 'vi' in kwargs:
-                vi = kwargs['vi']
-                del kwargs['vi']
-            if 'vertical_increment' in kwargs:
-                vi = kwargs['vertical_increment']
-                del kwargs['vertical_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].y) - min(self.data[i].y)
-            vi = max(temp)*factor*vi/100
-        else:
-            vi = 0
-    
-        # percentage wise horizontal increment ====================
-        if 'hi' in kwargs and 'horizontal_increment' in kwargs:
-            raise SyntaxError('keyword argument repeated: horizontal increment and hi')
-        elif 'hi' in kwargs or 'horizontal_increment' in kwargs:
-            if 'hi' in kwargs:
-                hi = kwargs['hi']
-                del kwargs['hi']
-            if 'horizontal_increment' in kwargs:
-                hi = kwargs['horizontal_increment']
-                del kwargs['horizontal_increment']
-            temp = [0]*len(self)
-            for i in range(len(self)):
-                temp[i] = max(self.data[i].x) - min(self.data[i].x)
-            hi = max(temp)*factor*hi/100
-        else:
-            hi = 0
-    
-        # offset
-        if isinstance(offset, Iterable):
-            if len(offset) != len(self):
-                raise ValueError(f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}')
-        else:
-            offset = [offset]*len(self)
-            for i in range(len(self)):
-                offset[i] = offset[i]+(vi*i)
-    
-        # shift
-        if isinstance(shift, Iterable):
-            if len(shift) != len(self):
-                raise ValueError(f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}')
-        else:
-            shift = [shift]*len(self)
-            for i in range(len(self)):
-                shift[i] = shift[i]+(hi*i)
-    
-        # calib
-        if isinstance(calib, Iterable):
-            if len(calib) != len(self):
-                raise ValueError(f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}')
-        else:
-            calib = [calib]*len(self)
-    
-        # factor
-        if isinstance(factor, Iterable):
-            if len(factor) != len(self):
-                raise ValueError(f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}')
-        else:
-            factor = [factor]*len(self)
-    
-        # get peaks ======================================
-        peaks = self.get_peaks(key='spectrum')
-    
-        # plot
-        r = [0]*len(self)
-        for i in range(len(self)):
-            r[i] = peaks[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], **kwargs)
-        return r
-
-    def load2(self, dirpath, string='*', verbose=False, **kwargs):
-        """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
-
-        Args:
-            dirpath (string, path object, or list): folderpath, folder handle,
-                or a list of filepaths. All files inside a folder where string 
-                can be found in the filename are imported. If the filename 
-                extension is .gz or .bz2, the file is first decompressed. 
-                Last used dirpath is saved to ss.dirpath.
-            string (str, optional): file names without this string will be ignored.
-                Use '*' for matching anything. Default is '*'.
-
-        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
-
-        Args:
-            delimiter (str, optional): String or character separating columns.
-                Use ``\\t`` for tab. Default is comma (', ').
-            comments (str, optional): The character used to indicate the start
-                of a comment. Default is ``# ``. Attributes picked up
-                from the header will be loaded too.
-
-        Returns:
-            None
-
-        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
-        """
-        # reset data
-        self._data     = []
-        self._restart_check_attr()
-        self._calculated_shifts  = None
-        self._calculated_calib  = None
-        self._calculated_factors = None
-        self._calculated_offsets = None
-
-        # if dirpath is str
-        if isinstance(dirpath, str) or isinstance(dirpath, Path):
-            dirpath = Path(dirpath)
-            if dirpath.is_file():
-                if verbose: print('dirpath is a file')
-                if verbose: print('Loading...')
-                self.append(Spectrum(filepath=dirpath))
-                if verbose: print('Done!')
-                return
-            elif dirpath.is_dir():
-                dirpath = [dirpath, ]
-            else:
-                raise ValueError(f'cannot read dirpath.\ndirpath: {dirpath}')
-
-        # if dirpath is iterable
-        if isinstance(dirpath, Iterable):
-            if verbose: print('Loading...')
-            for j, filepath in enumerate(dirpath):
-                if verbose: print(f'{j+1}/{len(dirpath)}: {filepath}')
-
-                # if Path(filepath).is_dir():
-                #     fl = filelist(dirpath=filepath, string=string)
-                #     for i, f in enumerate(fl):
-                #         if verbose: print(f'    {i+1}/{len(fl)}: {f}')
-                #         self.append(Spectrum(filepath=f))
-
-                elif Path(filepath).is_file():
-                    self.append(Spectrum(filepath=filepath))
-                else:
-                    raise ValueError(f'cannot read dirpath.\dirpath: {dirpath}')
-        
-        # save dirpath
-        self.dirpath = dirpath
-
-        if verbose: print('Done!')
-# %%
 
 
 class Image(metaclass=_Meta):

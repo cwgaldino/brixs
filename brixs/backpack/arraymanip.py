@@ -116,6 +116,15 @@ def extract(x, y, ranges, invert=False):
     x = np.array(x)
     y = np.array(y)
 
+    # if data is all inside ranges, then nothing is done
+    if len(ranges) == 1:
+        if ranges[0][0] <= min(x) and ranges[0][1] >= max(x):
+            if invert:
+                return np.array([]), np.array([])
+            else:
+                return x, y
+
+
     choose_range = choose(x, ranges)
     # print(choose_range[0:10])
     if invert:
