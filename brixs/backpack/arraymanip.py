@@ -6,7 +6,6 @@ import numpy as np
 import copy
 from scipy.optimize import curve_fit
 from .model_functions import voigt_fwhm
-from functools import reduce
 
 
 def index(x, value, closest=True):
@@ -482,11 +481,6 @@ def compressed(x, selectors):
     """
     return [d for d, s in zip(x, selectors) if s]
 
-def factors(n):
-    """Return a tuple with all the factors of a number."""
-    return set(reduce(list.__add__,
-                ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))
-
 def all_equal(array):
     """Returns True if all elements of an array are equal."""
     iterator = iter(array)
@@ -495,13 +489,6 @@ def all_equal(array):
     except StopIteration:
         return True
     return all(first == x for x in iterator)
-
-def is_integer(n):
-    """Returns True if number is integer."""
-    if isinstance(n, int):
-        return True
-    elif isinstance(n, float):
-        return n.is_integer()
 
 def has_duplicates(array):
     """Returns True if given array contains any duplicates."""

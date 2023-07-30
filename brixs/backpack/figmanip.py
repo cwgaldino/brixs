@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import warnings
 from subprocess import Popen, PIPE
-import decimal
+
 from collections import OrderedDict
 try:
     from bs4 import BeautifulSoup
@@ -31,6 +31,7 @@ from matplotlib.ticker import AutoMinorLocator
 # %% ------------------------- backpack Imports --------------------------- %% #
 from .arraymanip import index
 from .interact import copy2clipboard, png2clipboard, svg2clipboard, operating_system
+from .numanip import n_digits, n_decimal_places, round_to_1, is_integer
 
 # %% ------------------------- Initial definitions ------------------------ %% #
 is_windows = operating_system() == 'windows'
@@ -41,7 +42,6 @@ def available_colors():
     """Returns matplotlib available colors."""
     from matplotlib import colors as mcolors    
     return dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
-
 
 def set_cycler(n='tab10', ls=1):
     """Set color cycles for matplotlib.
@@ -103,7 +103,6 @@ def set_cycler(n='tab10', ls=1):
     # set colormap and linestyles
     plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', linestyles)))
 
-
 def bring2top():
     """Brings current window to the top.
 
@@ -126,7 +125,6 @@ def bring2top():
     else:
         figManager = get_current_fig_manager()
         figManager.window.raise_()
-
 
 def set_window_position(*args):
     """Change position of a maptplotlib figure on screen.
@@ -169,7 +167,6 @@ def set_window_position(*args):
         except AttributeError:
             warnings.warn('Backend not suported.')
     
-
 def get_window_position():
     """Return the position of a matplotlib position on the screen.
 
@@ -191,7 +188,6 @@ def get_window_position():
         except AttributeError:
             warnings.warn('Backend not suported.')
             return (0, 0)
-
 
 def set_window_size(*args):
     """Change the size of the window of a matplotlib figure.
@@ -265,7 +261,6 @@ def maximize():
             warnings.warn('Backend not suported.')
             return (0, 0)
 
-
 def _fix_figure(fig, **kwargs):
     cid1 = fig.canvas.mpl_connect('button_press_event', onclick)
     # cid2 = fig.canvas.mpl_connect('resize_event', onmove)
@@ -331,7 +326,6 @@ def figure(**kwargs):
     fig = _fix_figure(fig, **kwargs)
     return fig
 
-
 def onmove(event):
     if br.br.settings.FIGURE_FIX_RESOLUTION:
         fig = plt.gcf()
@@ -374,7 +368,6 @@ def onmove(event):
         # # # print('new size: ' + str(new_size))
     pass
 
-
 def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None):
     """Set the default format for saving figures using :py:func:`onclick()`.
 
@@ -405,7 +398,6 @@ def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None)
         onclick_round_y = None
     else:
         onclick_round_y = round_y
-
 
 def onclick(event):
     """This function is called everytime a mouse key is pressed over a figure.
@@ -501,7 +493,6 @@ def onclick(event):
                 plt.savefig(f'{onclick_folder/".temporary_fig.png"}', dpi=onclick_resolution)
                 png2clipboard(onclick_folder/".temporary_fig.png")
 
-
 def zoom(start, stop, ymargin=2):
     """Zoom up portion of current figure from start to stop.
 
@@ -578,7 +569,6 @@ def cm2pt(*tupl):
     else:
         return tuple(i*28.346 for i in tupl)
 
-
 def cm2px(*tupl, dpi=None):
     """Convert values from cm to px.
 
@@ -598,7 +588,6 @@ def cm2px(*tupl, dpi=None):
     else:
         return tuple(i/inch*dpi for i in tupl)
 
-
 def cm2inch(*tupl):
     """Convert values from cm to inches.
 
@@ -614,7 +603,6 @@ def cm2inch(*tupl):
     else:
         return tuple(i/inch for i in tupl)
 
-
 def mm2inch(*tupl):
     """Convert values from mm to inches.
 
@@ -629,40 +617,6 @@ def mm2inch(*tupl):
         return tuple(i/inch for i in tupl[0])
     else:
         return tuple(i/inch for i in tupl)
-
-
-
-def round_to_1(x):
-    """return the most significant digit"""
-    return round(x, -int(np.floor(np.log10(abs(x)))))
-
-def n_decimal_places(number):
-    """Return the number of decimal places of a number.
-
-    Args:
-        number (float or int): number.
-
-    Returns:
-        number of decimal places in number.
-    """
-
-    return abs(decimal.Decimal(str(number)).as_tuple().exponent)
-
-
-def n_digits(number):
-    """Return the number of digits of a number.
-
-    Args:
-        number (float or int): number.
-
-    Returns:
-        a tuple with number of digits and number of decimal places.
-    """
-    if n_decimal_places(number) != 0:
-        return (len(str(int(np.around(number))) ), n_decimal_places(number))
-    else:
-        return (len(str(int(np.around(number))) ), 0)
-
 
 def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
     """Set ticks of a plot.
@@ -1189,7 +1143,6 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None,
 
     return fig, axes
 
-
 def ax_box2fig_box(ax, points):
     """Transform 'bbox like' axis position values to percentage fig position.
 
@@ -1210,7 +1163,6 @@ def ax_box2fig_box(ax, points):
     delta_y = ax_pos2fig_pos(ax, y_final, direction='y') - y_init
 
     return [x_init, y_init, delta_x, delta_y]
-
 
 def ax_pos2fig_pos(ax, value, direction='x'):
     """Transform axis position values to figure percentage position.
@@ -1233,7 +1185,6 @@ def ax_pos2fig_pos(ax, value, direction='x'):
     x0 = point2[1] - (delta*point2[0])
 
     return x0 + delta*value
-
 
 def ungroup_svg(filepath, outfilepath=None):
     """Ungroup all objects in svg files created by matplotlib.
@@ -1295,7 +1246,6 @@ def ungroup_svg(filepath, outfilepath=None):
     f = outfilepath.open('w')
     f.write(output)
     f.close()
-
 
 def soft_ungroup_svg(filepath, outfilepath=None):
     """Ungroup objects in svg file (each object stands in a group by itself).

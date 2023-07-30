@@ -9,42 +9,125 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # specific libraries
+from collections.abc import Iterable, MutableMapping
 import lmfit
 from scipy.signal import find_peaks
-from collections.abc import Iterable, MutableMapping
-import numbers
-
-# backpack
-from .backpack.filemanip import filelist
-from .backpack.arraymanip import all_equal
-from .backpack.model_functions import voigt_fwhm, voigt_area_fwhm, dirac_delta
-from .backpack.figmanip import n_digits
 
 # BRIXS
 import brixs as br
 
-# common definitions ===========================================================
-names = ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']
-
-cc   = ['cross-correlation', 'cc']
-roll = ['roll', 'rotate', 'r', 'rot']
-hard = ['hard', 'x', 'h', 'Hard']
-soft = ['soft', 'Soft', 'interp', 'y', 's']
-relative = ['relative', 'r', 'rel']
-absolute = ['a', 'abs', 'absolute']
-increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
-decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
-
-
-# %% Peaks =====================================================================
+# Peaks ========================================================================
 class Peaks(lmfit.Parameters):
-    """m vary is false by default
+    """Creates a ``Peaks`` object.
+
+    How to create a peaks object:
+        p = br.Peaks()
+
+        p = br.Peaks(filepath=<filepath>)
+        p = br.Peaks(<filepath>)
+    
+    The filepath must point to a file with a JSON string.
+
+    Attributes:
+        additional (str or function): additional function f(x) to be included.
+        filepath (str or pathlib.Path): filepath associated with data.
+
+    Computed (read-only) attributes:
+        spectrum (br.Spectrum): spectrum
+        spectra (br.Spectra): spectra
+
+    Write-only attributes:
+        None
     """
-
     def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._reset_modifiers()
+        """Initialize the object instance.
 
+        Args:
+            filepath (str or pathlib.Path, optional): filepath to read.
+        
+        Raises:
+            AttributeError: if kwargs and args cannot be read.
+        """
+        #######################
+        # Initializing object #
+        #######################
+        super().__init__()
+        
+        ###########################
+        # Initializing attributes #
+        ###########################
+        self._additional = ''
+        self._filepath   = ''
+
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        error_message = 'Wrong input. Peaks object cannot be created. Please, use one ' +\
+                        'of the examples below to create a Peaks object:\n' +\
+                        '\n' +\
+                        'p = br.Peaks()\n' +\
+                        '\n' +\
+                        'p = br.Peaks(filepath=<filepath>)\n' +\
+                        'p = br.Peaks(<filepath>)\n' +\
+                        '\n' +\
+                        'filepath must be a string or pathlib.Path object'
+        if kwargs != {} and args != ():
+            raise AttributeError(error_message)
+        if any([item not in ['filepath'] for item in kwargs.keys()]):
+            raise AttributeError(error_message)
+        if len(args) > 1 or len(kwargs) > 1:
+            raise AttributeError(error_message)
+
+        ################
+        # loading data #
+        ################
+        # keyword arguments
+        if 'filepath' in kwargs:
+            self.load(kwargs['filepath'])
+            return
+
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], str) or isinstance(args[0], Path):
+                self.load(args[0])
+                return
+
+    ##############
+    # attributes #
+    ##############
+    @property
+    def additional(self):
+        return self._additional
+    @additional.setter
+    def additional(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, function):
+            self._additional = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for additional\nAdditional can only be str or function type.')  
+    @additional.deleter
+    def additional(self):
+            raise AttributeError('Cannot delete object.')
+
+    @property
+    def filepath(self):
+        return self._filepath
+    @filepath.setter
+    def filepath(self, value):
+        if value is None:
+            value = ''
+        elif isinstance(value, str) or isinstance(value, Path):
+            self._filepath = value
+        else:
+            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nFilepath can only be str or pathlib.Path type.')
+    @filepath.deleter
+    def filepath(self):
+        raise AttributeError('Cannot delete object.')   
+
+    ###################################
+    # computed (read-only) attributes #
+    ###################################
     @property
     def spectrum(self):
         return self.calculate_spectrum()
@@ -65,229 +148,544 @@ class Peaks(lmfit.Parameters):
     def spectra(self):
             raise AttributeError('Cannot delete object.')
 
-    def append(self, amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None):
-        # define index
-        indexes = self.indexes()
-        if indexes == []:
-            index = 0
-        else:
-            index = max(indexes) + 1
-
-        # check parameters
-        assert area is not None or amp is not None, 'amp or area not defined'
-        assert c is not None, 'c not defined'
-        assert w is not None or (w1 is not None and w2 is not None), 'Either w or (w1 and w2) must be defined'
-
-        assert area is None or isinstance(area, numbers.Number), 'area must be a number'
-        assert amp is None or isinstance(amp, numbers.Number), 'amp must be a number'
-        assert c is None or isinstance(c, numbers.Number), 'c must be a number'
-        assert w is None or isinstance(w, numbers.Number), 'w must be a number'
-        assert w1 is None or isinstance(w1, numbers.Number), 'w1 must be a number'
-        assert w2 is None or isinstance(w2, numbers.Number), 'w2 must be a number'
-        assert m is None or isinstance(m, numbers.Number), 'm must be a number'
-        assert m1 is None or isinstance(m1, numbers.Number), 'm1 must be a number'
-        assert m2 is None or isinstance(m2, numbers.Number), 'm2 must be a number'
-
-        if isinstance(w, numbers.Number):
-            assert w >= 0, 'w must be positive'
-        if isinstance(w1, numbers.Number):
-            assert w1 >= 0, 'w1 must be positive'
-        if isinstance(w2, numbers.Number):
-            assert w2 >= 0, 'w2 must be positive'
-
-        if isinstance(m, numbers.Number):
-            assert m <= 1 and m >= 0, 'm must be positive less than 1'
-        if isinstance(m1, numbers.Number):
-            assert m1 <= 1 and m1 >= 0, 'm1 must be positive less than 1'
-        if isinstance(m2, numbers.Number):
-            assert m2 <= 1 and m2 >= 0, 'm2 must be positive less than 1'
-
-        # add peak
-        if area is None:
-            self.add(f'amp_{index}', value=amp, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-        else:
-            self.add(f'area_{index}', value=area, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-
-        self.add(f'c_{index}',   value=c,   vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-
-        if w1 is not None and w2 is not None:
-            self.add(f'w1_{index}', value=w1, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-            self.add(f'w2_{index}', value=w2, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-            self.add(f'm1_{index}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
-            self.add(f'm2_{index}', value=m2, vary=False, min=0, max=1, expr=None, brute_step=None)
-        else:
-            self.add(f'w_{index}', value=w, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-            self.add(f'm_{index}', value=m, vary=False, min=0, max=1, expr=None, brute_step=None)
-
-    def add(self, name, value=None, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None):
-        # add
-        super().add(name, value=value, vary=vary, min=min, max=max, expr=expr, brute_step=brute_step)
-
+    #################
+    # magic methods #
+    #################
     def __setitem__(self, name, value):
-        # # check if name is valid
-        # if not name.startswith(tuple(names)):
-        #     raise ValueError(f'name= {name} is not valid.\nValid names:{names}')
-
-        # # area and amp
-        # if self._enable_update_area_amp:
-        #     if self.use_area:
-        #         if name == 'amp':
-        #             raise ValueError('amp cannot be edited if Peak.use_area is True.\nUse Peak.update_area_amp()\nOr change Peak.use_area to False.')
-        #     else:
-        #         if name == 'area':
-        #             raise ValueError('area cannot be edited if Peak.use_area is False.\nUse Peak.update_area_amp().\nOr change Peak.use_area to True.')
-        
-        # set values
         super().__setitem__(name, value)
-    
-        # if name == 'w':
-        #     self['w1'].value = self['w']/2
-        #     self['w2'].value = self['w']/2
-
-        # # check
-        # if self._enable_update_area_amp:
-        #     self.update_area_amp()
 
     def __getitem__(self, name):
-        if isinstance(name, int):
-            return self.get_params_with_index(i=name)
-        else:
-            if name in ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']:
-                if self.length() == 1:
-                    index = self.indexes()[0]
-                    name = name + f'_{index}'
-                else:
-                    raise ValueError(f'This list has multiple peaks, please, identify the peak number')
-            if name in self:
-                return super().__getitem__(name)
-            elif name.startswith('area'):
-                index = name.split('_')[1]
-                return lmfit.Parameter(name=name, value=self.calculate_area(i=index), vary=False)
-            elif name.startswith('amp'):
-                index = name.split('_')[1]
-                return lmfit.Parameter(name=name, value=self.calculate_amp(i=index), vary=False)
-            elif name.startswith('w'):
-                index = name.split('_')[1]
-                return lmfit.Parameter(name=name, value=self.calculate_w(i=index), vary=False)
-            else:
-                raise ValueError(f'Cannot find parameter: {name}')
 
-    def length(self):
-        return len(self.indexes())
+        has_i2 = self._has_i2()
+        if has_i2 is None:
+            return None
+        
+        if isinstance(name, int):
+            if has_i2:
+                return self._get_peaks_by_index(i1=None, i2=name)
+            else:
+                return self._get_peaks_by_index(i1=name, i2=None) 
+        elif name == 'A':
+            if has_i2:
+                raise ValueError('Peaks have multiple spectrum indexes i2.\nIndex i2 must be a integer\n"A" is not valid')
+            return self._get_peaks_by_index(i1=name, i2=None) 
+        elif isinstance(name, str):
+            if has_i2 == True:
+                return super().__getitem__(name)
+            elif has_i2 == False:
+                if self.number_of_peaks() == 1:
+                    if name in ['amp', 'area', 'c', 'w', 'w1', 'w2', 'm', 'm1', 'm2']:
+                        i1 = self._get_indexes_i1()[0]
+                        name = name + f'_{i1}'
+                        if name in self:
+                            return super().__getitem__(name)
+                        elif name.startswith('area'):
+                            i1 = name.split('_')[1]
+                            return lmfit.Parameter(name=name, value=self.get_area(i1=i1), vary=False)
+                        elif name.startswith('amp'):
+                            i1 = name.split('_')[1]
+                            return lmfit.Parameter(name=name, value=self.get_amp(i1=i1), vary=False)
+                        elif name.startswith('w'):
+                            i1 = name.split('_')[1]
+                            return lmfit.Parameter(name=name, value=self.get_w(i1=i1), vary=False)
+                        else:
+                            raise ValueError(f'Cannot find parameter: {name}')    
+            return super().__getitem__(name)
+
+    def __delitem__(self, name):
+        """TODO I want to avoid deleting single parameters from a peak.
+        """
+        super().__delitem__(name)
     
-    # support
-    def copy(self, *args, **kwargs):
-        i = None
-        if 'i' in kwargs:
-            i = kwargs['i']
-        elif len(args) > 0:
-            if isinstance(args[0], int):
-                i = args[0]
-            elif isinstance(args[0], Peaks):
-                self.clear()
-                for name in args[0]:
-                    self[name] = copy.deepcopy(args[0][name])
-                return
-        elif len(args) == 0:
-            pass
+    ###########
+    # support #
+    ###########
+    def _get_user_attrs(self):
+        """return attrs that are user defined."""
+        default_attrs =  ['_asteval', '_additional']
+        return [key for key in self.__dict__.keys() if key not in default_attrs]
+    
+    def _has_i2(self):
+        """return True if parameters have secondary (spectrum) index i2.
+
+        Raises:
+            ValueError: if no parameters are found, or parameters do not have 
+                indexes, or have too many indexes.
+        
+        Returns:
+            bool
+        """
+        if len(self) == 0:
+            return None
         else:
-            raise ValueError('input not recognized')
+            test = max([len(name.split('_')) for name in list(self.keys())])
+            if test == 3:
+                return True
+            elif test == 2:
+                return False
+            else:
+                raise ValueError('some parameters do not have or have too many indexes')
+    
+    def _has_additional(self):
+        """returns True if additional function is defined.
+
+        Returns:
+            bool
+        """
+        return self.additional != ''
+
+    def _get_indexes_i1(self, i2=None):
+        """return list of all i1's.
+
+        Includes additional parameters.
+        
+        Args:
+            i2 (int, optional): spectrum index. Only used if peaks has double 
+                indexes.
+        
+        Returns:
+            list
+        """
+        #########################
+        # check secondary index #
+        #########################
+        error_message1 = 'Peaks() has parameters from multiple spectra.' +\
+                        'Therefore, you must indicate the spectrum index i2.'
+        error_message2 = 'Peaks() does not have parameters from multiple spectra.' +\
+                        f'Therefore, i2 must be set to None and not {i2}'
+        has_i2 = self._has_i2()
+        if has_i2 is None:
+            return []
+        elif has_i2:
+            if i2 is None:
+                raise ValueError(error_message1)
+            elif br.numanip.is_integer(i2):
+                if i2 not in self._get_indexes_i2():
+                    raise ValueError(f'i2={i2} cannot be found\nvalid i2: {self._get_indexes_i2()}')
+            else:
+                raise TypeError('i2 must be an integer')
+        else:
+            if i2 is not None:
+                raise ValueError(error_message2)
+        
+        # get indexes
+        final = []
+        for name in self:
+            split = name.split('_')
+            _i1 = int(split[1])
+            if has_i2:
+                _i2 = int(split[2])
+                if _i1 not in final and _i2 == i2:
+                    final.append(_i1) 
+            if _i1 not in final:
+                final.append(_i1) 
+        return final
+
+    def _get_indexes_i2(self):
+        """return list of all secondary (spectrum) indexes i2.
+        
+        Returns:
+            list
+        """
+        #########################
+        # check secondary index #
+        #########################
+        error_message = 'Peaks() only have parameters from a single spectrum.' +\
+                        'Therefore, there is no need of secondary indexes i2.'
+        has_i2 = self._has_i2()
+        if has_i2 is None:
+            return []
+        if has_i2 == False:
+            raise ValueError(error_message)
+        
+        # get indexes
+        final = []
+        for name in self:
+            _i2 = int(name.split('_')[2])
+            if _i2 not in final:
+                final.append(_i2) 
+        return final
+
+    def _get_names_by_index(self, i1=None, i2=None):
+        """return list of names with index i1 and i2.
+
+        Args:
+            i1 (int): primary index i1. Use i1='A' for additional parameters.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+        
+        Returns:
+            list
+        """           
+        #########################
+        # check secondary index #
+        #########################
+        error_message = 'Peaks() does not have parameters from multiple spectra.' +\
+                        f'Therefore, i2 must be set to None and not {i2}'
+        assert i2 == None or br.numanip.is_integer(i2), 'i2 must be an integer or None'
+        has_i2 = self._has_i2()
+        if has_i2 is None:
+            return []
+        elif has_i2 == True and br.numanip.is_integer(i2):
+            if i2 not in self._get_indexes_i2():
+                raise ValueError(f'i2={i2} cannot be found\nvalid i2: {self._get_indexes_i2()}')
+        elif has_i2 == False and i2 is not None:
+                raise ValueError(error_message)
+
+        #######################
+        # check primary index #
+        #######################
+        if has_i2 == True and i1 is not None:
+            assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+        #############
+        # get names #
+        #############
+        final = []
+        if has_i2 == True and i2 is not None:
+            if i1 == 'A':
+                for name in self:
+                    split = name.split('_')
+                    if split[1] == 'A' and int(split[2]) == i2:
+                        final.append(name)
+            elif i1 == None:
+                for name in self:
+                    split = name.split('_')
+                    if int(split[2]) == i2:
+                        final.append(name)
+            else:
+                for name in self:
+                    split = name.split('_')
+                    if int(split[1]) == i1 and int(split[2]) == i2:
+                        final.append(name)
+        elif has_i2 == True and i2 is None:
+            if i1 == 'A':
+                for name in self:
+                    split = name.split('_')
+                    if split[1] == 'A':
+                        final.append(name)
+            elif i1 == None:
+                return list(self.keys())
+            else:
+                for name in self:
+                    split = name.split('_')
+                    if int(split[1]) == i1:
+                        final.append(name)
+        elif has_i2 == False:
+            if i1 == 'A':
+                for name in self:
+                    if name.split('_')[1] == 'A':
+                        final.append(name)
+            elif i1 is None:
+                for name in self:
+                    final.append(name)
+            else:
+                for name in self:
+                    if int(name.split('_')[1]) == i1:
+                        final.append(name)
+        return final
+    
+    def _get_peaks_by_index(self, i1=None, i2=None):
+        """return Peaks object with only selected peak.
+
+        The returned peaks object is "connect" to the parent Peaks object, i.e.
+            they point to the same object. Modifications done in the returned
+            peaks are reflected in the parent peaks. (Developers note, not sure
+            this will work well long term. This might change eventually).
+
+        Args:
+            i1 (int): primary index i1. Use i1='A' for additional parameters.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+        
+        Returns:
+            Peaks
+        """ 
+        names = self._get_names_by_index(i1=i1, i2=i2)
+
+        if names == []:
+            return Peaks()
+            # raise ValueError('Empty peaks object')
         
         peaks = Peaks()
-        if i is not None:
-            names = self._get_names_with_index(i=i)
-        else:
-            names = list(self.keys())
         for name in names:
-            peaks[name] = copy.deepcopy(self[name])
+            peaks[name] = self[name]
+        
+        try:
+            peaks.check_i2()
+        except ValueError:
+            peaks.remove_i2()
+
         return peaks
-    
-    def _get_names_with_index(self, i):
-        """return list of names with index i
-        if i is negative, gets indexes from high to low
+
+    def _is_asymmetric(self, i1=None, i2=None):
+        """Return true if peak has w1 and w2 objects.
+        
+        Args:
+            i1 (int): primary index i1. If i1='A', raises an error.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+        
+        Returns:
+            bool
         """
-        if i < 0:
-            try: 
-                i = np.sort(self.indexes())[i]
-            except IndexError:
-                raise AssertionError(f'index {i} does not exist\nPeak indexes available: {self.indexes()}')
+        #######################
+        # check primary index #
+        #######################
+        assert i1 != 'A', f'i1 must be a peak index (integer), not "A"'
+        if i1 is None:
+                if self.number_of_peaks(i2=i2) == 1:
+                    i1 = self._get_indexes_i1()[0]
+                else:
+                    raise ValueError('Peaks have multiple peaks and i1 must be defined')
+        assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+
+        #################
+        # is asymmetric #
+        #################
+        if self._has_i2():         
+            if f'w1_{i1}_{i2}' in self and f'w2_{i1}_{i2}' in self:
+                return True
+            elif f'w_{i1}_{i2}' in self:
+                return False
+        else:
+            if f'w1_{i1}' in self and f'w2_{i1}' in self:
+                return True
+            elif f'w_{i1}' in self:
+                return False
+    
+    def _use_area(self, i1=None, i2=None):
+        """returns True if area is found as a peak parameter.
+
+        Args:
+            i1 (int): primary index i1. If i1='A', raises an error.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+        
+        Returns:
+            bool
+        """
+        #######################
+        # check primary index #
+        #######################
+        assert i1 != 'A', f'i1 must be a peak index (integer), not "A"'
+        if i1 is None:
+                if self.number_of_peaks(i2=i2) == 1:
+                    i1 = self._get_indexes_i1()[0]
+                else:
+                    raise ValueError('Peaks have multiple peaks and i1 must be defined')
+        assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+        ############
+        # use area #
+        ############
+        if self._has_i2():
+            if f'area_{i1}_{i2}' in self:
+                return True
+            elif f'amp_{i1}_{i2}' in self:
+                return False
+        else:    
+            if f'area_{i1}' in self:
+                return True
+            elif f'amp_{i1}' in self:
+                return False
+
+    def _get_peaks_iterable(self, i2=None):
+        """Returns a list where each element is a Peak object with one peak.
+
+        Developers note: For now, we are returning a list, but we might return
+            a dict in the future.
+
+        Args:
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+        
+        Returns:
+            list
+        """         
+        final = [self._get_peaks_by_index(i1=i1, i2=i2) for i1 in self._get_indexes_i1(i2=i2)]
+        for peak in final:
+            # remove i2
+            try:
+                peak.check_i2()
+            except ValueError:
+                peak.remove_i2()
+
+            # user defined attrs
+            for attr in peak._get_user_attrs():
+                peak.__setattr__(attr, self.__dict__[attr])
             
-        assert i in self.indexes(), f'index {i} does not exist\nPeak indexes available: {self.indexes()}'
+            # additional attr
+            if 'A' in peak._get_indexes_i1():
+                peak._additional = self._additional
 
-        final = []
-        for name in self:
-            index = int(name.split('_')[1])
-            if index == i:
-                final.append(name)
         return final
-    
-    def get_params_with_index(self, i):
-        names = self._get_names_with_index(i=i)
-        final = {}
-        for name in names:
-            final[name.split('_')[0]] = self[name]
+            
+    def _get_spectrum_iterable(self, i1=None):
+        """Returns a list where each element a Peak object of each spectrum.
+
+        Developers note: For now, we are returning a list, but we might return
+            a dict in the future.
+        
+        If some spectrum with i2 does not have i1 defined, the respective list
+        element comes out empty.
+
+        Args:
+            i1 (int): primary index i1. Use i1='A' for additional parameters.      
+
+        Returns:
+            list
+        """
+        #########################
+        # check secondary index #
+        #########################
+        error_message = 'Peaks() does not have parameters from multiple spectra.'
+        has_i2 = self._has_i2()
+        if has_i2 is None:
+            return []
+        elif has_i2 == False:
+            raise ValueError(error_message)
+                   
+        # final
+        final = [self._get_peaks_by_index(i1=i1, i2=i2) for i2 in self._get_indexes_i2()]
+        for peaks in final:
+            # remove i2
+            try:
+                peaks.check_i2()
+            except ValueError:
+                peaks.remove_i2()
+
+            # user defined attrs
+            for attr in peaks._get_user_attrs():
+                peaks.__setattr__(attr, self.__dict__[attr])
+            # additional attr
+            if 'A' in peaks._get_indexes_i1():
+                peaks._additional = self._additional
+
         return final
 
-    def split_params(self):
-        indexes = self.indexes()
-        peaks = {}
-        for i in indexes:
-            peaks[i] = self.get_params_with_index(i)
-        return peaks
+    def _find_suitable_x(self):
+        """returns a array with x values for plotting.
 
-    def indexes(self):
-        """return list of all indexes."""
-        final = []
-        for name in self:
-            index = int(name.split('_')[1])
-            if index not in final:
-                final.append(index) 
-        return final
+        Returns:
+            array
+        """
+        if self._has_i2():
+            peaks_for_each_spectra = self._get_spectrum_iterable()
 
-    def is_asymmetric(self, i):
-        if f'w1_{i}' in self and f'w2_{i}' in self:
-            return True
-        elif f'w_{i}' in self:
-            return False
-        else:
-            raise ValueError(f'w not found for i={i}')
-    
-    def use_area(self, i):
-        if f'area_{i}' in self:
-            return True
-        elif f'amp_{i}' in self:
-            return False
-        else:
-            raise ValueError(f'area/amp not found for i={i}')
-    
-    def _find_suitable_x(self, i=None):
-        if i is None:
             vmin  = []
             vmax  = []
             step  = []
-
-            for i in self.indexes():
-                temp = self._find_suitable_x(i=i)
+            for peaks in peaks_for_each_spectra:
+                temp = peaks._find_suitable_x()
                 vmin.append(min(temp))
                 vmax.append(max(temp))
                 step.append(abs(temp[1]-temp[0]))
             return np.arange(min(vmin), max(vmax), min(step))
+
         else:
+            peaks = self._get_peaks_iterable()
+
+            vmin  = []
+            vmax  = []
+            step  = []
+            for peak in peaks:
+
+                # get width
+                if peak._is_asymmetric():
+                    w = peak[f'w1'].value + peak[f'w2'].value
+                    m = max([peak[f'm1'].value, peak[f'm2'].value])
+                else:
+                    w = peak[f'w'].value
+                    m = peak[f'm'].value
+
+                if w == 0:
+                    w = peak[f'c'].value*0.1
+                if w == 0:
+                    w = 1
+
+                # vmin and vmax
+                _vmin = peak[f'c'].value - w * (m*4 + 4)
+                _vmax = peak[f'c'].value + w * (m*4 + 4)
+
+                if _vmin == 0 and _vmax == 0:
+                    _vmin = -10
+                    _vmax = 10
+
+                # return np.arange(vmin, vmax, w/20)
+                vmin.append(_vmin)
+                vmax.append(_vmax)
+                step.append(w/20)
+            return np.arange(min(vmin), max(vmax), min(step))
+
+
+        if i1 == 'A':
+            raise ValueError('i1 = "A" is not valid')
+        if i1 is None and i2 is None:  # has_i2 is assumed False. Gets suitable x for full spectra
+            vmin  = []
+            vmax  = []
+            step  = []
+            for peak in self._get_peaks_iterable(i2=i2):
+                temp = peak._find_suitable_x()
+                vmin.append(min(temp))
+                vmax.append(max(temp))
+                step.append(abs(temp[1]-temp[0]))
+            return np.arange(min(vmin), max(vmax), min(step))
+        elif i1 is None:               # has_i2 is assumed True. Gets suitable x for full spectra
+            vmin  = []
+            vmax  = []
+            step  = []
+            for peak in self._get_peaks_iterable(i2=i2):
+                temp = peak._find_suitable_x()
+                vmin.append(min(temp))
+                vmax.append(max(temp))
+                step.append(abs(temp[1]-temp[0]))
+            return np.arange(min(vmin), max(vmax), min(step))
+        elif i2 is None:  # has_i2 is assumed False. Gets suitable x for peak i1
+            peak = self._get_peaks_by_index(i1=i1, i2=i2)
+
             # get width
-            if self.is_asymmetric(i):
-                w = self[f'w1_{i}'].value + self[f'w2_{i}'].value
-                m = max([self[f'm1_{i}'].value, self[f'm2_{i}'].value])
+            if peak._is_asymmetric(i):
+                w = peak[f'w1_{i1}'].value + peak[f'w2_{i1}'].value
+                m = max([peak[f'm1_{i1}'].value, peak[f'm2_{i1}'].value])
             else:
-                w = self[f'w_{i}'].value
-                m = self[f'm_{i}'].value
+                w = peak[f'w_{i1}'].value
+                m = peak[f'm_{i1}'].value
 
             if w == 0:
-                w = self[f'c_{i}'].value*0.1
+                w = peak[f'c_{i1}'].value*0.1
             if w == 0:
                 w = 1
 
-            vmin = self[f'c_{i}'].value - w * (m*4 + 4)
-            vmax = self[f'c_{i}'].value + w * (m*4 + 4)
+            # vmin and vmax
+            vmin = peak[f'c_{i1}'].value - w * (m*4 + 4)
+            vmax = peak[f'c_{i1}'].value + w * (m*4 + 4)
+
+            if vmin == 0 and vmax == 0:
+                vmin = -10
+                vmax = 10
+
+            return np.arange(vmin, vmax, w/20)
+        else:             # has_i2 is assumed True.  Gets suitable x for peak i1 and i2
+            peak = self._get_peaks_by_index(i1=i1, i2=i2)
+
+            # get width
+            if peak._is_asymmetric(i):
+                w = peak[f'w1_{i1}_{i2}'].value + peak[f'w2_{i1}_{i2}'].value
+                m = max([peak[f'm1_{i1}_{i2}'].value, peak[f'm2_{i1}_{i2}'].value])
+            else:
+                w = peak[f'w_{i1}_{i2}'].value
+                m = peak[f'm_{i1}_{i2}'].value
+
+            if w == 0:
+                w = peak[f'c_{i1}_{i2}'].value*0.1
+            if w == 0:
+                w = 1
+
+            # vmin and vmax
+            vmin = peak[f'c_{i1}_{i2}'].value - w * (m*4 + 4)
+            vmax = peak[f'c_{i1}_{i2}'].value + w * (m*4 + 4)
 
             if vmin == 0 and vmax == 0:
                 vmin = -10
@@ -295,9 +693,280 @@ class Peaks(lmfit.Parameters):
 
             return np.arange(vmin, vmax, w/20)
 
-    # save and load (TODO)*****
-    def save(self, filepath='./Untitled.txt', check_overwrite=False):
-        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
+    #########
+    # basic #
+    #########
+    def append(self, amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None, i1=None, i2=None):
+        """
+        """     
+        #########################
+        # check secondary index #
+        #########################
+        error_message = 'Peaks() has parameters from multiple spectra.' +\
+                        'Therefore, you must indicate the spectrum index i2.' +\
+                        'You can also use i2="all" to add this parameter to ' +\
+                        'every spectra'
+        has_i2 = self._has_i2()
+        if has_i2 is None and i2 == 'all':
+            raise ValueError('i2 cannot be "all", because Peaks does not have secondary (spectrum) i2 indexes')
+        elif has_i2 == True:
+            if i2 is None:
+                raise ValueError(error_message)
+            assert i2 == 'all' or br.numanip.is_integer(i2), 'i2 must be an integer or "all"'
+            # elif br.numanip.is_integer(i2):
+            #     if i2 not in self._get_indexes_i2():
+            #         raise ValueError(f'i2={i2} cannot be found\nvalid i2: {self._get_indexes_i2()}')
+            # elif i2 == 'all':
+            #     pass
+            # else:
+            #     raise TypeError('i2 must be an integer or "all"')
+        
+        #######################
+        # check primary index #
+        #######################
+        # returns a _i1
+        if i1 is None:
+            if has_i2 == None and br.numanip.is_integer(i2):
+                _i1 = 0                
+            elif has_i2 == True and i2 == 'all':
+                _i1 = -1
+                for _i2 in self._get_indexes_i2():
+                    _indexes = self._get_indexes_i1(i2=_i2)
+                    if _indexes != []:
+                        temp = max(_indexes)
+                        if _i1 < temp:
+                            _i1 = temp
+                _i1 += 1
+                # for _i2 in self._get_indexes_i2():
+                #     self.append(amp=amp, c=c, w=w, w1=w1, w2=w2, m=m, m1=m1, m2=m2, area=area, i1=None, i2=_i2)
+                # return
+            elif has_i2 == True and br.numanip.is_integer(i2):
+                if i2 in self._get_indexes_i2():
+                    _indexes = self._get_indexes_i1(i2=i2)
+                    if _indexes == []:
+                        _i1 = 0
+                    else:
+                        _i1 = max(_indexes) + 1
+                else:
+                    _i1 = 0
+            else:
+                _indexes = self._get_indexes_i1()
+                if _indexes == []:
+                    _i1 = 0
+                else:
+                    _i1 = max(_indexes) + 1
+        else:
+            assert br.numanip.is_integer(i1), 'i must be an integer'
+            if has_i2 == None and br.numanip.is_integer(i2):
+                _i1 = i1
+            elif has_i2 and i2 == 'all':
+                for _i2 in self._get_indexes_i2():
+                    if i1 in self._get_indexes_i1(i2=_i2):
+                        raise ValueError(f'i1={i1} already exists in spectrum index i2={_i2}\nPlease, select a valid index i1')
+                _i1 = i1
+            elif has_i2 and br.numanip.is_integer(i2):
+                if i1 in self._get_indexes_i1(i2=i2):
+                    raise ValueError(f'i1={i1} already exists in spectrum index i2={i2}\nPlease, select a valid index i1')
+                _i1 = i1
+            else:
+                if i1 in self._get_indexes_i1():
+                    raise ValueError(f'i1={i1} already exists\nPlease, select a valid index i1')
+                _i1 = i1
+
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        assert area is not None or amp is not None, 'amp or area not defined'
+        assert c    is not None, 'c not defined'
+        assert w    is not None or (w1 is not None and w2 is not None), 'Either w or (w1 and w2) must be defined'
+
+        assert area is None or br.numanip.is_number(area), 'area must be a number'
+        assert amp  is None or br.numanip.is_number(amp), 'amp must be a number'
+        assert c    is None or br.numanip.is_number(c), 'c must be a number'
+        assert w    is None or br.numanip.is_number(w), 'w must be a number'
+        assert w1   is None or br.numanip.is_number(w1), 'w1 must be a number'
+        assert w2   is None or br.numanip.is_number(w2), 'w2 must be a number'
+        assert m    is None or br.numanip.is_number(m), 'm must be a number'
+        assert m1   is None or br.numanip.is_number(m1), 'm1 must be a number'
+        assert m2   is None or br.numanip.is_number(m2), 'm2 must be a number'
+
+        if br.numanip.is_number(w):
+            assert w >= 0, 'w must be positive'
+        if br.numanip.is_number(w1):
+            assert w1 >= 0, 'w1 must be positive'
+        if br.numanip.is_number(w2):
+            assert w2 >= 0, 'w2 must be positive'
+
+        if br.numanip.is_number(m):
+            assert m <= 1 and m >= 0, 'm must be positive less than 1'
+        if br.numanip.is_number(m1):
+            assert m1 <= 1 and m1 >= 0, 'm1 must be positive less than 1'
+        if br.numanip.is_number(m2):
+            assert m2 <= 1 and m2 >= 0, 'm2 must be positive less than 1'
+
+        ############
+        # add peak #
+        ############
+        if has_i2 == True and i2 == 'all':
+            for _i2 in self._get_indexes_i2():
+                self.append(i1=_i1, i2=_i2, amp=amp, c=c, w=w, w1=w1, w2=w2, m=m, m1=m1, m2=m2, area=area)
+            return
+        elif has_i2 == True or (has_i2 == None and i2 is not None):
+            if area is None:
+                super().add(f'amp_{_i1}_{i2}',  value=amp,  vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            else:
+                super().add(f'area_{_i1}_{i2}', value=area, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            
+            super().add(f'c_{_i1}_{i2}',        value=c,    vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
+
+            if w1 is not None and w2 is not None:
+                super().add(f'w1_{_i1}_{i2}', value=w1, vary=True,     min=0,       max=np.inf, expr=None, brute_step=None)
+                super().add(f'w2_{_i1}_{i2}', value=w2, vary=True,     min=0,       max=np.inf, expr=None, brute_step=None)
+                super().add(f'm1_{_i1}_{i2}', value=m1, vary=False,    min=0,       max=1,      expr=None, brute_step=None)
+                super().add(f'm2_{_i1}_{i2}', value=m1, vary=False,    min=0,       max=1,      expr=None, brute_step=None)
+            else:
+                super().add(f'w_{_i1}_{i2}',  value=w,  vary=True,     min=0,       max=np.inf, expr=None, brute_step=None)
+                super().add(f'm_{_i1}_{i2}',  value=m,  vary=False,    min=0,       max=1,      expr=None, brute_step=None)
+            return
+        elif has_i2 == False or has_i2 == None:
+            if area is None:
+                super().add(f'amp_{_i1}',  value=amp,  vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            else:
+                super().add(f'area_{_i1}', value=area, vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            super().add(f'c_{_i1}',        value=c,    vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            if w1 is not None and w2 is not None:
+                super().add(f'w1_{_i1}',   value=w1,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+                super().add(f'w2_{_i1}',   value=w2,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+                super().add(f'm1_{_i1}',   value=m1,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+                super().add(f'm2_{_i1}',   value=m2,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            else:
+                super().add(f'w_{_i1}',    value=w,    vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+                super().add(f'm_{_i1}',    value=m,    vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            return
+
+    def add(self, name, value=None, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None, i2=None):
+        """
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        assert '_' not in name, 'name cannot have "_" (underscore)'
+        assert 'amp'  == name,  'name cannot be "amp"\namp is a reserved word'
+        assert 'area' == name,  'name cannot be "area"\area is a reserved word'
+        assert 'c'    == name,  'name cannot be "c"\nc is a reserved word'
+        assert 'w'    == name,  'name cannot be "w"\nw is a reserved word'
+        assert 'w1'   == name,  'name cannot be "w1"\nw1 is a reserved word'
+        assert 'w2'   == name,  'name cannot be "w2"\nw2 is a reserved word'
+        assert 'm'    == name,  'name cannot be "m"\nm is a reserved word'
+        assert 'm1'   == name,  'name cannot be "m1"\nm1 is a reserved word'
+        assert 'm2'   == name,  'name cannot be "m2"\nm2 is a reserved word'
+
+        #########################
+        # check secondary index #
+        #########################
+        error_message = 'Peaks() has parameters from multiple spectra.' +\
+                        'Therefore, you must indicate the spectrum index i2.' +\
+                        'You can also use i2="all" to add this parameter to ' +\
+                        'every spectra'
+        has_i2 = self._has_i2()
+        if has_i2:
+            if i2 is None:
+                raise ValueError(error_message)
+            elif br.numanip.is_integer(i2):
+                if i2 not in self._get_indexes_i2():
+                    raise ValueError(f'i2={i2} cannot be found\nvalid i2: {self._get_indexes_i2()}')
+            elif i2 == 'all':
+                pass
+            else:
+                raise TypeError('i2 must be an integer or "all"')
+        
+        if i2 == 'all':
+            for _i2 in self._get_indexes_i2():
+                self.add(name, value=value, vary=vary, min=min, max=max, expr=expr, brute_step=brute_step, i2=_i2)
+        else:
+            name += '_A_' + str(i2)
+            super().add(name, value=value, vary=vary, min=min, max=max, expr=expr, brute_step=brute_step)
+
+    def remove(self, i1, i2=None):
+        """Remove peak.
+
+        Args:
+            i1 (int): peaks to be removed. If i1='A', removes additional parameters.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+
+        Returns:
+            None
+        """
+        #########################
+        # check secondary index #
+        #########################
+        error_message1 = 'Peaks() has parameters from multiple spectra.' +\
+                        'Therefore, you must indicate the spectrum index i2.'
+        error_message2 = 'Peaks() does not have parameters from multiple spectra.' +\
+                        f'Therefore, i2 must be set to None and not {i2}'
+        has_i2 = self._has_i2()
+        if has_i2 is None:
+            raise ValueError('no parameters to remove')
+        elif has_i2:
+            if i2 is None:
+                raise ValueError(error_message1)
+            elif br.numanip.is_integer(i2):
+                if i2 not in self._get_indexes_i2():
+                    raise ValueError(f'i2={i2} cannot be found\nvalid i2: {self._get_indexes_i2()}')
+            else:
+                raise TypeError('i2 must be an integer')
+        else:
+            if i2 is not None:
+                raise ValueError(error_message2)
+            
+        #######################
+        # check primary index #
+        #######################
+        assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+        #####################
+        # remove parameters #
+        #####################
+        for name in self._get_names_by_index(i1=i1, i2=i2):
+            del self[name]
+
+    def clear(self):
+        """Erase all parameters."""
+        super().clear()
+
+    #################
+    # save and load #
+    #################
+    def _create_header(self, verbose=False):
+        """Gather attrs to be saved to a file."""
+        header = ''
+        attrs = self._get_user_attrs()
+        attrs += ['_additional']
+        for name in attrs:
+            if self.__dict__[name] is None:
+                header += f'{name}: None'  + '\n'
+            elif isinstance(self.__dict__[name], str):
+                temp2 = str(self.__dict__[name]).replace('\n','\\n')
+                header += f'{name}: \"{temp2}\"'  + '\n'
+            elif isinstance(self.__dict__[name], dict) or isinstance(self.__dict__[name], MutableMapping):
+                if verbose:
+                    type_ = str(type(self.__dict__[name]))
+                    print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
+            elif isinstance(self.__dict__[name], Iterable):
+                header += f'{name}: {list(self.__dict__[name])}'  + '\n'
+            elif br.numanip.is_number(self.__dict__[name]):
+                tosave = str(self.__dict__[name])
+                if tosave[-1] == '\n':
+                    tosave = tosave[:-1]
+                header += f'{name}: {tosave}'  + '\n'
+            else:
+                temp2 = str(self.__dict__[name]).replace('\n','\\n')
+                header += f'{name}: \"{temp2}\"'  + '\n'
+        return header[:-1]
+    
+    def save(self, filepath=None, check_overwrite=False):
+        r"""Save peak to a text file. Wrapper for `json.dump()`_.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -309,27 +978,30 @@ class Peaks(lmfit.Parameters):
 
         .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
         """
+        # filepath
+        if filepath is None:
+            if filepath == '':
+                raise TypeError("Missing 1 required argument: 'filepath'")
+            else:
+                filepath = self.filepath               
         filepath = Path(filepath)
+
         # check overwrite
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                    if br.interact.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
-                        warnings.warn('File not saved because user did not allow overwriting.')
                         return
                 else:
-                    warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
-                    filepath = filepath/'Untitled.txt'
+                    raise AttributeError('filepath not pointing to a file.')
 
-        string2save = ''
-        for peak in self:
-            string2save += peak._string2save()
-            string2save += '\nend_of_peak\n'
+        # to add header with user defined parameters we have to use self.dumps
+        # to create a string, then add the header TODO
 
-        with open(str(filepath), 'w') as file:
-            file.write(string2save)
+        # save
+        self.dump(filepath.open('w'))
 
     def load(self, filepath):
         """Load peak from a text file. Wrapper for `json.load()`_.
@@ -343,149 +1015,448 @@ class Peaks(lmfit.Parameters):
 
         .. _json.load(): https://docs.python.org/3/library/json.html#json.load
         """
+        print('gg')
+        # filepath
+        if filepath is None:
+            if filepath == '':
+                raise TypeError("Missing 1 required argument: 'filepath'")
+            else:
+                filepath = self.filepath               
         filepath = Path(filepath)
 
-        # remove all peaks
-        for i in range(len(self)):
-            self.remove(0)
+        # clear
+        self.clear()
 
-        with open(str(filepath), 'r') as file:
-            try:
-                peaks_str = file.read().split('end_of_peak')
-                for peak_str in peaks_str:
-                    temp = br.Peak(amp=0, c=0, fwhm=1)
-                    obj = json.loads(peak_str)
-                    temp._obj_decode(obj)
-                    self.append(temp)
-            except json.JSONDecodeError as e:
-                if peak_str == '\n':
-                    pass
-                else:
-                    raise e
+        # read header
+        # TODO
 
-    # basic
-    def remove(self, i):
-        """Remove peak.
+        # load
+        super().load(filepath.open('r'))
+
+    #################
+    # check methods #
+    #################
+    def check_feasibility(self):
+        """Check if start values are within boundaries."""
+        for p in self:
+            value = self[p].value
+            vmax  = self[p].max
+            vmin  = self[p].min
+
+            if value > vmax or value < vmin:
+                raise ValueError(f'Start value for parameter {p} is out of bounds\nbound max = {vmax}\nstart value = {value}\nbound min = {vmin}')
+
+    def check_i2(self):
+        """raises error if i2 is defined, but is unique (only one spectrum i2)."""
+        error_message = 'Peaks() have secondary (spectrum) index i2 defined.' +\
+                        f'However, i2 seems to be unique.' +\
+                         'Therefore, i2 is not necessary. Please, use peaks.remove_i2()'
+        
+        if self._has_i2():
+            if len(self._get_indexes_i2()) == 1:
+                raise ValueError(error_message)
+        return
+
+    def remove_i2(self):
+        """removes secondary (spectrum) index i2 from parameters."""
+        if self._has_i2():
+            if len(self._get_indexes_i2()) == 1:
+                to_remove = []
+                for name in self._get_names_by_index():
+                    to_remove.append(name)
+                    super().add('_'.join(name.split('_')[:-1]), value=self[name].value, vary=self[name].vary, min=self[name].min, max=self[name].max, expr=self[name].expr, brute_step=self[name].brute_step)
+                for name in to_remove:
+                    del self[name]
+            else:
+                raise ValueError('Peaks have multiple i2. Can only remove i2 if only one i2 exists')
+        return
+    
+    ##################
+    # base modifiers #
+    ##################
+    def set_calib(self, value):
+        """Set calibration value.
 
         Args:
-            key (int): peaks to be removed.
+            value (number): calibration value (centers and widths will be multiplied
+                by this value).
 
         Returns:
             None
         """
-        names = self._get_names_with_index(i=i)
-        for name in names:
-            del self[name]
-
-    def clear(self):
-        """Erase all peaks."""
-        super().clear()
-
-    def replace_index(self, i, i_new):
-        """Change the index of a peak."""
-        # check i exists
-
-        # check i_new is int
-
-        # get params
-        params = self.get_params_with_index(i)
-
-        # create new
-        for p in params:
-            name_new = params[p].name.split('_')[0] + '_' + str(i_new)
-            self.add(name=name_new, 
-                     value=params[p].value, 
-                     vary=params[p].vary, 
-                     min=params[p].min, 
-                     max=params[p].max, 
-                     expr=params[p].expr, 
-                     brute_step=params[p].brute_step)
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if value == 0:
+            raise ValueError('cannot set calib = 0.0') 
+        elif value == 1:
+            return
         
-        # delete old
-        self.remove(i)
-
-    def fix_indexes(self):
-        """Fix indexes so they start from zero."""
-        indexes = self.indexes()
-        final = len(indexes)
+        # apply
+        for name in self:
+            if name.split('_')[0] == 'c':
+                self[name].value = self[name].value*value
+            elif name.split('_')[0] == 'w':
+                self[name].value = abs(self[name].value*value)
         
-        # replace indexes
-        for i_new, index in enumerate(np.sort(indexes)):
-            if i_new != index:
-                self.replace_index(index, i_new)
+    def set_shift(self, value):
+        """Shift peaks.
 
-        # remove
-        for index in self.indexes():
-            if index >= final:
-                self.remove(index)
-
-    def reorder(self, attr='c'):
-        """Change peak indexes based on the position of the peak or other attr."""
-        raise NotImplementedError('sorry, not implemented yet.')
-
-    # plot and visualization
-    def plot(self, i=None, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
-        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
+        Adds a value to the center parameter.
 
         Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            offset (number, optional): defines a vertical offset. Default is 0.
-            shift (number, optional): horizontal shift value. Default is 0.
-            factor (number, optional): multiplicative factor on the y axis.
-                Default is 1.
-            calib (number, optional): multiplicative factor on the x axis.
-                Default is 1.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
+            value (float or int): shift value (value will be added to center c).
 
         Returns:
-            `ErrorbarContainer`_
-
-        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
-        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+            None
         """
-        if ax is None:
-            ax = plt
-            if br.settings.FIGURE_FORCE_NEW_WINDOW:
-                br.figure()
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if value == 0:
+            return
+        
+        for name in self:
+            if name.split('_')[0] == 'c':
+                self[name].value += value
 
-        if i is None:
-            for i in self.indexes():
-                self.plot(i=i, ax=ax, offset=offset, shift=shift, factor=factor, calib=calib, **kwargs)
+    def set_offset(self, value):
+        """Set offset value (in fact, it does nothing)
+
+        Applying an offset, should not change the amp or area of peaks.
+
+        Args:
+            value (value): offset value.
+
+        Returns:
+            None
+        """
+        pass
+
+    def set_factor(self, value):
+        """Set multiplicative factor.
+
+        Args:
+            value (number): multiplicative factor (amplitudes and areas will be
+                multiplied by this value).
+
+        Returns:
+            None
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if value == 0:
+            raise ValueError('cannot set factor = 0.')
+        elif value == 1:
+            return
+
+        for name in self:
+            if name.split('_')[0] == 'amp' or name.split('_') == 'area':
+                self[name].value  = self[name].value * value
+  
+    #############
+    # modifiers #
+    #############
+
+    ##############
+    # extractors #
+    ##############
+    def copy(self, *args, **kwargs):
+        """Return a copy of the data.
+
+        Usage:
+            p2.copy(p1)                 # s2 is now a copy of s1
+            p2.copy(peaks=p1)
+            p2 = p1.copy()              
+
+            peak = p1.copy(i1=2)        # peak is a copy of peak with index i1, assuming p1 does not have multiple spectra
+            peak = p1.copy(2)
+
+            peak = p1.copy(i1=2, i2=3)  # peak is a copy of peak with index i1 from spectrum i2
+            peak = p1.copy(2, 3)
+
+            peak = p1.copy(i2=3)        # peak ia a copy of all peaks from spectrum i2.
+
+        Args:
+            peaks (Peaks, optional): Peaks object is copied. See usage.
+            i1 (int): primary index i1. Use i1='A' for additional parameters.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes.
+
+        Returns:
+            :py:attr:`Peaks`
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        error_message = 'Wrong input. Peaks object could not be copied. Please, use one ' +\
+                        'of the examples below:\n' +\
+                        '\n' +\
+                        'p2.copy(peaks=p1)\n' +\
+                        'p2.copy(p1)\n' +\
+                        'p2 = p1.copy()' +\
+                        '\n' +\
+                        'peak = p1.copy(i1=2)\n' +\
+                        'peak = p1.copy(2)\n' +\
+                        '\n' +\
+                        'peak = p1.copy(i1=2, i2=3)\n' +\
+                        'peak = p1.copy(2, 3)\n' +\
+                        '\n' +\
+                        'peak = p1.copy(i2=3)'
+        if kwargs != {} and args != ():
+            raise AttributeError(error_message)
+        if any([item not in ['peaks', 'i1', 'i2'] for item in kwargs.keys()]):
+            raise AttributeError(error_message)
+        if len(args) > 2 or len(kwargs) > 2:
+            raise AttributeError(error_message)
+        if ('i1' in kwargs or 'i2' in kwargs) and 'peaks' in kwargs:
+            raise AttributeError(error_message)
+
+        #################
+        # sorting input #
+        #################
+        peaks = None
+        i1    = None
+        i2    = None
+        # keyword arguments
+        if 'peaks' in kwargs:
+            peaks = kwargs['peaks']
+        elif 'i1' in kwargs:
+            i1 = kwargs['i1']
+            if 'i2' in kwargs:
+                i2 = kwargs['i2']
+        elif 'i2' in kwargs:
+            i2 = kwargs['i2']
+
+        # positional arguments
+        if len(args) == 1:
+            if isinstance(args[0], Peaks):
+                peaks = args[0]
+            else:
+                i1 = args[0]
+        elif len(args) == 2:
+            i1 = args[0]
+            i2 = args[1]
+
+        # validating types
+        if peaks is not None:
+            assert isinstance(peaks, Peaks), 'Only type br.Peaks can be copied to type br.Peaks'
+        if i1 is not None:
+            assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
+        if i2 is not None:
+            assert br.numanip.is_integer(i2), f'i1 must be a integer, not {type(i2)}'
+
+        ##################################
+        # if peaks is passed, copy peaks #
+        ##################################
+        if peaks is not None:
+            self.clear()
+            for name in peaks:
+                self[name] = copy.deepcopy(peaks[name])
+
+            # user defined attrs
+            for attr in self._get_user_attrs():
+                self.__delattr__(attr)
+            for attr in peaks._get_user_attrs():
+                self.__setattr__(attr, peaks.__dict__[attr])
+            # additional attr
+            peaks._additional = self._additional
+            return
+        
+        ###############################
+        # Otherwise, self is returned #
+        ###############################
         else:
-            # data
-            c    = self[f'c_{i}'].value
-            amp  = self.calculate_amp(i)
-            xerr = self.calculate_w(i)/2
+            peaks = self._get_peaks_by_index(i1=i1, i2=i2)
+            # user defined attrs
+            for attr in self._get_user_attrs():
+                peaks.__setattr__(attr, self.__dict__[attr])
+            # additional attr
+            if 'A' in peaks._get_indexes_i1():
+                peaks._additional = self._additional
+            return copy.deepcopy(peaks)
 
-            if 'lw' not in kwargs and 'linewidth' not in kwargs:
-                kwargs['lw'] = 0
-            if 'elinewidth' not in kwargs :
-                kwargs['elinewidth'] = 2
-            if 'marker' not in kwargs :
-                kwargs['marker'] = 'o'
-            if 'markersize' not in kwargs and 'ms' not in kwargs:
-                kwargs['markersize'] = 5
+    ########################
+    # calculation and info #
+    ########################
+    def number_of_peaks(self, i2=None):
+        """returns the number of peaks
 
-            return ax.errorbar((c*calib)+shift, amp*factor+offset, xerr=xerr*calib, **kwargs)
+        Does not include additional parameters.
+        
+        Args:
+            i2 (int, optional): spectrum index. Only used if peaks has double 
+                indexes.
 
-    # extractors
-    def split_peaks(self):
-        """return a dict with type Peaks."""
-        indexes = self.indexes()
-        peaks = {}
-        for i in indexes:
-            peaks[i] = Peaks()
-            temp = self.get_params_with_index(i)
-            for param in temp:
-                temp[param] = {'name':param + '_0',  
-                               'value':temp[param].value, 
-                               'min':temp[param].min, 
-                               'max':temp[param].max,}
-                peaks[i].add(**temp[param])
-        return peaks
+        Returns:
+            int
+        """
+        l = self._get_indexes_i1(i2=i2)
+        if 'A' in l:
+            return len(l)-1
+        else:
+            return len(l)
     
-    def calculate_spectrum(self, i=None, x=None):
-        """Return peak curve.
+    def number_of_i2(self):
+        """returns the number of secondary (spectrum) indexes i2.
+
+        Returns:
+            int
+        """
+        return len(self._get_indexes_i2())
+    
+    def number_of_additional(self, i2=None):
+        """returns the number of additional parameters
+        
+        Args:
+            i2 (int, optional): spectrum index. Only used if peaks has double 
+                indexes.
+
+        Returns:
+            int
+        """
+        return len(self._get_names_by_index(i1='A', i2=i2))
+
+    def get_area(self, i1=None, i2=None):
+        """Returns the area of a peak
+
+        i1 (int): primary index i1. If i1='A', raises an error.
+        i2 (int, optional): secondary (spectrum) index i2. Only used if 
+            peaks has secondary indexes. Default is None.
+
+        Returns:
+            number
+        """
+        #######################
+        # check primary index #
+        #######################
+        assert i1 != 'A', f'i1 must be a peak index (integer), not "A"'
+        if i1 is None:
+                if self.number_of_peaks(i2=i2) == 1:
+                    i1 = self._get_indexes_i1()[0]
+                else:
+                    raise ValueError('Peaks have multiple peaks and i1 must be defined')
+        assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+
+        if self._has_i2():
+            if self._use_area(i1=i1, i2=i2):
+                return self[f'area_{i1}_{i2}']
+            else:
+                if self._is_asymmetric(i1=i1, i2=i2):
+                    c1 = self[f'm1_{i1}_{i2}'].value/np.pi + (1-self[f'm1_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    c2 = self[f'm2_{i1}_{i2}'].value/np.pi + (1-self[f'm2_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'amp_{i1}_{i2}'].value * (self[f'w1_{i1}_{i2}'].value*c1 + self[f'w2_{i1}_{i2}'].value*c2)/2
+                else:
+                    c = self[f'm_{i1}_{i2}'].value/np.pi + (1-self[f'm_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'amp_{i1}_{i2}'].value * self[f'w_{i1}_{i2}'].value * c
+        else:
+            if self._use_area(i1=i1):
+                return self[f'area_{i1}']
+            else:
+                if self._is_asymmetric(i1=i1):
+                    c1 = self[f'm1_{i1}'].value/np.pi + (1-self[f'm1_{i1}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    c2 = self[f'm2_{i1}'].value/np.pi + (1-self[f'm2_{i1}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'amp_{i1}'].value * (self[f'w1_{i1}'].value*c1 + self[f'w2_{i1}'].value*c2)/2
+                else:
+                    c = self[f'm_{i1}'].value/np.pi + (1-self[f'm_{i1}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'amp_{i1}'].value * self[f'w_{i1}'].value * c
+
+    def get_amp(self, i1=None, i2=None):
+        """Returns the amplitude of a peak
+
+        i1 (int): primary index i1. If i1='A', raises an error.
+        i2 (int, optional): secondary (spectrum) index i2. Only used if 
+            peaks has secondary indexes. Default is None.
+
+        Returns:
+            number
+        """
+        #######################
+        # check primary index #
+        #######################
+        assert i1 != 'A', f'i1 must be a peak index (integer), not "A"'
+        if i1 is None:
+            if self.number_of_peaks(i2=i2) == 1:
+                i1 = self._get_indexes_i1()[0]
+            else:
+                raise ValueError('Peaks have multiple peaks and i1 must be defined')
+        assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+        if self._has_i2():
+            if self._use_area(i1=i1, i2=i2) == False:
+                return self[f'amp_{i1}_{i2}']
+            else:
+                if self._is_asymmetric(i1=i1, i2=i2):
+                    c1 = self[f'm1_{i1}_{i2}'].value/np.pi + (1-self[f'm1_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    c2 = self[f'm2_{i1}_{i2}'].value/np.pi + (1-self[f'm2_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'area_{i1}_{i2}'].value * 2 /(self[f'w1_{i1}_{i2}'].value*c1 + self[f'w2_{i1}_{i2}'].value*c2)
+                else:
+                    c = self[f'm_{i1}_{i2}'].value/np.pi + (1-self[f'm_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'area_{i1}_{i2}'].value/self[f'w_{i1}_{i2}'].value/c
+        else:
+            if self._use_area(i1=i1) == False:
+                return self[f'amp_{i1}']
+            else:
+                if self._is_asymmetric(i1=i1):
+                    c1 = self[f'm1_{i1}'].value/np.pi + (1-self[f'm1_{i1}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    c2 = self[f'm2_{i1}'].value/np.pi + (1-self[f'm2_{i1}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'area_{i1}'].value * 2 /(self[f'w1_{i1}'].value*c1 + self[f'w2_{i1}'].value*c2)
+                else:
+                    c = self[f'm_{i1}'].value/np.pi + (1-self[f'm_{i1}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
+                    return self[f'area_{i1}'].value/self[f'w_{i1}'].value/c
+
+    def get_w(self, i1=None, i2=None):
+        """Returns the width of a peak
+
+        i1 (int): primary index i1. If i1='A', raises an error.
+        i2 (int, optional): secondary (spectrum) index i2. Only used if 
+            peaks has secondary indexes. Default is None.
+
+        Returns:
+            number
+        """
+        #######################
+        # check primary index #
+        #######################
+        assert i1 != 'A', f'i1 must be a peak index (integer), not "A"'
+        if i1 is None:
+                if self.number_of_peaks(i2=i2) == 1:
+                    i1 = self._get_indexes_i1()[0]
+                else:
+                    raise ValueError('Peaks have multiple peaks and i1 must be defined')
+        assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
+
+        if self._has_i2():
+            if self._is_asymmetric(i1=i1, i2=i2):
+                return self[f'w1_{i1}_{i2}'].value + self[f'w2_{i1}_{i2}'].value
+            else:
+                return self[f'w_{i1}_{i2}'].value
+        else:
+            if self._is_asymmetric(i1=i1):
+                return self[f'w1_{i1}'].value + self[f'w2_{i1}'].value
+            else:
+                return self[f'w_{i1}'].value
+
+    def iterable(self):
+        """Returns an iterable.
+
+        If secondary index i2 is present, iterate over spectra, 
+            otherwise, iterate over peaks.
+
+        Returns:
+            Iterable
+        """
+        if self._has_i2():
+            for peaks in self._get_spectrum_iterable():
+                yield peaks
+        else:
+            for peaks in self._get_peaks_iterable():
+                yield peaks
+
+    def calculate_spectrum(self, x=None):
+        """Return peaks curve.
 
         Args:
             x (list, optional): x values to which the curve will be calculated.
@@ -495,24 +1466,22 @@ class Peaks(lmfit.Parameters):
         Returns:
             :py:class:`Spectrum`.
         """
+        error_message = 'Peaks() has parameters from multiple spectra.' +\
+                        'Therefore, spectrum cannot be calculated.'
+        if self._has_i2():
+            raise ValueError(error_message)
+        
         if x is None:
-            x = self._find_suitable_x(i=i)
-        f = self.model(i=i)
+            x = self._find_suitable_x()
+        f = self.model()
 
         s = br.Spectrum(x=x, y=f(x))
 
-        # # copy modifiers
-        # s._shift  = self.shift
-        # # s._shift_roll    = self.shift_roll  # cannot copy shift_roll because step might be different
-        # s._shift_interp  = self.shift_interp
-        # s._factor = self.factor
-        # s._calib  = self.calib
-        # s._offset = self.offset
         return s
 
     def calculate_spectra(self, x=None):
-        """Return each peak spectrum separately.
-
+        """Return a Spectra object.
+         
         Args:
             x (list, optional): x values to which the curve will be calculated.
                 If None, a suitable x will be constructed.
@@ -523,138 +1492,168 @@ class Peaks(lmfit.Parameters):
         if x is None:
             x = self._find_suitable_x(i=i)
 
-        indexes = self.indexes()
-        n_peaks = len(indexes)
-
-        if n_peaks > 0:
-            ss = br.Spectra(n_peaks)
-            for j, i in enumerate(indexes):
-                ss[i] = self.calculate_spectrum(i=i, x=x)
-            return ss
+        ss = br.Spectra()
+        if self._has_i2():
+            for peaks in self._get_spectrum_iterable():
+                ss.append(peaks.calculate_spectrum(x=x))
         else:
-            raise ValueError('No peaks defined.')
-    
-    # calculation and info
-    def _model_str(self, i=None):
-        """Returns string for building peak function.
+            for peaks in self._get_peaks_iterable():
+                ss.append(peaks.calculate_spectrum(x=x))
+        return ss
+
+    def _model_str(self, i1=None, i2=None):
+        """Returns string for building model.
+
+        Args:
+            i1 (int): primary index i1. Use i1='A' for additional parameters.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
 
         Returns:
             function f(x) as string
         """
-        if i is None:
-            final = ''
-            for i in self.indexes():
-                final += self._model_str(i) + ' + '
+        if i2 is None:
+            if i1 is None:
+                final = ''
+                for i1 in self._get_indexes_i1(i2=i2):
+                    final += self._model_str(i1=i1, i2=i2) + ' + '
+                
+                # add additional if string
+                if self._has_additional():
+                    if isinstance(self.additional, str):
+                        final += self.additional  + ' + '
+                return final[:-3]
+
+            if self._is_asymmetric(i1=i1):
+                if self._use_area(i1=i1):
+                    final = f"np.heaviside(c_{i1}-x, 0)*br.voigt_area_fwhm(x, area_{i1}, c_{i1}, w1_{i1},  m1_{i1}) + np.heaviside(x-c_{i1}, 0)*br.voigt_area_fwhm(x, area_{i1}, c_{i1},  w2_{i1},  m2_{i1}) + br.dirac_delta(x, amp_{i1}, c_{i1})" 
+                else:
+                    final = f"np.heaviside(c_{i1}-x, 0)*br.voigt_fwhm(x, amp_{i1}, c_{i1}, w1_{i1},  m1_{i1}) + np.heaviside(x-c_{i1}, 0)*br.voigt_fwhm(x, amp_{i1}, c_{i1},  w2_{i1},  m2_{i1}) + br.dirac_delta(x, amp_{i1}, c_{i1})" 
+            else:
+                if self._use_area(i1=i1):
+                    final = f"br.voigt_area_fwhm(x, area_{i1}, c_{i1}, w_{i1}, m_{i1})"
+                else:
+                    final = f"br.voigt_fwhm(x, amp_{i1}, c_{i1}, w_{i1}, m_{i1})"
             
-            return final[:-3]
-
-        if self.is_asymmetric(i):
-            if self.use_area(i):
-                return f"np.heaviside(c_{i}-x, 0)*br.voigt_area_fwhm(x, area_{i}, c_{i}, w1_{i},  m1_{i}) + np.heaviside(x-c_{i}, 0)*br.voigt_area_fwhm(x, area_{i}, c_{i},  w2_{i},  m2_{i}) + dirac_delta(x, amp_{i}, c_{i})" 
-            else:
-                return f"np.heaviside(c_{i}-x, 0)*br.voigt_fwhm(x, amp_{i}, c_{i}, w1_{i},  m1_{i}) + np.heaviside(x-c_{i}, 0)*br.voigt_fwhm(x, amp_{i}, c_{i},  w2_{i},  m2_{i}) + dirac_delta(x, amp_{i}, c_{i})" 
+            # add additional if string
+            if self._has_additional():
+                if isinstance(self.additional, str):
+                    final += ' + ' + self.additional
+            return final
         else:
-            if self.is_asymmetric(i):
-                return f"br.voigt_area_fwhm(x, area_{i}, c_{i}, w_{i}, m_{i})"
-            else:
-                return f"br.voigt_fwhm(x, amp_{i}, c_{i}, w_{i}, m_{i})"
+            if i1 is None:
+                final = ''
+                for i1 in self._get_indexes_i1(i2=i2):
+                    final += self._model_str(i1=i1, i2=i2) + ' + '
+                # add additional if string
+                if self._has_additional():
+                    if isinstance(self.additional, str):
+                        final += self.additional  + ' + '
+                return final[:-3]
 
-    def _generate_residual_function(self, x, y, yerr=None, i=None):
-        # params = self
-        if yerr is None:
+            if self._is_asymmetric(i1=i1, i2=i2):
+                if self._use_area(i1=i1, i2=i2):
+                    final = f"np.heaviside(c_{i1}_{i2}-x, 0)*br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2}, w1_{i1}_{i2},  m1_{i1}_{i2}) + np.heaviside(x-c_{i1}_{i2}, 0)*br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2},  w2_{i1}_{i2},  m2_{i1}_{i2}) + dirac_delta(x, amp_{i1}_{i2}, c_{i1}_{i2})" 
+                else:
+                    final = f"np.heaviside(c_{i1}_{i2}-x, 0)*br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2}, w1_{i1}_{i2},  m1_{i1}_{i2}) + np.heaviside(x-c_{i1}_{i2}, 0)*br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2},  w2_{i1}_{i2},  m2_{i1}_{i2}) + dirac_delta(x, amp_{i1}_{i2}, c_{i1}_{i2})" 
+            else:
+                if self._use_area(i1=i1, i2=i2):
+                    final = f"br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2}, w_{i1}_{i2}, m_{i1}_{i2})"
+                else:
+                    final = f"br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2}, w_{i1}_{i2}, m_{i1}_{i2})"
+            
+            # add additional if string
+            if self._has_additional():
+                if isinstance(self.additional, str):
+                    final += ' + ' + self.additional
+            return final
+    
+    def model(self, i1=None, i2=None):
+        """Returns a function f(x) for the peak.
+        
+        Args:
+            i1 (int): primary index i1. Use i1='A' for additional parameters.
+            i2 (int, optional): secondary (spectrum) index i2. Only used if 
+                peaks has secondary indexes. Default is None.
+
+        Returns:
+            function f(x)
+        """
+        if i2 is None:
+            var_str = ''
+            if i1 is None:
+                for name in self:
+                    var_str += f'{name} = self["{name}"].value' + ', '
+            else:
+                for name in self._get_names_by_index(i1=i1):
+                    var_str += f'{name} = self["{name}"].value' + ', '
+
+            model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i1=i1)}'
+            return eval(model_str)
+        else:
+            var_str = ''
+            for name in self._get_names_by_index(i1=i1, i2=i2):
+                var_str += f'{name} = self["{name}"].value' + ', '
+
+            model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i1=i1, i2=i2)}'
+            return eval(model_str)
+
+    def _generate_residual_function(self):
+        """Returns residual function for fitting."""
+        if self._has_i2():
+            def residual(params, xs, ys):
+                residual = []
+
+                # make residual per data set
+                for i2, x in enumerate(xs):
+                    residual.append(ys[i2] - params.model(i2=i2)(x))
+
+                residual = np.concatenate(residual).ravel()
+                return residual
+
+            return residual
+        else:
             def residual(params, x, y):
                 # for name in params:
                 #     eval(f'{name} = self[{name}]')
-                model = params.model(i=i)
+                model = params.model()
                 # pvals = params.valuesdict()
                 # model = eval(model_str)
                 return model(x)-y
             return residual
+    
+    def fit(self, x, y, method='least_squares', update_peaks=True):
+        """fit spectrum with peaks model
+
+        Developers note: I think x and y must be monotonic, but I am not sure.
+            If this is the case, include a check_monotonic in the future.
+
+        Args:
+            x, y (array or list of arrays): x and y coordinates to fit. If 
+                peaks has secondary (spectrum) indexes i2, then x and y must be
+                a list os x's and y's in the respective order.
+            method (str, optional): Name of the fitting method to use. See methods
+                available on `lmfit.minimize()`_ documentation.
+            update_peaks (bool, optional): if True, peaks will be updated with 
+                fitted values.
         
-        else:
-            def residual(params, x, y, yerr):
-                model = params.model(i=i)
-                # pdict = params.valuesdict()
-                # model = eval(model_str)
-                return (model-y)/yerr
-            return residual
-        
-    def model(self, i=None):
-        """Returns a function f(x) for the peak."""
-        var_str = ''
-        if i is None:
-            for name in self:
-                var_str += f'{name} = self["{name}"].value' + ', '
-        else:
-            for name in self._get_names_with_index(i=i):
-                var_str += f'{name} = self["{name}"].value' + ', '
+        Returns:
+            `lmfit.minimize()`_ output object  
 
-        model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i=i)}'
-        return eval(model_str)
-
-    def calculate_area(self, i):
-        """Updates the area amp values.
-
-        if use_area = True, amp is updated based on the area.
-        if use_area = False, area is updated based on the amp.
-
-        Only necessary if amp and area values are changed by hand.        
-        """
-        if self.use_area(i=i):
-            return self[f'area_{i}']
-        else:
-            if self.is_asymmetric(i=i):
-                c1 = self[f'm1_{i}'].value/np.pi + (1-self[f'm1_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                c2 = self[f'm2_{i}'].value/np.pi + (1-self[f'm2_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'amp_{i}'].value * (self[f'w1_{i}'].value*c1 + self[f'w2_{i}'].value*c2)/2
-            else:
-                c = self[f'm_{i}'].value/np.pi + (1-self[f'm_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'amp_{i}'].value * self[f'w_{i}'].value * c
-
-    def calculate_amp(self, i):
-        """Updates the area amp values.
-
-        if use_area = True, amp is updated based on the area.
-        if use_area = False, area is updated based on the amp.
-
-        Only necessary if amp and area values are changed by hand.        
-        """
-        if self.use_area(i=i) == False:
-            return self[f'amp_{i}']
-        else:
-            if self.is_asymmetric(i=i):
-                c1 = self[f'm1_{i}'].value/np.pi + (1-self[f'm1_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                c2 = self[f'm2_{i}'].value/np.pi + (1-self[f'm2_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'area_{i}'].value * 2 /(self[f'w1_{i}'].value*c1 + self[f'w2_{i}'].value*c2)
-            else:
-                c = self[f'm_{i}'].value/np.pi + (1-self[f'm_{i}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'area_{i}'].value/self[f'w_{i}'].value/c
-
-    def calculate_w(self, i):
-        if self.is_asymmetric(i):
-            return self[f'w1_{i}'].value + self[f'w2_{i}'].value
-        else:
-            return self[f'w_{i}'].value
-
-    def fit(self, x, y, yerr=None, i=None, method='least_squares', return_fitted_peaks=False):
-        """output, peaks = fit()
-        
-        I think x and y must be monotonic.
+        .. _lmfit.minimize(): https://lmfit.github.io/lmfit-py/fitting.html      
         """
         self.check_feasibility()
-        residual = self._generate_residual_function(x=x, y=y, yerr=yerr, i=i)
-        if yerr is None:
-            out = lmfit.minimize(residual, method=method, params=self, args=(x, y))
+        residual = self._generate_residual_function()
+        if self._has_i2():
+            out = lmfit.minimize(residual, method=method, params=self, kws={'xs':x, 'ys':y})        
         else:
-            out = lmfit.minimize(residual, method=method, params=self, args=(x, y, yerr))
+            out = lmfit.minimize(residual, method=method, params=self, args=(x, y))
 
         # return peaks2
-        if return_fitted_peaks:
-            return out, out.params
-        else:
+        if update_peaks:
             for name in self:
                 self[name] = out.params[name]
-            return out
+        return out
     
     def find(self, x, y, prominence=5, width=4, moving_average_window=8):
         """I think x and y must be monotonic and uniform."""
@@ -672,8 +1671,8 @@ class Peaks(lmfit.Parameters):
             
         # data smoothing
         if moving_average_window > 1:
-            y2 = br.moving_average(y, moving_average_window)
-            x2 = br.moving_average(x, moving_average_window)
+            y2 = br.arraymanip.moving_average(y, moving_average_window)
+            x2 = br.arraymanip.moving_average(x, moving_average_window)
         else:
             x2 = x
             y2 = y
@@ -697,459 +1696,168 @@ class Peaks(lmfit.Parameters):
         except IndexError:
             pass
 
-    def check_feasibility(self):
-        """Check if start values are within boundaries."""
-        for p in self:
-            value = self[p].value
-            vmax  = self[p].max
-            vmin  = self[p].min
+    ##########################        
+    # plot and visualization #
+    ##########################  
+    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, **kwargs):
+        """Place a marker at the maximum of every peak position. Wrapper for `matplotlib.pyplot.errorbar()`_.
 
-            if value > vmax or value < vmin:
-                raise ValueError(f'Start value for parameter {p} is out of bounds\nbound max = {vmax}\nstart value = {value}\nbound min = {vmin}')
-
-
-    # %% attributes and properties
-    @property
-    def calib(self):
-        return self._calib
-    @calib.setter
-    def calib(self, value):
-        self.set_calib(value)
-    @calib.deleter
-    def calib(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def shift(self):
-        return self._shift
-    @shift.setter
-    def shift(self, value):
-        self.set_shift(value)
-    @shift.deleter
-    def shift(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def roll(self):
-        return self._roll
-    @roll.setter
-    def roll(self, value):
-        # raise AttributeError("Attribute is 'read only'. Cannot set attribute.\nPlease, use Spectrum.set_shifts(value, mode='roll').")
-        self.set_roll(value)
-    @roll.deleter
-    def roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def offset(self):
-        return self._offset
-    @offset.setter
-    def offset(self, value):
-        self.set_offsets(value)
-    @offset.deleter
-    def offset(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def factor(self):
-        return self._factor
-    @factor.setter
-    def factor(self, value):
-        self.set_factors(value)
-    @factor.deleter
-    def factor(self):
-            raise AttributeError('Cannot delete object.')
-    
-    @property
-    def step(self):
-        return self._step
-    @step.setter
-    def step(self, value):
-        raise AttributeError('Cannot edit object.')
-    @step.deleter
-    def step(self):
-        raise AttributeError('Cannot delete object.')
-
-    # modifiers
-    def set_calib(self, value, type_='relative'):
-        """Set calibration value.
+        Does not work if peaks has multiple secondary (spectrum) indexes i2.
 
         Args:
-            value (number): calibration value (x-coordinates will be multiplied
-                by this value).
+            ax (matplotlib.axes, optional): axes for plotting on.
+            offset (number, optional): defines a vertical offset. Default is 0.
+            shift (number, optional): horizontal shift value. Default is 0.
+            factor (number, optional): multiplicative factor on the y axis.
+                Default is 1.
+            calib (number, optional): multiplicative factor on the x axis.
+                Default is 1.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.errorbar()`_ that plots the data.
 
         Returns:
-            None
+            `ErrorbarContainer`_
+
+        .. matplotlib.pyplot.errorbar(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
+        .. ErrorbarContainer: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.errorbar.html
         """
-        # is relative?
-        if type_ in relative:
-            value = self.calib * value
+        if ax is None:
+            ax = plt
+            if br.settings.FIGURE_FORCE_NEW_WINDOW:
+                br.figure()
 
-        # apply
-        if self.calib != value:
-            if self.calib != 1:
-                for name in self:
-                    if name.split('_')[0] == 'c':
-                        self[name].value = self[name].value*self.calib**-1
-                    elif name.split('_')[0] == 'w':
-                        self[name].value = abs(self[name].value*self.calib**-1)
-            if value != 1:
-                for name in self:
-                    if name.split('_')[0] == 'c':
-                        self[name].value = self[name].value*value
-                    elif name.split('_')[0] == 'w':
-                        self[name].value = abs(self[name].value*value)
-            self._calib = value
+            c    = []
+            amp  = []
+            xerr = []
+            for i1 in self._get_indexes_i1():
+                c    += [self[f'c_{i1}'].value]
+                amp  += [self.get_amp(i1=i1)]
+                xerr += [self.get_w(i1=i1)/2]
 
-    def set_roll(self, value, type_='relative'):
-        """Set roll value (compatible with Spectrum roll).
+            if 'lw' not in kwargs and 'linewidth' not in kwargs:
+                kwargs['lw'] = 0
+            if 'elinewidth' not in kwargs :
+                kwargs['elinewidth'] = 2
+            if 'marker' not in kwargs :
+                kwargs['marker'] = 'o'
+            if 'markersize' not in kwargs and 'ms' not in kwargs:
+                kwargs['markersize'] = 5
+
+            c = (np.array(c)*calib)+shift
+            amp = np.array(amp)*factor+offset
+            xerr = np.array(xerr)*calib
+
+            return ax.errorbar(c, amp, xerr=xerr, **kwargs)
+
+    ###########
+    # special #
+    ###########
+    def _copy_from_spectra(self, ss):
+        """copy peaks from each spectra
 
         Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-        # is relative?
-        if type_ in relative:
-            value = self.roll + value
+            ss (Spectra): br.Spectra object
         
-        # Fix step
-        value = self.step*value
-
-        # apply
-        if self.roll != value:
-            if self.roll != 0:
-                for name in self:
-                    if name.split('_')[0] == 'c':
-                        self[name].value = self[name].value - self.roll
-            if value != 0:
-                for name in self:
-                    if name.split('_')[0] == 'c':
-                        self[name].value = self[name].value + value
-            self._roll = value
-            
-    def set_shift(self, value, type_='relative'):
-            # is relative?
-            if type_ in relative:
-                value = self.shift + value
-
-            if self.shift != value:
-                if self.shift != 0:
-                    for name in self:
-                        if name.split('_')[0] == 'c':
-                            self[name].value = self[name].value - self.shift
-                if value != 0:
-                    for name in self:
-                        if name.split('_')[0] == 'c':
-                            self[name].value = self[name].value + value
-                self._shift = value
-
-    def set_offset(self, value, type_='relative'):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
         Returns:
             None
         """
-        # to fix offset we have to add a background option
-        pass
-
-    def set_factor(self, value, type_='relative'):
-        """Set y multiplicative factor.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        pass
-        # is relative?
-        if type_ in relative:
-            value = self.factor * value
-
-        if self.factor != value:
-            if self.factor != 1:
-                for name in self:
-                        if name.split('_')[0] == 'amp' or name.split('_') == 'area':
-                            self[name].value  = self[name].value * self.factor**-1
-            if value != 1:
-                for name in self:
-                    if name.split('_')[0] == 'amp' or name.split('_') == 'area':
-                        self[name].value  = self[name].value * value
-            self._factor = value
-
-    def _reset_modifiers(self):
-        self._factor = 1
-        self._offset = 0
-        self._calib  = 1
-        self._shift  = 0
-        self._roll   = 0
-
-    # save and load (TODO)*****
-
-    def _string2save(self):
-        """String used for saving peak to a file."""
-        temp = {'_store': self._store,
-                'error': self.error,
-                'bounds': self.bounds,
-                'asymmetry': self.asymmetry,
-                'fixed': self.fixed,
-                '_shift': self._shift,
-                '_calib': self._calib,
-                '_offset': self._offset,
-                '_factor': self._factor}
-        return json.dumps(temp, indent=4, sort_keys=False)
-
-    def save(self, filepath='./Untitled.txt', check_overwrite=False):
-        r"""Save peak to a text file. Wrapper for `json.dumps()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-            check_overwrite (bool, optional): if True, it will check if file exists
-                and ask if user want to overwrite file.
-
-        Returns:
-            None
-
-        .. _json.dumps(): https://docs.python.org/3/library/json.html#json.dumps
-        """
-        filepath = Path(filepath)
-
-        # check overwrite
-        if check_overwrite:
-            if filepath.exists() == True:
-                if filepath.is_file() == True:
-                    if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
-                        pass
-                    else:
-                        warnings.warn('File not saved because user did not allow overwriting.')
-                        return
-                else:
-                    warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
-                    filepath = filepath/'Untitled.txt'
-
-        with open(str(filepath), 'w') as file:
-            file.write(self._string2save())
-
-    def _obj_decode(self, obj):
-        obj['_store'].pop('area')
-
-        if obj['asymmetry']:
-            obj['_store'].pop('fwhm')
-            obj['_store'].pop('m')
-        else:
-            obj['_store'].pop('fwhm1')
-            obj['_store'].pop('fwhm2')
-            obj['_store'].pop('m1')
-            obj['_store'].pop('m2')
-
-        self.asymmetry = obj['asymmetry']
-        for parameter in obj['_store']:
-            # print(parameter)
-            self[parameter] = obj['_store'][parameter]
-        self.error = obj['error']
-        self.bounds = obj['bounds']
-        self.fixed = obj['fixed']
-        self._shift = obj['_shift']
-        self._calib = obj['_calib']
-        self._offset = obj['_offset']
-        self._factor = obj['_factor']
-
-    def load(self, filepath):
-        """Load peak from a text file. Wrapper for `json.load()`_.
-
-        Args:
-            filepath (string or path object, optional): filepath or file handle.
-                If the filename extension is .gz or .bz2, the file is first decompressed.
-
-        Returns:
-            None
-
-        .. _json.load(): https://docs.python.org/3/library/json.html#json.load
-        """
-        filepath = Path(filepath)
-
-        with open(str(filepath), 'r') as file:
-            obj = json.load(file)
-        self._obj_decode(obj)
-
-
-# %%
-class Collection(lmfit.Parameters):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-        if 'data' in kwargs:
-            data = kwargs['data']
-        elif len(args) == 1:
-            data = args[0]
-        else:
-            data = args
-
-        # append peaks
-        for peaks in data:
-            self.append(peaks)        
-    
-    def __getitem__(self, name):
-        if type(name) == int:
-            return self.split_peaks_per_spectrum()[name]
-        
-        elif type(name) == str:
-            if len(name.split('_')) == 1:
-                raise NotImplementedError('sorry, calling __getitem___ like this is not implemented yet.')
-            if len(name.split('_')) == 2:
-                return self.get_values(attr=name)
-            if len(name.split('_')) == 3:
-                if name in self:
-                    return super().__getitem__(name)
-                else:
-                    raise ValueError(f'Cannot find parameter: {name}')
-    
-    def length(self):
-        return len(self._get_indexes_i2())
-
-    def append(self, i2='all', amp=None, c=None, w=None, w1=None, w2=None, m=0, m1=0, m2=0, area=None):
-
-        # check parameters
-        assert area is not None or amp is not None, 'amp or area not defined'
-        assert c is not None, 'c not defined'
-        assert w is not None or (w1 is not None and w2 is not None), 'Either w or (w1 and w2) must be defined'
-
-        assert area is None or isinstance(area, numbers.Number), 'area must be a number'
-        assert amp is None or isinstance(amp, numbers.Number), 'amp must be a number'
-        assert c is None or isinstance(c, numbers.Number), 'c must be a number'
-        assert w is None or isinstance(w, numbers.Number), 'w must be a number'
-        assert w1 is None or isinstance(w1, numbers.Number), 'w1 must be a number'
-        assert w2 is None or isinstance(w2, numbers.Number), 'w2 must be a number'
-        assert m is None or isinstance(m, numbers.Number), 'm must be a number'
-        assert m1 is None or isinstance(m1, numbers.Number), 'm1 must be a number'
-        assert m2 is None or isinstance(m2, numbers.Number), 'm2 must be a number'
-
-        if isinstance(w, numbers.Number):
-            assert w >= 0, 'w must be positive'
-        if isinstance(w1, numbers.Number):
-            assert w1 >= 0, 'w1 must be positive'
-        if isinstance(w2, numbers.Number):
-            assert w2 >= 0, 'w2 must be positive'
-
-        if isinstance(m, numbers.Number):
-            assert m <= 1 and m >= 0, 'm must be positive less than 1'
-        if isinstance(m1, numbers.Number):
-            assert m1 <= 1 and m1 >= 0, 'm1 must be positive less than 1'
-        if isinstance(m2, numbers.Number):
-            assert m2 <= 1 and m2 >= 0, 'm2 must be positive less than 1'
-
-        # run
-        if i2 == 'all':
-            for i2 in self._get_indexes_i2():
-                self.append(i2=i2, amp=amp, c=c, w=w, w1=w1, w2=w2, m=m, m1=m1, m2=m2, area=area)
-            return
-        else:
-            # define index
-            indexes_i1 = self._get_indexes_i1(i2=i2)
-            if indexes_i1 == []:
-                i1 = 0
-            else:
-                i1 = max(indexes_i1) + 1
-
-            # add parameters
-            if area is None:
-                self.add(f'amp_{i1}_{i2}', value=amp, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-            else:
-                self.add(f'area_{i1}_{i2}', value=area, vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-            
-            self.add(f'c_{i1}_{i2}',   value=c,   vary=True, min=-np.inf, max=np.inf, expr=None, brute_step=None)
-
-            if w1 is not None and w2 is not None:
-                self.add(f'w1_{i1}_{i2}', value=w1, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-                self.add(f'w2_{i1}_{i2}', value=w2, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-                self.add(f'm1_{i1}_{i2}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
-                self.add(f'm2_{i1}_{i2}', value=m1, vary=False, min=0, max=1, expr=None, brute_step=None)
-            else:
-                self.add(f'w_{i1}_{i2}', value=w, vary=True, min=0, max=np.inf, expr=None, brute_step=None)
-                self.add(f'm_{i1}_{i2}', value=m, vary=False, min=0, max=1, expr=None, brute_step=None)
-
-    # support   
-    def copy(self, *args):
-        if len(args) == 0:
-            return copy.deepcopy(self)
-        elif len(args) == 1:
-            if isinstance(args[0], Collection):
-                raise NotImplementedError('sorry, not implemented')
-        else:
-            raise ValueError('input not recognized')
-    
-    def copy_from_spectra(self, ss):
-        for i, s in enumerate(ss):
+        ss.peaks.clear()
+        for i2, s in enumerate(ss):
             temp = s.peaks.copy()
             for name in temp:
                 temp[name].set(expr='')
-                self[name + f'_{i}'] = temp[name]
+                self[name + f'_{i2}'] = temp[name]
 
-    def copy_to_spectra(self, ss):
+    def _copy_to_spectra(self, ss):
+        """copy peaks to the corresponding spectrum
+
+        Args:
+            ss (Spectra): br.Spectra object
+        
+        Returns:
+            None
+        """
         temp = self.copy()
         for par in temp:
             temp[par].set(expr='')
 
         for i2, s in enumerate(ss):
             s.peaks.clear()
-            names = temp._get_names_with_index(i2=i2)
+            names = temp._get_names_by_index(i2=i2)
             for name in names:
                 _name = '_'.join(name.split('_')[:2])
                 s.peaks[_name] = temp[name]
 
-    def _get_indexes_i2(self):
-        """return list of all indexes i2."""
-        final = []
-        for name in self:
-            index = int(name.split('_')[2])
-            if index not in final:
-                final.append(index) 
-        return final
 
-    def _get_indexes_i1(self, i2):
-        """return list of all indexes i1 for a specific i2."""
-        final = []
-        for name in self:
-            split = name.split('_')
-            _i1 = int(split[1])
-            _i2 = int(split[2])
-            if _i1 not in final and _i2 == i2:
-                final.append(_i1) 
-        return final
+    # is this useful? Probably obsolete
+    def _replace_index(self, i1, i1_new, i2=None):
+        """Change the index of a peak."""
+        raise NotImplementedError('sorry, not implemented yet.')
 
-    def _get_names_with_index(self, i1=None, i2=None):
-        """Return list of names with i2."""
-        assert i1 is not None or i2 is not None, 'i1 and i2 cannot both be None'
+        # check i exists
+
+        # check i_new is int
+
+        # get params
+        params = self.get_params_with_index(i)
+
+        # create new
+        for p in params:
+            name_new = params[p].name.split('_')[0] + '_' + str(i_new)
+            self.add(name=name_new, 
+                     value=params[p].value, 
+                     vary=params[p].vary, 
+                     min=params[p].min, 
+                     max=params[p].max, 
+                     expr=params[p].expr, 
+                     brute_step=params[p].brute_step)
         
-        final = []
+        # delete old
+        self.remove(i)
+
+    def fix_indexes(self):
+        """Fix indexes so they start from zero."""
+        raise NotImplementedError('sorry, not implemented yet.')
+
+        indexes = self.indexes()
+        final = len(indexes)
+        
+        # replace indexes
+        for i_new, index in enumerate(np.sort(indexes)):
+            if i_new != index:
+                self.replace_index(index, i_new)
+
+        # remove
+        for index in self.indexes():
+            if index >= final:
+                self.remove(index)
+
+    def reorder(self, attr='c'):
+        """Change peak indexes based on the position of the peak or other attr."""
+        raise NotImplementedError('sorry, not implemented yet.')
+
+    def _model_str_old(self, i1=None):
+        """Returns string for building peak function.
+
+        Returns:
+            function f(x) as string
+        """
         if i1 is None:
-            for name in self:
-                split = name.split('_')
-                # _i1 = int(split[1])
-                _i2 = int(split[2])
-                if _i2 == i2:
-                    final.append(name)    
-        elif i2 is None:
-            for name in self:
-                split = name.split('_')
-                _i1 = int(split[1])
-                # _i2 = int(split[2])
-                if _i1 == i1:
-                    final.append(name)
+            final = ''
+            for i in self._get_indexes_i1():
+                final += self._model_str(i1) + ' + '
+            
+            return final[:-3]
+
+        if self.is_asymmetric(i1):
+            if self.use_area(i1):
+                return f"np.heaviside(c_{i1}-x, 0)*br.voigt_area_fwhm(x, area_{i1}, c_{i1}, w1_{i},  m1_{i1}) + np.heaviside(x-c_{i1}, 0)*br.voigt_area_fwhm(x, area_{i1}, c_{i1},  w2_{i1},  m2_{i1}) + dirac_delta(x, amp_{i1}, c_{i1})" 
+            else:
+                return f"np.heaviside(c_{i1}-x, 0)*br.voigt_fwhm(x, amp_{i1}, c_{i1}, w1_{i1},  m1_{i1}) + np.heaviside(x-c_{i1}, 0)*br.voigt_fwhm(x, amp_{i1}, c_{i1},  w2_{i1},  m2_{i1}) + dirac_delta(x, amp_{i1}, c_{i1})" 
         else:
-            for name in self:
-                split = name.split('_')
-                _i1 = int(split[1])
-                _i2 = int(split[2])
-                if _i1 == i1 and _i2 == i2:
-                    final.append(name)
-        return final
+            if self.is_asymmetric(i):
+                return f"br.voigt_area_fwhm(x, area_{i1}, c_{i1}, w_{i1}, m_{i1})"
+            else:
+                return f"br.voigt_fwhm(x, amp_{i1}, c_{i1}, w_{i1}, m_{i1})"
 
     def get_params(self, attr, i1=None):
         final = []
@@ -1165,48 +1873,7 @@ class Collection(lmfit.Parameters):
             else:
                 raise ValueError(f'Cannot find parameter: {name}')
         return final
-
-    def split_peaks_per_spectrum(self):
-        temp = self.copy()
-        for par in temp:
-            temp[par].set(expr='')
-
-        final = {}
-        for i2 in self._get_indexes_i2():
-            final[i2] = Peaks()
-            for i1 in self._get_indexes_i1(i2=i2):
-                names = self._get_names_with_index(i1=i1, i2=i2)
-                for name in names:
-                    _name = '_'.join(name.split('_')[:2])
-                    final[i2][_name] = temp[name] 
-        return final
-    
         
-
-    def _get_params_with_index(self, i1, i2):
-        """Return peaks with all names with i2."""
-        names = self._get_names_with_index(i1=i1, i2=i2)
-        final = {}
-        for name in names:
-            final[name.split('_')[0]] = self[name]
-        return final
-
-    def is_asymmetric(self, i1, i2):
-        if f'w1_{i1}_{i2}' in self and f'w2_{i1}_{i2}' in self:
-            return True
-        elif f'w_{i1}_{i2}' in self:
-            return False
-        else:
-            raise ValueError(f'w not found for i1={i1}, i2={i2}')
-    
-    def use_area(self, i1, i2):
-        if f'area_{i1}_{i2}' in self:
-            return True
-        elif f'amp_{i1}_{i2}' in self:
-            return False
-        else:
-            raise ValueError(f'amp/area not found for i1={i1}, i2={i2}')
-   
     def get_values(self, attr, i1=None):
         """returns a list with values of a peak for all spectra"""
         final = []
@@ -1217,11 +1884,11 @@ class Collection(lmfit.Parameters):
                 if name in self:
                     final.append(self[name].value)
                 elif name.startswith('area'):
-                    final.append(self.calculate_area(i1=i1, i2=i2))
+                    final.append(self.get_area(i1=i1, i2=i2))
                 elif name.startswith('amp'):
-                    final.append(self.calculate_amp(i1=i1, i2=i2))
+                    final.append(self.get_amp(i1=i1, i2=i2))
                 elif name.startswith('w'):
-                    final.append(self.calculate_w(i1=i1, i2=i2))
+                    final.append(self.get_w(i1=i1, i2=i2))
                 else:
                     raise ValueError(f'Cannot find parameter: {name}')
         else:
@@ -1230,190 +1897,14 @@ class Collection(lmfit.Parameters):
                 if name in self:
                     final.append(self[name].value)
                 elif name.startswith('area'):
-                    final.append(self.calculate_area(i1=i1, i2=i2))
+                    final.append(self.get_area(i1=i1, i2=i2))
                 elif name.startswith('amp'):
-                    final.append(self.calculate_amp(i1=i1, i2=i2))
+                    final.append(self.get_amp(i1=i1, i2=i2))
                 elif name.startswith('w'):
-                    final.append(self.calculate_w(i1=i1, i2=i2))
+                    final.append(self.get_w(i1=i1, i2=i2))
                 else:
                     raise ValueError(f'Cannot find parameter: {name}')
         return final
     
-    def _find_suitable_x(self, i2, i1=None):
-        if i1 is None:
-            vmin  = []
-            vmax  = []
-            step  = []
 
-            for i1 in self._get_indexes_i1(i2=i2):
-                temp = self._find_suitable_x(i2=i2, i1=i1)
-                vmin.append(min(temp))
-                vmax.append(max(temp))
-                step.append(abs(temp[1]-temp[0]))
-            return np.arange(min(vmin), max(vmax), min(step))
-        else:
-            # get width
-            if self.is_asymmetric(i1=i1, i2=i2):
-                w = self[f'w1_{i1}_{i2}'].value + self[f'w2_{i1}_{i2}'].value
-                m = max([self[f'm1_{i1}_{i2}'].value, self[f'm2_{i1}_{i2}'].value])
-            else:
-                w = self[f'w_{i1}_{i2}'].value
-                m = self[f'm_{i1}_{i2}'].value
-
-            if w == 0:
-                w = self[f'c_{i1}_{i2}'].value*0.1
-            if w == 0:
-                w = 1
-
-            vmin = self[f'c_{i1}_{i2}'].value - w * (m*4 + 4)
-            vmax = self[f'c_{i1}_{i2}'].value + w * (m*4 + 4)
-
-            if vmin == 0 and vmax == 0:
-                vmin = -10
-                vmax = 10
-
-            return np.arange(vmin, vmax, w/20)
-        
-    # calculation and info
-    def calculate_spectrum(self, i2, i1=None, x=None):
-        """Return peak curve.
-
-        Args:
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x, with at least 20 points within the peak,
-                will be constructed.
-
-        Returns:
-            :py:class:`Spectrum`.
-        """
-        if x is None:
-            x = self._find_suitable_x(i2=i2, i1=i1)
-        f = self.model(i2=i2, i1=i1)
-
-        s = br.Spectrum(x=x, y=f(x))
-        return s
-    
-    def calculate_area(self, i1, i2):
-        """Updates the area amp values.
-
-        if use_area = True, amp is updated based on the area.
-        if use_area = False, area is updated based on the amp.
-
-        Only necessary if amp and area values are changed by hand.        
-        """
-        if self.use_area(i1=i1, i2=i2):
-            return self[f'area_{i1}_{i2}']
-        else:
-            if self.is_asymmetric(i1=i1, i2=i2):
-                c1 = self[f'm1_{i1}_{i2}'].value/np.pi + (1-self[f'm1_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                c2 = self[f'm2_{i1}_{i2}'].value/np.pi + (1-self[f'm2_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'amp_{i1}_{i2}'].value * (self[f'w1_{i1}_{i2}'].value*c1 + self[f'w2_{i1}_{i2}'].value*c2)/2
-            else:
-                c = self[f'm_{i1}_{i2}'].value/np.pi + (1-self[f'm_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'amp_{i1}_{i2}'].value * self[f'w_{i1}_{i2}'].value * c
-
-    def calculate_amp(self, i1, i2):
-        """Updates the area amp values.
-
-        if use_area = True, amp is updated based on the area.
-        if use_area = False, area is updated based on the amp.
-
-        Only necessary if amp and area values are changed by hand.        
-        """
-        if self.use_area(i1=i1, i2=i2) == False:
-            return self[f'amp_{i1}_{i2}']
-        else:
-            if self.is_asymmetric(i1=i1, i2=i2):
-                c1 = self[f'm1_{i1}_{i2}'].value/np.pi + (1-self[f'm1_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                c2 = self[f'm2_{i1}_{i2}'].value/np.pi + (1-self[f'm2_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'area_{i1}_{i2}'].value * 2 /(self[f'w1_{i1}_{i2}'].value*c1 + self[f'w2_{i1}_{i2}'].value*c2)
-            else:
-                c = self[f'm_{i1}_{i2}'].value/np.pi + (1-self[f'm_{i1}_{i2}'].value)*2*np.sqrt(np.log(2))/np.sqrt(np.pi)
-                return self[f'area_{i1}_{i2}'].value/self[f'w_{i1}_{i2}'].value/c
-
-    def calculate_w(self, i1, i2):
-        if self.is_asymmetric(i1=i1, i2=i2):
-            return self[f'w1_{i1}_{i2}'].value + self[f'w2_{i1}_{i2}'].value
-        else:
-            return self[f'w_{i1}_{i2}'].value
-
-    def _model_str(self, i2, i1=None):
-        """Returns string for building peak function.
-
-        i1
-
-        Returns:
-            function f(x) as string
-        """
-        if i1 is None:
-            final = ''
-            for i1 in self._get_indexes_i1(i2=i2):
-                final += self._model_str(i1=i1, i2=i2) + ' + '
-            return final[:-3]
-
-        if self.is_asymmetric(i1=i1, i2=i2):
-            if self.use_area(i1=i1, i2=i2):
-                return f"np.heaviside(c_{i1}_{i2}-x, 0)*br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2}, w1_{i1}_{i2},  m1_{i1}_{i2}) + np.heaviside(x-c_{i1}_{i2}, 0)*br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2},  w2_{i1}_{i2},  m2_{i1}_{i2}) + dirac_delta(x, amp_{i1}_{i2}, c_{i1}_{i2})" 
-            else:
-                return f"np.heaviside(c_{i1}_{i2}-x, 0)*br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2}, w1_{i1}_{i2},  m1_{i1}_{i2}) + np.heaviside(x-c_{i1}_{i2}, 0)*br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2},  w2_{i1}_{i2},  m2_{i1}_{i2}) + dirac_delta(x, amp_{i1}_{i2}, c_{i1}_{i2})" 
-        else:
-            if self.is_asymmetric(i1=i1, i2=i2):
-                return f"br.voigt_area_fwhm(x, area_{i1}_{i2}, c_{i1}_{i2}, w_{i1}_{i2}, m_{i1}_{i2})"
-            else:
-                return f"br.voigt_fwhm(x, amp_{i1}_{i2}, c_{i1}_{i2}, w_{i1}_{i2}, m_{i1}_{i2})"
-
-    def model(self, i2, i1=None):
-        """Returns a function f(x) for the peak."""
-        var_str = ''
-        for name in self._get_names_with_index(i1=i1, i2=i2):
-            var_str += f'{name} = self["{name}"].value' + ', '
-
-        model_str = f'lambda x, {var_str[:-2]}: {self._model_str(i1=i1, i2=i2)}'
-        return eval(model_str)
-    
-    def _generate_residual_function(self, yerr=None):
-
-        def residual(params, xs, ys):
-            residual = []
-
-            # make residual per data set
-            for i2, x in enumerate(xs):
-                residual.append(ys[i2] - params.model(i2=i2)(x))
-
-            residual = np.concatenate(residual).ravel()
-            return residual
-
-        return residual
-    
-    def check_feasibility(self):
-        """Check if start values are within boundaries."""
-        for p in self:
-            value = self[p].value
-            vmax  = self[p].max
-            vmin  = self[p].min
-
-            if value > vmax or value < vmin:
-                raise ValueError(f'Start value for parameter {p} is out of bounds\nbound max = {vmax}\nstart value = {value}\nbound min = {vmin}')
-
-    def fit(self, xs, ys, yerr=None, method='least_squares', return_fitted_peaks=False):
-        """output, peaks = fit()
-        
-        I think x and y must be monotonic.
-        """
-        self.check_feasibility()
-
-        residual = self._generate_residual_function(yerr=yerr)
-        if yerr is None:
-            out = lmfit.minimize(residual, method=method, params=self, kws={'xs':xs, 'ys':ys})
-        else:
-            raise NotImplementedError('sorry, not implemented yet')
-            # out = lmfit.minimize(residual, method=method, params=self, args=(x, y, yerr))
-
-        # return peaks2
-        if return_fitted_peaks:
-            return out, out.params
-        else:
-            for name in self:
-                self[name] = out.params[name]
-            return out
 
