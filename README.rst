@@ -7,8 +7,8 @@ BRIXS is a python package for processing and analysis of XAS and RIXS spectra.
 Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
 
 .. contents:: Table of Contents
-   
-#############
+
+
 Introduction
 #############
 
@@ -113,7 +113,7 @@ Just like metadata, repetitive tasks can be added to the object,
    s1.processing()
    s2.processing()
 
-#############
+
 Basics
 #############
 
@@ -176,7 +176,7 @@ line of code to get the spectrum from scan number 56,
 The modules inside the `file_reading` folder, may be used as an example for 
 writing new modules for other file types.
 
-#############
+
 Installation
 #############
 
@@ -200,7 +200,7 @@ or
     import brixs as br
 
 
-############
+
 Requirements
 ############
 
@@ -218,13 +218,13 @@ Reciprocal space calculations:
 
 Other packages may be required for file reading functions.
 
-#############
+
 Usage
 #############
 
 Refer to the examples folder on GitHub for code examples.
 
-#############
+
 Documentation
 #############
 
