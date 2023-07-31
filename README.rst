@@ -2,11 +2,9 @@
 BRIXS
 #######
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Table of Contents
-
 BRIXS is a python package for processing and analysis of XAS and RIXS spectra.
+
+Click :doc:`here <documentation>` for brixs documentation.
 
 #############
 Introduction
@@ -223,17 +221,3 @@ Documentation
 #############
 
 Click :doc:`here <documentation>` for brixs documentation.
-
-#############
-See on GitHub
-#############
-
-Report issues on GitHub: https://github.com/cwgaldino/brixs
-
-##################
-Indices and tables
-##################
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
