@@ -6,9 +6,6 @@ BRIXS is a python package for processing and analysis of XAS and RIXS spectra.
 
 Click :doc:`here <documentation>` for brixs documentation.
 
-.. toctree::
-  :maxdepth: 2
-
 #############
 Introduction
 #############
