@@ -787,6 +787,7 @@ br.Spectra.calculate_th_map = _calculate_th_map
 
 # ------------------------------- EXPERIMENTAL ---------------------------- %% #
 def th2rlu(theta, energy, propagation_vector=(1, 0, 0), lattice_parameters=(3.5066, 4.7485, 7.9341), twotheta=130):
+    """[EXPERIMENTAL]"""
     q, qpar, qper = br.momentum_transfer(energy, twotheta-theta, twotheta)
     rlu = br.momentum2rlu(qpar, propagation_vector, *lattice_parameters)
     return rlu

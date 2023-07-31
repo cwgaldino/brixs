@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brixs.PhotonEvents &mdash; brixs 0.8 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            brixs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">brixs.PhotonEvents</a></li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">brixs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">brixs.PhotonEvents</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_autosummary/brixs.PhotonEvents.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="brixs-photonevents">
+<h1>brixs.PhotonEvents<a class="headerlink" href="#brixs-photonevents" title="Permalink to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="brixs.PhotonEvents">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">brixs.</span></span><span class="sig-name descname"><span class="pre">PhotonEvents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a <code class="docutils literal notranslate"><span class="pre">Photon</span> <span class="pre">events</span></code> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>array</em>) – vector with x-coordinate of photon events.</p></li>
+<li><p><strong>y</strong> (<em>array</em>) – vector with y-coordinate of photon events.</p></li>
+<li><p><strong>filepath</strong> (<em>string</em><em> or </em><em>path object</em><em>, </em><em>optional</em>) – filepath.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>How to initialize a Photon events object:</dt><dd><p><strong>Empty</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">PhotonEvents</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl>
+<dt><strong>From array</strong></dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">PhotonEvents</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">PhotonEvents</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<p>where <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> are 1D array or list.</p>
+<dl>
+<dt><strong>From file</strong></dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">PhotonEvents</span><span class="p">(</span><span class="o">&lt;</span><span class="n">filepath</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">PhotonEvents</span><span class="p">(</span><span class="n">filepath</span><span class="o">=&lt;</span><span class="n">filepath</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<p>where <code class="docutils literal notranslate"><span class="pre">filepath</span></code> must point to a xy-type file, where comments
+must be marked with <cite>#</cite> and columns must be separated by <cite>,</cite> (comma).</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.PhotonEvents.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#brixs.PhotonEvents.x" title="Permalink to this definition"></a></dt>
+<dd><p>vector with x-coordinate of photon events.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.PhotonEvents.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#brixs.PhotonEvents.y" title="Permalink to this definition"></a></dt>
+<dd><p>vector with y-coordinate of photon events.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.PhotonEvents.filepath">
+<span class="sig-name descname"><span class="pre">filepath</span></span><a class="headerlink" href="#brixs.PhotonEvents.filepath" title="Permalink to this definition"></a></dt>
+<dd><p>filepath associated with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str or pathlib.Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">xlim,</span> <span class="pre">ylim</span></span></dt>
+<dd><p>two element tuple with min and max x and y
+coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="simple">
+<dt>Computed (read-only) attributes:</dt><dd><dl class="simple">
+<dt>data (array)</dt><dd><p>2 column data (x, y)</p>
+</dd>
+<dt>calculated_shift (list)</dt><dd><p>Calculated shifts.</p>
+</dd>
+</dl>
+</dd>
+<dt>Write-only attributes:</dt><dd><p>None</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.PhotonEvents.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize the object instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>AttributeError</strong> – if kwargs and args cannot be read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.PhotonEvents.__init__" title="brixs.PhotonEvents.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(*args, **kwargs)</p></td>
+<td><p>Initialize the object instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">binning</span></code>(*args, **kwargs)</p></td>
+<td><p>Compute the 2D histogram of the data (binning of the data).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_shift</span></code>(nbins[, deg, axis, limit_size])</p></td>
+<td><p>Calculate intensity misalignments via cross-correlation.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_spectrum</span></code>(nbins[, axis])</p></td>
+<td><p>Integrate data in one direction (sum columns or rows).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>(*args, **kwargs)</p></td>
+<td><p>Return a copy of the object.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fix_curvature</span></code>(nbins[, deg, axis, limit_size])</p></td>
+<td><p>Shift datapoints along a given axis to fix curvature via cc.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(filepath[, only_data, verbose])</p></td>
+<td><p>Load data from a text file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code>([ax, set_limits])</p></td>
+<td><p>Display data as an image.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>([filepath, only_data, check_overwrite, ...])</p></td>
+<td><p>Save data to a text file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_shift</span></code>([value, p, f, axis])</p></td>
+<td><p>Shift photon events along a given axis.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculated_shift</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">data</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.PhotonEvents.filepath" title="brixs.PhotonEvents.filepath"><code class="xref py py-obj docutils literal notranslate"><span class="pre">filepath</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#brixs.PhotonEvents.x" title="brixs.PhotonEvents.x"><code class="xref py py-obj docutils literal notranslate"><span class="pre">x</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">xlim</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#brixs.PhotonEvents.y" title="brixs.PhotonEvents.y"><code class="xref py py-obj docutils literal notranslate"><span class="pre">y</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ylim</span></code></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Carlos Galdino.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

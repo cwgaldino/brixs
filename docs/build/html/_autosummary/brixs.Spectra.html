@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brixs.Spectra &mdash; brixs 0.8 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            brixs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">brixs.Spectra</a></li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">brixs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">brixs.Spectra</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_autosummary/brixs.Spectra.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="brixs-spectra">
+<h1>brixs.Spectra<a class="headerlink" href="#brixs-spectra" title="Permalink to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="brixs.Spectra">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">brixs.</span></span><span class="sig-name descname"><span class="pre">Spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectra" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a <code class="docutils literal notranslate"><span class="pre">spectra</span></code> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int</em><em>, </em><em>optional</em>) – array preallocation.</p></li>
+<li><p><strong>data</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – list of <code class="xref py py-class docutils literal notranslate"><span class="pre">spectrum</span></code> objects.</p></li>
+<li><p><strong>folderpath</strong> (<em>string</em><em>, </em><em>path object</em>) – folderpath.</p></li>
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – filepath to read.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>How to initialize a Spectra object:</dt><dd><p><strong>Empty</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><strong>Pre-allocation</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>From Spectrum</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">([</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>where s1, s2, … are <a class="reference internal" href="brixs.Spectrum.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum</span></code></a> type.</p>
+<p><strong>From file</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="n">folderpath</span><span class="o">=&lt;</span><span class="n">folderpath</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="o">&lt;</span><span class="n">folderpath</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="n">filepath</span><span class="o">=&lt;</span><span class="n">filepath</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectra</span><span class="p">(</span><span class="o">&lt;</span><span class="n">filepath</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where filepath must point to
+a xy-type file, where comments must be marked with <cite>#</cite> and columns
+must be separated by <cite>,</cite> (comma). Folderpath must point to
+a folderpath populated only with files similar xy-type files.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.data">
+<span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#brixs.Spectra.data" title="Permalink to this definition"></a></dt>
+<dd><p>list with <a class="reference internal" href="brixs.Spectrum.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum</span></code></a> objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of <a class="reference internal" href="brixs.Spectrum.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.folderpath">
+<span class="sig-name descname"><span class="pre">folderpath</span></span><a class="headerlink" href="#brixs.Spectra.folderpath" title="Permalink to this definition"></a></dt>
+<dd><p>folderpath associated with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str or pathlib.Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.filepath">
+<span class="sig-name descname"><span class="pre">filepath</span></span><a class="headerlink" href="#brixs.Spectra.filepath" title="Permalink to this definition"></a></dt>
+<dd><p>filepath associated with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str or pathlib.Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.step">
+<span class="sig-name descname"><span class="pre">step</span></span><a class="headerlink" href="#brixs.Spectra.step" title="Permalink to this definition"></a></dt>
+<dd><p>step size for x-coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>number, read only</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.length">
+<span class="sig-name descname"><span class="pre">length</span></span><a class="headerlink" href="#brixs.Spectra.length" title="Permalink to this definition"></a></dt>
+<dd><p>length of x-coordinates vector.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>number, read only</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#brixs.Spectra.x" title="Permalink to this definition"></a></dt>
+<dd><p>x-coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>number, read only</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.monotonicity">
+<span class="sig-name descname"><span class="pre">monotonicity</span></span><a class="headerlink" href="#brixs.Spectra.monotonicity" title="Permalink to this definition"></a></dt>
+<dd><p>monotonicity of the x-array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str or None, read only</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectra.peaks">
+<span class="sig-name descname"><span class="pre">peaks</span></span><a class="headerlink" href="#brixs.Spectra.peaks" title="Permalink to this definition"></a></dt>
+<dd><p>each entry represents a parameter of a peak.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="brixs.Peaks.html#brixs.Peaks" title="brixs.Peaks"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Peaks</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="simple">
+<dt><strong>Computed (read-only) attributes:</strong></dt><dd><dl class="simple">
+<dt>area (list)</dt><dd><p>area of each spectrum</p>
+</dd>
+<dt>sum (<a class="reference internal" href="brixs.Spectrum.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum</span></code></a>)</dt><dd><p>sum of every spectrum</p>
+</dd>
+<dt>average (<a class="reference internal" href="brixs.Spectrum.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum</span></code></a>)</dt><dd><p>average of every spectrum</p>
+</dd>
+<dt>map (<a class="reference internal" href="brixs.Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Image</span></code></a>)</dt><dd><p>2D representation of spectra</p>
+</dd>
+<dt>calculated_shift (list)</dt><dd><p>calculated x add. factor</p>
+</dd>
+<dt>calculated_offset (list)</dt><dd><p>calculated y additive factor</p>
+</dd>
+<dt>calculated_roll (list)</dt><dd><p>calculated x roll</p>
+</dd>
+<dt>calculated_calib (list)</dt><dd><p>calculated x multiplicative factor</p>
+</dd>
+<dt>calculated_factor (list)</dt><dd><p>calculated y multiplicative factor</p>
+</dd>
+</dl>
+</dd>
+<dt>Write-only attributes:</dt><dd><dl class="simple">
+<dt>calib</dt><dd><p>calls s.set_calib()</p>
+</dd>
+<dt>shift</dt><dd><p>calls s.set_shift()</p>
+</dd>
+<dt>roll</dt><dd><p>calls s.set_roll()</p>
+</dd>
+<dt>factor</dt><dd><p>calls s.set_factor()</p>
+</dd>
+<dt>offset</dt><dd><p>calls s.set_offset()</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectra.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectra.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize the object instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>AttributeError</strong> – if kwargs and args cannot be read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.Spectra.__init__" title="brixs.Spectra.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(*args, **kwargs)</p></td>
+<td><p>Initialize the object instance.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">align</span></code>([mode])</p></td>
+<td><p>Uses calculate_shift and set_shift.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">append</span></code>(*args, **kwargs)</p></td>
+<td><p>Append spectrum to the spectrum list.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_average</span></code>(*args, **kwargs)</p></td>
+<td><p>Returns Spectrum object with the average of all spectra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_calib</span></code>([values, mode, deg])</p></td>
+<td><p>Calculate calibration factor via <code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.calculate_shift()</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_factor</span></code>([mode])</p></td>
+<td><p>Calculate mult.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_map</span></code>([axis])</p></td>
+<td><p>Return image representation of spectra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_offset</span></code>([mode])</p></td>
+<td><p>Calculate offsets to align data background.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_roll</span></code>([mode])</p></td>
+<td><p>Calculate x-coord.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_shift</span></code>([mode])</p></td>
+<td><p>Calculate x-coord.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_sum</span></code>(*args, **kwargs)</p></td>
+<td><p>Returns Spectrum object with the sum of all spectra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_y_sum</span></code>(*args, **kwargs)</p></td>
+<td><p>Returns a list of the sum of y elements within a range for each spectra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_length</span></code>()</p></td>
+<td><p>Checks if all spectra has the same length.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_monotonicity</span></code>()</p></td>
+<td><p>Sets monotonicity attribute to 'increasing' or 'decreasing'.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_same_x</span></code>([max_error])</p></td>
+<td><p>Check if spectra have same x-coordinates.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_step</span></code>([max_error])</p></td>
+<td><p>Check step between data points in the x-coordinates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">concatenate</span></code>()</p></td>
+<td><p>Return spectrum of concatenate spectra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>(*args, **kwargs)</p></td>
+<td><p>Return a copy of the object with data contained in a range.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_peaks_from_spectra</span></code>()</p></td>
+<td><p>Copy peaks from each spectrum.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_peaks_to_spectra</span></code>()</p></td>
+<td><p>Copy peaks to each spectrum</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">crop</span></code>([start, stop])</p></td>
+<td><p>Crop data.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_peaks</span></code>([prominence, width, ...])</p></td>
+<td><p>Find peaks recursively.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_peak</span></code>([asymmetry, method, ranges, verbose])</p></td>
+<td><p>Fit one peak for all spectra recursively.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_peaks</span></code>([method, ranges])</p></td>
+<td><p>Fit peaks for all spectra SIMULTANEOUSLY.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fix_monotonicity</span></code>([mode])</p></td>
+<td><p>Rearrange x, y such as x array is monotonically increasing or decreasing.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flip</span></code>()</p></td>
+<td><p>Flip x axis.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flip_order</span></code>()</p></td>
+<td><p>reorder spectra backwards:</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">floor</span></code>(*args, **kwargs)</p></td>
+<td><p>Sets zero value for y-coordinates (shifts data verticaly).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_by_attr</span></code>(attr, value[, closest, verbose])</p></td>
+<td><p>Return spectrum with attr closest to value.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">interp</span></code>([start, stop, num, step, x])</p></td>
+<td><p>Interpolate data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>([folderpath, string, verbose])</p></td>
+<td><p>Load data from text files.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_from_single_file</span></code>([filepath, only_data, ...])</p></td>
+<td><p>load multiple spectra from file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize</span></code>([mode])</p></td>
+<td><p>Uses Spectra.calculate_factor() and Spectra.set_factor() to normalize spectra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code>([ax, offset, shift, factor, calib, ...])</p></td>
+<td><p>Plot spectra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">polyfit</span></code>(deg, *args, **kwargs)</p></td>
+<td><p>Fit data recursively with a polynomial.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove</span></code>(idx)</p></td>
+<td><p>Remove spectrum.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder</span></code>(i1, i2)</p></td>
+<td><p>reorder spectra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder_by_attr</span></code>(attr[, decreasing])</p></td>
+<td><p>reorder spectra based on a attr.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">roll_plot</span></code>([xlim, ylim, vlines, update_function])</p></td>
+<td><p>flip through spectra (up/down keys), roll spectrum (left/right keys)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>([folderpath, prefix, suffix, ...])</p></td>
+<td><p>Save spectra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_all_single_file</span></code>([filepath, only_data, ...])</p></td>
+<td><p>Save all Spectra in one single file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sequential_plot</span></code>([xlim, ylim, update_function])</p></td>
+<td><p>plot where you can use arrows to flip through spectra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_calib</span></code>(value)</p></td>
+<td><p>Apply multiplicative x factor recursively.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_factor</span></code>([value])</p></td>
+<td><p>Apply multiplicative y factor recursively.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_offset</span></code>([value])</p></td>
+<td><p>Apply additive y factor recursively.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_roll</span></code>([value])</p></td>
+<td><p>Roll y data recursively.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_shift</span></code>([value])</p></td>
+<td><p>Shift data recursively.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">shift_plot</span></code>([xlim, ylim, step, vlines, ...])</p></td>
+<td><p>flip through spectra (up/down keys), shift spectrum (left/right keys)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">switch</span></code>()</p></td>
+<td><p>Switch x and y axis</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">area</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">average</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculated_calib</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculated_factor</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculated_offset</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculated_roll</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculated_shift</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calib</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.Spectra.data" title="brixs.Spectra.data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">factor</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.Spectra.filepath" title="brixs.Spectra.filepath"><code class="xref py py-obj docutils literal notranslate"><span class="pre">filepath</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#brixs.Spectra.folderpath" title="brixs.Spectra.folderpath"><code class="xref py py-obj docutils literal notranslate"><span class="pre">folderpath</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.Spectra.length" title="brixs.Spectra.length"><code class="xref py py-obj docutils literal notranslate"><span class="pre">length</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">map</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.Spectra.monotonicity" title="brixs.Spectra.monotonicity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">monotonicity</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">offset</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#brixs.Spectra.peaks" title="brixs.Spectra.peaks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">peaks</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">roll</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">shift</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#brixs.Spectra.step" title="brixs.Spectra.step"><code class="xref py py-obj docutils literal notranslate"><span class="pre">step</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sum</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#brixs.Spectra.x" title="brixs.Spectra.x"><code class="xref py py-obj docutils literal notranslate"><span class="pre">x</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Carlos Galdino.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

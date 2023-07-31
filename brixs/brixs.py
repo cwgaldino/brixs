@@ -1,14 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""BRIXS is divided in four major classes: 
-
-.. autosummary::
-
-    Spectrum
-    Spectra  
-    Image
-    PhotonEvents 
-"""
+"""Core brixs module"""
 
 # standard libraries
 import copy
@@ -45,7 +37,7 @@ class _Meta(type):
                     raise AttributeError('Attribute is "read only". Cannot set attribute.')
                 def deleter(self):
                     raise AttributeError('Attribute is "read only". Cannot delete object.')
-            return getter, setter, deleter, 'read only attribute'
+            return getter, setter, deleter#, 'read only attribute'
 
         def lazy_non_removable(_attr):
             variable = '_' + _attr
@@ -56,7 +48,7 @@ class _Meta(type):
                     return setattr(self, variable, value)
                 def deleter(self):
                     raise AttributeError('Attribute cannot be deleted.')
-            return getter, setter, deleter, 'non-removable attribute'
+            return getter, setter, deleter#, 'non-removable attribute'
 
         new_attrs = {}
         for name, value in attrs.items():
@@ -76,24 +68,35 @@ class _Meta(type):
 
 # BRIXS ========================================================================
 class Spectrum(metaclass=_Meta):
-    """Creates a ``spectrum`` object.
+    """Returns a ``Spectrum`` object. 
 
-    How to create a spectrum object:
-        s = br.Spectrum()
+    Args:
+        x (list or array, optional): x values (1D list/array).
+        y (list or array, optional): y values (1D list/array).
+        filepath (str or pathlib.Path, optional): filepath to read.
 
-        s = br.Spectrum(x, y)
-        s = br.Spectrum(x=x, y=y)
+    How to initialize a Spectrum object:
+        **Empty**
+        
+            >>> s = br.Spectrum()
 
-        s = br.Spectrum(y)
-        s = br.Spectrum(y=y)
+        **From array**
 
-        s = br.Spectrum(filepath=<filepath>)
-        s = br.Spectrum(<filepath>)
+            >>> s = br.Spectrum(x, y)
+            >>> s = br.Spectrum(x=x, y=y)
+            >>> s = br.Spectrum(y)
+            >>> s = br.Spectrum(y=y)
 
-    If only y data is passed, a dummy x-array will be set.
+        where ``x`` and ``y`` are 1D arrays (or list). If only y data is passed, a dummy 
+        x-array will be set.
 
-    The filepath must point to a xy-type file. Comments must be marked with `#`
-    and columns must be separated by `,` (comma).
+        **From file**
+
+            >>> s = br.Spectrum(filepath=<filepath>)
+            >>> s = br.Spectrum(<filepath>)
+
+        where ``filepath`` must point to a xy-type file, where comments 
+        must be marked with `#` and columns must be separated by `,` (comma).
 
     Attributes:
         x (array): vector with x-coordinate values
@@ -101,18 +104,30 @@ class Spectrum(metaclass=_Meta):
         filepath (str or pathlib.Path): filepath associated with data.
         step (number or None, read only): step size of the x-array.
         monotonicity (str or None, read only): monotonicity of the x-array.
-        peaks (lmfit.Parameters): each entry represents a parameter of a peak.
+        peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.
 
     Computed (read-only) attributes:
-        data (array): 2 column data (x, y)
-        area (number): area under the curve.
+        data (array)
+            2 column data (x, y)
+
+        area (number) 
+            area under the curve.
 
     Write-only attributes:
-        calib:  calls s.set_calib()
-        shift:  calls s.set_shift()
-        roll:   calls s.set_roll()
-        factor: calls s.set_factor()
-        offset: calls s.set_offset()
+        calib
+            calls s.set_calib()
+
+        shift
+            calls s.set_shift()
+
+        roll
+            calls s.set_roll()
+
+        factor
+            calls s.set_factor()
+
+        offset
+            calls s.set_offset()
     """
     _read_only     = ['step', 'monotonicity', 'peaks']
     _non_removable = []
@@ -120,11 +135,6 @@ class Spectrum(metaclass=_Meta):
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
 
-        Args:
-            x (list or array, optional): x values (1D list/array).
-            y (list or array, optional): y values (1D list/array).
-            filepath (str or pathlib.Path, optional): filepath to read.
-        
         Raises:
             AttributeError: if kwargs and args cannot be read.
         """
@@ -245,7 +255,7 @@ class Spectrum(metaclass=_Meta):
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
-
+    
     @property
     def y(self):
         return self._y
@@ -753,14 +763,13 @@ class Spectrum(metaclass=_Meta):
                 an warning when attributes cannot be loaded from the file.
             **kwargs: kwargs are passed to ``plt.genfromtxt()`` that loads the data.
 
-
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
         Args:
             delimiter (str, optional): String or character separating columns.
                 Use ``\\t`` for tab. Default is comma (', ').
             comments (str, optional): The character used to indicate the start
-                of a comment. Default is ``# ``. Attributes picked up
+                of a comment. Default is ``#``. Attributes picked up
                 from the header will be loaded too.
             usecols (tuple, optional): Default is (0, 1).
 
@@ -1094,8 +1103,11 @@ class Spectrum(metaclass=_Meta):
         """Sets zero value for y-coordinates.
 
         Usage:
-            s.floor(None, None)  # to bring the avg of all data points to zero.
-            s.floor((0, 10), (90, 100))  # Brings the avg between x=0 and 10 and between x=90 and 100 to zero
+            >>> # to bring the avg of all data points to zero.
+            >>> s.floor(None, None)  
+            >>>
+            >>> # Brings the avg between x=0 and 10 and between x=90 and 100 to zero
+            >>> s.floor((0, 10), (90, 100))  
 
         Args:
             ranges (list, optional): Pair of x-coordinate values or a list of
@@ -1137,80 +1149,6 @@ class Spectrum(metaclass=_Meta):
         """
         s = self._extract(*args, **kwargs)
         self.set_factor(value/np.mean(s.y))
-
-    def zero(self, mode='max', ref_spectrum=0, ref_peak=0, shift_mode='x'):
-        """[EXPERIMENTAL] Uses Spectrum.set_shift() to shift a specified position to zero.
-
-        It shifts data using shift mode: 'hard' ('x').
-
-        Args:
-            mode (string, optional): method for identifing the point which the x-
-                coordinate is zero. Default is 'max'. Options are: 
-                'second derivative minimum'
-                'cross-correlation reference'
-                'max', 
-                'min',
-                'fitted peaks', 
-                'peak'.
-            ref (int, optional): if mode='peak' or mode='fitted peaks', this
-                variable selects which peak to align data. If mode='cc', ref 
-                must be a reference spectrum of type brixs.Spectrum.
-            bkg_check (bool, optional): If mode = 'cc', data needs to be 
-                normalized and shifts must be calculated and if bkg_check is 
-                True, data with big bkg will raise an error. Later, I can
-                describe here how this bkg check is done.
-
-        Returns:
-            None
-        """
-        # second derivative minimum
-        if mode == 'second derivative minimum':
-            s = self.derivative(2)
-            value = -self.x[np.argmin(s.y)]
-        # cross-correlation reference
-        elif mode in cc:
-            assert isinstance(ref_spectrum, Spectrum), 'ref must be of type brixs.Spectrum.'
-            try:
-                ref_spectrum.check_step()
-            except ValueError:
-                raise ValueError(f'Cannot shift data using mode = {mode}, because x-coordinates of reference spectrum are not uniform.')
-
-            # max
-            ss = Spectra([copy.deepcopy(ref_spectrum), copy.deepcopy(self)])
-            ss.calculate_shift('max')
-            value1 = ss.calculated_shift.y[1]
-            ss.set_shift()
-
-            # cc
-            ss.interp(x=ss[0].x)
-            ss.calculate_factor(mode='area')
-            ss.set_factor()
-            ss.calculate_shift(mode='cc')
-            value2 = ss.calculated_shift.y[1]*ref_spectrum.step
-            value = value1+value2
-        # max
-        elif mode == 'max':
-            value = -self.x[np.argmax(self.y)]
-        # min
-        elif mode == 'min':
-            value = -self.x[np.argmin(self.y)]        
-        # peak
-        elif mode == 'peak':
-            assert len(self.peaks) > 0, 'no peaks defined for this spectrum.'
-            value = -self.peaks[ref_peak]['c'].value
-        else:
-            raise ValueError('mode not valid.\nValid modes: max, min, fitted peaks, peak.')
-        
-        # if roll, shift value must be an integer
-        if shift_mode in roll and self.step is None:
-            try:
-                self.check_step()
-            except ValueError:
-                raise ValueError(f'Cannot shift data using shift_mode = {shift_mode}, because x-coordinates are not uniform.')
-            value = int(value/self.step)
-        
-        # apply shift
-        self.set_shift(value, shift_mode=shift_mode, type_='relative')
 
     def interp(self, start=None, stop=None, num=None, step=None, x=None):
         """Interpolate data.
@@ -1275,104 +1213,6 @@ class Spectrum(metaclass=_Meta):
         self._x = x
         self._y = y
 
-    def makeover(self, ranges, mode='poly', deg=1, n=3):
-        """[EXPERIMENTAL] Replace y data points inside range with averaged out data points nearby.
-        
-        mode can be average (avg) or polinomial (poly). If poly, the deg may also 
-        be selected. Default is mode='poly'.
-        
-        n is the number of points to be used for calculating the average before 
-        (or after) the data point to be substituted.
-        
-        it replaces data points from the beggining of the dataset by calculating
-        the average of n previous points and by replacing data points from the
-        end of the dataset by calculation the average of n subsequent data 
-        points. If mode is poly, a polynomial curve is extrapolated and n points
-        are used in the extrapolation.
-        """
-        ranges = _check_ranges(ranges, vmin=min(self.x), vmax=max(self.x))
-
-        # check
-        if self.monotonicity is None:
-            self.check_monotonicity()
-        if self.monotonicity != 'increasing' and self.monotonicity != 'decreasing':
-            raise RuntimeError('Data must be monotonic (either increasing or decreasing).')
-
-        if mode == 'poly':
-            for r in ranges:
-                x, _   = extract(self.x, self.y, r)
-                # print(x)
-                # # plot data that will be replaced
-                # plt.plot(x, y)
-
-                start = index(self.x, x[0])
-                stop  = index(self.x, x[-1])+1
-
-                # print(x)
-                for i in range(len(x)): 
-                    if stop-i<(start+(stop-start)/2):
-                        # print(start)
-                        # print(stop)
-                        # print((start+stop-start)/2)
-                        break
-
-                    # # plot step by step by changing i
-                    # if i == 1:
-                    #     # plot point to be replaced
-                    #     plt.plot(self.x[start+i], self.y[start+i],    marker='X', ms=10)
-                    #     plt.plot(self.x[stop-i-1],  self.y[stop-i-1], marker='X', ms=10)
-
-                    #     # plot points to be used as reference
-                    #     plt.plot(self.x[start+i-n:start+i], self.y[start+i-n:start+i], color='g', marker='o')
-                    #     plt.plot(self.x[stop-i:stop-i+n], self.y[stop-i:stop-i+n], color='g', marker='o', lw=3)
-
-                    # calculate polyfit
-                    p1 = np.polyfit(self.x[start+i-n:start+i], self.y[start+i-n:start+i], deg)
-                    p2 = np.polyfit(self.x[stop-i:stop-i+n], self.y[stop-i:stop-i+n], deg)
-
-                    self._y[start+i]  = np.polyval(p1, self.x[start+i])
-                    self._y[stop-i-1]  = np.polyval(p2, self.x[stop-i-1])
-
-                    # # plot step by step by changing i
-                    # if i == 1:
-                    #     # plot new point
-                    #     plt.plot(self.x[start+i], np.polyval(p1, self.x[start+i]), marker='v', ms=10)
-                    #     plt.plot(self.x[stop-i-1], np.polyval(p2, self.x[stop-i-1]), marker='v', ms=10)
-
-                    # self._y[start+i] = np.mean(self.y[start+i-n:start+i])
-                    # self._y[stop-i]  = np.mean(self.y[stop+i:stop+i+n])
-                    pass
-        elif mode == 'avg':
-            for r in ranges:
-                x, _   = extract(self.x, self.y, r)
-                # print(x)
-                # # plot data that will be replaced
-                # plt.plot(x, y)
-
-                start = index(self.x, x[0])
-                stop  = index(self.x, x[-1])+1
-
-                # print(x)
-                for i in range(len(x)): 
-                    if stop-i<(start+(stop-start)/2):
-                        # print(start)
-                        # print(stop)
-                        # print((start+stop-start)/2)
-                        break
-
-                    # # plot step by step by changing i
-                    # if i == 1:
-                    #     # plot point to be replaced
-                    #     plt.plot(self.x[start+i], self.y[start+i],    marker='X', ms=10)
-                    #     plt.plot(self.x[stop-i-1],  self.y[stop-i-1], marker='X', ms=10)
-
-                    #     # plot points to be used as reference
-                    #     plt.plot(self.x[start+i-n:start+i], self.y[start+i-n:start+i], color='g', marker='o')
-                    #     plt.plot(self.x[stop-i:stop-i+n], self.y[stop-i:stop-i+n], color='g', marker='o', lw=3)
-
-                    self._y[start+i]  = np.mean(self.y[start+i-n:start+i])
-                    self._y[stop-i-1] = np.mean(self.y[stop-i:stop-i+n])
-
     def crop(self, start=None, stop=None):
         """Crop edges of the dataset.
 
@@ -1401,7 +1241,10 @@ class Spectrum(metaclass=_Meta):
         self._y = s.y
 
     def switch(self):
-        """Switch x and y axis"""
+        """Switch x and y axis.
+        
+        Returns:
+            None"""
         x = copy.deepcopy(self.x)
         y = copy.deepcopy(self.y)
 
@@ -1431,9 +1274,11 @@ class Spectrum(metaclass=_Meta):
         """Return a copy of the data within a range.
 
         Usage:
-            s2.copy(s1)     # s2 is now a copy of s1
-            s2 = s1.copy()  # s2 is now a copy of s2
-            s2 = s1.copy((0, 10), (90, 100))  # s2 will have only data between x=0 and 10 and between x=90 and 100
+            >>> s2.copy(s1)     # s2 is now a copy of s1
+            >>> s2 = s1.copy()  # s2 is now a copy of s2
+            >>>
+            >>> # s2 will have only data between x=0 and 10 and between x=90 and 100
+            >>> s2 = s1.copy((0, 10), (90, 100))  
 
         Args:
             s (Spectrum, optional): Spectrum is copied. See usage.
@@ -1543,17 +1388,18 @@ class Spectrum(metaclass=_Meta):
         """Returns the calculated area under the curve. Wrapper for `numpy.trapz()`_.
 
         Usage:
-            s.calculate_area()  # returns the area for the whole dataset
-
-            s.calculate_area(0, 10)  # returns the area between x=0 and 10
-
-            s.calculate_area((0, 10), (90, 100))  # this works, but will 
-            typically not return a desirable value, because the trapz()
+            >>> s.calculate_area()  # returns the area for the whole dataset
+            >>> s.calculate_area(0, 10)  # returns the area between x=0 and 10
+            >>> s.calculate_area((0, 10), (90, 100))
+            
+        Warning:
+            the last line of the `Usage section` works, but will 
+            typically not return a desirable value, because the ``trapz()``
             algorithm will consider the area between 10 and 90 as a rectangle.
             The correct approach in this case would be to calculated the area
             between 0 and 10 and between 90 and 100 separately.
 
-            area = s.calculate_area(0, 10) + s.calculate_area(90, 100)
+            >>> area = s.calculate_area(0, 10) + s.calculate_area(90, 100)
 
 
         Args:
@@ -1837,19 +1683,41 @@ class Spectrum(metaclass=_Meta):
 class Spectra(metaclass=_Meta):
     """Returns a ``spectra`` object.
 
-    How to create a Spectra object:
-        ss = br.Spectra()
+    Args:
+        n (int, optional): array preallocation.
+        data (list or array, optional): list of :py:class:`spectrum` objects.
+        folderpath (string, path object): folderpath.
+        filepath (str or pathlib.Path, optional): filepath to read.
 
-        ss = br.Spectra(10)  # pre-allocation
+    How to initialize a Spectra object:
+        **Empty**
 
-        ss = br.Spectra(s1, s2, ...)
-        ss = br.Spectra([s1, s2, ...])
+            >>> ss = br.Spectra()
 
-        ss = br.Spectra(folderpath=<folderpath>)
-        ss = br.Spectra(<folderpath>)
+        **Pre-allocation**
 
-        ss = br.Spectra(filepath=<filepath>)
-        ss = br.Spectra(<filepath>)
+            >>> ss = br.Spectra(n=10)
+            >>> ss = br.Spectra(10)
+
+        **From Spectrum**
+
+            >>> ss = br.Spectra(s1, s2, ...)
+            >>> ss = br.Spectra([s1, s2, ...])
+            >>> ss = br.Spectra(data=[s1, s2, ...])
+
+        where s1, s2, ... are :py:attr:`Spectrum` type.
+        
+        **From file**
+
+            >>> ss = br.Spectra(folderpath=<folderpath>)
+            >>> ss = br.Spectra(<folderpath>)
+            >>> ss = br.Spectra(filepath=<filepath>)
+            >>> ss = br.Spectra(<filepath>)
+
+        where filepath must point to 
+        a xy-type file, where comments must be marked with `#` and columns 
+        must be separated by `,` (comma). Folderpath must point to 
+        a folderpath populated only with files similar xy-type files.
 
     Attributes:
         data (list of :py:attr:`Spectrum`): list with :py:attr:`Spectrum` objects.
@@ -1859,26 +1727,51 @@ class Spectra(metaclass=_Meta):
         length (number, read only): length of x-coordinates vector.
         x (number, read only): x-coordinates.
         monotonicity (str or None, read only): monotonicity of the x-array.
-        peaks (lmfit.Parameters): each entry represents a parameter of a peak.
+        peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.
 
-    Computed (read-only) attributes:
-        area (list, read oly): area of each spectrum.
-        sum (Spectrum, read oly): sum of every spectrum. 
-        average (Spectrum, read oly): average of every spectrum.
-        map (Image, read oly): 2D representation of spectra.
-        calculated_shift (list, read_oly): calculated x add. factor.
-        calculated_offset (list, read_oly): calculated y add. factor.
-        calculated_roll (list, read_oly): calculated x roll.
-        calculated_calib (list, read_oly): calculated x mult. factor.
-        calculated_factor (list, read_oly): calculated y mult. factor.
+    **Computed (read-only) attributes:**
+        area (list)
+            area of each spectrum
+
+        sum (:py:attr:`Spectrum`)
+            sum of every spectrum
+
+        average (:py:attr:`Spectrum`)
+            average of every spectrum
+
+        map (:py:attr:`Image`)
+            2D representation of spectra
+
+        calculated_shift (list)
+            calculated x add. factor
+
+        calculated_offset (list)
+            calculated y additive factor
+
+        calculated_roll (list)
+            calculated x roll
+
+        calculated_calib (list)
+            calculated x multiplicative factor
+
+        calculated_factor (list)
+            calculated y multiplicative factor
 
     Write-only attributes:
-        calib:  calls s.set_calib()
-        shift:  calls s.set_shift()
-        roll:   calls s.set_roll()
-        factor: calls s.set_factor()
-        offset: calls s.set_offset()
+        calib
+            calls s.set_calib()
 
+        shift
+            calls s.set_shift()
+
+        roll
+            calls s.set_roll()
+
+        factor
+            calls s.set_factor()
+
+        offset
+            calls s.set_offset()
     """
     _read_only     = ['step', 'length', 'x', 'monotonicity',
                       'calculated_calib', 'calculated_factor',
@@ -1888,12 +1781,6 @@ class Spectra(metaclass=_Meta):
 
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
-
-        Args:
-            n (int, optional): array preallocation.
-            data (list or array, optional): list of :py:class:`spectrum` objects.
-            folderpath (string, path object): folderpath.
-            filepath (str or pathlib.Path, optional): filepath to read.
         
         Raises:
             AttributeError: if kwargs and args cannot be read.
@@ -2346,14 +2233,14 @@ class Spectra(metaclass=_Meta):
         """Append spectrum to the spectrum list.
 
         Usage:
-            ss = br.Spectra()
-
-            ss.append(s)
-            ss.append(s1, s2, s3)
-            ss.append([s1, s2, s3])
-
-            ss.append(s=s)
-            ss.append(s=[s1, s2, s3])
+            >>> ss = br.Spectra()
+            >>> 
+            >>> ss.append(s)
+            >>> ss.append(s1, s2, s3)
+            >>> ss.append([s1, s2, s3])
+            >>> 
+            >>> ss.append(s=s)
+            >>> ss.append(s=[s1, s2, s3])
 
         Args:
             s (Spectrum obj or list): Spectrum object to be added or
@@ -2494,7 +2381,7 @@ class Spectra(metaclass=_Meta):
         """reorder spectra backwards:
 
         If ss.data = [s1, s2, s3], then flip_order() would make it 
-            ss.data = [s3, s2, s1]
+        ss.data = [s3, s2, s1]
 
         Returns:
             None
@@ -3310,7 +3197,7 @@ class Spectra(metaclass=_Meta):
     def set_factor(self, value=None):
         """Apply multiplicative y factor recursively.
 
-        if value is none, calculated values will be used and type_ will be set to relative.
+        if value is none, calculated values will be used.
 
         Args:
             value (number or list, optional): value will be multiplied to y-coordinates.
@@ -3656,9 +3543,11 @@ class Spectra(metaclass=_Meta):
         """Return a copy of the object with data contained in a range.
 
         Usage:
-            ss2.copy(ss1)     # ss2 is now a copy of ss1
-            ss2 = ss1.copy()  # ss2 is now a copy of ss1
-            ss2 = ss1.copy((0, 10), (90, 100))  # ss2 will have only data between x=0 and 10 and between x=90 and 100
+            >>> ss2.copy(ss1)     # ss2 is now a copy of ss1
+            >>> ss2 = ss1.copy()  # ss2 is now a copy of ss1
+            >>>
+            >>> # ss2 will have only data between x=0 and 10 and between x=90 and 100
+            >>> ss2 = ss1.copy((0, 10), (90, 100))  
 
         Args:
             ss (Spectra, optional): Spectra to be copied. See usage.
@@ -3718,7 +3607,11 @@ class Spectra(metaclass=_Meta):
     def concatenate(self):
         """Return spectrum of concatenate spectra.
         
-        attrs are copied to the final spectrum, but attrs from each spectrum is lost.
+        Note:
+            attrs are copied to the returned spectrum, but attrs from each spectrum is lost.
+
+        Returns:
+            Spectrum
         """
         x = np.concatenate([s.x for s in self.data])
         y = np.concatenate([s.y for s in self.data])
@@ -3843,48 +3736,51 @@ class Spectra(metaclass=_Meta):
 
         Result is a list of shift values that is save in the attr:
 
-            ss.calculated_shift
+            >>> ss.calculated_shift
 
         Args:
             mode (string, optional): method used for calculating shifts.
                 The current options are: 
 
-                    'cross-correlation' or 'cc'
-                    'max',
-                    'peaks' or 'peak'
+                1) 'cross-correlation' or 'cc'
+
+                2) 'max'
+
+                3) 'peaks' or 'peak'
 
         Modes may have additional parameters:
 
-        `cross-correlation`:
+        `cross-correlation`
             ref_spectrum (int or str, optional): index of the spectrum used
                 to cross-correlate with all other spectra, i.e., all spectra 
                 will be aligned to ref_spectrum. If ref_spectrum = 'seq' or 
                 'sequential', cross-correlation is performed between subsequent
                 spectra. Default is 0.
-
             ranges (list, optional): a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data.
 
-        `peaks`:
-            ref_spectrum (int, optional): index of the spectrum to which all
+        `peaks`
+            ref_spectrum (int, optional)
+                index of the spectrum to which all
                 other spectra will be aligned to. Default is 0.
-
-            ref_peak (int, optional): peak used to calculate shifts. Default is 0.
-
-            ref_value (number, optional): If not None, the center of ref_peak 
+            ref_peak (int, optional)
+                peak used to calculate shifts. Default is 0.
+            ref_value (number, optional)
+                If not None, the center of ref_peak 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
 
         `max`:
-            ref_spectrum (int, optional): index of the spectrum to which all
+            ref_spectrum (int, optional)
+                index of the spectrum to which all
                 other spectra will be aligned to. Default is 0.
-
-            ref_value (number, optional): If not None, the max y-coord. 
+            ref_value (number, optional)
+                If not None, the max y-coord. 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
-
-            ranges (list, optional): a pair of x-coordinate values or a list of
+            ranges (list, optional)
+                a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data.
                   
@@ -3965,48 +3861,53 @@ class Spectra(metaclass=_Meta):
 
         Result is a list of int values that is save in the attr:
 
-            ss.calculated_roll
+            >>> ss.calculated_roll
 
         Args:
             mode (string, optional): method used for calculating rolls.
                 The current options are: 
 
-                    'cross-correlation' or 'cc'
-                    'max',
-                    'peaks' or 'peak'
+                1) 'cross-correlation' or 'cc'
+
+                2) 'max'
+
+                3) 'peaks' or 'peak'
 
         Some modes may have additional parameters:
 
-        `cross-correlation`:
-            ref_spectrum (int or str, optional): index of the spectrum used
+        `cross-correlation`
+            ref_spectrum (int or str, optional)
+                index of the spectrum used
                 to cross-correlate with all other spectra, i.e., all spectra 
                 will be aligned to ref_spectrum. If ref_spectrum = 'seq' or 
                 'sequential', cross-correlation is performed between subsequent
                 spectra. Default is 0.
-
-            ranges (list, optional): a pair of x-coordinate values or a list of
+            ranges (list, optional)
+                a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data.
 
-        `peaks`:
-            ref_spectrum (int, optional): index of the spectrum to which all
+        `peaks`
+            ref_spectrum (int, optional)
+                index of the spectrum to which all
                 other spectra will be aligned to. Default is 0.
-
-            ref_peak (int, optional): peak used to calculate shifts. Default is 0.
-
-            ref_value (number, optional): If not None, the center of ref_peak 
+            ref_peak (int, optional)
+                peak used to calculate shifts. Default is 0.
+            ref_value (number, optional)
+                If not None, the center of ref_peak 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
 
-        `max`:
-            ref_spectrum (int, optional): index of the spectrum to which all
+        `max`
+            ref_spectrum (int, optional)
+                index of the spectrum to which all
                 other spectra will be aligned to. Default is 0.
-
-            ref_value (number, optional): If not None, the max y-coord. 
+            ref_value (number, optional)
+                If not None, the max y-coord. 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
-
-            ranges (list, optional): a pair of x-coordinate values or a list of
+            ranges (list, optional)
+                a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data. 
             
@@ -4090,34 +3991,45 @@ class Spectra(metaclass=_Meta):
 
         Result is a list of shift values that is save in the attr:
 
-            ss.calculated_factor
+            >>> ss.calculated_factor
 
         Args:
             mode (string, optional): method used to calculate the multiplicative factor.
                 The current options are: 
-                    'max'
-                    'delta'
-                    'area'
-                    'peaks'
-                    'peaks area'
+
+                1) 'max'
+
+                2) 'delta'
+
+                3) 'area'
+
+                4) 'peaks'
+
+                5) 'peaks area'
 
         Some modes may have additional parameters:
 
-        `max`, `delta`, `area`:
-            ref_spectrum (int, optional): index of the spectrum to be taken as 
+        `max`, `delta`, `area`
+            ref_spectrum (int, optional)
+                index of the spectrum to be taken as 
                 reference. Default is 0.
-            ref_value (number, optional): the max, delta, or area 
+            ref_value (number, optional)
+                the max, delta, or area 
                 for all spectra is set to ref_value. ref_value overwrites 
-                ref_spectrum. Default is None.  
-            ranges (list, optional): a pair of x-coordinate values or a list of
+                ref_spectrum. Default is None.
+            ranges (list, optional)
+                a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data. 
 
-        `peaks` or `peaks area`:
-            ref_spectrum (int, optional): index of the spectrum to be used as
+        `peaks` or `peaks area`
+            ref_spectrum (int, optional)
+                index of the spectrum to be used as
                 reference. Default is 0.
-            ref_peak (int, optional): peak used as reference. Default is 0.
-            ref_value (number, optional): If not None, the amplitude (area)
+            ref_peak (int, optional)
+                peak used as reference. Default is 0.
+            ref_value (number, optional)
+                If not None, the amplitude (area)
                 of ref_peak 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
@@ -4234,23 +4146,28 @@ class Spectra(metaclass=_Meta):
 
         Result is a list of int values that is save in the attr:
 
-            ss.calculated_offset
+            >>> ss.calculated_offset
 
         Args:
             mode (string, optional): method used to calculate the multiplicative factor.
                 The current options are: 
-                    'average'
-                    'peaks'
+
+                    1) 'average'
+
+                    2) 'peaks'
         
         Some modes may have additional parameters:
 
-        `average`:
-            ref_spectrum (int, optional): index of the spectrum to be taken as 
+        `average`
+            ref_spectrum (int, optional)
+                index of the spectrum to be taken as 
                 reference. Default is 0.
-            ref_value (number, optional): the average of data within ranges
+            ref_value (number, optional)
+                the average of data within ranges
                 for all spectra is set to ref_value. ref_value overwrites 
                 ref_spectrum. Default is None.  
-            ranges (list, optional): a pair of x-coordinate values or a list of
+            ranges (list, optional)
+                a pair of x-coordinate values or a list of
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data.
 
@@ -4302,14 +4219,20 @@ class Spectra(metaclass=_Meta):
 
         Result is a Spectrum (x=values, y=shifts) that is save in the attr:
 
-            ss.calculated_calib
+            >>> ss.calculated_calib
 
         calculated_calib is a Spectrum type and has many attrs:
-            ss.calculated_calib.x:     values
-            ss.calculated_calib.y:     calculated shifts
-            ss.calculated_calib.popt:  polynomial coeff. (highest power first.) that fit the calibration curve.
-            ss.calculated_calib.model: function f(x) of the calibration curve.
-            ss.calculated_calib.R2:    R2 factor of the fitting.
+
+            ss.calculated_calib.x
+                values
+            ss.calculated_calib.y
+                calculated shifts
+            ss.calculated_calib.popt
+                polynomial coeff. (highest power first.) that fit the calibration curve.
+            ss.calculated_calib.model
+                function f(x) of the calibration curve.
+            ss.calculated_calib.R2
+                R2 factor of the fitting.
 
         Args:
             values (list): value list. Values associated with each spectrum.
@@ -4340,8 +4263,10 @@ class Spectra(metaclass=_Meta):
         """Returns a list of the sum of y elements within a range for each spectra.
         
         Usage:
-            ss.calculate_y_sum()  # returns the y sum
-            ss.calculate_y_sum((0, 10), (90, 100))  # returns the y sum from data beteen x=0 and 10 and between x=90 and 100
+            >>> ss.calculate_y_sum()
+            >>>
+            >>> # returns the y sum from data beteen x=0 and 10 and between x=90 and 100
+            >>> ss.calculate_y_sum((0, 10), (90, 100))  
 
         Args:
             ranges (list): a pair of values or a list of pairs. Each pair represents
@@ -4505,18 +4430,18 @@ class Spectra(metaclass=_Meta):
 
         
         Args:
-            xlim (tuple, optional): min and max x value. Default is None (full
+            xlim (tuple, optional): min and max ``x`` value. Default is None (full
                 data range).
-            ylim (tuple, optional): min and max y value. Default is None.
+            ylim (tuple, optional): min and max ``y`` value. Default is None.
             update_function (function, optional): function that is called when
                 the left or right arrows are pressed. update_function must be a 
                 function of type:
 
-                def update_function(ss, __i):
-                    plt.title(__i)
-                    ss[__i].plot(color='black', marker='o')
+                >>> def update_function(ss, __i):
+                >>>     plt.title(__i)
+                >>>     ss[__i].plot(color='black', marker='o')
             
-                where __i is updated in every iteraction.
+                where ``__i`` is updated in every iteraction.
         
         Returns:
             None
@@ -4590,9 +4515,9 @@ class Spectra(metaclass=_Meta):
         """flip through spectra (up/down keys), shift spectrum (left/right keys)
 
         Args:
-            xlim (tuple, optional): min and max x value. Default is None (full
+            xlim (tuple, optional): min and max ``x`` value. Default is None (full
                 data range).
-            ylim (tuple, optional): min and max y value. Default is None.
+            ylim (tuple, optional): min and max ``y`` value. Default is None.
             step (number, optional): step. If None, 1% of the min datapoint 
                 separation is used.
             vlines (list or number, optional): vertical dashed lines for 
@@ -4601,11 +4526,11 @@ class Spectra(metaclass=_Meta):
                 the left or right arrows are pressed. update_function must be a 
                 function of type:
 
-                def update_function(ss, __i):
-                    plt.title(__i)
-                    ss[__i].plot(color='black', marker='o')
+                >>> def update_function(ss, __i):
+                >>>     plt.title(__i)
+                >>>     ss[__i].plot(color='black', marker='o')
             
-                where __i is updated in every iteraction.
+                where ``__i`` is updated in every iteraction.
         
         Returns:
             None
@@ -4712,20 +4637,20 @@ class Spectra(metaclass=_Meta):
         """flip through spectra (up/down keys), roll spectrum (left/right keys)
 
         Args:
-            xlim (tuple, optional): min and max x value. Default is None (full
+            xlim (tuple, optional): min and max ``x`` value. Default is None (full
                 data range).
-            ylim (tuple, optional): min and max y value. Default is None.
+            ylim (tuple, optional): min and max ``y`` value. Default is None.
             vlines (list or number, optional): vertical dashed lines for 
                 reference, default is None.
             update_function (function, optional): function that is called when
                 the left or right arrows are pressed. update_function must be a 
                 function of type:
 
-                def update_function(ss, __i):
-                    plt.title(__i)
-                    ss[__i].plot(color='black', marker='o')
+                >>> def update_function(ss, __i):
+                >>>     plt.title(__i)
+                >>>     ss[__i].plot(color='black', marker='o')
             
-                where __i is updated in every iteraction.
+                where ``__i`` is updated in every iteraction.
         
         Returns:
             None
@@ -4950,15 +4875,28 @@ class Spectra(metaclass=_Meta):
 class Image(metaclass=_Meta):
     """Returns a ``Image`` object.
 
-    How to create a Image object:
-    
-        im = br.Image()
+    Args:
+        data (2D array, optional): Image.
+        filepath (string or path object, optional): filepath.
 
-        im = br.Image(data)
-        im = br.Image(data=data)
+    How to initialize a Image object:
+        **Empty**
 
-        im = br.Image(<filepath>)
-        im = br.Image(filepath=<filepath>)
+            >>> im = br.Image()
+
+        **From 2D array**
+
+            >>> im = br.Image(data)
+            >>> im = br.Image(data=data)
+
+        **From file**
+            
+            >>> im = br.Image(<filepath>)
+            >>> im = br.Image(filepath=<filepath>)
+
+        where ``filepath`` must point to a 2D xy-type file, where comments 
+        must be marked with `#` and columns must be separated by `,` (comma).
+
 
     Attributes:
         data (2D np.array): This is where we store the Image.
@@ -4967,12 +4905,14 @@ class Image(metaclass=_Meta):
         x_centers, y_centers (np.array): pixel center labels.
 
     Computed (read-only) attributes:
-        histogram (brixs.Spectrum): Data intensity histogram.
-        calculated_roll (list): Calculated rolls.
-        calculated_shift (list): same as calculated_shift, but in terms of x or
-            y centers.
-        columns, rows (brixs.Spectra): Spectra obtained from each pixel columns
-            or rows, respectively.
+        histogram (brixs.Spectrum)
+            Data intensity histogram.
+        calculated_roll (list)
+            Calculated rolls.
+        calculated_shift (list)
+            same as calculated_shift, but in terms of x or y centers.
+        columns, rows (brixs.Spectra)
+            Spectra obtained from each pixel columns or rows, respectively.
 
     Write-only attributes:
         None
@@ -4983,10 +4923,6 @@ class Image(metaclass=_Meta):
 
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
-
-        Args:
-            data (2D array, optional): Image.
-            filepath (string or path object, optional): filepath.
         
         Raises:
             AttributeError: if kwargs and args cannot be read.
@@ -5663,8 +5599,8 @@ class Image(metaclass=_Meta):
         """Return a copy of the object.
 
         Usage:
-            im2.copy(im1)     # im2 is now a copy of im1
-            im2 = im1.copy()  # im2 is now a copy of im1
+            >>> im2.copy(im1)     # im2 is now a copy of im1
+            >>> im2 = im1.copy()  # im2 is now a copy of im1
 
         Args:
             im (Image, optional): Image to be is copied. See usage.
@@ -5723,15 +5659,19 @@ class Image(metaclass=_Meta):
 
         Usage:
 
-            im.binning(nbins=10)       # (10 rows, 10 columns)
-            im.binning(nbins=(10))     # (10 rows, 10 columns)
-            im.binning(10)             # (10 rows, 10 columns)
-            im.binning((10))           # (10 rows, 10 columns)
-
-            im.binning(nbins=(10, 5))  # (10 rows, 5 columns)
-            im.binning((10, 5))        # (10 rows, 5 columns)
-            im.binning(10, 5)          # (10 rows, 5 columns)
-            im.binning(None, 5)        # (No binning, 5 columns)
+            >>> # 10 rows, 10 columns
+            >>> im.binning(nbins=10)       
+            >>> im.binning(nbins=(10))
+            >>> im.binning(10)           
+            >>> im.binning((10))  
+            >>>
+            >>> # 10 rows, 5 columns
+            >>> im.binning(nbins=(10, 5)) 
+            >>> im.binning((10, 5))       
+            >>> im.binning(10, 5)   
+            >>>
+            >>> # No binning, 5 columns
+            >>> im.binning(None, 5)    
 
         Args:
             nbins (int or tuple): number of bins. Must be non-zero positive number.
@@ -6204,14 +6144,29 @@ class Image(metaclass=_Meta):
 class PhotonEvents(metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
-    How to create a Photon events object:
-        pe = br.PhotonEvents()
+    Args:
+        x (array): vector with x-coordinate of photon events.
+        y (array): vector with y-coordinate of photon events.
+        filepath (string or path object, optional): filepath.
 
-        pe = br.PhotonEvents(x, y)
-        pe = br.PhotonEvents(x=x, y=y)
+    How to initialize a Photon events object:
+        **Empty**
+            
+            >>> pe = br.PhotonEvents()
 
-        pe = br.PhotonEvents(<filepath>)
-        pe = br.PhotonEvents(filepath=<filepath>)
+        **From array**
+            >>> pe = br.PhotonEvents(x, y)
+            >>> pe = br.PhotonEvents(x=x, y=y)
+        
+        where ``x`` and ``y`` are 1D array or list.
+
+        **From file**
+            >>> pe = br.PhotonEvents(<filepath>)
+            >>> pe = br.PhotonEvents(filepath=<filepath>)
+        
+        where ``filepath`` must point to a xy-type file, where comments 
+        must be marked with `#` and columns must be separated by `,` (comma).
+
 
     Attributes:
         x (array): vector with x-coordinate of photon events.
@@ -6221,8 +6176,10 @@ class PhotonEvents(metaclass=_Meta):
             coordinates.
 
     Computed (read-only) attributes:
-        data (array): 2 column data (x, y)
-        calculated_shift (list): Calculated shifts.
+        data (array)
+            2 column data (x, y)
+        calculated_shift (list)
+            Calculated shifts.
 
     Write-only attributes:
         None
@@ -6233,12 +6190,7 @@ class PhotonEvents(metaclass=_Meta):
 
     def __init__(self, *args, **kwargs): 
         """Initialize the object instance.
-
-        Args:
-            x (array): vector with x-coordinate of photon events.
-            y (array): vector with y-coordinate of photon events.
-            filepath (string or path object, optional): filepath.
-        
+         
         Raises:
             AttributeError: if kwargs and args cannot be read.
         """
@@ -6786,8 +6738,8 @@ class PhotonEvents(metaclass=_Meta):
         """Return a copy of the object.
 
         Usage:
-            pe2.copy(pe1)     # pe2 is now a copy of ss1
-            pe2 = pe1.copy()  # pe2 is now a copy of ss1
+            >>> pe2.copy(pe1)     # pe2 is now a copy of ss1
+            >>> pe2 = pe1.copy()  # pe2 is now a copy of ss1
 
         Args:
             pe (Image, optional): PhotonEvents to be is copied. See usage.
@@ -6844,15 +6796,16 @@ class PhotonEvents(metaclass=_Meta):
         """Compute the 2D histogram of the data (binning of the data).
 
         Usage:
-
-            pe.binning(nbins=10)       # (10 rows, 10 columns)
-            pe.binning(nbins=(10))     # (10 rows, 10 columns)
-            pe.binning(10)             # (10 rows, 10 columns)
-            pe.binning((10))           # (10 rows, 10 columns)
-
-            pe.binning(nbins=(10, 5))  # (10 rows, 5 columns)
-            pe.binning((10, 5))        # (10 rows, 5 columns)
-            pe.binning(10, 5)          # (10 rows, 5 columns)
+            >>> # 10 rows, 10 columns
+            >>> pe.binning(nbins=10)       
+            >>> pe.binning(nbins=(10))   
+            >>> pe.binning(10)            
+            >>> pe.binning((10))          
+            >>> 
+            >>> # 10 rows, 5 columns
+            >>> pe.binning(nbins=(10, 5)) 
+            >>> pe.binning((10, 5))      
+            >>> pe.binning(10, 5)      
 
         Args:
             nbins (int or tuple): number of bins. Must be non-zero positive number.
