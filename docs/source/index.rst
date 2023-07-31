@@ -8,6 +8,8 @@ BRIXS
 
 BRIXS is a python package for processing and analysis of XAS and RIXS spectra.
 
+.. contents:: Table of Contents
+
 #############
 Introduction
 #############
