@@ -21,7 +21,7 @@ and over again for multiple datasets.
 
 For instance, an example of spectrum processing would look something like this 
 
-.. code-block::
+.. code-block:: python
 
    # import data
    x, y = read_data(...)  
@@ -47,7 +47,7 @@ For instance, an example of spectrum processing would look something like this
 
 In a OO approach, the same processing would look like this,
 
-.. code-block::
+.. code-block:: python
 
    s = br.Spectrum(...)   # import data
 
@@ -65,7 +65,7 @@ At the same time, this does not limit the most experienced users, because you
 can always apply a `functional approach` by extracting the x and y data from the 
 object like,
 
-.. code-block::
+.. code-block:: python
 
    x = s.x
    y = s.y
@@ -74,7 +74,7 @@ object like,
 Keeping track and labeling data is also more intuitive in a OO approach. One can
 load different datasets and easily label them, 
 
-.. code-block::
+.. code-block:: python
 
    s1 = br.Spectrum(...)
    s2 = br.Spectrum(...)
@@ -84,7 +84,7 @@ load different datasets and easily label them,
 
 and metadata can be stored directly inside objects,
 
-.. code-block::
+.. code-block:: python
 
    s = br.Spectrum(...)      # import data
    print(s.H)                # Metadata: Magnetic Field     
@@ -92,13 +92,13 @@ and metadata can be stored directly inside objects,
 
 moreover, new metadata can be added on the fly,
 
-.. code-block::
+.. code-block:: python
 
    s.angle = 12.53
 
 Just like metadata, repetitive tasks can be added to the object,
 
-.. code-block::
+.. code-block:: python
 
    # define new method
    def common_processing(s):
@@ -120,7 +120,7 @@ Basics
 
 BRIXS is based on four major objects:
 
-.. code-block::
+.. code-block:: python
 
    im = br.Image()
    pe = br.PhotonEvents()
@@ -139,7 +139,7 @@ the Spectra object.
 Having only four classes makes the code easy to maintain. 
 Despite of that, BRIXS also have a secondary class
 
-.. code-block::
+.. code-block:: python
 
    peaks = br.Peaks()
 
@@ -149,7 +149,7 @@ Parameters object <https://lmfit.github.io/lmfit-py/parameters.html#>`_ with som
 BRIXS also have additional smaller modules with everyday functions, which we 
 call `backpack functions`.
 
-.. code-block::
+.. code-block:: python
 
    br.figmanip
    br.filemanip
@@ -169,7 +169,7 @@ to one of the 4 major BRIXS objects, are stored in the `file_reading` folder. Fo
 example, for data collected at ADRESS beamline of PSI, one can use the following
 line of code to get the spectrum from scan number 56,
 
-.. code=block::
+.. code-block:: python
 
    from brixs.file_reading import ADRESS
    ADRESS.read(folderpath, 'Cu_', 56)
@@ -185,7 +185,7 @@ There are two recommended methods:
 
 1. Using pip
 
-```python
+```
     pip install git+https://github.com/cwgaldino/brixs
 ```
 
@@ -193,11 +193,12 @@ or
 
 2. Cloning (or downloading) the GitHub repository then adding brixs to the "path":
 
-```python
+.. code-block:: python
+
     import sys
     sys.path.append('<path-to-brixs>')
     import brixs as br
-```
+
 
 ############
 Requirements
