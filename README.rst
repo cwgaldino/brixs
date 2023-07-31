@@ -4,7 +4,7 @@ BRIXS
 
 BRIXS is a python package for processing and analysis of XAS and RIXS spectra.
 
-Click :doc:`here <documentation>` for brixs documentation.
+Click `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
 
 #############
 Introduction
@@ -182,9 +182,10 @@ There are two recommended methods:
 
 1. Using pip
 
-```
-    pip install git+https://github.com/cwgaldino/brixs
-```
+.. code-block::    
+   
+   pip install git+https://github.com/cwgaldino/brixs
+
 
 or
 
@@ -202,11 +203,15 @@ Requirements
 ############
 
 Base (required):
+
 - numpy
+
 - scipy
+
 - matplotlib
 
 Reciprocal space calculations:
+
 - pbcpy
 
 Other packages may be required for file reading functions.
