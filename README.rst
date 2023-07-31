@@ -212,6 +212,8 @@ Base (required):
 
 - matplotlib
 
+- lmfit >= 1.2.2
+
 Reciprocal space calculations:
 
 - pbcpy
