@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brixs.backpack.arraymanip &mdash; brixs 0.8 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            brixs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">brixs.backpack.arraymanip</a></li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">brixs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">brixs.backpack.arraymanip</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_autosummary/brixs.backpack.arraymanip.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-brixs.backpack.arraymanip">
+<span id="brixs-backpack-arraymanip"></span><h1>brixs.backpack.arraymanip<a class="headerlink" href="#module-brixs.backpack.arraymanip" title="Permalink to this heading"></a></h1>
+<p>Everyday use functions for array manipulation.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.index">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">closest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.index" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the first index of the element in array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – value.</p></li>
+<li><p><strong>closest</strong> (<em>book</em><em>, </em><em>optional</em>) – if True, returns the index of the element in
+array which is closest to value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>index (int)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.sort">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">sort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.sort" title="Permalink to this definition"></a></dt>
+<dd><p>Returns sorted arrays based on a reference array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>*args</strong> – array to sort.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>sorted arrays.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.choose">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">choose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.choose" title="Permalink to this definition"></a></dt>
+<dd><p>Return a mask of x values inside range pairs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1d list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.extract">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">extract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.extract" title="Permalink to this definition"></a></dt>
+<dd><p>Returns specific data ranges from x and y.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D reference vector.</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1D y-coordinates or list of several data sets.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x.</p></li>
+<li><p><strong>invert</strong> (<em>bool</em><em>, </em><em>optional</em>) – if inverted is True, data outside of the data
+will be returned. Default is False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>x and y arrays. If <cite>y</cite> is 1d, the returned <cite>y</cite> is 1d. If <cite>y</cite> is
+a multicolumn array then the returned <cite>y</cite> is also multicolumn</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>if <cite>y</cite> is 1d, the returned <cite>y</cite> is 1d:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ranges</span> <span class="o">=</span> <span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mf">7.5</span><span class="p">,</span> <span class="mi">9</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_sliced</span><span class="p">,</span> <span class="n">y_sliced</span> <span class="o">=</span> <span class="n">am</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ranges</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">x_sliced</span><span class="p">)</span>
+<span class="go">[0 1 2 3 8 9]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">y_sliced</span><span class="p">)</span>
+<span class="go">[0 1 4 9 64 81]</span>
+</pre></div>
+</div>
+<p>if <cite>y</cite> is multicolumn, the returned <cite>y</cite> is also multicolumn:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">**</span><span class="mi">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ranges</span> <span class="o">=</span> <span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mf">7.5</span><span class="p">,</span> <span class="mi">9</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_sliced</span><span class="p">,</span> <span class="n">y_sliced</span> <span class="o">=</span> <span class="n">am</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ranges</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">x_sliced</span><span class="p">)</span>
+<span class="go">[0. 1. 2. 3. 8. 9.]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">y_sliced</span><span class="p">)</span>
+<span class="go">[[  0.   0.]</span>
+<span class="go"> [  1.   0.]</span>
+<span class="go"> [  8.   0.]</span>
+<span class="go"> [ 27.   0.]</span>
+<span class="go"> [512.   0.]</span>
+<span class="go"> [729.   0.]]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.moving_average">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">moving_average</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.moving_average" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the moving average of an array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – number of points to average.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>array of length given by (len(x)-n+1).</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">am</span><span class="o">.</span><span class="n">moving_average</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="go">[0. 1. 2. 3. 4. 5. 6. 7. 8. 9.]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">am</span><span class="o">.</span><span class="n">moving_average</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="go">[0.5 1.5 2.5 3.5 4.5 5.5 6.5 7.5 8.5]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">am</span><span class="o">.</span><span class="n">moving_average</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="go">[1. 2. 3. 4. 5. 6. 7. 8.]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">am</span><span class="o">.</span><span class="n">moving_average</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="go">[1.5 2.5 3.5 4.5 5.5 6.5 7.5]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.derivative">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.derivative" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the derivative of y-coordinates as a function of x-coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array x-coordinates.</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array y-coordinates.</p></li>
+<li><p><strong>order</strong> (<em>number</em><em>, </em><em>optional</em>) – derivative order.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>x and y arrays.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.check_monotonicity">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">check_monotonicity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.check_monotonicity" title="Permalink to this definition"></a></dt>
+<dd><p>return 1 (-1) if increas. (decre.) monotonic or 0 if not monotonic.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.fix_monotonicity">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">fix_monotonicity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'increasing'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.fix_monotonicity" title="Permalink to this definition"></a></dt>
+<dd><p>return x, y where the x array is monotonically increasing or decreasing.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.shifted">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">shifted</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hard'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.shifted" title="Permalink to this definition"></a></dt>
+<dd><p>Shift (x, y) data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array.</p></li>
+<li><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – shift value.</p></li>
+<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <ol class="arabic simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">mode='x'</span></code> or <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code></dt><dd><p>y is fully preserved while x is shifted.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">mode='y'</span></code>, <code class="docutils literal notranslate"><span class="pre">'interp'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'soft'</span></code></dt><dd><p>x is preserved while y is interpolated with a shift</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">mode='roll'`</span> <span class="pre">or</span> <span class="pre">``r</span></code>,</dt><dd><p>x and y are preserved and y elements are just rolled along the
+array (in this case <code class="docutils literal notranslate"><span class="pre">shift</span></code> value must be an integer).</p>
+</dd>
+</dl>
+</li>
+</ol>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shifted x and y.</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is always better to use <code class="docutils literal notranslate"><span class="pre">mode='hard'</span></code> or <code class="docutils literal notranslate"><span class="pre">'roll'</span></code> since the form of y is fully
+preserved (no interpolation). After applying a shift using the <code class="docutils literal notranslate"><span class="pre">mode='interp'</span></code>,
+one can apply a
+‘inverse’ shift to retrieve the original data. The diference between the retrieved
+y data and the original data will give an ideia of the information loss
+caused by the interpolation.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.peak_fit">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">peak_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_c</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_A</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_w</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guess_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">asymmetry</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.peak_fit" title="Permalink to this definition"></a></dt>
+<dd><p>Simple peak fit function. Data is fitted with a pseudo-voigt curve.</p>
+<div class="math notranslate nohighlight">
+\[y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array x-coordinates.</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1D array y-coordinates.</p></li>
+<li><p><strong>guess_c</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – guess Center. If None, it will be guessed by the
+position of <code class="docutils literal notranslate"><span class="pre">guess_A</span></code>.</p></li>
+<li><p><strong>guess_A</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – guess Amplitude. If None, it will be guessed by the
+the maximum y-coordinate.</p></li>
+<li><p><strong>guess_w</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – guess FWHM. If None, it will be guessed as 10% of
+<code class="docutils literal notranslate"><span class="pre">guess_c</span></code></p></li>
+<li><p><strong>guess_offset</strong> (<em>float</em><em> or </em><em>int</em><em>, </em><em>optional</em>) – guess Offset. If None, it will be guessed as zero [0].</p></li>
+<li><p><strong>fixed_m</strong> (<em>False</em><em> or </em><em>number</em>) – Factor from 1 to 0 of the lorentzian amount.
+If False, <code class="docutils literal notranslate"><span class="pre">m</span></code> will be a fitting parameter. If
+<code class="docutils literal notranslate"><span class="pre">fixed_m=&lt;number&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;number&gt;</span></code> will be used for <code class="docutils literal notranslate"><span class="pre">m</span></code>.</p></li>
+<li><p><strong>asymmetry</strong> (<em>Bool</em><em>, </em><em>optional</em>) – half of the peak with a different <code class="docutils literal notranslate"><span class="pre">w</span></code> and <code class="docutils literal notranslate"><span class="pre">m</span></code> than the second half. The optimal <code class="docutils literal notranslate"><span class="pre">w</span></code> parameter
+returned will be the sum of the <code class="docutils literal notranslate"><span class="pre">w</span></code> of the first and second halfs.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ol class="arabic simple">
+<li><p>2 column (x, y) array with “Smoothed” fitted peak (array lenght 100 bigger than input x, y).</p></li>
+<li><dl class="simple">
+<dt>An array with the optimized parameters.</dt><dd><p>if assymetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
+if assymetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
+if assymetry=False, fixed_m=False: amp, c, fwhm, m, offset
+if assymetry=False, fixed_m=True: amp, c, fwhm, offset</p>
+</dd>
+</dl>
+</li>
+<li><p>One standard deviation errors on the parameters</p></li>
+<li><p>Peak function</p></li>
+</ol>
+</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">backpack.model_functions.voigt_fwhm()</span></code></p>
+</div>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">backpack.model_functions</span> <span class="kn">import</span> <span class="n">fwhmGauss</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">amp</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="mi">25</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">fwhmGauss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">amp</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">smooth</span><span class="p">,</span> <span class="n">popt</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">f</span> <span class="o">=</span> <span class="n">am</span><span class="o">.</span><span class="n">peak_fit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;A = </span><span class="si">{</span><span class="n">popt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> +/- </span><span class="si">{</span><span class="n">err</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">A = 1.0187633097698565 +/- 0.015832212669397393</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;c = </span><span class="si">{</span><span class="n">popt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1"> +/- </span><span class="si">{</span><span class="n">err</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">c = 24.940397238212615 +/- 0.0674408860045828</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;w = </span><span class="si">{</span><span class="n">popt</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s1"> +/- </span><span class="si">{</span><span class="n">err</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">w = 9.952479117885305 +/- 0.24269432941302957</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;offset = </span><span class="si">{</span><span class="n">popt</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s1"> +/- </span><span class="si">{</span><span class="n">err</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">offset = -0.10529818707281721 +/- 0.032115907889677234</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;m = </span><span class="si">{</span><span class="n">popt</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s1"> +/- </span><span class="si">{</span><span class="n">err</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">m = 2.4612897990598044e-14 +/- 0.005287100795322343</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">smooth</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">smooth</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.flatten">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">flatten</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.flatten" title="Permalink to this definition"></a></dt>
+<dd><p>Return a copy of the array collapsed into one dimension.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.transpose">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">transpose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.transpose" title="Permalink to this definition"></a></dt>
+<dd><p>Returns transposed lists/arrays.</p>
+<p>Differently from numpy.transpose(), this funcion also transposes 1D arrays/lists.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.compressed">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">compressed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selectors</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.compressed" title="Permalink to this definition"></a></dt>
+<dd><p>compress(‘ABCDEF’, [1, 0, 1, 0, 1, 1]) –&gt; A C E F</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.all_equal">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">all_equal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.all_equal" title="Permalink to this definition"></a></dt>
+<dd><p>Returns True if all elements of an array are equal.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.has_duplicates">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">has_duplicates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.has_duplicates" title="Permalink to this definition"></a></dt>
+<dd><p>Returns True if given array contains any duplicates.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.backpack.arraymanip.get_attributes">
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">get_attributes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.get_attributes" title="Permalink to this definition"></a></dt>
+<dd><p>returns a dictionary with attributes (name and value) of an object.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Carlos Galdino.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

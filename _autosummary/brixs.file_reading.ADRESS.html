@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brixs.file_reading.ADRESS &mdash; brixs 0.8 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            brixs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">brixs.file_reading.ADRESS</a></li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">brixs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">brixs.file_reading.ADRESS</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_autosummary/brixs.file_reading.ADRESS.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-brixs.file_reading.ADRESS">
+<span id="brixs-file-reading-adress"></span><h1>brixs.file_reading.ADRESS<a class="headerlink" href="#module-brixs.file_reading.ADRESS" title="Permalink to this heading"></a></h1>
+<p>Support functions for reading files from ADRESS beamline - PSI.</p>
+<p>Last edited: Carlos Galdino 03-2023</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.file_reading.ADRESS.read_xas">
+<span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">read_xas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.read_xas" title="Permalink to this definition"></a></dt>
+<dd><p>Read xas file from ADRESS beamline.</p>
+<dl>
+<dt>Usage:</dt><dd><p>TEY, TFY, RMU = br.ADRESS.read_xas(filepath=&lt;filepath&gt;)
+TEY, TFY, RMU = br.ADRESS.read_xas(&lt;filepath&gt;)</p>
+<p>TEY, TFY, RMU = br.ADRESS.read_xas(folderpath, prefix, scan)
+TEY, TFY, RMU = br.ADRESS.read_xas(folderpath=&lt;folderpath&gt;, prefix=&lt;prefix&gt;, scan=&lt;scan&gt;)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path object</em>) – filepath to xas file.</p></li>
+<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – file prefix.</p></li>
+<li><p><strong>scan</strong> (<em>number</em>) – scan number. Example: for ‘Cu_0001.xas’ the file number is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>TEY, TFY, RMU</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.file_reading.ADRESS.raw">
+<span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">raw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.raw" title="Permalink to this definition"></a></dt>
+<dd><p>Read raw RIXS files from ADRESS beamline at PSI.</p>
+<dl>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span>   <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pe</span>  <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">&#39;pe&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bad</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">&#39;bad&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="kn">from</span> <span class="nn">all</span> <span class="mi">3</span> <span class="n">ccd</span><span class="s1">&#39;s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span>   <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scan</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pes</span>  <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scan</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">&#39;pe&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bads</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scan</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s1">&#39;bad&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+<dt>where pes and bads are lists, while ss is a type br.Spectra of length 3.</dt><dd><p>one can also use keyword arguments instead of positional arguments</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path object</em>) – filepath to h5 file (for loading a single file).</p></li>
+<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath to files.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – file prefix.</p></li>
+<li><p><strong>scan</strong> (<em>number</em>) – scan number. Example: for ‘Cu_0001_d1.h5’ the file number is 1.</p></li>
+<li><p><strong>type</strong> (<em>str</em><em>, </em><em>optional</em>) – data to return (not case sensitive). Use
+‘spectrum’ or ‘s’ for spectrum; ‘photon events’ or ‘pe’, for photon
+events list; ‘bad’ or ‘b’ for bad events image; Default is spectrum.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><a class="reference internal" href="brixs.Spectrum.html#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Spectrum</span></code></a> or <a class="reference internal" href="brixs.Spectra.html#brixs.Spectra" title="brixs.Spectra"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Spectra</span></code></a></p>
+<p>if <code class="docutils literal notranslate"><span class="pre">type_</span> <span class="pre">=</span> <span class="pre">'pe'</span></code>: <a class="reference internal" href="brixs.PhotonEvents.html#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.PhotonEvents</span></code></a> or a list of <a class="reference internal" href="brixs.PhotonEvents.html#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.PhotonEvents</span></code></a>.</p>
+<p>if <code class="docutils literal notranslate"><span class="pre">type_</span> <span class="pre">=</span> <span class="pre">'bad'</span></code>: <a class="reference internal" href="brixs.Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Image</span></code></a> or a list of <a class="reference internal" href="brixs.Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">brixs.Image</span></code></a></p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>if <code class="docutils literal notranslate"><span class="pre">type_</span> <span class="pre">=</span> <span class="pre">'s'</span></code></p>
+</dd>
+</dl>
+<p>Last updated: Carlos Galdino 07-2023</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.file_reading.ADRESS.read">
+<span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folderpath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scan</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curvature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calib</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.read" title="Permalink to this definition"></a></dt>
+<dd><p>Returns RIXS final spectrum from ADRESS beamline at PSI.</p>
+<dl>
+<dt>Data from all ccd’s are aligned and summed up. If calib is not None, data</dt><dd><p>is also calibrated. If nbins is not None, data is rebined. If more than
+one scan is passed as input, scans are summed up.</p>
+</dd>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">raw</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scan</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath to files.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – file prefix.</p></li>
+<li><p><strong>scan</strong> (<em>number</em><em> or </em><em>list</em>) – scan number or list with scan numbers.</p></li>
+<li><p><strong>nbins</strong> (<em>int</em><em>, </em><em>optional</em>) – if not None, photon events will be rebined to
+nbins. Default is None. Curvature must be defined.</p></li>
+<li><p><strong>curvature</strong> (<em>list</em><em>, </em><em>optional</em>) – list with length 3. Each item should be the
+polynomial coeff. for curvature correction of the corresponding ccd.
+Default is None. Required if nbins is not None.</p></li>
+<li><p><strong>calib</strong> (<em>number</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – If not None, calibration factor is
+applied. Can be a multiplicative factor (number) or a list with
+polynomial coeff. with highest power first. Default is None.</p></li>
+<li><p><strong>offset</strong> (<em>number</em><em>, </em><em>optional</em>) – calibration offset. If calib are polynomial
+coeff., offset is added to the const. term. If calib is a number
+(multiplicative factor), offset is a hard shift on the x-coord.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If rebining, calib factor must be in terms of subpixels and not bins.</p>
+<p>Use the calibration factor of the first ccd, because the multiplicative
+term is the same for all ccd’s and the cdd’s spectra are aligned to the
+first ccd, so the additive term should be the one for the first ccd.</p>
+<dl class="simple">
+<dt>Offset is mostly used when you move the detector mid experiment and</dt><dd><p>you don’t want to run recalibration again.</p>
+</dd>
+</dl>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Spectrum</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.file_reading.ADRESS.sequence">
+<span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folderpath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curvature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calib</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.sequence" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a spectra object with RIXS final spectrum from ADRESS beamline.</p>
+<dl>
+<dt>Data from all ccd’s are aligned and summed up. If calib is not None, data</dt><dd><p>is also calibrated. If nbins is not None, data is rebined. If more than
+one scan is passed as input, scans are summed up.</p>
+</dd>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">sequence</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">sequence</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scans</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>scans = (10, 11, 13, 14, 18, 30)
+scans = ((10, 11), (13, 14), (15, 16))</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath to files.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – file prefix.</p></li>
+<li><p><strong>scan</strong> (<em>list</em>) – list with scan numbers.</p></li>
+<li><p><strong>nbins</strong> (<em>int</em><em>, </em><em>optional</em>) – if not None, photon events will be rebined to
+nbins. Default is None. Curvature must be defined.</p></li>
+<li><p><strong>curvature</strong> (<em>list</em><em>, </em><em>optional</em>) – list with length 3. Each item should be the
+polynomial coeff. for curvature correction of the corresponding ccd.
+Default is None. Required if nbins is not None.</p></li>
+<li><p><strong>calib</strong> (<em>number</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – If not None, calibration factor is
+applied. Can be a multiplicative factor (number) or a list with
+polynomial coeff. with highest power first. Default is None.</p></li>
+<li><p><strong>offset</strong> (<em>number</em><em>, </em><em>optional</em>) – calibration offset. If calib are polynomial
+coeff., offset is added to the const. term. If calib is a number
+(multiplicative factor), offset is a hard shift on the x-coord.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If rebining, calib factor must be in terms of subpixels and not bins.</p>
+<p>Use the calibration factor of the first ccd, because the multiplicative
+term is the same for all ccd’s and the cdd’s spectra are aligned to the
+first ccd, so the additive term should be the one for the first ccd.</p>
+<dl class="simple">
+<dt>Offset is mostly used when you move the detector mid experiment and</dt><dd><p>you don’t want to run recalibration again.</p>
+</dd>
+</dl>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Spectra</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.file_reading.ADRESS.calib">
+<span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">calib</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folderpath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scans</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curvature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.calib" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the calibration factor (dispersion) of ADRESS.</p>
+<dl class="simple">
+<dt>if Spectra is given as a function of bin (x=bin, y=Intensity), then</dt><dd><p>calib factor comes in units of eV/bin. If Spectra is given in terms of
+detector coordinates (x=um, y=Intensity), then calib = eV/um.</p>
+</dd>
+<dt>popt gives the polynomial fitting coeff. of the dispersion curve and can be</dt><dd><p>used to calibrate data absolutely.</p>
+</dd>
+</dl>
+<p>Usage:</p>
+<blockquote>
+<div><p>calib, popt, sss = br.ADRESS.calib(folderpath, prefix, start=17, stop=26)</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>folderpath</strong> (<em>str</em><em> or </em><em>Path object</em>) – folderpath.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – file prefix.</p></li>
+<li><p><strong>start</strong> (<em>number</em><em>, </em><em>optional</em>) – first scan number. Default is None.</p></li>
+<li><p><strong>stop</strong> (<em>number</em><em>, </em><em>optional</em>) – last scan number. Default is None.</p></li>
+<li><p><strong>scans</strong> (<em>list</em><em>, </em><em>optional</em>) – list of scan numbers. Overwrites start and
+stop. Default is None.</p></li>
+<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – method used to calculate the shifts. See
+br.Spectra.calculate_shift() for mode options.</p></li>
+<li><p><strong>nbins</strong> (<em>int</em><em> or </em><em>tuple</em>) – number of bins for calculate spectra.</p></li>
+<li><p><strong>(</strong><strong>)</strong> (<em>curvature</em>) – 1D array of polynomial coefficients
+(including coefficients equal to zero) from highest degree to
+the constant term. Polynomial as a function of x_centers (um).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>Dispersion factor for each ccd (energy/unit)</p>
+<p>polynomial coefficients that fit the dispersion curve.</p>
+<p>Spectra for each ccd.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3 lists</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="brixs.file_reading.ADRESS.th2rlu">
+<span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">th2rlu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">energy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">propagation_vector</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,</span> <span class="pre">0,</span> <span class="pre">0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lattice_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(3.5066,</span> <span class="pre">4.7485,</span> <span class="pre">7.9341)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">twotheta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">130</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.th2rlu" title="Permalink to this definition"></a></dt>
+<dd><p>[EXPERIMENTAL]</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Carlos Galdino.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
