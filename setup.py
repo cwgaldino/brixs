@@ -7,7 +7,7 @@ setuptools.setup(
     author_email="galdino@ifi.unicamp.br, thiago.mori@lnls.br, tulio.rocha@lnls.br, felipe.custodio@lnls.br",
     description="python package for processing and analysis of XAS and RIXS spectra ",
     long_description=open('README.rst').read(),
-    long_description_content_type="text/rst",
+    long_description_content_type="text/x-rst",
     url="https://github.com/cwgaldino/brixs",
     packages=['brixs'],
     packages_dir={'brixs': './brixs'},
