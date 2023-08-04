@@ -203,7 +203,7 @@ class Peaks(lmfit.Parameters):
     def _get_user_attrs(self):
         """return attrs that are user defined."""
         default_attrs =  ['_asteval', '_additional']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
+        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
     
     def _has_i2(self):
         """return True if parameters have secondary (spectrum) index i2.

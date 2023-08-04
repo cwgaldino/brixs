@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="brixs",
-    version="0.9",
+    version="0.9.1",
     author="Carlos Galdino, Thiago Mori, Tulio Rocha, Felipe Custodio",
     author_email="galdino@ifi.unicamp.br, thiago.mori@lnls.br, tulio.rocha@lnls.br, felipe.custodio@lnls.br",
     description="python package for processing and analysis of XAS and RIXS spectra ",

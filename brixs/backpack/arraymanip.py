@@ -6,7 +6,7 @@ import numpy as np
 import copy
 from scipy.optimize import curve_fit
 from .model_functions import voigt_fwhm
-
+from collections.abc import Iterable
 
 def index(x, value, closest=True):
     """Returns the first index of the element in array.

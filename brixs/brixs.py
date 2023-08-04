@@ -546,7 +546,7 @@ class Spectrum(metaclass=_Meta):
     def _get_user_attrs(self):
         """return attrs that are user defined."""
         default_attrs =  ['_x', '_y', '_filepath', '_step', '_monotonicity', '_peaks']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
+        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
     
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
@@ -653,7 +653,11 @@ class Spectrum(metaclass=_Meta):
     def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
-        User defined attr are saved in the header (except for dictionaries).
+        Attrs are saved as comments if only_data is False. Saving attrs to file
+        is tricky because requires converting variables to string. Only attrs 
+        that are of type: string, number, and list of number and strings are 
+        saved somewhat correctly. Dictionaries are not saved. 
+
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -2114,7 +2118,7 @@ class Spectra(metaclass=_Meta):
                           '_calculated_factor', 
                           '_calculated_offset', '_calculated_calib', 
                           '_monotonicity', '_x', '_step', '_length']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
+        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
     
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
@@ -2163,7 +2167,9 @@ class Spectra(metaclass=_Meta):
         # fix format #
         ##############
         # empty input
-        if len(args) == 0:
+        if args is None:
+            return ((vmin, vmax),)
+        elif len(args) == 0:
             return ((vmin, vmax),)
         
         # (xi, xf)
@@ -2456,6 +2462,11 @@ class Spectra(metaclass=_Meta):
     def save(self, folderpath=None, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, only_data=False, verbose=False, **kwargs):
         r"""Save spectra. Wrapper for `numpy.savetxt()`_.
 
+        Attrs are saved as comments if only_data is False. Saving attrs to file
+        is tricky because requires converting variables to string. Only attrs 
+        that are of type: string, number, and list of number and strings are 
+        saved somewhat correctly. Dictionaries are not saved. 
+
         Args:
             folderpath (string or pathlib.Path, optional): folderpath, folder handle. 
                 If None, filepath can be inferred from a
@@ -2598,24 +2609,37 @@ class Spectra(metaclass=_Meta):
         header = ''
         attrs = self._get_user_attrs()
         for name in attrs:
-            if attrs[name] is None:
+            value = self.__getattribute__(name)
+            if value is None:
                 header += f'{name}: None'  + '\n'
-            elif isinstance(attrs[name], str):
-                temp2 = str(attrs[name]).replace('\n','\\n')
+            elif isinstance(value, str):
+                temp2 = str(value).replace('\n','\\n')
                 header += f'{name}: \"{temp2}\"'  + '\n'
-            elif isinstance(attrs[name], Iterable):
-                header += f'{name}: {list(attrs[name])}'  + '\n'
-            elif isinstance(attrs[name], dict):
+            elif isinstance(value, Iterable):
+                value = list(value)
+                for item in value:
+                    if item is None:
+                        item = 'None'
+                    elif isinstance(item, str):
+                        temp2 = str(item).replace('\n','\\n')
+                        item = f'\"{temp2}\"'
+                    elif numanip.is_number(value):
+                        item = str(item)
+                    else:
+                        temp2 = str(item).replace('\n','\\n')
+                        item = f'\"{temp2}\"'
+                header += f'{name}: {value}'  + '\n'
+            elif isinstance(value, dict):
                 if verbose:
-                    type_ = str(type(attrs[name]))
+                    type_ = str(type(value))
                     print(r'Warning: Cannot save attr of type: ' + type_ + r'.\attr: '+ name + r'.\nTo turn off this warning, set verbose to False.')
-            elif numanip.is_number(attrs[name]):
-                tosave = str(attrs[name])
+            elif numanip.is_number(value):
+                tosave = str(value)
                 if tosave[-1] == '\n':
                     tosave = tosave[:-1]
                 header += f'{name}: {tosave}'  + '\n'
             else:
-                temp2 = str(attrs[name]).replace('\n','\\n')
+                temp2 = str(value).replace('\n','\\n')
                 header += f'{name}: \"{temp2}\"'  + '\n'
         return header[:-1]
 
@@ -2725,14 +2749,6 @@ class Spectra(metaclass=_Meta):
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
 
-            # gather ylabels
-            if self[0].xlabel != '':
-                if '' in self.ylabels:
-                    if verbose:
-                        print('Warning: Some spectra have no ylabel.\n ylabels: {self.ylabels}.\nFile is being saved without column names.')
-
-                kwargs['header'] += '\n' + self[0].xlabel + kwargs['delimiter'] + kwargs['delimiter'].join(self.ylabels)
-
         np.savetxt(Path(filepath), final, **kwargs)
 
     def load_from_single_file(self, filepath=None, only_data=False, verbose=False, **kwargs):
@@ -2774,9 +2790,7 @@ class Spectra(metaclass=_Meta):
             if header:
                 for line in header:
                     if ':' not in line:
-                        temp = line.split(kwargs['delimiter'])
-                        self.xlabels = temp[kwargs['usecols'][0]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip()
-                        self.ylabels = [temp[kwargs['usecols'][i]].replace(kwargs['comments'], '').replace('\n', '').replace('\r', '').strip() for i in kwargs['usecols'][1:]]
+                        pass
                     else:
                         # extract name and value
                         name = line[1:-1].split(':')[0].strip()
@@ -5241,7 +5255,7 @@ class Image(metaclass=_Meta):
         """return attrs that are user defined."""
         default_attrs =  ['_data', '_shape', '_calculated_shifts', 
                            '_x_centers', '_y_centers']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
+        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
 
     #################
     # save and load #
@@ -5274,6 +5288,11 @@ class Image(metaclass=_Meta):
     
     def save(self, filepath=None, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
+
+        Attrs are saved as comments if only_data is False. Saving attrs to file
+        is tricky because requires converting variables to string. Only attrs 
+        that are of type: string, number, and list of number and strings are 
+        saved somewhat correctly. Dictionaries are not saved. 
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -6453,7 +6472,7 @@ class PhotonEvents(metaclass=_Meta):
     def _get_user_attrs(self):
         """return attrs that are user defined."""
         default_attrs =  ['_x', '_y', '_filepath', '_calculated_shift']
-        return [key for key in self.__dict__.keys() if key not in default_attrs]
+        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
     
     #################
     # save and load #
@@ -6486,6 +6505,11 @@ class PhotonEvents(metaclass=_Meta):
     
     def save(self, filepath=None, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
+
+        Attrs are saved as comments if only_data is False. Saving attrs to file
+        is tricky because requires converting variables to string. Only attrs 
+        that are of type: string, number, and list of number and strings are 
+        saved somewhat correctly. Dictionaries are not saved. 
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
