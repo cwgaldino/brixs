@@ -306,42 +306,36 @@ anymore (useful to read comments at the beginning of a file).</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>obj</strong> (<em>dict</em><em>, </em><em>list</em><em>, or </em><em>numpy.array</em>) – data to be saved to a file. If obj is</p></li>
-<li><p><strong>dictonary</strong> (<em>a</em>) – </p></li>
+<li><p><strong>dictionary</strong> (<em>a</em>) – </p></li>
 <li><p><strong>file.</strong> (<em>use * in front of a key to do not save it to the</em>) – </p></li>
 <li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – path to save file.</p></li>
-<li><p><strong>add_labels</strong> (<em>bool</em><em>, </em><em>optional</em>) – When obj is a dictonary, <code class="docutils literal notranslate"><span class="pre">add_labels=True</span></code>
+<li><p><strong>add_labels</strong> (<em>bool</em><em>, </em><em>optional</em>) – When obj is a dictionary, <code class="docutils literal notranslate"><span class="pre">add_labels=True</span></code>
 makes the dict keys to be added to the header as label for each data column.</p></li>
 <li><p><strong>fmt</strong> (<em>string</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – <p>format for saving data.
 If string, the value is used for x- and y-coordinates. If tuple
 of strings, the first string is used for x-coordinates and the
 second for y-coordinates.</p>
-<blockquote>
-<div><p>fmt = (%[flag]width[.precision]specifier)</p>
-</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">fmt</span> <span class="pre">=</span> <span class="pre">(%[flag]width[.precision]specifier)</span></code></p>
 <ul>
-<li><dl class="simple">
-<dt><cite>flag</cite> can be:</dt><dd><ol class="arabic simple">
+<li><p><cite>flag</cite> can be:</p>
+<blockquote>
+<div><ol class="arabic simple">
 <li><p>’-’ for left justify</p></li>
 <li><p>’+’, puts + or - in front of the numbers</p></li>
 <li><p>’0’ to Left pad the number with zeros instead of space (see width).</p></li>
 </ol>
-</dd>
-</dl>
+</div></blockquote>
 </li>
 <li><p><cite>width</cite> is the minimum number of characters to be printed.</p></li>
 <li><p><cite>precision</cite> is the number of significant digits.</p></li>
-<li><p><cite>specifier</cite> is the type of notation. Tipically, either ‘e’ for</p></li>
-</ul>
-<p>scientific notation of ‘f’ for decimal floating point.</p>
-<ul>
+<li><p><cite>specifier</cite> is the type of notation. Typically, either ‘e’ for scientific notation of ‘f’ for decimal floating point.</p></li>
 <li><p>a common <cite>fmt</cite> strings is: ‘%.3f’ for 3 decimal places.</p></li>
 <li><p>for more information see <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt">np.savetxt</a> documentation:</p></li>
 </ul>
 </p></li>
-<li><p><strong>header</strong> (<em>str</em><em>, </em><em>oprional</em>) – string that will be written at the beggining of
+<li><p><strong>header</strong> (<em>str</em><em>, </em><em>optional</em>) – string that will be written at the beginning of
 the file (comment flag is added automatically).</p></li>
-<li><p><strong>footer</strong> (<em>str</em><em>, </em><em>oprional</em>) – string that will be written at the end of the
-file (comment flag is added automatically).</p></li>
+<li><p><strong>footer</strong> (<em>str</em><em>, </em><em>optional</em>) – string that will be written at the end of the file (comment flag is added automatically).</p></li>
 <li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – The string used to separate values.</p></li>
 <li><p><strong>comment_flag</strong> (<em>str</em><em>, </em><em>optional</em>) – string that flag comments.</p></li>
 <li><p><strong>newline</strong> (<em>str</em><em>, </em><em>optional</em>) – string to indicate new lines.</p></li>
@@ -362,19 +356,19 @@ and ask if user want to overwrite file.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="brixs.backpack.filemanip.load_data">
 <span class="sig-prename descclassname"><span class="pre">brixs.backpack.filemanip.</span></span><span class="sig-name descname"><span class="pre">load_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_array</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header_delimiter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.filemanip.load_data" title="Permalink to this definition"></a></dt>
-<dd><p>Load data from text file. Wrapper for <a href="#id1"><span class="problematic" id="id2">`numpy.genfromtxt()`_</span></a>.</p>
-<p>Data is formated in a dictionary or array.</p>
+<dd><p>Load data from text file. Wrapper for <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html">np.genfromtxt</a>.</p>
+<p>Data is formatted in a dictionary or array.</p>
 <p>The dictionary keys are set as the label of the corresponding data columns, where
 the last comment line before data starts is assumed to have the labels of each data column.
 If column labels cannot be found, data is imported as an array. The file expects
-comments at the begining of the file (file must not have comments elsewhere).</p>
+comments at the beginning of the file (file must not have comments elsewhere).</p>
 <p>If a column is full of NaN’s, it’s converted to a column full of zeros.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em>) – path to file</p></li>
 <li><p><strong>labels</strong> (<em>list</em><em>, </em><em>optional</em>) – It forces data to be loaded as a dictionary where
-each label is associated with a data column. Its lenght must have the same as the number of
+each label is associated with a data column. Its length must have the same as the number of
 columns. To avoid importing a column, put an asterisk (*) in front of the corresponding label.</p></li>
 <li><p><strong>force_array</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">force_array=True</span></code>, data it will be returned in a array.</p></li>
 <li><p><strong>header_delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – String or character separating column
@@ -382,7 +376,7 @@ labels in the header. Default is None. If None, it will be guessed.</p></li>
 </ul>
 </dd>
 </dl>
-<p>If not specified, the following parameters are passed to <a href="#id3"><span class="problematic" id="id4">`numpy.savetxt()`_</span></a>:</p>
+<p>If not specified, the following parameters are passed to <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt">np.savetxt</a>:</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

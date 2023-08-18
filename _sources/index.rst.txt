@@ -176,6 +176,41 @@ line of code to get the spectrum from scan number 56,
 The modules inside the `file_reading` folder, may be used as an example for 
 writing new modules for other file types.
 
+#############
+Installation
+#############
+
+There are two recommended methods:
+
+1. Using pip
+
+```python
+    pip install git+https://github.com/cwgaldino/brixs
+```
+
+or
+
+2. Cloning (or downloading) the GitHub repository then adding brixs to the "path":
+
+```python
+    import sys
+    sys.path.append('<path-to-brixs>')
+    import brixs as br
+```
+
+############
+Requirements
+############
+
+Base (required):
+- numpy
+- scipy
+- matplotlib
+
+Reciprocal space calculations:
+- pbcpy
+
+Other packages may be required for file reading functions.
 
 #############
 Usage
