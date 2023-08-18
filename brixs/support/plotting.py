@@ -49,6 +49,12 @@ def label_rixs(title=None, ax=None, grid=True):
     ylabel = 'Intensity (arb. units)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
 
+def label_emission(title=None, ax=None, grid=True):
+    """Quickly set x and y labels and title in emission rixs plots."""
+    xlabel = 'Emission energy (eV)'
+    ylabel = 'Intensity (arb. units)'
+    _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
+
     
 def label_energy_map(title=None, ax=None, grid=False):
     """Quickly set x and y labels and title in energy map plots."""

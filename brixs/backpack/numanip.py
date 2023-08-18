@@ -12,6 +12,8 @@ def is_integer(n):
     """Returns True if number is integer."""
     if isinstance(n, int):
         return True
+    elif isinstance(n, np.int32):
+        return True
     elif isinstance(n, float):
         return n.is_integer()
     else:

@@ -970,7 +970,7 @@ class Spectrum(metaclass=_Meta):
         if isinstance(value, Iterable):
             f = lambda x: np.polyval(value, x)
             self._x = np.array([f(x) for x in self.x])
-        elif isinstance(value, function):
+        elif callable(value):
             self._x = np.array([f(x) for x in self.x])
         else:
             self._x = self.x*value
@@ -1589,7 +1589,7 @@ class Spectrum(metaclass=_Meta):
 
         self.peaks.find(x=s.x, y=s.y, prominence=prominence, width=width, moving_average_window=moving_average_window)
 
-    def fit_peak(self, asymmetry=None, moving_average_window=4, ranges=None):
+    def fit_peak(self, asymmetry=None, moving_average_window=4, method='least_squares', ranges=None):     
         """Fits one peak. Initial guess is based on the maximum y value.
 
         Args:
@@ -1597,6 +1597,8 @@ class Spectrum(metaclass=_Meta):
                 with a different width.
             moving_average_window (int, optional): window size for smoothing the
                 data for finding the peak. Default is 4.
+            method (str, optional): Name of the fitting method to use. See methods
+                available on `lmfit.minimize()`_ documentation.
             ranges (list): a pair of values or a list of pairs. Each pair represents
                 the start and stop of a data range from x. Use None to indicate
                 the minimum or maximum x value of the data.
@@ -1609,7 +1611,9 @@ class Spectrum(metaclass=_Meta):
             y0 = self.y
         else:
             ranges = self._validate_ranges(ranges)
-            x0, y0 = self._extract(self.x, self.y, ranges)
+            s0 = self._extract(ranges)
+            x0 = s0.x
+            y0 = s0.y
 
         # asymmetry
         if asymmetry is None:
@@ -1647,7 +1651,7 @@ class Spectrum(metaclass=_Meta):
             self.peaks.append(amp=amp, c=c, w=w)
 
         # fit
-        self.fit_peaks(ranges=ranges)
+        self.fit_peaks(method=method, ranges=ranges)
 
     def fit_peaks(self, method='least_squares', ranges=None):
         """Fit peaks. Wrapper for `lmfit.minimize()`_.
@@ -3128,7 +3132,7 @@ class Spectra(metaclass=_Meta):
                 value = [value]*len(self)
 
         # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
 
         # if all rolls are zero, does nothing
         if  all(x==0 for x in value):
@@ -3860,7 +3864,7 @@ class Spectra(metaclass=_Meta):
 
             # calculate peak
             if ref_value is None:
-                p = self.peaks._get_params_with_index(i1=ref_peak, i2=ref_spectrum)
+                p = self.peaks._get_peaks_by_index(i1=ref_peak, i2=ref_spectrum)
                 ref_value = p['c'].value
             values = self.peaks.get_values('c', ref_peak)
             values = -np.array(values)+ref_value  
@@ -4558,11 +4562,11 @@ class Spectra(metaclass=_Meta):
             if self.step is None:
                 try:
                     self.check_step()
-                    self.__step = self.step*0.01
+                    self.__step = self.step*0.1
                 except:
                     self.__step = min([np.mean(np.diff(s.x)) for s in self])*0.01
             else:
-                self.__step = self.step*0.01
+                self.__step = self.step*0.1
         else:
             self.__step = step
 
@@ -4669,6 +4673,13 @@ class Spectra(metaclass=_Meta):
         Returns:
             None
         """
+        # check step
+        if self.check_step is None:
+            try:
+                self.check_step()
+            except ValueError:
+                raise ValueError('cannot apply roll because step is not the same. Use shift_plot().')
+
         # raise NotImplementedError('This is not implemented yet.')
         self.__i = 0
         self._calculated_roll = np.array([0]*len(self))
@@ -4746,21 +4757,148 @@ class Spectra(metaclass=_Meta):
                 _update(ss)
                 plt.draw()
 
-        # mouse events
-        def mouse(event):
-            """Mouse can be used with a keyboard key"""
-            # print('mouse')
-            # print(event.key)
-            # print(event.button)
-            pass
 
         # plotting
         fig = figmanip.figure()
         fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
-        fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
+
         _update(self)
         return
 
+    def roll_plot2(self, xlim=None, ylim=None, vlines=None, update_function=None):
+        """[experimental] flip through spectra (up/down keys), roll spectrum (left/right keys).
+
+        Use mouse to click and drag spectra to the left or right.
+
+        Args:
+            xlim (tuple, optional): min and max ``x`` value. Default is None (full
+                data range).
+            ylim (tuple, optional): min and max ``y`` value. Default is None.
+            vlines (list or number, optional): vertical dashed lines for 
+                reference, default is None.
+            update_function (function, optional): function that is called when
+                the left or right arrows are pressed. update_function must be a 
+                function of type:
+
+                >>> def update_function(ss, __i):
+                >>>     plt.title(__i)
+                >>>     ss[__i].plot(color='black', marker='o')
+            
+                where ``__i`` is updated in every iteraction.
+        
+        Returns:
+            None
+        """
+        # check step
+        if self.step is None:
+            try:
+                self.check_step()
+            except ValueError:
+                raise ValueError('cannot apply roll because step is not the same. Use shift_plot().')
+
+        # raise NotImplementedError('This is not implemented yet.')
+        self.__i = 0
+        self._calculated_roll = np.array([0]*len(self))
+        self._mouse_press   = 0
+
+        # check if all data has well defined step
+        for i, s in enumerate(self):
+            try:
+                s.check_step()
+            except ValueError:
+                raise ValueError(f'Spectrum number {i} has non-uniform x-coord.\nRoll can only be applied with uniform x-coord.\nMaybe used ss.interp() to fix that.')
+
+        # core update function
+        if update_function is None:
+            def _update(ss):
+                if self.__i >= len(self):
+                    self.__i = len(self) - 1
+                elif self.__i < 0:
+                    self.__i = 0
+
+                plt.title(f'{self.__i}: {self._calculated_roll[self.__i]}')
+                ss[self.__i].plot(shift=self._calculated_roll[self.__i]*ss[self.__i].step, color='black', marker='o')
+                
+                if vlines is not None:
+                    figmanip.vlines(vlines, color='red', ls='--', lw=1)
+
+                if xlim is not None:
+                    plt.xlim(xlim)
+                if ylim is not None:
+                    plt.ylim(ylim)
+        else:
+            # add counter and xlim/ylim to update function
+            def _update(ss):
+                if self.__i >= len(self):
+                    self.__i = len(self) - 1
+                elif self.__i < 0:
+                    self.__i = 0
+
+                update_function(ss, __i=self.__i)
+
+                if vlines is not None:
+                    figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                
+                if xlim is not None:
+                    plt.xlim(xlim)
+                if ylim is not None:
+                    plt.ylim(ylim)
+
+        # keyboard events
+        def keyboard(event, ss):
+            # print(event.key)
+            # print('keyboard')
+            # print(event.key)
+            if event.key == 'up':
+                self.__i = self.__i + 1
+
+                plt.cla()
+                _update(ss)
+                plt.draw()
+            elif event.key == 'down':
+                self.__i = self.__i - 1
+                
+                plt.cla()
+                _update(ss)
+                plt.draw()
+            elif event.key == 'right':
+                self._calculated_roll[self.__i] += 1
+                
+                plt.cla()
+                _update(ss)
+                plt.draw()
+            elif event.key == 'left':
+                self._calculated_roll[self.__i] -= 1
+                
+                plt.cla()
+                _update(ss)
+                plt.draw()
+
+        # mouse events
+        def mouse_press(event):
+            """Mouse can be used with a keyboard key"""
+            if event.button is not None:
+                if event.button == 1:
+                    self._mouse_press = event.xdata
+
+        def mouse_release(event, ss):
+            """Mouse can be used with a keyboard key"""
+            if event.button is not None:
+                if event.button == 1:
+                    self._calculated_roll[self.__i] += int(round((event.xdata - self._mouse_press)/self.step))   
+                    plt.cla()
+                    _update(ss)
+                    plt.draw()
+
+        # plotting
+        fig = figmanip.figure()
+        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
+        fig.canvas.mpl_connect('button_press_event', lambda event: mouse_press(event))
+        fig.canvas.mpl_connect('button_release_event', lambda event: mouse_release(event, ss=self))
+
+        _update(self)
+        return
+    
     ###########
     # Special #
     ###########
@@ -6159,7 +6297,100 @@ class Image(metaclass=_Meta):
         """
         return self.imshow(*args, **kwargs)
 
-    
+    def linecuts(self, axis=0, xlim=None, ylim=None):
+        """[EXPERIMENTAL] Plot image and flip trhough linecuts with keyboard arrows.
+
+        Args:
+            axis (int or string, optional): Axis along linecuts.
+                By default, linecuts are in the vertical (0) direction.
+            xlim, ylim (tuple, optional): spectra ploting limits (not image 
+                ploting limits).
+
+        Returns:
+            None
+        """
+        if axis == 0:
+            ss = self.columns
+        elif axis == 1:
+            ss = self.rows
+        else:
+            raise ValueError('axis must be 0 or 1')
+
+        # update function
+        def update(ss):
+            # plot
+            ax = axes[0]
+            ss[ss.__i].plot(ax=ax, color='black', marker='o')
+
+            # lim
+            if xlim is not None:
+                ax.set_xlim(xlim)
+            if ylim is not None:
+                ax.set_ylim(ylim)
+            # br.label_rixs(ax=ax)
+
+            # plot map (shouldn't we put this outside of the update function?)
+            ax = axes[1]
+            
+            if ylim is not None:
+                self.pcolormesh(ax=ax, vmin=ylim[0], vmax=ylim[1])
+            else:
+                self.pcolormesh(ax=ax)
+            if xlim is not None:
+                if axis == 0:
+                    ax.set_ylim(xlim)
+                else:
+                    ax.set_xlim(xlim)
+
+            # vline
+            if axis == 0:
+                E = self.x_centers[ss.__i]
+                figmanip.vlines(E, ax=ax, color='red', lw=1)
+            else:
+                E = self.y_centers[ss.__i]
+                figmanip.hlines(E, ax=ax, color='red', lw=1)
+
+            # title
+            axes[0].set_title(f'{ss.__i}: {E} eV')
+
+        def _update(ss):
+            if ss.__i >= len(ss):
+                ss.__i = len(ss) - 1
+            elif ss.__i < 0:
+                ss.__i = 0
+
+            update(ss)
+
+        # keyboard events
+        def keyboard(event, ss):
+            # print(event.key)
+            # print('keyboard')
+            # print(event.key)
+            if event.key == 'right' or event.key == 'up':
+                ss.__i = ss.__i + 1
+
+                for ax in axes:
+                    ax.cla()
+                _update(ss)
+                # for ax in axes:
+                plt.draw()
+            elif event.key == 'left' or event.key == 'down':
+                ss.__i = ss.__i - 1
+                
+                for ax in axes:
+                    ax.cla()
+                _update(ss)
+                # for ax in axes:
+                plt.draw()
+
+
+        # figure
+        fig, axes = figmanip.subplots(nrows=2, ncols=1)
+        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
+        ss.__i = 0
+        _update(ss)
+
+
 class PhotonEvents(metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
@@ -6975,11 +7206,13 @@ class PhotonEvents(metaclass=_Meta):
         im.calculate_roll(axis=axis, limit_size=limit_size)
         if axis == 0:
             centers = im.x_centers
+            y = im.calculated_roll*np.mean(np.diff(im.y_centers))
         elif axis == 1:
             centers = im.y_centers
+            y = im.calculated_roll*np.mean(np.diff(im.x_centers))
 
         # calculate poly
-        popt  = np.polyfit(x=centers, y=im.calculated_shift, deg=deg)
+        popt  = np.polyfit(x=centers, y=y, deg=deg)
         model = lambda x: np.polyval(popt, x)
 
         # store

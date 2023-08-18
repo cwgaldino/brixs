@@ -30,7 +30,7 @@ curvature2 = [2.8209855702191653e-06, -0.004759568633407643, 0.03754642287537074
 curvature  = [curvature0, curvature1, curvature2]
 
 # %% quick calibration calculation =============================================
-disp, popt, sss = ADRESS.calib(folderpath, prefix, 17, 26)
+popt, sss = ADRESS.calib(folderpath, prefix, 17, 26)
 
 # %% print as string
 for i, p in enumerate(popt):
@@ -72,26 +72,24 @@ axes[3].set_ylabel('Intensity (arb. units)')
 
 # %% other modes ===============================================================
 
-# mode peaks (ev/bin)
-disp, popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, mode='peak')
+# %% mode peaks (ev/bin)
+popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, mode='peak')
 calib0 = [0.004556657343031468, 516.1910040053092]
 calib1 = [0.004539722713328706, 515.696903029858]
 calib2 = [0.004565239596075693, 515.2262740278696]
-calib  = [calib0, calib1, calib2]
 
-# mode cc (ev/subpixel)
-disp, popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, nbins=2000, curvature=curvature)
-calib0 = [0.018228083877778765, 516.1699816340371]
-calib1 = [0.018147251168973262, 515.696753572465]
-calib2 = [0.018262961090482758, 515.2192036580997]
-calib_subpixel  = [calib0, calib1, calib2]
+# %% mode cc (ev/subpixel)
+popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, nbins=2000, curvature=curvature)
+calib0_subpixel = [0.018228083877778765, 516.1699816340371]
+calib1_subpixel = [0.018147251168973262, 515.696753572465]
+calib2_subpixel = [0.018262961090482758, 515.2192036580997]
 
 
 # %% read ADRESS files with calibration factor =================================
 # elastic-line error is less than 0.1 eV for oxygen-K edge
 br.figure()
 for scan in (17, 18, 19, 20, 21, 22, 23, 24, 25, 26):
-    s = ADRESS.read(folderpath, prefix, scan, calib=calib)
+    s = ADRESS.read(folderpath, prefix, scan, calib=calib0)
     s.plot()
 br.vlines(0)
 plt.xlim(-0.5, 0.5)

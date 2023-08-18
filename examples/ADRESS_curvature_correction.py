@@ -45,6 +45,7 @@ for ccd in (1, 2, 3):
     # fit shifts
     s = br.Spectrum(x=im.x_centers, y=im.calculated_shift)
     popt, model, R2 = s.polyfit(2)
+    print(f'curvature{ccd} = {list(popt)}')
     x = np.linspace(min(pe.x), max(pe.x), 100)
     fit = br.Spectrum(x=x, y=model(x))
 
@@ -91,7 +92,12 @@ for ccd in (1, 2, 3):
     axes[0+(ccd-1)*6].set_ylabel(f'ccd {ccd}: y pixels (subpixel)')
 
 fig.subplots_adjust(top=0.99, bottom=0.05, left=0.05, right=0.99)
-
+print('curvature  = [curvature1, curvature2, curvature3]')
+# %% Result
+# curvature1 = [2.8024508424253414e-06, -0.018400753443323096, 0.7201982228298014]
+# curvature2 = [3.769963633262668e-06, -0.01463334137482744, 0.3192278992936906]
+# curvature3 = [2.8209855702191653e-06, -0.004759568633407643, 0.037546422875370744]
+# curvature  = [curvature1, curvature2, curvature3]
 
 # %% quick curvature correction ================================================
 pes = ADRESS.raw(folderpath, prefix, scan, type_='pe')

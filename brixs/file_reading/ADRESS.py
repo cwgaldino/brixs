@@ -24,10 +24,11 @@ def _unpack_attrs_xas(s):
     else:
         s.pol = 'LH'
 
-    s.T    = float(s.Cryostat_temperature[:-1])
-    s.th   = float(s.Manipulator_Theta[:-3])
-    s.slit = float(s.Exit_slit[:-3])
-    
+    s.T    = round(float(s.Cryostat_temperature[:-1]), 1)
+    s.th   = round(float(s.Manipulator_Theta[:-3]), 1)
+    s.slit = round(float(s.Exit_slit[:-3]), 1)
+    s.label = f'{s.pol}, {s.T} K, th {s.th}, {s.slit}'
+
 def _read_xas(filepath):
     """Read xas file from ADRESS beamline.
 
@@ -83,11 +84,13 @@ def read_xas(*args, **kwargs):
     """Read xas file from ADRESS beamline.
 
     Usage:
-        TEY, TFY, RMU = br.ADRESS.read_xas(filepath=<filepath>)
-        TEY, TFY, RMU = br.ADRESS.read_xas(<filepath>)
+        from brixs.file_reading import ADRESS
 
-        TEY, TFY, RMU = br.ADRESS.read_xas(folderpath, prefix, scan)
-        TEY, TFY, RMU = br.ADRESS.read_xas(folderpath=<folderpath>, prefix=<prefix>, scan=<scan>)
+        TEY, TFY, RMU = ADRESS.read_xas(filepath=<filepath>)
+        TEY, TFY, RMU = ADRESS.read_xas(<filepath>)
+
+        TEY, TFY, RMU = ADRESS.read_xas(folderpath, prefix, scan)
+        TEY, TFY, RMU = ADRESS.read_xas(folderpath=<folderpath>, prefix=<prefix>, scan=<scan>)
 
     Args:
         filepath (str or Path object): filepath to xas file.
@@ -104,11 +107,11 @@ def read_xas(*args, **kwargs):
     error_message = 'Wrong input. Please, use one ' +\
                     'of the examples below to read xas files:\n' +\
                     '\n' +\
-                    'TEY, TFY, RMU = br.ADRESS.read_xas(filepath=<filepath>)\n' +\
-                    'TEY, TFY, RMU = br.ADRESS.read_xas(<filepath>)\n' +\
+                    'TEY, TFY, RMU = ADRESS.read_xas(filepath=<filepath>)\n' +\
+                    'TEY, TFY, RMU = ADRESS.read_xas(<filepath>)\n' +\
                     '\n' +\
-                    'TEY, TFY, RMU = br.ADRESS.read_xas(folderpath, prefix, scan)\n' +\
-                    'TEY, TFY, RMU = br.ADRESS.read_xas(folderpath=<folderpath>, prefix=<prefix>, scan=<scan>)\n' +\
+                    'TEY, TFY, RMU = ADRESS.read_xas(folderpath, prefix, scan)\n' +\
+                    'TEY, TFY, RMU = ADRESS.read_xas(folderpath=<folderpath>, prefix=<prefix>, scan=<scan>)\n' +\
                     '\n' +\
                     'filepath and folderpath must be a string or pathlib.Path object' +\
                     'prefix must be a string and scan must be an int'
@@ -208,6 +211,7 @@ def _unpack_attrs(s):
 
     # slit
     params['slit']     = round(s.ExitSlit[0], 2)
+
 
     for name in params:
         setattr(s, name,  params[name])
@@ -327,13 +331,13 @@ def raw(*args, **kwargs):
     error_message = 'Wrong input. Please, use one ' +\
                     'of the examples below to read RIXS files:\n' +\
                     '\n' +\
-                    's   = br.ADRESS.raw(filepath)\n' +\
-                    "pe  = br.ADRESS.raw(filepath, type_='pe')\n" +\
-                    "bad = br.ADRESS.raw(filepath, type_='bad')\n" +\
+                    's   = ADRESS.raw(filepath)\n' +\
+                    "pe  = ADRESS.raw(filepath, type_='pe')\n" +\
+                    "bad = ADRESS.raw(filepath, type_='bad')\n" +\
                     '\n' +\
-                    'ss   = br.ADRESS.raw(folderpath, prefix, scan)\n' +\
-                    "pes  = br.ADRESS.raw(folderpath, prefix, scan, type_='pe')\n" +\
-                    "bads = br.ADRESS.raw(folderpath, prefix, scan, type_='bad')\n" +\
+                    'ss   = ADRESS.raw(folderpath, prefix, scan)\n' +\
+                    "pes  = ADRESS.raw(folderpath, prefix, scan, type_='pe')\n" +\
+                    "bads = ADRESS.raw(folderpath, prefix, scan, type_='bad')\n" +\
                     '\n' +\
                     'filepath and folderpath must be a string or pathlib.Path object' +\
                     'prefix must be a string and scan must be an int'
@@ -463,12 +467,12 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
                 ss1 = br.Spectra(3)
                 if curvature is None:
                     raise ValueError('bining requires curvature')
-                pes = br.ADRESS.raw(folderpath=folderpath, prefix=prefix, scan=s, type_='pe')
+                pes = raw(folderpath=folderpath, prefix=prefix, scan=s, type_='pe')
                 for i, pe in enumerate(pes):
                     pe.set_shift(p=curvature[i])
                     ss1[i] = pe.calculate_spectrum(nbins=nbins)
             else:
-                ss1 = br.ADRESS.raw(folderpath=folderpath, prefix=prefix, scan=s)
+                ss1 = raw(folderpath=folderpath, prefix=prefix, scan=s)
 
             # align and sum
             ss1.align()
@@ -482,12 +486,12 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
             ss = br.Spectra(3)
             if curvature is None:
                 raise ValueError('new bining requires curvature')
-            pes = br.ADRESS.raw(folderpath=folderpath, prefix=prefix, scan=scan, type_='pe')
+            pes = raw(folderpath=folderpath, prefix=prefix, scan=scan, type_='pe')
             for i, pe in enumerate(pes):
                 pe.set_shift(p=curvature[i])
                 ss[i] = pe.calculate_spectrum(nbins=nbins)
         else:
-            ss = br.ADRESS.raw(folderpath=folderpath, prefix=prefix, scan=scan)
+            ss = raw(folderpath=folderpath, prefix=prefix, scan=scan)
 
     #################
     # align and sum #
@@ -539,11 +543,20 @@ def sequence(folderpath, prefix, scans, nbins=None, curvature=None, calib=None, 
         one scan is passed as input, scans are summed up.
 
     Usage:
-        >>> ss = ADRESS.sequence(folderpath, prefix, start, stop)
         >>> ss = ADRESS.sequence(folderpath, prefix, scans)
 
-        scans = (10, 11, 13, 14, 18, 30)
-        scans = ((10, 11), (13, 14), (15, 16))
+        where scans can be 
+
+        >>> scans = (10, 11, 13, 14, 18, 30)
+
+        in this case, the returned object will have 6 spectra (one for each scan).
+
+
+        >>> scans = ((10, 11), (13, 14), (15, 16))
+
+        In this case, the returned object will have 3 spectra.
+        10 and 11 will be added together, so 13 and 14, and finally
+        15 and 16.
 
     Args:
         folderpath (str or Path object): folderpath to files.
@@ -574,7 +587,7 @@ def sequence(folderpath, prefix, scans, nbins=None, curvature=None, calib=None, 
     Returns:
         Spectra
     """    
-    ss = br.spectra(len(scans))
+    ss = br.Spectra(len(scans))
     for i, scan in enumerate(scans):
         ss[i] = read(folderpath=folderpath, prefix=prefix, scan=scan, nbins=nbins, curvature=curvature, calib=calib, offset=offset)
 
@@ -604,8 +617,8 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
         used to calibrate data absolutely.
 
     Usage:
-        
-        calib, popt, sss = br.ADRESS.calib(folderpath, prefix, start=17, stop=26)
+        from brixs.file_reading import ADRESS
+        calib, popt, sss = ADRESS.calib(folderpath, prefix, start=17, stop=26)
 
     Args:
         folderpath (str or Path object): folderpath.
@@ -638,7 +651,7 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
     if nbins is not None:
         sss = [br.Spectra(n=len(scans)), br.Spectra(n=len(scans)), br.Spectra(n=len(scans))]
         for i, scan in enumerate(scans):
-            pes = br.ADRESS.raw(folderpath=folderpath, prefix=prefix, scan=scan, type_='pe')
+            pes = raw(folderpath=folderpath, prefix=prefix, scan=scan, type_='pe')
             for ccd in (0, 1, 2):
                 pes[ccd].set_shift(p=curvature[ccd], axis=0)
                 s = pes[ccd].calculate_spectrum(nbins=nbins)
@@ -658,14 +671,13 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
         sss[ccd].E = energies
 
     # calculate calib
-    disp = [0, 0, 0]
     popt = [0, 0, 0]   
     for ccd in (0, 1, 2):
         # calculate shifts
         if mode == 'peaks' or mode == 'peak':
             for ccd2 in (0, 1, 2):
                 sss[ccd2].fit_peak()
-        disp[ccd] = sss[ccd].calculate_calib(values=energies, mode=mode, deg=1)
+        sss[ccd].calculate_calib(values=energies, mode=mode, deg=1)
 
         # get peak of first spectrum
         sss[ccd][0].fit_peak()
@@ -673,7 +685,7 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
         s = br.Spectrum(x=-sss[ccd].calculated_shift+c, y=energies)
         popt[ccd], model, r2 = s.polyfit(deg=1)        
 
-    return disp, popt, sss
+    return popt, sss
 
 # %% -------------------------- high level functions ---------------------- %% #
 def _calculate_energy_map(self):
@@ -738,7 +750,7 @@ def _calculate_emission_map(self):
         None
     """
     try:
-        ss = ss.emission.copy()
+        ss = self.emission.copy()
     except AttributeError:
         raise AttributeError('Must first calculate emission spectra (ss.calculate_emission_spectra())')
 

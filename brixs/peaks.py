@@ -335,7 +335,10 @@ class Peaks(lmfit.Parameters):
         #######################
         # check primary index #
         #######################
-        if has_i2 == True and i1 is not None:
+        # if has_i2 == True and i1 is not None:
+        if i1 is not None:
+            if i1 < 0:
+                i1 = np.sort(self._get_indexes_i1(i2=i2))[i1]
             assert i1 in self._get_indexes_i1(i2=i2), f'index {i1} does not exist\nPeak indexes available: {self._get_indexes_i1(i2=i2)}'
 
         #############
