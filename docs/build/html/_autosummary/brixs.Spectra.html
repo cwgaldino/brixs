@@ -271,11 +271,23 @@ a folderpath populated only with files similar xy-type files.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_calib</span></code>([values, mode, deg])</p></td>
 <td><p>Calculate calibration factor via <code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.calculate_shift()</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_factor</span></code>([mode])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_emission_map</span></code>()</p></td>
+<td><p>Calculates emission map.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_emission_spectra</span></code>()</p></td>
+<td><p>Calculates emission spectra.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_energy_map</span></code>()</p></td>
+<td><p>Calculates energy map.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_factor</span></code>([mode])</p></td>
 <td><p>Calculate mult.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_map</span></code>([axis])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_map</span></code>([axis])</p></td>
 <td><p>Return image representation of spectra.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_momentum_map</span></code>([energy, ...])</p></td>
+<td><p>Calculates momentum map.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_offset</span></code>([mode])</p></td>
 <td><p>Calculate offsets to align data background.</p></td>
@@ -289,89 +301,95 @@ a folderpath populated only with files similar xy-type files.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_sum</span></code>(*args, **kwargs)</p></td>
 <td><p>Returns Spectrum object with the sum of all spectra.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_y_sum</span></code>(*args, **kwargs)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_th_map</span></code>()</p></td>
+<td><p>Calculates th map.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_y_sum</span></code>(*args, **kwargs)</p></td>
 <td><p>Returns a list of the sum of y elements within a range for each spectra.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_length</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_length</span></code>()</p></td>
 <td><p>Checks if all spectra has the same length.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_monotonicity</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_monotonicity</span></code>()</p></td>
 <td><p>Sets monotonicity attribute to 'increasing' or 'decreasing'.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_same_x</span></code>([max_error])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_same_x</span></code>([max_error])</p></td>
 <td><p>Check if spectra have same x-coordinates.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_step</span></code>([max_error])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_step</span></code>([max_error])</p></td>
 <td><p>Check step between data points in the x-coordinates.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">concatenate</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">concatenate</span></code>()</p></td>
 <td><p>Return spectrum of concatenate spectra.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>(*args, **kwargs)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>(*args, **kwargs)</p></td>
 <td><p>Return a copy of the object with data contained in a range.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_peaks_from_spectra</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_peaks_from_spectra</span></code>()</p></td>
 <td><p>Copy peaks from each spectrum.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_peaks_to_spectra</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_peaks_to_spectra</span></code>()</p></td>
 <td><p>Copy peaks to each spectrum</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">crop</span></code>([start, stop])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">crop</span></code>([start, stop])</p></td>
 <td><p>Crop data.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_peaks</span></code>([prominence, width, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_peaks</span></code>([prominence, width, ...])</p></td>
 <td><p>Find peaks recursively.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_peak</span></code>([asymmetry, method, ranges, verbose])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_peak</span></code>([asymmetry, method, ranges, verbose])</p></td>
 <td><p>Fit one peak for all spectra recursively.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_peaks</span></code>([method, ranges])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_peaks</span></code>([method, ranges])</p></td>
 <td><p>Fit peaks for all spectra SIMULTANEOUSLY.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fix_monotonicity</span></code>([mode])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fix_monotonicity</span></code>([mode])</p></td>
 <td><p>Rearrange x, y such as x array is monotonically increasing or decreasing.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flip</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flip</span></code>()</p></td>
 <td><p>Flip x axis.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flip_order</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flip_order</span></code>()</p></td>
 <td><p>reorder spectra backwards:</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">floor</span></code>(*args, **kwargs)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">floor</span></code>(*args, **kwargs)</p></td>
 <td><p>Sets zero value for y-coordinates (shifts data verticaly).</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_by_attr</span></code>(attr, value[, closest, verbose])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_by_attr</span></code>(attr, value[, closest, verbose])</p></td>
 <td><p>Return spectrum with attr closest to value.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">interp</span></code>([start, stop, num, step, x])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">interp</span></code>([start, stop, num, step, x])</p></td>
 <td><p>Interpolate data.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>([folderpath, string, verbose])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>([folderpath, string, verbose])</p></td>
 <td><p>Load data from text files.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_from_single_file</span></code>([filepath, only_data, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_from_single_file</span></code>([filepath, only_data, ...])</p></td>
 <td><p>load multiple spectra from file.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize</span></code>([mode])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize</span></code>([mode])</p></td>
 <td><p>Uses Spectra.calculate_factor() and Spectra.set_factor() to normalize spectra.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code>([ax, offset, shift, factor, calib, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code>([ax, offset, shift, factor, calib, ...])</p></td>
 <td><p>Plot spectra.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">polyfit</span></code>(deg, *args, **kwargs)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">polyfit</span></code>(deg, *args, **kwargs)</p></td>
 <td><p>Fit data recursively with a polynomial.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove</span></code>(idx)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove</span></code>(idx)</p></td>
 <td><p>Remove spectrum.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder</span></code>(i1, i2)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder</span></code>(i1, i2)</p></td>
 <td><p>reorder spectra.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder_by_attr</span></code>(attr[, decreasing])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reorder_by_attr</span></code>(attr[, decreasing])</p></td>
 <td><p>reorder spectra based on a attr.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">roll_plot</span></code>([xlim, ylim, vlines, update_function])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">roll_plot</span></code>([xlim, ylim, vlines, update_function])</p></td>
 <td><p>flip through spectra (up/down keys), roll spectrum (left/right keys)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">roll_plot2</span></code>([xlim, ylim, vlines, update_function])</p></td>
+<td><p>[experimental] flip through spectra (up/down keys), roll spectrum (left/right keys).</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>([folderpath, prefix, suffix, ...])</p></td>
 <td><p>Save spectra.</p></td>

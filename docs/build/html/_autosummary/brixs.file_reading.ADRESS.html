@@ -81,10 +81,11 @@
 <span class="sig-prename descclassname"><span class="pre">brixs.file_reading.ADRESS.</span></span><span class="sig-name descname"><span class="pre">read_xas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.file_reading.ADRESS.read_xas" title="Permalink to this definition"></a></dt>
 <dd><p>Read xas file from ADRESS beamline.</p>
 <dl>
-<dt>Usage:</dt><dd><p>TEY, TFY, RMU = br.ADRESS.read_xas(filepath=&lt;filepath&gt;)
-TEY, TFY, RMU = br.ADRESS.read_xas(&lt;filepath&gt;)</p>
-<p>TEY, TFY, RMU = br.ADRESS.read_xas(folderpath, prefix, scan)
-TEY, TFY, RMU = br.ADRESS.read_xas(folderpath=&lt;folderpath&gt;, prefix=&lt;prefix&gt;, scan=&lt;scan&gt;)</p>
+<dt>Usage:</dt><dd><p>from brixs.file_reading import ADRESS</p>
+<p>TEY, TFY, RMU = ADRESS.read_xas(filepath=&lt;filepath&gt;)
+TEY, TFY, RMU = ADRESS.read_xas(&lt;filepath&gt;)</p>
+<p>TEY, TFY, RMU = ADRESS.read_xas(folderpath, prefix, scan)
+TEY, TFY, RMU = ADRESS.read_xas(folderpath=&lt;folderpath&gt;, prefix=&lt;prefix&gt;, scan=&lt;scan&gt;)</p>
 </dd>
 </dl>
 <dl class="field-list simple">
@@ -206,12 +207,20 @@ first ccd, so the additive term should be the one for the first ccd.</p>
 <dt>Data from all ccd’s are aligned and summed up. If calib is not None, data</dt><dd><p>is also calibrated. If nbins is not None, data is rebined. If more than
 one scan is passed as input, scans are summed up.</p>
 </dd>
-<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">sequence</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">sequence</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scans</span><span class="p">)</span>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ss</span> <span class="o">=</span> <span class="n">ADRESS</span><span class="o">.</span><span class="n">sequence</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">scans</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>scans = (10, 11, 13, 14, 18, 30)
-scans = ((10, 11), (13, 14), (15, 16))</p>
+<p>where scans can be</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scans</span> <span class="o">=</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>in this case, the returned object will have 6 spectra (one for each scan).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scans</span> <span class="o">=</span> <span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">14</span><span class="p">),</span> <span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">16</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>In this case, the returned object will have 3 spectra.
+10 and 11 will be added together, so 13 and 14, and finally
+15 and 16.</p>
 </dd>
 </dl>
 <dl class="field-list simple">
@@ -262,11 +271,10 @@ detector coordinates (x=um, y=Intensity), then calib = eV/um.</p>
 </dd>
 <dt>popt gives the polynomial fitting coeff. of the dispersion curve and can be</dt><dd><p>used to calibrate data absolutely.</p>
 </dd>
+<dt>Usage:</dt><dd><p>from brixs.file_reading import ADRESS
+calib, popt, sss = ADRESS.calib(folderpath, prefix, start=17, stop=26)</p>
+</dd>
 </dl>
-<p>Usage:</p>
-<blockquote>
-<div><p>calib, popt, sss = br.ADRESS.calib(folderpath, prefix, start=17, stop=26)</p>
-</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

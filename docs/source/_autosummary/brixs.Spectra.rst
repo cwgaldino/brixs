@@ -18,12 +18,17 @@
       ~Spectra.append
       ~Spectra.calculate_average
       ~Spectra.calculate_calib
+      ~Spectra.calculate_emission_map
+      ~Spectra.calculate_emission_spectra
+      ~Spectra.calculate_energy_map
       ~Spectra.calculate_factor
       ~Spectra.calculate_map
+      ~Spectra.calculate_momentum_map
       ~Spectra.calculate_offset
       ~Spectra.calculate_roll
       ~Spectra.calculate_shift
       ~Spectra.calculate_sum
+      ~Spectra.calculate_th_map
       ~Spectra.calculate_y_sum
       ~Spectra.check_length
       ~Spectra.check_monotonicity
@@ -52,6 +57,7 @@
       ~Spectra.reorder
       ~Spectra.reorder_by_attr
       ~Spectra.roll_plot
+      ~Spectra.roll_plot2
       ~Spectra.save
       ~Spectra.save_all_single_file
       ~Spectra.sequential_plot

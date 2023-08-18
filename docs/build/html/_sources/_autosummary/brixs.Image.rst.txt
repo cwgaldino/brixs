@@ -23,6 +23,7 @@
       ~Image.fix_curvature
       ~Image.floor
       ~Image.imshow
+      ~Image.linecuts
       ~Image.load
       ~Image.pcolormesh
       ~Image.plot

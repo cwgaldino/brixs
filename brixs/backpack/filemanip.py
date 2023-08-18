@@ -401,37 +401,38 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
 
     Args:
         obj (dict, list, or numpy.array): data to be saved to a file. If obj is
-        a dictonary, use ``*`` in front of a key to do not save it to the file.
+        a dictionary, use ``*`` in front of a key to do not save it to the file.
         filepath (str or pathlib.Path, optional): path to save file.
-        add_labels (bool, optional): When obj is a dictonary, ``add_labels=True``
+        add_labels (bool, optional): When obj is a dictionary, ``add_labels=True``
             makes the dict keys to be added to the header as label for each data column.
         fmt (string, or list, optional): format for saving data.
             If string, the value is used for x- and y-coordinates. If tuple
             of strings, the first string is used for x-coordinates and the
             second for y-coordinates.
 
-                fmt = (%[flag]width[.precision]specifier)
+            ``fmt = (%[flag]width[.precision]specifier)``
 
             * `flag` can be:
+
                 1. '-' for left justify
+
                 2. '+', puts + or - in front of the numbers
+
                 3. '0' to Left pad the number with zeros instead of space (see width).
 
             * `width` is the minimum number of characters to be printed.
 
             * `precision` is the number of significant digits.
 
-            * `specifier` is the type of notation. Tipically, either 'e' for
-            scientific notation of 'f' for decimal floating point.
+            * `specifier` is the type of notation. Typically, either 'e' for scientific notation of 'f' for decimal floating point.
 
             * a common `fmt` strings is: '%.3f' for 3 decimal places.
 
             *  for more information see `np.savetxt <https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt>`_ documentation::
 
-        header (str, oprional): string that will be written at the beggining of
+        header (str, optional): string that will be written at the beginning of
             the file (comment flag is added automatically).
-        footer (str, oprional): string that will be written at the end of the
-            file (comment flag is added automatically).
+        footer (str, optional): string that will be written at the end of the file (comment flag is added automatically).
         delimiter (str, optional): The string used to separate values.
         comment_flag (str, optional): string that flag comments.
         newline (str, optional): string to indicate new lines.
@@ -480,27 +481,27 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
 
 
 def load_data(filepath, labels=None, force_array=False, header_delimiter=None, **kwargs):
-    """Load data from text file. Wrapper for `numpy.genfromtxt()`_.
+    """Load data from text file. Wrapper for `np.genfromtxt <https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html>`_.
 
-    Data is formated in a dictionary or array.
+    Data is formatted in a dictionary or array.
 
     The dictionary keys are set as the label of the corresponding data columns, where
     the last comment line before data starts is assumed to have the labels of each data column.
     If column labels cannot be found, data is imported as an array. The file expects
-    comments at the begining of the file (file must not have comments elsewhere).
+    comments at the beginning of the file (file must not have comments elsewhere).
 
     If a column is full of NaN's, it's converted to a column full of zeros.
 
     Args:
         filepath (str or pathlib.Path): path to file
         labels (list, optional): It forces data to be loaded as a dictionary where
-            each label is associated with a data column. Its lenght must have the same as the number of
+            each label is associated with a data column. Its length must have the same as the number of
             columns. To avoid importing a column, put an asterisk (*) in front of the corresponding label.
         force_array (bool, optional): If ``force_array=True``, data it will be returned in a array.
         header_delimiter (str, optional): String or character separating column
             labels in the header. Default is None. If None, it will be guessed.
 
-    If not specified, the following parameters are passed to `numpy.savetxt()`_:
+    If not specified, the following parameters are passed to `np.savetxt <https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt>`_:
 
     Args:
         delimiter (str, optional): String or character separating columns.
