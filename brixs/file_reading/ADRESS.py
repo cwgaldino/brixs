@@ -728,11 +728,15 @@ def _calculate_emission_spectra(self):
     ss = self.copy()
 
     # x axis from energy loss to emission energy
-    try:
-        for s in ss:
-            s.x = s.x + s.E
-    except AttributeError:
-        raise AttributeError('spectra does not have s.E (energy) attribute.')
+    if hasattr(self, 'E') == False:
+        try:
+            for s in ss:
+                s.x = s.x + s.E
+        except AttributeError:
+            raise AttributeError('spectra does not have s.E (energy) attribute.')
+    else:
+        for i, s in enumerate(ss):
+            s.x = s.x + ss.E[i]
 
     self.emission = ss
 br.Spectra.calculate_emission_spectra = _calculate_emission_spectra

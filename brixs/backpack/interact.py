@@ -65,7 +65,7 @@ def make_sound(duration=1, freq=440):
 
     Args:
         duration (int, optional): duration in seconds.
-        freq (int, optional): frequence of sound in Hertz
+        freq (int, optional): frequency of sound in Hertz
     """
     if is_windows:
         duration = duration*1000  # milliseconds

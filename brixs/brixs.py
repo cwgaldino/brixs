@@ -416,11 +416,12 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        final.step         = self.step
-        final.monotonicity = self.monotonicity
+        final._step         = self.step
+        final._monotonicity = self.monotonicity
 
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
 
@@ -443,8 +444,9 @@ class Spectrum(metaclass=_Meta):
         final._step = self.step
         final._monotonicity = self.monotonicity
         
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
 
@@ -467,8 +469,9 @@ class Spectrum(metaclass=_Meta):
         final._step = self.step
         final._monotonicity = self.monotonicity
         
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
 
@@ -497,8 +500,9 @@ class Spectrum(metaclass=_Meta):
         final._step = self.step
         final._monotonicity = self.monotonicity
         
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
 
@@ -521,7 +525,8 @@ class Spectrum(metaclass=_Meta):
 
             # transfer attrs
             for attr in self._get_user_attrs():
-                s.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                s.__setattr__(attr, value)
 
             return s
         else:
@@ -543,10 +548,13 @@ class Spectrum(metaclass=_Meta):
     ###########
     # support #
     ###########
+    def _default_attrs(self):
+        """return list with default attrs."""
+        return ['_x', '_y', '_filepath', '_step', '_monotonicity', '_peaks']
+    
     def _get_user_attrs(self):
-        """return attrs that are user defined."""
-        default_attrs =  ['_x', '_y', '_filepath', '_step', '_monotonicity', '_peaks']
-        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
+        """return attrs that are user defined.""" 
+        return [key for key in self.__dict__.keys() if key not in self._default_attrs() and key.startswith('_') == False]
     
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
@@ -1333,7 +1341,8 @@ class Spectrum(metaclass=_Meta):
 
             # transfer attrs
             for attr in self._get_user_attrs():
-                s.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                s.__setattr__(attr, value)
 
         return s
 
@@ -1341,7 +1350,7 @@ class Spectrum(metaclass=_Meta):
         """Returns the derivative of y-coordinates as a function of x-coordinates.
 
         Args:
-            order (number, optional): derivative order. Defaut is 1.
+            order (number, optional): derivative order. Default is 1.
 
         Returns:
             Derivative spectrum
@@ -1351,7 +1360,8 @@ class Spectrum(metaclass=_Meta):
 
         # transfer attrs
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
+            value = copy.deepcopy(self.__dict__[attr])
+            s.__setattr__(attr, value)
 
         return s
     
@@ -1373,7 +1383,8 @@ class Spectrum(metaclass=_Meta):
 
         # transfer attrs
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
+            value = copy.deepcopy(self.__dict__[attr])
+            s.__setattr__(attr, value)
 
         return s
 
@@ -2078,7 +2089,8 @@ class Spectra(metaclass=_Meta):
 
             # transfer attrs
             for attr in self._get_user_attrs():
-                ss.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                ss.__setattr__(attr, value)
 
             return ss        
         else:
@@ -2115,14 +2127,17 @@ class Spectra(metaclass=_Meta):
     ###########
     # support #
     ###########
-    def _get_user_attrs(self):
-        """return attrs that are user defined."""
-        default_attrs =  ['_data', '_folderpath', '_filepath', '_peaks', 
+    def _default_attrs(self):
+        """return list with default attrs."""
+        return ['_data', '_folderpath', '_filepath', '_peaks', 
                           '_calculated_shift', '_calculated_roll',
                           '_calculated_factor', 
                           '_calculated_offset', '_calculated_calib', 
                           '_monotonicity', '_x', '_step', '_length']
-        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
+    
+    def _get_user_attrs(self):
+        """return attrs that are user defined."""
+        return [key for key in self.__dict__.keys() if key not in self._default_attrs() and key.startswith('_') == False]
     
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
@@ -2415,17 +2430,43 @@ class Spectra(metaclass=_Meta):
         self._calculated_shift  = None
         self._calculated_roll   = None
 
-    def reorder_by_attr(self, attr, decreasing=False):
-        """reorder spectra based on a attr.
+    def reorder_by_attr(self, attr, attrs=None, decreasing=False):
+        """Reorder spectra based on a attr. attr list is also sorted.
+        
+        Attr must be a list of numbers with same lenght of number of spectra.
 
         Args:
-            attr (str): name of the attr
+            attr (str): name of the reference attr.
+            attrs (list, optional): list of str with names of other attrs that 
+                must also be sorted based on the ref attr.
             decreasing (bool, optional): if True, small attr value comes last.
         
         Returns:
             None
         """
-        raise NotImplementedError('sorry, not implemented yet')
+        # get ref attr
+        ref = self.__getattribute__(attr)
+
+        # check validity
+        assert isinstance(ref, Iterable), 'ref attr must be an iterable type'
+        assert len(ref) == len(self), f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}'
+        
+        for a in attrs:
+            temp = self.__getattribute__(attr)
+            assert isinstance(temp, Iterable), f'{a} must be an iterable type'
+            assert len(temp) == len(self), f'Lenght of attr {a} must be the same as the number of spectra.\nlenght of attr: {len(a)}\nnumber of spectra: {len(self)}'
+
+        # sort
+        self.data = arraymanip.sort(ref, self.data)
+        self.__setattr__(attr, arraymanip.sort(ref, ref))
+        for a in attrs:
+            temp = self.__getattribute__(a)
+            self.__setattr__(a, arraymanip.sort(ref, temp))
+
+        # flip order if decreasing is True
+        if decreasing:
+            self.data = self.data[::-1]
+            self.__setattr__(attr, self.__getattribute__(attr)[::-1])
 
     def get_by_attr(self, attr, value, closest=True, verbose=True):
         """Return spectrum with attr closest to value.
@@ -3618,7 +3659,8 @@ class Spectra(metaclass=_Meta):
 
             # transfer attrs
             for attr in self._get_user_attrs():
-                ss.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                ss.__setattr__(attr, value)
 
         return ss
     
@@ -3633,13 +3675,16 @@ class Spectra(metaclass=_Meta):
         """
         x = np.concatenate([s.x for s in self.data])
         y = np.concatenate([s.y for s in self.data])
-        s = Spectrum(x=x, y=y)
+        final = Spectrum(x=x, y=y)
         
         # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
 
-        return s
+        return final
 
     def calculate_sum(self, *args, **kwargs):
         """Returns Spectrum object with the sum of all spectra.
@@ -3663,14 +3708,16 @@ class Spectra(metaclass=_Meta):
         y = np.zeros(len(x))
         for i in range(len(self)):
             y += ys[:, i]
-
-        s = Spectrum(x=x, y=y)
-
+        final = Spectrum(x=x, y=y)
+        
         # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
 
-        return s
+        return final
 
     def calculate_average(self, *args, **kwargs):
         """Returns Spectrum object with the average of all spectra.
@@ -3696,13 +3743,16 @@ class Spectra(metaclass=_Meta):
             y += ys[:, i]
         y = y/len(self)
 
-        s = Spectrum(x=x, y=y)
-
+        final = Spectrum(x=x, y=y)
+        
         # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
-            
-        return s
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
+
+        return final
 
     def calculate_map(self, axis=0, *args, **kwargs):
         """Return image representation of spectra.
@@ -3736,15 +3786,18 @@ class Spectra(metaclass=_Meta):
             x = y
             y = None
 
-        im = Image(data=ys)
-        im.x_centers = x
-        im.y_centers = y
-
+        final = Image(data=ys)
+        final.x_centers = x
+        final.y_centers = y
+        
         # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            im.__setattr__(attr, self.__dict__[attr])
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
 
-        return im
+        return final
     
     ########################
     # calculation and info #
@@ -5293,11 +5346,12 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
 
-        ##################
-        # transfer attrs #
-        ##################
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # ##################
+        # # transfer attrs #
+        # ##################
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
         
@@ -5320,11 +5374,12 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
 
-        ##################
-        # transfer attrs #
-        ##################
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # ##################
+        # # transfer attrs #
+        # ##################
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
     
@@ -5347,11 +5402,12 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
         
-        ##################
-        # transfer attrs #
-        ##################
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # ##################
+        # # transfer attrs #
+        # ##################
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
     
@@ -5375,11 +5431,12 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Image')
         
-        ##################
-        # transfer attrs #
-        ##################
-        for attr in self._get_user_attrs():
-            final.__setattr__(attr, self.__dict__[attr])
+        # ##################
+        # # transfer attrs #
+        # ##################
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     final.__setattr__(attr, value)
 
         return final
     
@@ -5389,11 +5446,14 @@ class Image(metaclass=_Meta):
     ###########
     # support #
     ###########
+    def _default_attrs(self):
+        """return list with default attrs."""
+        return ['_data', '_shape', '_calculated_shift', '_calculated_roll',
+                           '_x_centers', '_y_centers']
+    
     def _get_user_attrs(self):
         """return attrs that are user defined."""
-        default_attrs =  ['_data', '_shape', '_calculated_shifts', 
-                           '_x_centers', '_y_centers']
-        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
+        return [key for key in self.__dict__.keys() if key not in self._default_attrs() and key.startswith('_') == False]
 
     #################
     # save and load #
@@ -5807,7 +5867,8 @@ class Image(metaclass=_Meta):
             
             # transfer attrs
             for attr in self._get_user_attrs():
-                im.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                im.__setattr__(attr, value)
 
         return im
     
@@ -5907,7 +5968,8 @@ class Image(metaclass=_Meta):
 
         # transfer attrs
         for attr in self._get_user_attrs():
-            reduced.__setattr__(attr, self.__dict__[attr])
+            value = copy.deepcopy(self.__dict__[attr])
+            reduced.__setattr__(attr, value)
 
         return reduced
 
@@ -5953,17 +6015,11 @@ class Image(metaclass=_Meta):
 
         # transfer attrs
         for attr in self._get_user_attrs():
-            im.__setattr__(attr, self.__dict__[attr])
+            value = copy.deepcopy(self.__dict__[attr])
+            im.__setattr__(attr, value)
 
         return im
     
-    ########################
-    # calculation and info #
-    ########################
-    def possible_nbins(self):
-        """return possible values for nbins in the y (nrows) and x (ncols) directions."""
-        return np.sort(list(numanip.factors(self.shape[0]))), np.sort(list(numanip.factors(self.shape[1])))
-
     def calculate_histogram(self, nbins=None):
         """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
 
@@ -5993,8 +6049,16 @@ class Image(metaclass=_Meta):
             raise TypeError('nbins must be a integer')
 
         x = arraymanip.moving_average(bin_edges, 2)
-        s = Spectrum(x=x, y=hist)
-        return s
+        final = Spectrum(x=x, y=hist)
+
+        # transfer attrs
+        default_attrs = final._default_attrs()
+        for attr in self._get_user_attrs():
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
+
+        return final
 
     def calculate_spectrum(self, axis=1):
         """Integrate data in one direction (sum columns or rows).
@@ -6016,15 +6080,25 @@ class Image(metaclass=_Meta):
 
         # calculation
         if axis == 0:
-            s = Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
+            final = Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
         elif axis == 1:
-            s = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
+            final = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
         
         # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
 
-        return s
+        return final
+
+    ########################
+    # calculation and info #
+    ########################
+    def possible_nbins(self):
+        """return possible values for nbins in the y (nrows) and x (ncols) directions."""
+        return np.sort(list(numanip.factors(self.shape[0]))), np.sort(list(numanip.factors(self.shape[1])))
 
     def calculate_roll(self, axis=0, limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
@@ -6114,7 +6188,7 @@ class Image(metaclass=_Meta):
         # fix monotonicity of labels x
         if arraymanip.check_monotonicity(self.x_centers) != 1:
             x, ordering = arraymanip.fix_monotonicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
-            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
+            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x_centers or set it to None.\nx: {self.x_centers}'
             ordering = [int(i) for i in ordering]
             data = copy.deepcopy(self.data)
             for i in ordering:
@@ -6127,7 +6201,7 @@ class Image(metaclass=_Meta):
         # fix monotonicity of labels y
         if arraymanip.check_monotonicity(self.y_centers) != 1:
             y, ordering = arraymanip.fix_monotonicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
-            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
+            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.y_centers or set it to None.\ny: {self.y_centers}'
             ordering = [int(i) for i in ordering]
             data2 = copy.deepcopy(data)
             for i in ordering:
@@ -6684,7 +6758,8 @@ class PhotonEvents(metaclass=_Meta):
 
             # transfer attrs
             for attr in self._get_user_attrs():
-                pe.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                pe.__setattr__(attr, value)
 
             return pe
         else:
@@ -6700,10 +6775,13 @@ class PhotonEvents(metaclass=_Meta):
     ###########
     # support #
     ###########    
+    def _default_attrs(self):
+        """return list with default attrs."""
+        return ['_x', '_y', '_filepath', '_calculated_shift']
+    
     def _get_user_attrs(self):
         """return attrs that are user defined."""
-        default_attrs =  ['_x', '_y', '_filepath', '_calculated_shift']
-        return [key for key in self.__dict__.keys() if key not in default_attrs and key.startswith('_') == False]
+        return [key for key in self.__dict__.keys() if key not in self._default_attrs() and key.startswith('_') == False]
     
     #################
     # save and load #
@@ -7043,7 +7121,8 @@ class PhotonEvents(metaclass=_Meta):
             
             # transfer attrs
             for attr in self._get_user_attrs():
-                pe.__setattr__(attr, self.__dict__[attr])
+                value = copy.deepcopy(self.__dict__[attr])
+                pe.__setattr__(attr, value)
 
         return pe
     
@@ -7132,15 +7211,18 @@ class PhotonEvents(metaclass=_Meta):
         temp, _x_edges, _y_edges = np.histogram2d(self.x, self.y, bins=nbins[::-1], range=(xlim, ylim))
 
         # Image
-        im = Image(temp.transpose())
-        im._x_centers = arraymanip.moving_average(_x_edges, n=2)
-        im._y_centers = arraymanip.moving_average(_y_edges, n=2)
+        final = Image(temp.transpose())
+        final._x_centers = arraymanip.moving_average(_x_edges, n=2)
+        final._y_centers = arraymanip.moving_average(_y_edges, n=2)
 
-        # user defined attrs
+        # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            im.__setattr__(attr, self.__dict__[attr])
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
 
-        return im
+        return final
 
     ########################
     # calculation and info #
@@ -7166,13 +7248,16 @@ class PhotonEvents(metaclass=_Meta):
         
         pe = self.copy()
         im = pe.binning(nbins=nbins)
-        s = im.calculate_spectrum(axis=axis)
+        final = im.calculate_spectrum(axis=axis)
 
-        # user defined attrs
+        # transfer attrs
+        default_attrs = final._default_attrs()
         for attr in self._get_user_attrs():
-            s.__setattr__(attr, self.__dict__[attr])
+            if attr not in default_attrs:
+                value = copy.deepcopy(self.__dict__[attr])
+                final.__setattr__(attr, value)
 
-        return s
+        return final
 
     def calculate_shift(self, nbins, deg=2, axis=0, limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
