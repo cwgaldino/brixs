@@ -963,15 +963,6 @@ class Spectrum(metaclass=_Meta):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        # calib cannot be zero
-        if value == 0:
-            raise ValueError('cannot set calib = 0.0')
-        elif value == 1:
-            return
-
         #######
         # run #
         #######
@@ -981,6 +972,10 @@ class Spectrum(metaclass=_Meta):
         elif callable(value):
             self._x = np.array([f(x) for x in self.x])
         else:
+            if value == 0:  # calib cannot be zero
+                raise ValueError('cannot set calib = 0.0')
+            elif value == 1:   # if calib is 1, do nothing
+                return
             self._x = self.x*value
 
         ##########################
@@ -3889,8 +3884,12 @@ class Spectra(metaclass=_Meta):
                 ss = self._extract(ranges=kwargs['ranges'])
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             
             # calculate
             if ref_value is None:
@@ -3910,10 +3909,16 @@ class Spectra(metaclass=_Meta):
             # args
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             if 'ref_peak' not in kwargs:
                 ref_peak = 0
+            else:
+                ref_peak = kwargs['ref_peak']
 
             # calculate peak
             if ref_value is None:
@@ -4129,8 +4134,12 @@ class Spectra(metaclass=_Meta):
                 ss = self._extract(ranges=kwargs['ranges'])
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             # calculation
             if ref_value is None:
                 ref_value = max(ss.data[ref_spectrum].y)
@@ -4150,8 +4159,12 @@ class Spectra(metaclass=_Meta):
                 ss = self._extract(ranges=kwargs['ranges'])
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             # calculation
             if ref_value is None:
                 ref_value = max(ss.data[ref_spectrum].y) - min(ss.data[ref_spectrum].y)
@@ -4171,8 +4184,12 @@ class Spectra(metaclass=_Meta):
                 ss = self._extract(ranges=kwargs['ranges'])
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             # calculation
             if ref_value is None:
                 ref_value = ss.data[ref_spectrum].area
@@ -4189,17 +4206,23 @@ class Spectra(metaclass=_Meta):
              # args
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             if 'ref_peak' not in kwargs:
                 ref_peak = 0
+            else:
+                ref_peak = kwargs['ref_peak']
 
             # calculate peak
             if ref_value is None:
                 p = self.peaks._get_params_with_index(i1=ref_peak, i2=ref_spectrum)
                 ref_value = p['amp'].value
             values = self.peaks.get_values('amp', ref_peak)
-            values    = ref_value/np.array(values)  
+            values = ref_value/np.array(values)  
         
         ##############
         # peaks area #
@@ -4266,8 +4289,12 @@ class Spectra(metaclass=_Meta):
                 ss = self._extract(ranges=kwargs['ranges'])
             if 'ref_value' not in kwargs:
                 ref_value = None
+            else:
+                ref_value = kwargs['ref_value']
             if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
+            else:
+                ref_spectrum = kwargs['ref_spectrum']
             # calculation
             if ref_value is None:
                 ref_value = np.mean(ss[ref_spectrum].y)

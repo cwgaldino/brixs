@@ -9,6 +9,7 @@ Last edited: Carlos Galdino 03-2023
 from pathlib import Path
 import numpy as np
 from collections.abc import Iterable
+import copy
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import brixs as br
@@ -511,13 +512,16 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
     # calibrate and zero #
     ######################
     if calib is not None:
+        calib = copy.deepcopy(calib)
         if isinstance(calib, Iterable):
-            calib[-1] += offset
+            if offset is not None:
+                calib[-1] += offset
             s.set_calib(calib)
             s.set_shift(-s.E)
         else:
             s.set_calib(calib)
-            s.set_shift(offset)
+            if offset is not None:
+                s.set_shift(offset)
     
     #########
     # label #
@@ -535,7 +539,7 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
     s.label = label
     return s
 
-def sequence(folderpath, prefix, scans, nbins=None, curvature=None, calib=None, offset=None):
+def sequence(folderpath, prefix, scans, nbins=None, curvature=None, calib=None, offset=0):
     """Returns a spectra object with RIXS final spectrum from ADRESS beamline.
 
     Data from all ccd's are aligned and summed up. If calib is not None, data
@@ -618,7 +622,7 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
 
     Usage:
         from brixs.file_reading import ADRESS
-        calib, popt, sss = ADRESS.calib(folderpath, prefix, start=17, stop=26)
+        popt, sss = ADRESS.calib(folderpath, prefix, start=17, stop=26)
 
     Args:
         folderpath (str or Path object): folderpath.

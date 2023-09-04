@@ -1086,21 +1086,33 @@ class Peaks(lmfit.Parameters):
 
         Returns:
             None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        if value == 0:
-            raise ValueError('cannot set calib = 0.0') 
-        elif value == 1:
-            return
-        
+        """       
         # apply
         for name in self:
             if name.split('_')[0] == 'c':
-                self[name].value = self[name].value*value
+                if isinstance(value, Iterable):
+                    f = lambda x: np.polyval(value, x)
+                    self[name].value = np.float(f(self[name].value))
+                elif callable(value):
+                    self[name].value = np.float(f(self[name].value))
+                else:
+                    if value == 0:  # calib cannot be zero
+                        raise ValueError('cannot set calib = 0.0')
+                    elif value == 1:   # if calib is 1, do nothing
+                        return
+                    self[name].value = self[name].value*value
             elif name.split('_')[0] == 'w':
-                self[name].value = abs(self[name].value*value)
+                if isinstance(value, Iterable):
+                    f = lambda x: np.polyval(value, x)
+                    self[name].value = abs(f(self[name].value))
+                elif callable(value):
+                    self[name].value = abs(f(self[name].value))
+                else:
+                    if value == 0:  # calib cannot be zero
+                        raise ValueError('cannot set calib = 0.0')
+                    elif value == 1:   # if calib is 1, do nothing
+                        return
+                    self[name].value = abs(self[name].value*value)
         
     def set_shift(self, value):
         """Shift peaks.
