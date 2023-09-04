@@ -1488,7 +1488,20 @@ class Spectrum(metaclass=_Meta):
         Returns:
             int
         """
-        return filemanip.index(self.x, x, closest=closest)
+        return arraymanip.index(self.x, x, closest=closest)
+
+    def x2y(self, x, closest=True):
+        """Return the y value associated with a given x.
+
+        Args:
+            x (number): x value.
+            closest (bool, optional): if True, x does not have to be exact and
+                the index which is closest to the x value is returned. 
+            
+        Returns:
+            y number
+        """
+        return self.y[self.index(x=x, closest=closest)]
 
     ##########################        
     # plot and visualization #
