@@ -1369,8 +1369,8 @@ class Spectrum(metaclass=_Meta):
         Returns:
             spectrum of length given by (len(x)-n+1).
         """
-        x = filemanip.moving_average(self.x, n=n)
-        y = filemanip.moving_average(self.y, n=n)
+        x = arraymanip.moving_average(self.x, n=n)
+        y = arraymanip.moving_average(self.y, n=n)
         s = Spectrum(x=x, y=y)
 
         # special
@@ -3128,7 +3128,7 @@ class Spectra(metaclass=_Meta):
                 value = [value]*len(self)
 
         # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
 
         # if all shifts are zero, does nothing
         if  all(x==0 for x in value):
@@ -3286,7 +3286,7 @@ class Spectra(metaclass=_Meta):
                 value = [value]*len(self)
 
         # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
 
         # set values
         for i in range(len(self)):
@@ -3334,7 +3334,7 @@ class Spectra(metaclass=_Meta):
                 value = [value]*len(self)
 
         # value must be the right length
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(values)}\nnumber of spectra: {len(self)}'
+        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
 
         # set values
         for i in range(len(self)):
