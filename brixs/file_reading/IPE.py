@@ -141,6 +141,13 @@ def read(folderpath, prefix, x_min=0, x_max=3300, n=1, peak=[1000,1000], calib=[
         s1.xlabel = "Energy [eV]" if calib != 1 else "Pixel"
         s2.xlabel = "Energy [eV]" if calib != 1 else "Pixel"    
     
+    ### shift reference to zero
+    elif isinstance(peak, int) or isinstance(peak, Iterable):
+        s1.zero(peak=0.0)
+        s2.zero(peak=0.0)
+
+    s1.fix_monotonicity()
+    s2.fix_monotonicity()
     ss = br.Spectra(s1,s2)
     ss.interp()
     ss.calculate_shift()
@@ -152,7 +159,7 @@ def read(folderpath, prefix, x_min=0, x_max=3300, n=1, peak=[1000,1000], calib=[
     s.label = 'Total Spectrum'
     s.xlabel = s1.xlabel or s2.xlabel or 'Pixel'
     plt.figure()
-    s.plot(label=prefix.split('/')[-1])
+    s.plot(label=s.label)
     plt.ylabel('Photon counts')
     plt.xlabel(s.xlabel)
     plt.show()
