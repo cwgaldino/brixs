@@ -11,10 +11,10 @@ from copy import deepcopy
 import collections
 from .interact import query
 import json
-try:
-    from detect_delimiter import detect
-except ModuleNotFoundError:
-    pass
+# try:
+#     from detect_delimiter import detect
+# except ModuleNotFoundError:
+#     pass
 # %%
 import warnings
 import re
@@ -213,7 +213,7 @@ def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='li
     else:
         raise ValueError('return_type not valid')
 
-
+# 
 def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
     """Save text to txt file.
 
@@ -480,7 +480,7 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
     np.savetxt(filepath, obj, fmt=fmt, delimiter=delimiter, newline=newline, header=header, footer=footer, comments=comment_flag)
 
 
-def load_data(filepath, labels=None, force_array=False, header_delimiter=None, **kwargs):
+def load_data(filepath, labels=None, force_array=False, **kwargs):
     """Load data from text file. Wrapper for `np.genfromtxt <https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html>`_.
 
     Data is formatted in a dictionary or array.
@@ -497,9 +497,8 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
         labels (list, optional): It forces data to be loaded as a dictionary where
             each label is associated with a data column. Its length must have the same as the number of
             columns. To avoid importing a column, put an asterisk (*) in front of the corresponding label.
-        force_array (bool, optional): If ``force_array=True``, data it will be returned in a array.
-        header_delimiter (str, optional): String or character separating column
-            labels in the header. Default is None. If None, it will be guessed.
+        force_array (bool, optional): If ``force_array=True``, data it will be 
+            returned in a array. Overwrites labels.
 
     If not specified, the following parameters are passed to `np.savetxt <https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html?highlight=savetxt#numpy.savetxt>`_:
 
@@ -535,26 +534,26 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
     filepath = Path(filepath)
 
     # guess delimiter
-    if kwargs['delimiter'] is None:
-        # find header lenght
-        header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-        try: line_number = len(header)
-        except TypeError: line_number = 0
-        if kwargs['skip_header'] > line_number:
-            line_number = kwargs['skip_header']
+    # if kwargs['delimiter'] is None:
+    #     # find header length
+    #     header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+    #     try: line_number = len(header)
+    #     except TypeError: line_number = 0
+    #     if kwargs['skip_header'] > line_number:
+    #         line_number = kwargs['skip_header']
 
-        # find delimiter from the first data row
-        f = open(filepath)
-        for i, line in enumerate(f):
-            if i == line_number:
-                kwargs['delimiter'] = detect(line)
-            elif i > line_number:
-                break
-        f.close()
-        if kwargs['delimiter'] is None:
-            warnings.warn('Could not figure out the delimiter. Trying space.')
-    if kwargs['delimiter'] == ' ':
-        kwargs['delimiter'] = None
+    #     # find delimiter from the first data row
+    #     f = open(filepath)
+    #     for i, line in enumerate(f):
+    #         if i == line_number:
+    #             kwargs['delimiter'] = detect(line)
+    #         elif i > line_number:
+    #             break
+    #     f.close()
+    #     if kwargs['delimiter'] is None:
+    #         warnings.warn('Could not figure out the delimiter. Trying space.')
+    # if kwargs['delimiter'] == ' ':
+    #     kwargs['delimiter'] = None
 
     # get data
     # print(kwargs)
@@ -570,29 +569,22 @@ def load_data(filepath, labels=None, force_array=False, header_delimiter=None, *
             # data[:, i] = [x.decode('utf-8') for x in temp]
             data[:, i] = [0 for x in temp]
 
-    # get labels
-    if labels is None and force_array is False:
-        # print('here')
-        header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-        if header:
-            header_line = header[-1].replace(kwargs['comments'], '').strip()
-            header_line = header_line.replace('\n', '')
-            if header_delimiter is None:
-                header_delimiter = detect(header_line)
-            labels = header_line.split(header_delimiter)
-    # print(labels)
+    # # get labels
+    # if labels is None and force_array is False:
+    #     # print('here')
+    #     header = load_Comments(filepath, comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+    #     if header:
+    #         header_line = header[-1].replace(kwargs['comments'], '').strip()
+    #         header_line = header_line.replace('\n', '')
+    #         if header_delimiter is None:
+    #             header_delimiter = detect(header_line)
+    #         labels = header_line.split(header_delimiter)
+    # # print(labels)
 
     # check labels length
-    if labels is not None:
-        if len(labels) != data.shape[1]:
-            labels = header_line.split(kwargs['delimiter'])
-            if len(labels) != data.shape[1]:
-                return data
-        # remove empty itens and trailing spaces
-        labels = [item.strip() for item in labels if item != '']
-
-    # create dict
     if labels is not None and force_array is False:
+        assert len(labels) == data.shape[1], 'labels must be the same length as the number of columns'
+        labels = [item.strip() for item in labels if item != '']  # remove empty items and trailing spaces
         datadict = {labels[i]: data[:, i] for i in range(len(labels)) if not labels[i].startswith('*')}
         return datadict
     else:

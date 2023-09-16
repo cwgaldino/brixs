@@ -1138,8 +1138,11 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None,
 
     del gridspec_kw
 
-    for i, ax in enumerate(br.flatten(_axes)):
-        axes[i] = ax
+    try:
+        for i, ax in enumerate(br.flatten(_axes)):
+            axes[i] = ax
+    except TypeError:
+        axes[0] = _axes
 
     return fig, axes
 
