@@ -44,6 +44,9 @@ def _read_xas(filepath):
     ##################
     # check filepath #
     ##################
+    filepath = Path(filepath)
+    assert filepath.exists(), 'filepath does not exists'
+    assert filepath.is_file(), 'filepath must point to a file'
 
     #############
     # load data # 
@@ -73,7 +76,7 @@ def _read_xas(filepath):
     
     # additional attrs
     for s in (TEY, TFY, RMU):
-        _unpack_attrs_xas(TEY)
+        _unpack_attrs_xas(s)
         s.xlabel = 'energy'
     TEY.ylabel = 'TEY'
     TFY.ylabel = 'TFY'
