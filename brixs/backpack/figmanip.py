@@ -765,6 +765,8 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         # print(ticks_sep)
         # print(ticks)
     else:
+        if n_ticks < 2:
+            raise ValuError('n_ticks needs to be bigger or equal than 2.')
         ticks   = np.linspace(min_value, max_value, n_ticks)
     # ticks shift to get better values (include zero)
     if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
@@ -782,6 +784,8 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
 
     # limits
+    if len(ticks) < 2:
+        raise ValueError(f'ticks = {ticks} has only one tick, please, reduce ticks_sep.')
     try:
         if len(pad) == 2:
             min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]

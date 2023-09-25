@@ -615,18 +615,20 @@ class Spectrum(metaclass=_Meta):
         # (xi_, xf_1), (xi_2, xf_2)
         elif len(args) == 2:
             if isinstance(args[0], Iterable):
-                args = tuple(args)
+                args = list(args)
             else:
-                args = ((args), )
-
+                args = [args, ]
+        
         # (xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3)
-        for pair in args:
+        args = list(args)
+        for i, pair in enumerate(args):
+            pair    = list(pair)
+            args[i] = pair
             if len(pair) == 2:
                 if pair[0] == None: pair[0] = vmin
                 if pair[1] == None: pair[1] = vmax
             else:
                 raise AttributeError(error_message)        
-
         return args
 
     #################
@@ -2217,13 +2219,15 @@ class Spectra(metaclass=_Meta):
                 args = ((args), )
 
         # (xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3)
-        for pair in args:
+        args = list(args)
+        for i, pair in enumerate(args):
+            pair    = list(pair)
+            args[i] = pair
             if len(pair) == 2:
                 if pair[0] == None: pair[0] = vmin
                 if pair[1] == None: pair[1] = vmax
             else:
-                raise AttributeError(error_message)
-
+                raise AttributeError(error_message)        
         return args
     
     def _gather_ys(self, *args, **kwargs):

@@ -262,7 +262,10 @@ def _read(filepath, type_='spectrum'):
     # spectrum
     if type_.lower() in ['spectrum', 's']:
         # spectrum
-        final = br.Spectrum(f['entry']['analysis']['spectrum'][:])
+        try:
+            final = br.Spectrum(f['entry']['analysis']['spectrum'][:])
+        except KeyError:
+            raise ValueError(f'Cannot find spectrum inside file: {filepath}')
     # photon events
     elif type_.lower() in ['photon events', 'pe']:
         # get array size
@@ -482,6 +485,10 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
             ss1.align()
             s = ss1.calculate_sum()
             ss.append(s)
+
+        # transfer attrs
+        for attr in ss1[0]._get_user_attrs():
+            ss.__setattr__(attr, ss1[0].__dict__[attr])
     ############
     # one scan #
     ############
