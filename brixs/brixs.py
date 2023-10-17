@@ -2939,6 +2939,10 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_step`, :py:func:`Spectra.check_same_x`.
         """
+        # check spectra exists
+        if len(self) == 0:
+            raise ValueError('no spectra found')
+        
         # collect
         length = [None]*len(self)
         for i in range(len(self)):
@@ -2989,6 +2993,11 @@ class Spectra(metaclass=_Meta):
             See Also:
                 :py:func:`Spectra.check_length`, :py:func:`Spectra.check_same_x`.
         """
+        # check spectra exists
+        if len(self) == 0:
+            raise ValueError('no spectra found')
+        
+        # max error
         if max_error is None:
             max_error = settings.MAX_ERROR_STEP_X
 
@@ -3070,6 +3079,17 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_length`, :py:func:`Spectra.check_step`.
         """
+        # check spectra exists
+        if len(self) == 0:
+            raise ValueError('no spectra found')
+        
+        # if only one spectra exists, then x is immediately defined
+        if len(self) == 1:
+            self._x = self[0].x
+            self._length = len(self.x)
+            return
+        
+        # max error
         if max_error is None:
             max_error = settings.MAX_ERROR_STEP_X
 
