@@ -23,13 +23,8 @@ else:
 folderpath = Path(r'calib')
 prefix = 'O_'
 
-# see ADRESS curvature correction example
-curvature0 = [2.8024508424253414e-06, -0.018400753443323096, 0.7201982228298014]
-curvature1 = [3.769963633262668e-06, -0.01463334137482744, 0.3192278992936906]
-curvature2 = [2.8209855702191653e-06, -0.004759568633407643, 0.037546422875370744]
-curvature  = [curvature0, curvature1, curvature2]
-
 # %% quick calibration calculation =============================================
+# calibration uses cross-correlation by default
 popt, sss = ADRESS.calib(folderpath, prefix, 17, 26)
 
 # %% print as string
@@ -79,6 +74,11 @@ calib1 = [0.004539722713328706, 515.696903029858]
 calib2 = [0.004565239596075693, 515.2262740278696]
 
 # %% mode cc (ev/subpixel)
+curvature0 = [2.8024508424253414e-06, -0.018400753443323096, 0.7201982228298014]
+curvature1 = [3.769963633262668e-06, -0.01463334137482744, 0.3192278992936906]
+curvature2 = [2.8209855702191653e-06, -0.004759568633407643, 0.037546422875370744]
+curvature  = [curvature0, curvature1, curvature2] # see ADRESS curvature correction example
+ 
 popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, nbins=2000, curvature=curvature)
 calib0_subpixel = [0.018228083877778765, 516.1699816340371]
 calib1_subpixel = [0.018147251168973262, 515.696753572465]

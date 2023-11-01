@@ -433,7 +433,7 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
         one scan is passed as input, scans are summed up.
 
     Usage:
-        >>> s = ADRESS.raw(folderpath, prefix, scan)
+        >>> s = ADRESS.read(folderpath, prefix, scan)
 
     Args:
         folderpath (str or Path object): folderpath to files.

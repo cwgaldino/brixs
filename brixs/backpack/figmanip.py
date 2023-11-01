@@ -1193,6 +1193,39 @@ def ax_pos2fig_pos(ax, value, direction='x'):
 
     return x0 + delta*value
 
+# %% Experimental
+def publication_font():
+    """Set font options for publication quality font.
+
+    Change this function accordingly to your preferences.
+
+    Returns:
+        None
+    """
+    # set default font
+    matplotlib.rcParams['font.family']          = 'cmr10'
+    matplotlib.rcParams['font.size']            = 9
+    plt.rcParams["axes.formatter.use_mathtext"] = True
+
+    # math text
+    matplotlib.rcParams['mathtext.fontset'] = 'cm'  # Change mathtext to CMR ("latex")
+    matplotlib.rcParams['svg.fonttype']     = 'none'  # Change text to text, and not paths.
+
+def default_font():
+    """Set font options to Matplotlib's default.
+
+    Returns:
+        None
+    """
+    # set default font
+    matplotlib.rcParams['font.family'] = 'sans-serif'
+    matplotlib.rcParams['font.size']   = 10
+    plt.rcParams["axes.formatter.use_mathtext"] = False
+
+    # math text
+    matplotlib.rcParams['mathtext.fontset'] = 'dejavusans'
+    matplotlib.rcParams['svg.fonttype'] = 'path'
+    
 def ungroup_svg(filepath, outfilepath=None):
     """Ungroup all objects in svg files created by matplotlib.
 
@@ -1322,7 +1355,7 @@ def soft_ungroup_svg(filepath, outfilepath=None):
     f.close()
 
 
-# gradient functions ========================================================
+# %% gradient functions ========================================================
 def rgb2hex(rgb, max_rgb_value=1):
     """Return hex value.
 
