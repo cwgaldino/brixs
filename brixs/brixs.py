@@ -740,6 +740,11 @@ class Spectrum(metaclass=_Meta):
             else:
                 filepath = self.filepath               
         filepath = Path(filepath)
+
+        # check if filepath points to a file
+        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+        if filepath.exists():
+            assert filepath.is_file(), 'filepath must point to a file'
         
         # check overwrite
         if check_overwrite:
@@ -825,6 +830,11 @@ class Spectrum(metaclass=_Meta):
             kwargs['comments'] = '#'
         if 'usecols' not in kwargs:
             kwargs['usecols'] = (0, 1)
+
+        # check if filepath points to a file
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
+        assert filepath.exists(), f'filepath does not exist\n{filepath}'
 
         # read data
         data = np.genfromtxt(Path(filepath), **kwargs)
@@ -1628,7 +1638,7 @@ class Spectrum(metaclass=_Meta):
         if ranges is None:
             s = self
         else:
-            s = self._extract(self.x, self.y, ranges)
+            s = self._extract(ranges)
 
         # check monotonicity
         if s.monotonicity is None:
@@ -1908,7 +1918,7 @@ class Spectra(metaclass=_Meta):
             self.load(kwargs['folderpath'])
             return
         elif 'filepath' in kwargs:
-            self.load(kwargs['filepath'])
+            self.load_from_single_file(kwargs['filepath'])
             return
         elif 'n' in kwargs:
             n = int(kwargs['n'])
@@ -1927,7 +1937,12 @@ class Spectra(metaclass=_Meta):
                 self._data = [-1]*n
                 return
             elif isinstance(args[0], str) or isinstance(args[0], Path):
-                self.load(args[0])
+                temp = Path(args[0])
+                assert temp.exists(), f'filepath (or folderpath) do not exist\n{temp}'
+                if temp.is_file():
+                    self.load_from_single_file(temp)
+                elif temp.is_dir():
+                    self.load(temp)
                 return
             elif isinstance(args[0], Iterable):
                 self.data = args[0]
@@ -2644,7 +2659,7 @@ class Spectra(metaclass=_Meta):
         """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
-            folderpath (string, path object, or list): folderpath. If None,
+            folderpath (string or path object): folderpath. If None,
                 Last used folderpath is used.
             string (str, optional): file names without this string will be ignored.
                 Use '*' for matching anything. Default is '*'.
@@ -2661,11 +2676,21 @@ class Spectra(metaclass=_Meta):
         if folderpath is None:
             folderpath = self.folderpath
         
-        if isinstance(folderpath, str) or isinstance(folderpath, Path): 
-            fl = filemanip.filelist(dirpath=folderpath, string=string)
-            self.folderpath = folderpath
-        else:
-            raise TypeError(f'folderpath is unknown format: {folderpath}')
+        # if isinstance(folderpath, str) or isinstance(folderpath, Path): 
+        #     fl = filemanip.filelist(dirpath=folderpath, string=string)
+        #     self.folderpath = folderpath
+        # else:
+        #     raise TypeError(f'folderpath is unknown format: {folderpath}')
+        
+        # check if folder points to a folder and exists
+        folderpath = Path(folderpath)
+        assert isinstance(folderpath, str) or isinstance(folderpath, Path), f'folderpath is unknown format\n{folderpath}'
+        assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
+        assert folderpath.is_dir(), f'folderpath must point to a file\n{folderpath}'
+        
+        # get filelist
+        fl = filemanip.filelist(dirpath=folderpath, string=string)
+        self.folderpath = folderpath
         
         # get data
         for i, filepath in enumerate(fl):
@@ -2778,8 +2803,11 @@ class Spectra(metaclass=_Meta):
                 filepath = self.filepath               
         filepath = Path(filepath)
 
+        # check if filepath points to a file
         assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-                
+        if filepath.exists():
+            assert filepath.is_file(), 'filepath must point to a file'
+
         # check x is the same
         if self.x is None:
             try:
@@ -2855,10 +2883,15 @@ class Spectra(metaclass=_Meta):
         if 'usecols' not in kwargs:
             kwargs['usecols'] = None
 
+        # check if filepath points to a file
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
+        assert filepath.exists(), f'filepath does not exist\n{filepath}'
+
         # read data
         data = np.genfromtxt(Path(filepath), **kwargs)
-        x  = data[:, 0]
-        ys = data[:, 1:]
+        x    = data[:, 0]
+        ys   = data[:, 1:]
 
         # artificial usecols
         if kwargs['usecols'] is None:
@@ -6318,7 +6351,12 @@ class Image(metaclass=_Meta):
                 filepath = Path(self.filepath)
             except AttributeError:
                 raise TypeError("Missing 1 required argument: 'filepath'")
-        
+            
+        # check if filepath points to a file
+        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+        if filepath.exists():
+            assert filepath.is_file(), 'filepath must point to a file'
+
         # check overwrite
         if check_overwrite:
             if filepath.exists() == True:
@@ -6394,6 +6432,11 @@ class Image(metaclass=_Meta):
             kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
+
+        # check if filepath points to a file
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
+        assert filepath.exists(), f'filepath does not exist\n{filepath}'
 
         #############
         # read data #
@@ -7615,7 +7658,6 @@ class Image(metaclass=_Meta):
         return
 
 
-
 class PhotonEvents(metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
@@ -8016,6 +8058,11 @@ class PhotonEvents(metaclass=_Meta):
         else:
             filepath = Path(filepath)
 
+        # check if filepath points to a file
+        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+        if filepath.exists():
+            assert filepath.is_file(), 'filepath must point to a file'
+
         # check overwrite
         if check_overwrite:
             if filepath.exists() == True:
@@ -8091,6 +8138,11 @@ class PhotonEvents(metaclass=_Meta):
             kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
+
+        # check if filepath points to a file
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
+        assert filepath.exists(), f'filepath does not exist\n{filepath}'
 
         #############
         # read data #
