@@ -169,6 +169,10 @@ def read_xas(*args, **kwargs):
     return _read_xas(filepath)
 
 # %% ------------------------------ base ---------------------------------- %% #
+def _find_prefix(filepath):
+    f = h5py.File(filepath, 'r')
+    return ''.join([i for i in list(f.keys())[0] if not i.isdigit()])
+    
 def _unpack_attrs(s):
     """Makes ADRESS relevant scan parameters more readable."""
 
@@ -649,8 +653,10 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
                 the constant term. Polynomial as a function of x_centers (um).
 
     Returns:
-        2 lists:
-                    
+        3 lists:
+            
+            Dispersion factor for each ccd (energy/unit)
+            
             polynomial coefficients that fit the dispersion curve. 
             
             Spectra for each ccd.

@@ -493,7 +493,44 @@ def onclick(event):
                 plt.savefig(f'{onclick_folder/".temporary_fig.png"}', dpi=onclick_resolution)
                 png2clipboard(onclick_folder/".temporary_fig.png")
 
-def zoom(start, stop, ymargin=2):
+def zoom(start, stop, ax=None, ymargin=2):
+    """Zoom up portion of current figure from start to stop.
+
+    Args:
+        start (float or int): initial x value.
+        ymargin (number, optional): margin value between data and the edges of
+            plot in percentage of the y data range.
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    ymax = None
+    ymin = None
+
+    for line in ax.get_lines():
+
+        x = line.get_data()[0]
+        y = line.get_data()[1]
+
+        _, y = br.extract(x=x, y=y, ranges=(start, stop))
+        ymin_temp = min(y)
+        ymax_temp = max(y)
+
+        if ymin is None:
+                ymin = copy.copy(ymin_temp)
+                ymax = copy.copy(ymax_temp)
+        try:
+            if ymax_temp > ymax:
+                ymax = copy.copy(ymax_temp)
+            if ymin_temp < ymin:
+                ymin = copy.copy(ymin_temp)
+        except UnboundLocalError:
+            warnings.warn("All data are outside of the required range. Cannot zoom.")
+    m = (ymax-ymin)*ymargin/100
+    ax.set_ylim(ymin-m, ymax+m)
+    ax.set_xlim(start, stop)
+
+def zoom2(start, stop, ymargin=2):
     """Zoom up portion of current figure from start to stop.
 
     Args:

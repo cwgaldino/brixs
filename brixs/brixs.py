@@ -577,6 +577,8 @@ class Spectrum(metaclass=_Meta):
                 ((xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3))
         """
         error_message = 'Wrong input. Please check ranges input.\n' +\
+                        f'args passed: {args}\n' +\
+                        f'kwargs passed: {kwargs}\n\n' +\
                         'ranges should be a pair (x_init, x_final) or a list of pairs.\n' +\
                         'See examples below:\n' +\
                         '\n' +\
@@ -1548,7 +1550,7 @@ class Spectrum(metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################        
-    def plot(self, ax=None, offset=0, shift=0, factor=1, calib=1, smooth=1, ranges=None, switch=False, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, ranges=None, switch=False, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Args:
@@ -1590,6 +1592,11 @@ class Spectrum(metaclass=_Meta):
 
         x = (x*calib) + shift
         y = y*factor + offset
+
+        if roll != 0:
+            assert numanip.is_integer(roll), 'roll must be an integer'
+            x = np.roll(x, roll)
+            x, y = arraymanip.sort(x, x, y)
 
         # if 'label' not in kwargs and hasattr(self, 'label'):
         #     kwargs['label'] = self.label
@@ -2214,6 +2221,8 @@ class Spectra(metaclass=_Meta):
                 ((xi_, xf_1), (xi_2, xf_2), (xi_3, xf_3))
         """
         error_message = 'Wrong input. Please check ranges input.\n' +\
+                        f'args passed: {args}\n' +\
+                        f'kwargs passed: {kwargs}\n\n' +\
                         'ranges should be a pair (x_init, x_final) or a list of pairs.\n' +\
                         'See examples below:\n' +\
                         '\n' +\
@@ -4410,7 +4419,7 @@ class Spectra(metaclass=_Meta):
         # final 
         self._calculated_offset = values
 
-    def calculate_calib(self, values=None, mode='cross-correlation', deg=1, **kwargs):
+    def calculate_calib(self, values, mode='cross-correlation', deg=1, **kwargs):
         """Calculate calibration factor via :py:func:`Spectra.calculate_shift()`.
 
         The calibration factor is the shift value (x-coord) as a function of the
@@ -4449,10 +4458,14 @@ class Spectra(metaclass=_Meta):
 
         # CALCULATION
         self.calculate_shift(mode=mode, **kwargs)
+
+        # if mode == 'peaks' or mode == 'peak':
+        #     centers = [c+self.calculated_shift[0] for c in self.calculated_shift]
+        #     print(centers)
         # centers = -(self.calculated_shift + self.calculated_shift.ref_value)
 
         # save calculated values ===============================================
-        self._calculated_calib      = Spectrum(x=values, y=self.calculated_shift)
+        self._calculated_calib = Spectrum(x=-self._calculated_shift, y=values)
         popt, model, R2 = self.calculated_calib.polyfit(deg=deg)
         self._calculated_calib.popt  = popt
         self._calculated_calib.model = model
@@ -5921,11 +5934,11 @@ class Image(metaclass=_Meta):
 
     Attributes:
         data (2D np.array): This is where we store the Image.
-        shape (tuple, read only): Shape of data (vertical size, horizontal size),
-            i.e., number of pixels rows and number of columns, respectively.
         x_centers, y_centers (np.array): pixel center labels.
 
     Computed (read-only) attributes:
+        shape (tuple, read only): Shape of data (vertical size, horizontal size),
+            i.e., number of pixels rows and number of columns, respectively.
         histogram (brixs.Spectrum)
             Data intensity histogram.
         calculated_roll (list)
@@ -5939,7 +5952,7 @@ class Image(metaclass=_Meta):
         None
     """
     # read only and non-removable arguments
-    _read_only = ['shape', 'calculated_roll', 'calculated_shift']
+    _read_only = ['calculated_roll', 'calculated_shift']
     _non_removable = []
 
     def __init__(self, *args, **kwargs):
@@ -5957,8 +5970,8 @@ class Image(metaclass=_Meta):
         self._y_centers = None
         self._filepath  = ''
 
-        self._shape     = None
-        self._calculated_roll = None
+        self._calculated_roll  = None
+        self._calculated_shift = None
 
         #######################
         # non-user attributes #
@@ -6023,11 +6036,10 @@ class Image(metaclass=_Meta):
     def data(self, value):
         # basic attr
         self._data  = np.array(value, dtype='float')
-        self._shape = (self.data.shape[0], self.data.shape[1])
-
         self.x_centers = None
         self.y_centers = None        
-        self._calculated_roll = None
+        self._calculated_roll  = None
+        self._calculated_shift = None
 
         ##############
         # vmin, vmax #
@@ -6098,6 +6110,16 @@ class Image(metaclass=_Meta):
     ###################################
     # computed (read-only) attributes #
     ###################################
+    @property
+    def shape(self):
+        return (self.data.shape[0], self.data.shape[1])
+    @shape.setter
+    def shape(self, value):
+        raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    @shape.deleter
+    def shape(self):
+        raise AttributeError('Cannot delete object.')
+
     @property
     def histogram(self):
         return self.calculate_histogram()
@@ -6535,6 +6557,20 @@ class Image(metaclass=_Meta):
     #############
     # modifiers #
     #############
+    def transpose(self):
+        """Transpose image
+
+        Returns:
+            None
+        """
+        self._data = self.data.transpose()
+
+        # fixing attrs
+        temp = copy.deepcopy(self.c_centers)
+        self._x_centers = self.y_centers
+        self._y_centers = temp        
+        self._calculated_roll = None
+
     def floor(self, x=0, y=0, n=30, nx=None, ny=None):
         """Set background intensity to zero.
 
@@ -6635,6 +6671,63 @@ class Image(metaclass=_Meta):
 
         return popt, model
 
+    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Crop Image.
+
+        Warning:
+            In this version, crop overwrites the data in this object. For croping
+            to a new object use im.copy(). This might change in the future.
+
+        Args:
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+
+        Returns:
+            None
+        """
+        #################
+        # check if None #
+        #################
+        if x_start is None: x_start = self.x_centers[0]
+        if x_stop  is None: x_stop  = self.x_centers[-1]
+        if y_start is None: y_start = self.y_centers[0]
+        if y_stop  is None: y_stop  = self.y_centers[-1]
+
+        ####################
+        # centers to index #
+        ####################
+        x_start = arraymanip.index(self.x_centers, x_start)
+        x_stop  = arraymanip.index(self.x_centers, x_stop) + 1
+        y_start = arraymanip.index(self.y_centers, y_start)
+        y_stop  = arraymanip.index(self.y_centers, y_stop) + 1
+
+        ##################
+        # validate input #
+        ##################
+        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
+
+        ########
+        # crop #
+        ########
+        self._data      = self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)]
+        self._x_centers = self.x_centers[x_start:x_stop]
+        self._y_centers = self.y_centers[y_start:y_stop]
+
+        # save to a new object (old version)
+        # im = Image(data=self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)])
+        # im.x_centers = self.x_centers[x_start:x_stop]
+        # im.y_centers = self.y_centers[y_start:y_stop]
+
+        # # transfer attrs
+        # for attr in self._get_user_attrs():
+        #     value = copy.deepcopy(self.__dict__[attr])
+        #     im.__setattr__(attr, value)
+
+        # return im
+        return
+    
     ##############
     # extractors #
     ##############
@@ -6644,23 +6737,57 @@ class Image(metaclass=_Meta):
         Usage:
             >>> im2.copy(im1)     # im2 is now a copy of im1
             >>> im2 = im1.copy()  # im2 is now a copy of im1
+            >>>
+            >>> # im3 will be a croped image of im1
+            >>> im3 = im1.copy(x_start, x_stop, y_start, y_stop) 
 
         Args:
             im (Image, optional): Image to be is copied. See usage.
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
 
         Returns:
             :py:attr:`Image`
         """
+        error_message = 'Wrong input. Please check input.\n' +\
+                        f'args passed: {args}\n'  +\
+                        f'kwargs passed: {kwargs}\n\n'  +\
+                        ' === Usage ===\n'  +\
+                        'im2.copy(im1)     # im2 is now a copy of im1\n'  +\
+                        'im2 = im1.copy()  # im2 is now a copy of im1\n'  +\
+                        'im3 = im1.copy(x_start, x_stop, y_start, y_stop)\n'
         #############################
         # check if input is Spectra #
         #############################
-        im = None
+        im      = None
+        x_start = False
         if 'im' in kwargs:
             im = kwargs['im']
         elif len(args) == 1:
             if isinstance(args[0], Spectra):
                 im = args[0]
-        
+        ###################################
+        # check if crop ranges are passed #
+        ###################################
+        elif 'x_start' in kwargs or 'x_stop' in kwargs or 'y_start' in kwargs or 'y_stop' in kwargs:
+            assert 'x_start' in kwargs and 'x_stop' in kwargs and 'y_start' in kwargs and 'y_stop' in kwargs, error_message
+            x_start = kwargs['x_start']
+            x_stop  = kwargs['x_stop']
+            y_start = kwargs['y_start']
+            y_stop  = kwargs['y_stop']
+        elif len(args) == 4:
+            x_start = args[0]
+            x_stop  = args[1]
+            y_start = args[2]
+            y_stop  = args[3]
+        elif len(args) != 4 and len(args) != 0 and len(args) != 1:
+            raise ValueError(error_message)
+        elif len(kwargs) != 0:
+            for x in list(kwargs.keys()):
+                if x not in ['im', 'x_start', 'x_stop', 'y_start', 'y_stop']:
+                    raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
+
         ##################################
         # if Image is passed, copy Image #
         ##################################
@@ -6670,7 +6797,6 @@ class Image(metaclass=_Meta):
                 self._x_centers = im.x_centers
                 self._y_centers = im.y_centers
                 self._filepath  = im.filepath
-                self._shape     = im.shape
                 self._calculated_roll = im.calculated_roll
 
                 # user defined attrs
@@ -6681,22 +6807,30 @@ class Image(metaclass=_Meta):
             else:
                 raise TypeError('Only type br.Spectra can be copied to type br.Spectra')
             return
-        ####################################
-        # Otherwise, return a copy of self #
-        ####################################
-        else:
+        ##################
+        # identical copy #
+        ##################
+        elif x_start == False:
             im = Image(data=self.data)
-
             im._x_centers = self.x_centers
             im._y_centers = self.y_centers
-            im._filepath  = self.filepath
-            
+            # im._filepath  = self.filepath
+
             # transfer attrs
             for attr in self._get_user_attrs():
                 value = copy.deepcopy(self.__dict__[attr])
                 im.__setattr__(attr, value)
 
-        return im
+            return im
+        #############################
+        # if crop ranges are passed #
+        #############################
+        else:
+            im = self.copy()
+            im.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+            # im._filepath = self.filepath
+
+            return im
     
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
@@ -6798,53 +6932,6 @@ class Image(metaclass=_Meta):
             reduced.__setattr__(attr, value)
 
         return reduced
-
-    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
-        """Crop Image.
-
-        Args:
-            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
-                x_centers and y_centers. Interval is inclusive. Use None to 
-                indicate the edge of the image.
-
-        Returns:
-            croped image
-        """
-        #################
-        # check if None #
-        #################
-        if x_start is None: x_start = self.x_centers[0]
-        if x_stop  is None: x_stop  = self.x_centers[-1]
-        if y_start is None: y_start = self.y_centers[0]
-        if y_stop  is None: y_stop  = self.y_centers[-1]
-
-        ####################
-        # centers to index #
-        ####################
-        x_start = arraymanip.index(self.x_centers, x_start)
-        x_stop  = arraymanip.index(self.x_centers, x_stop) + 1
-        y_start = arraymanip.index(self.y_centers, y_start)
-        y_stop  = arraymanip.index(self.y_centers, y_stop) + 1
-
-        ##################
-        # validate input #
-        ##################
-        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
-
-        ########
-        # crop #
-        ########
-        im = Image(data=self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)])
-        im.x_centers = self.x_centers[x_start:x_stop]
-        im.y_centers = self.y_centers[y_start:y_stop]
-
-        # transfer attrs
-        for attr in self._get_user_attrs():
-            value = copy.deepcopy(self.__dict__[attr])
-            im.__setattr__(attr, value)
-
-        return im
     
     def calculate_histogram(self, nbins=None):
         """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
@@ -7058,7 +7145,7 @@ class Image(metaclass=_Meta):
 
         return pos
 
-    def imshow(self, ax=None, xlim=None, ylim=None, colorbar=False, verbose=True, **kwargs):
+    def imshow(self, ax=None, xlim=None, ylim=None, colorbar=False, origin='lower', verbose=True, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
@@ -7067,6 +7154,8 @@ class Image(metaclass=_Meta):
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
             colorbar (bool, optional): if True, colorbar is shown on the right side.
+                 (str, optional): Location of the [0, 0] index. Options are
+                `upper` and `lower`. Default is 'lower'.
             verbose (bool, optional): if True, a warning will show up if data
                 has iregular pixel sizes. Default is true.
             **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
@@ -7077,7 +7166,6 @@ class Image(metaclass=_Meta):
             cmap: The Colormap instance. Default is 'jet'.
             aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
                 an aspect ratio of 1 will be used (pixels will be square).
-            origin: Location of the [0, 0] index. default is 'lower'.
             interpolation: The interpolation method used. Default is 'none'.
                 Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
                 'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
@@ -7119,12 +7207,11 @@ class Image(metaclass=_Meta):
             im = self.copy()
 
         # default arguments
+        kwargs['origin'] = origin
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
         if 'aspect' not in kwargs:
             kwargs['aspect'] = 'auto'
-        if 'origin' not in kwargs:
-            kwargs['origin'] = 'lower'
         if 'interpolation' not in kwargs:
             kwargs['interpolation'] = 'none'
         if 'vmin' not in kwargs:
@@ -7684,13 +7771,13 @@ class PhotonEvents(metaclass=_Meta):
         where ``filepath`` must point to a xy-type file, where comments 
         must be marked with `#` and columns must be separated by `,` (comma).
 
-
     Attributes:
         x (array): vector with x-coordinate of photon events.
         y (array): vector with y-coordinate of photon events.
         filepath (str or pathlib.Path): filepath associated with data.
-        xlim, ylim (tuple): two element tuple with min and max x and y
-            coordinates.
+        xlim, ylim (tuple): two element tuple with min and max possible 
+            x and y coordinates. This is only used for plotting. Usually, its
+            okay if this is not set. 
 
     Computed (read-only) attributes:
         data (array)
@@ -8234,6 +8321,16 @@ class PhotonEvents(metaclass=_Meta):
     #############
     # modifiers #
     #############
+    def transpose(self):
+        """Switch x and y positions.
+
+        Returns:
+            None
+        """
+        x = copy.deepcopy(self.x)
+        self._x = copy.deepcopy(self.y)
+        self._y = x
+
     def fix_curvature(self, nbins, deg=2, axis=0, limit_size=1000):
         """Shift datapoints along a given axis to fix curvature via cc.
 
@@ -8267,32 +8364,166 @@ class PhotonEvents(metaclass=_Meta):
 
         return popt, model
 
+    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Crop photon events out.
+
+        Args:
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+
+        Returns:
+            None
+        """
+        #################
+        # check if None #
+        #################
+        if x_start is None: x_start = min(self.x)
+        if x_stop  is None: x_stop  = max(self.x)
+        if y_start is None: y_start = min(self.y)
+        if y_stop  is None: y_stop  = max(self.y)
+
+        ##################
+        # validate input #
+        ##################
+        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
+
+        ########
+        # crop #
+        ########
+        temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
+        self.x = list(temp[:, 0])
+        self.y = list(temp[:, 1])
+
+        return 
+
+    def clip(self, mask):
+        """Clip photon events.
+
+        Usage:
+            >>> pe.clip((0, 12, 3, 12))
+            >>> pe.clip([(0, 12, 3, 12), (1, 4, 15, 18)])
+
+        Args:
+            mask (list): list with ractangles coordinates (x_start, x_stop, y_start, y_stop).
+
+        Returns:
+            None
+        """
+        # assert mask is the right format
+        assert isinstance(mask, Iterable), 'mask must be iterable'
+        if len(mask) == 4:
+            if isinstance(mask[0], Iterable) == False:
+                mask = [mask, ]
+
+        ########
+        # clip #
+        ########
+        x = []
+        y = []
+        for r in mask:
+            temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > r[0] and x < r[1]) and (y > r[2] and y < r[3]))])
+            x += list(temp[:, 0])
+            y += list(temp[:, 1])
+
+        #########
+        # final #
+        #########
+        self._x = x
+        self._y = y
+        return
+
     ##############
     # extractors #
     ##############
+    def _extract(self, *args, **kwargs):
+        """Same as copy(), but attributes are not copied to the new object."""
+        
+        # check if extract is really necessary
+        if kwargs == {} and args == ():
+            return copy.deepcopy(self)
+        else:
+            ranges = self._validate_ranges(*args, **kwargs)
+        if (ranges[0][0] <= min([min(s.x) for s in self]) and ranges[0][1] >= max([max(s.x) for s in self]) ) and len(ranges) == 1:
+                return copy.deepcopy(self)
+
+        # if x is the same for all spectra, this operation is much faster
+        if self.x is None:
+            try:
+                self.check_same_x()
+                if self.x is not None:
+                    ss = Spectra(n=len(self))
+                    x, ys = self._gather_ys(*args, **kwargs)
+                    for i in range(len(self)):
+                        ss[i].copy(self[i])
+                        ss[i]._x = x
+                        ss[i]._x = ys[i]
+                    return ss
+            except:
+                pass
+        
+        # if x is not the same, extract data recursively
+        ranges = self._validate_ranges(*args, **kwargs)
+        ss = Spectra(n=len(self))
+        for i, s in enumerate(self.data):
+            try:
+                ss[i] = s.copy(ranges=ranges)
+            except RuntimeError:
+                raise RuntimeError(f'It seems like spectrum number {i} has no data points within range: {ranges}.\nPlease, fix ranges (or delete spectrum) so all spectra have at least one data point within range.')
+        return ss
+    
     def copy(self, *args, **kwargs):
         """Return a copy of the object.
 
         Usage:
             >>> pe2.copy(pe1)     # pe2 is now a copy of ss1
             >>> pe2 = pe1.copy()  # pe2 is now a copy of ss1
+            >>> pe3 = pe1.copy(x_start, x_stop, y_start, y_stop)
+            >>> pe3 = pe1.copy((x1_start, x1_stop, y1_start, y1_stop))
+            >>> pe3 = pe1.copy([(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])
 
         Args:
             pe (Image, optional): PhotonEvents to be is copied. See usage.
+            mask (list): list with rectangles coordinates (x_start, x_stop, y_start, y_stop).
 
         Returns:
             :py:attr:`PhotonEvents`
         """
+        error_message = 'Wrong input. Please check input.\n' +\
+                        f'args passed: {args}\n'  +\
+                        f'kwargs passed: {kwargs}\n\n'  +\
+                        ' === Usage ===\n'  +\
+                        'pe2.copy(pe1)     # pe2 is now a copy of pe1\n'  +\
+                        'pe2 = pe1.copy()  # pe2 is now a copy of pe1\n'  +\
+                        'pe3 = pe1.copy(x_start, x_stop, y_start, y_stop)\n' +\
+                        'pe3 = pe1.copy([(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
         #############################
         # check if input is Spectra #
         #############################
-        pe = None
+        pe   = None
+        mask = None
         if 'pe' in kwargs:
             pe = kwargs['pe']
         elif len(args) == 1:
             if isinstance(args[0], PhotonEvents):
                 pe = args[0]
-        
+            elif isinstance(args[0], Iterable):
+                mask = args[0]
+        ############################
+        # check if mask are passed #
+        ############################
+        elif 'mask' in kwargs:
+            mask = kwargs['mask']
+        elif len(args) == 4:
+            mask = [[args[0], args[1], args[2], args[3]], ]
+        elif len(args) != 4 and len(args) != 0 and len(args) != 1:
+            raise ValueError(error_message)
+        elif len(kwargs) != 0:
+            for x in list(kwargs.keys()):
+                if x not in ['im', 'mask']:
+                    raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
+
         ##################################
         # if Image is passed, copy Image #
         ##################################
@@ -8312,6 +8543,10 @@ class PhotonEvents(metaclass=_Meta):
             else:
                 raise TypeError('Only type br.PhotonEvents can be copied to type br.PhotonEvents')
             return
+        elif mask is not None:
+            pe = self.copy()
+            pe.clip(mask=mask)
+            return pe
         ####################################
         # Otherwise, return a copy of self #
         ####################################
@@ -8328,7 +8563,7 @@ class PhotonEvents(metaclass=_Meta):
                 pe.__setattr__(attr, value)
 
         return pe
-    
+
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
 
@@ -8522,6 +8757,7 @@ class PhotonEvents(metaclass=_Meta):
             ax (matplotlib.axes, optional): axes for plotting on.
             set_limits (bool, optional): If True, plt.xlim and plt.ylim are
                 called and the limits are set to pe.xlim and pe.ylim.
+            **kwargs: kwargs are passed to ``plt.scatter()`` that plots the data.
 
         If not specified, the following parameters are passed to `matplotlib.pyplot.scatter()`_:
 

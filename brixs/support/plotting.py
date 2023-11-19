@@ -8,6 +8,8 @@ import copy
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+from collections.abc import Iterable
+from matplotlib.patches import Rectangle
 
 # BRIXS
 import brixs as br
@@ -74,6 +76,36 @@ def label_th_map(title=None, ax=None, grid=False):
     xlabel = r'$\Theta$ ($^\circ$)'
     ylabel = 'Energy loss (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
+
+# Experimental
+def draw_mask(mask, ax=None,  **kwargs):
+    """[Experimental] Draw rectangles.
+
+        mask (list): list with rectangles coordinates (x_start, x_stop, y_start, y_stop).
+        **kwargs: kwargs are passed to ``matplotlib.patches.Rectangle()`` 
+            that plots the data.
+        
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    # assert mask is the right format
+    assert isinstance(mask, Iterable), 'mask must be iterable'
+    if len(mask) == 4:
+        if isinstance(mask[0], Iterable) == False:
+            mask = [mask, ]
+
+    # kwargs
+    # if 'color' not in kwargs:
+    #     kwargs['color'] = 'red'
+            
+    for m in mask:
+        w = m[1] - m[0]
+        h = m[3] - m[2]
+        rect = Rectangle((m[0], m[2]), w, h, fill=False, **kwargs)
+        ax.add_patch(rect)
 
 # Experimental
 def label_qmap_rlu(title=None, ax=None, grid=False):
