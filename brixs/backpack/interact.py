@@ -135,6 +135,14 @@ def query(question, default="yes"):
             sys.stdout.write("Please respond with 'yes' or 'no' "
                              "('y' or 'n').\n")
 
+# %% clipboard functions =======================================================
+import win32clipboard
+from io import BytesIO
+try:
+    from PIL import Image as _image
+except ModuleNotFoundError:
+    pass
+
 def copy2clipboard(txt):
     """Copy text to clipboard.
 
@@ -165,7 +173,16 @@ def png2clipboard(filepath):
 
     On linux it uses ``xsel`` package (``sudo apt-get install -y xsel``)."""
     if is_windows:
-        raise NotImplementedError('This function is not implemented on Windows yet.')
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        image = _image.open(filepath)
+        output = BytesIO()
+        image.convert("RGB").save(output, "DIB")
+        data = output.getvalue()
+        output.close()
+        win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+        win32clipboard.CloseClipboard()
+        # raise NotImplementedError('This function is not implemented on Windows yet.')
     elif is_linux:
         p = subprocess.Popen([f'xclip -selection clipboard -t image/png -i {filepath}'], shell=True)  # ctrl+V
     elif is_mac:

@@ -213,7 +213,7 @@ def square_pulse(x, amp, c, w):
     return - np.heaviside(x-c-w/2, amp)*amp + np.heaviside(x-c+w/2, amp)*amp
 
 
-def heaviside(x, amp, c):
+def heaviside(x, amp, c, flip=False):
     r"""Heaviside step function.
 
     .. math::
@@ -226,10 +226,13 @@ def heaviside(x, amp, c):
     :param x: x array
     :param amp: Amplitude
     :param c: Center
+    :param flip: flip the step. Default is False (1 if x > c)
     :return: :math:`y(x)`
     """
-    return np.heaviside(x-c, amp)
-
+    if flip:
+        return np.heaviside(c-x, amp)
+    else:
+        return np.heaviside(x-c, amp)
 
 def dirac_delta(x, amp, c):
     r"""Crude implementation of Dirac delta function.

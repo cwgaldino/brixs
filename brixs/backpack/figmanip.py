@@ -19,6 +19,7 @@ except ModuleNotFoundError:
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import brixs as br
+import tempfile
 
 # %% ------------------------- Matplotlib Imports ------------------------- %% #
 import matplotlib
@@ -27,6 +28,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import AutoMinorLocator
+from matplotlib import colormaps
 
 # %% ------------------------- backpack Imports --------------------------- %% #
 from .arraymanip import index
@@ -38,10 +40,14 @@ is_windows = operating_system() == 'windows'
 is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
 
-def available_colors():
+def get_available_colors():
     """Returns matplotlib available colors."""
     from matplotlib import colors as mcolors    
     return dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
+
+def reset_cycler():
+    """Resets the linestyle cycle"""
+    plt.gca().set_prop_cycle(None)
 
 def set_cycler(n='tab10', ls=1):
     """Set color cycles for matplotlib.
@@ -49,9 +55,9 @@ def set_cycler(n='tab10', ls=1):
     Args:
         n (int, str, list, optional): name of a matplotlib sequential colormap.      
             If n is a number, n colors will be selected in order from the 
-            listing: 'k', 'b', 'g', 'r', 'c', 'm', 'y', tab20b, tab20c. 
+            listing: 'k', 'r', 'g', 'b', 'c', 'm', 'y', tab20b, tab20c. 
             The maximum value is then 47 colors. n can also be a list of colors 
-            by name. Default is 'tab10'. Use None to use the default.
+            by name or by (rgb alpha). Default is 'tab10'. Use None to use the default.
         ls (int, list, optional): number of different linestyles to iterate from
             (from 1 to 4) or a list of linestyles by name. Default is 1.
 
@@ -60,10 +66,12 @@ def set_cycler(n='tab10', ls=1):
     """
     from cycler import cycler
 
-    # colors
+    # set default
     if n is None:
         n = 'tab10'
-    elif type(n) == str:
+    
+    # colors
+    if type(n) == str:
         if n not in plt.colormaps():
             raise ValueError(f'{n} is not a recognized colormap. To check all available colormaps use plt.colormaps().')
         else:
@@ -71,14 +79,16 @@ def set_cycler(n='tab10', ls=1):
     elif type(n) == int:
         if n > 47 or n < 1:
             raise ValueError('Permitted values for the number of colors is between 1 and 67.')
-        init = ['k', 'b', 'g', 'r', 'c', 'm', 'y']
+        init = ['k', 'r', 'g', 'b', 'c', 'm', 'y']
         init += plt.get_cmap('tab20b').colors + plt.get_cmap('tab20c').colors
         colors = init[0:n]
     elif type(n) == list:
-        available_colors = available_colors()
+        available_colors = get_available_colors()
         for color in n:
-            if color not in available_colors:
-                raise ValueError(f'{color} is not a recognized color. To check all available colors use brixs.available_colors().')
+            if isinstance(color, str):
+                assert color in available_colors, f'{color} is not a recognized color\nAvailable colors: {available_colors}'
+            else:
+                assert len(color) == 3 or len(color) == 4, f'{color} is not recognized\ncolors must be rgb-alpha values or color names'        
         colors = n
     else:
         raise ValueError(f'"n" must be False, int, str, or a list.\nType(n) = {type(n)}')
@@ -102,6 +112,48 @@ def set_cycler(n='tab10', ls=1):
     
     # set colormap and linestyles
     plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', linestyles)))
+
+    # reset cycler
+    br.reset_cycler()
+
+def get_available_colormaps():
+    """returns a list of available colormaps"""
+    return list(colormaps)
+
+def set_cycler_from_colormap(name, n):
+    """Sets a color cycler based on a colormap.
+
+    Args:
+        name (str): name of the colormap
+        n (int): number of colors to pick from the colormap.
+
+    Returns:
+        None
+    """
+    # available_colormaps = get_available_colormaps()
+    # assert name in available_colormaps, f'{name} is not a recognized colormap\nAvailable colormaps: {available_colormaps}'
+
+    # cmap = matplotlib.cm.get_cmap(name)
+    # colors = [cmap(j/n) for j in range(n)]
+    colors = get_colors_from_colormap(name, n)
+    set_cycler(n=colors, ls=1)
+
+def get_colors_from_colormap(name, n):
+    """Returns a list of colors from colormap.
+
+    Args:
+        name (str): name of the colormap
+        n (int): number of colors to pick from the colormap.
+
+    Returns:
+        None
+    """
+    available_colormaps = get_available_colormaps()
+    assert name in available_colormaps, f'{name} is not a recognized colormap\nAvailable colormaps: {available_colormaps}'
+
+    cmap   = matplotlib.cm.get_cmap(name)
+    colors = [cmap(j/n) for j in range(n)]
+    return colors
 
 def bring2top():
     """Brings current window to the top.
@@ -368,6 +420,7 @@ def onmove(event):
         # # # print('new size: ' + str(new_size))
     pass
 
+# %% on click functions ========================================================
 def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None):
     """Set the default format for saving figures using :py:func:`onclick()`.
 
@@ -400,7 +453,7 @@ def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None)
         onclick_round_y = round_y
 
 def onclick(event):
-    """This function is called everytime a mouse key is pressed over a figure.
+    """This function is called every time a mouse key is pressed over a figure.
 
     Right click:
         x value is copied to the clipboard.
@@ -433,44 +486,26 @@ def onclick(event):
     except NameError:
         onclick_round_x = 2
 
-    if event.key == 'y' or event.button == 3:
-        try:
-            ax = plt.gca()
-            ticks_showing = [y for y in ax.get_yticks() if y >= ax.get_ylim()[0] and y <= ax.get_ylim()[1]]
-            delta = ticks_showing[-1] - ticks_showing[0]
-            n = n_decimal_places(round_to_1(delta))*2
-            y = round(event.ydata, n)
-            # if onclick_round_y is not None:
-            #     y = round(event.ydata, onclick_round_y)
-            # else:
-            #     y = event.ydata
-            copy2clipboard(str(y))
+    ################
+    # double click #
+    ################
+    if event.dblclick:
+        w, h = plt.gcf().get_size_inches()
 
-        except TypeError:
-            pass
-    else: # left
-        try:
-            # if onclick_round_x is not None:
-            #     x = round(event.xdata, onclick_round_x)
-            # else:
-            ax = plt.gca()
-            ticks_showing = [x for x in ax.get_xticks() if x >= ax.get_xlim()[0] and x <= ax.get_xlim()[1]]
-            delta = ticks_showing[-1] - ticks_showing[0]
-            n = n_decimal_places(round_to_1(delta))*2
-            x = round(event.xdata, n)
-            # x = event.xdata
-            # print(x)
-            copy2clipboard(str(x))
-        except TypeError:
-            pass
-    # double click (put image on clipboard)
-    if event.dblclick or event.button == 2:
+        x = event.x/(w*100)
+        y = event.y/(h*100)
+
+        print([x, y])
+    ###############
+    # middle click #
+    ###############
+    elif event.button == 2:
+        # get variables        
         global onclick_fig_format, onclick_resolution, onclick_folder
-
         try:
             onclick_fig_format
         except NameError:
-            onclick_fig_format = 'svg'
+            onclick_fig_format = 'png'
         try:
             onclick_folder
         except NameError:
@@ -480,18 +515,71 @@ def onclick(event):
         except NameError:
             onclick_resolution = 300
 
-        onclick_folder = Path(onclick_folder)
-        if onclick_fig_format == 'svg':
-            if is_linux:
-                plt.savefig(f'{onclick_folder/".temporary_fig.svg"}')
-                svg2clipboard(onclick_folder/".temporary_fig.svg")
-            elif is_windows:
-                print('hh')
+        with tempfile.NamedTemporaryFile("r+b", delete=True) as fd:
+            if onclick_fig_format == 'svg':
+                plt.savefig(fd)
+                svg2clipboard(fd)
+            elif onclick_fig_format == 'png':
+                plt.savefig(fd, dpi=onclick_resolution)
+                png2clipboard(fd)
+            print(f'figure copied to clipboard as {onclick_fig_format}')
+    ###############
+    # right click #
+    ###############
+    # elif event.key == 'y' or event.button == 3:
+    elif event.button == 3:
+        ax = event.inaxes
+        if ax is not None: # check if mouse is over an axes
+            try:
+                lim = ax.get_ylim()
+                delta = lim[1] - lim[0]
+                r21 = round_to_1(delta)
+                if r21 < 1:
+                    n = n_decimal_places(r21)*2
+                elif r21 >= 1 and r21 < 2:
+                    n = 3
+                elif r21 >= 2 and r21 < 100:
+                    n = 2
+                elif r21 >= 100 and r21 < 800:
+                    n = 1
+                elif r21 >= 800:
+                    n = 0
+                final = round(event.ydata, n)
+                if n == 0:
+                    final = int(final)
+                copy2clipboard(str(final))
+                print('y coordinate copied to clipboard')
+            except TypeError:
+                pass
+    ###############
+    # left click #
+    ###############
+    elif event.button == 1:
+        ax = event.inaxes
+        if ax is not None: # check if mouse is over an axes
+            try:
+                lim = ax.get_xlim()
+                delta = lim[1] - lim[0]
+                r21 = round_to_1(delta)
+                if r21 < 1:
+                    n = n_decimal_places(r21)*2
+                elif r21 >= 1 and r21 < 2:
+                    n = 3
+                elif r21 >= 2 and r21 < 100:
+                    n = 2
+                elif r21 >= 100 and r21 < 800:
+                    n = 1
+                elif r21 >= 800:
+                    n = 0
+                final = round(event.xdata, n)
+                if n == 0:
+                    final = int(final)
+                copy2clipboard(str(final))
+                print('x coordinate copied to clipboard')
+            except TypeError:
+                pass
 
-        elif onclick_fig_format == 'png':
-            if is_linux:
-                plt.savefig(f'{onclick_folder/".temporary_fig.png"}', dpi=onclick_resolution)
-                png2clipboard(onclick_folder/".temporary_fig.png")
+# %% ===========================================================================
 
 def zoom(start, stop, ax=None, ymargin=2):
     """Zoom up portion of current figure from start to stop.
@@ -512,23 +600,30 @@ def zoom(start, stop, ax=None, ymargin=2):
         x = line.get_data()[0]
         y = line.get_data()[1]
 
-        _, y = br.extract(x=x, y=y, ranges=(start, stop))
-        ymin_temp = min(y)
-        ymax_temp = max(y)
-
-        if ymin is None:
-                ymin = copy.copy(ymin_temp)
-                ymax = copy.copy(ymax_temp)
         try:
-            if ymax_temp > ymax:
-                ymax = copy.copy(ymax_temp)
-            if ymin_temp < ymin:
-                ymin = copy.copy(ymin_temp)
-        except UnboundLocalError:
-            warnings.warn("All data are outside of the required range. Cannot zoom.")
-    m = (ymax-ymin)*ymargin/100
-    ax.set_ylim(ymin-m, ymax+m)
-    ax.set_xlim(start, stop)
+            _, y = br.extract(x=x, y=y, ranges=(start, stop))
+            ymin_temp = min(y)
+            ymax_temp = max(y)
+
+            if ymin is None:
+                    ymin = copy.copy(ymin_temp)
+                    ymax = copy.copy(ymax_temp)
+            try:
+                if ymax_temp > ymax:
+                    ymax = copy.copy(ymax_temp)
+                if ymin_temp < ymin:
+                    ymin = copy.copy(ymin_temp)
+            except UnboundLocalError:
+                warnings.warn("All data are outside of the required range. Cannot zoom.")
+        except RuntimeError:
+            pass
+
+    if ymax is None:
+        ax.set_xlim(start, stop)
+    else:
+        m = (ymax-ymin)*ymargin/100
+        ax.set_ylim(ymin-m, ymax+m)
+        ax.set_xlim(start, stop)
 
 def zoom2(start, stop, ymargin=2):
     """Zoom up portion of current figure from start to stop.
@@ -662,30 +757,15 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
             last ax will be used.
         axis (string, optional): possible values are 'x' or 'y'.
-        **kwargs:
-
-            #. min_value (float or int)
-                start value for ticks (not the plot edge --- see ``pad``)
-            #. max_value (float or int)
-                stop value for ticks (not the plot edge --- see ``pad``)
-            #. n_ticks (int)
-                Number of ticks. Ticks separation
-                is calculated accordingly and
-                this parameter overwrites
-                ticks_sep.
-            #. ticks_sep (float or int)
-                Ticks separation.
-            #. n_minor_ticks (int)
-                Number of minor ticks between two major ticks.
-            #. fontproperties
-                Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
-            #. pad (float or int)
-                Distance between plot edge and the first tick in terms of tick separation.
-                Typically, must be something between 0 and 1.
-            #. n_decimal_places (int)
-                Number of decimal places to use for tick labels.
-            #. direction
-                default is 'out', possible values are 'in' and 'out'
+        start (float or int): start value for ticks (not the plot edge --- see ``pad``)
+        stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
+        n_ticks (int): Number of ticks. Ticks separation is calculated accordingly and this parameter overwrites ticks_sep.
+        ticks_sep (float or int): Ticks separation.
+        n_minor_ticks (int): Number of minor ticks between two major ticks.
+        fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
+        pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
+        n_decimal_places (int): Number of decimal places to use for tick labels.
+        direction (str, optional): default is 'out', possible values are 'in' and 'out'
 
     Note:
         To set minor and major ticks 'manually' use `xaxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
@@ -709,51 +789,51 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
         raise ValueError("Axis must be either 'x' or 'y'.")
 
     ## collecting kwargs
-    if 'min_value' in kwargs:
-        min_value = kwargs.pop('min_value')
-        if min_value is None:
-            min_value = ticks_showing[-1]
+    if 'start' in kwargs:
+        start = kwargs.pop('start')
+        if start is None:
+            start = ticks_showing[-1]
             for line in ax.get_lines():
                 if axis == 'x':
-                    if min_value > min(line.get_xdata()):
-                        min_value = min(line.get_xdata())
+                    if start > min(line.get_xdata()):
+                        start = min(line.get_xdata())
                 if axis == 'y':
-                    if min_value > min(line.get_ydata()):
-                        min_value = min(line.get_ydata())
-            # min_value = ticks_showing[0]
+                    if start > min(line.get_ydata()):
+                        start = min(line.get_ydata())
+            # start = ticks_showing[0]
     else:
-        min_value = min(ticks_showing)
+        start = min(ticks_showing)
         for line in ax.get_lines():
             if axis == 'x':
-                if min_value > min(line.get_xdata()):
-                    min_value = min(line.get_xdata())
+                if start > min(line.get_xdata()):
+                    start = min(line.get_xdata())
             if axis == 'y':
-                if min_value > min(line.get_ydata()):
-                    min_value = min(line.get_ydata())
-        # min_value = ticks_showing[0]
+                if start > min(line.get_ydata()):
+                    start = min(line.get_ydata())
+        # start = ticks_showing[0]
 
-    if 'max_value' in kwargs:
-        max_value = kwargs.pop('max_value')
-        if max_value is None:
-            max_value = ticks_showing[0]
+    if 'stop' in kwargs:
+        stop = kwargs.pop('stop')
+        if stop is None:
+            stop = ticks_showing[0]
             for line in ax.get_lines():
                 if axis == 'x':
-                    if max_value < max(line.get_xdata()):
-                        max_value = max(line.get_xdata())
+                    if stop < max(line.get_xdata()):
+                        stop = max(line.get_xdata())
                 elif axis == 'y':
-                    if max_value < max(line.get_ydata()):
-                        max_value = max(line.get_ydata())
-            # max_value = ticks_showing[-1]
+                    if stop < max(line.get_ydata()):
+                        stop = max(line.get_ydata())
+            # stop = ticks_showing[-1]
     else:
-        max_value = max(ticks_showing)
+        stop = max(ticks_showing)
         for line in ax.get_lines():
             if axis == 'x':
-                if max_value < max(line.get_xdata()):
-                    max_value = max(line.get_xdata())
+                if stop < max(line.get_xdata()):
+                    stop = max(line.get_xdata())
             elif axis == 'y':
-                if max_value < max(line.get_ydata()):
-                    max_value = max(line.get_ydata())
-        # max_value = ticks_showing[-1]
+                if stop < max(line.get_ydata()):
+                    stop = max(line.get_ydata())
+        # stop = ticks_showing[-1]
 
     if 'n_ticks' in kwargs:
         n_ticks = kwargs.pop('n_ticks')
@@ -798,26 +878,26 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
     # ticks
     if use_sep:
         # print('hh')
-        ticks   = np.arange(min_value, max_value+ticks_sep*0.1, ticks_sep)
+        ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep)
         # print(ticks_sep)
         # print(ticks)
     else:
         if n_ticks < 2:
-            raise ValuError('n_ticks needs to be bigger or equal than 2.')
-        ticks   = np.linspace(min_value, max_value, n_ticks)
+            raise ValueError('n_ticks needs to be bigger or equal than 2.')
+        ticks   = np.linspace(start, stop, n_ticks)
     # ticks shift to get better values (include zero)
     if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
         ticks = ticks-ticks[index(ticks, 0)]
-    elif max_value-min_value > 5:
+    elif stop-start > 5:
         ticks = ticks-(ticks[0]-int(ticks[0]))
     # ticks edges
     # print(ticks[-1])
     # print(ticks[-1]+np.mean(np.diff(ticks))*0.5)
-    # print(max_value)
-    if ticks[-1]+np.mean(np.diff(ticks))*0.5 < max_value:
+    # print(stop)
+    if ticks[-1]+np.mean(np.diff(ticks))*0.5 < stop:
         # print('ff')
         ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
-    if ticks[0]-np.mean(np.diff(ticks))*0.8 > min_value:
+    if ticks[0]-np.mean(np.diff(ticks))*0.8 > start:
         ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
 
     # limits
@@ -1050,9 +1130,9 @@ def hlines(y, xmin=None, xmax=None, colors=None, linestyles='solid', label='', a
     ax.hlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
 
 import types
-def gridspec(nrows, ncols, instructions=None):
+def gridspec(nrows, ncols, instructions=None, **kwargs):
     """instructions = row_init, row_final, col_init, col_final, hspace, wspace"""
-    fig = plt.gcf()
+    fig = br.figure(**kwargs)
 
     if instructions is None:
         instructions = []
@@ -1113,10 +1193,12 @@ def gridspec(nrows, ncols, instructions=None):
             ax.remove_yticks = types.MethodType(_remove_yticks, ax)
             ax.remove_spline = types.MethodType(_remove_spline, ax)
 
-    return axes
+    return fig, axes
 
 def subplots(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None, width_ratios=None, height_ratios=None, gridspec_kw=None, **fig_kw):
+    """quickly create multiple plots
 
+    """
     class myarray(list):
         def remove_label_from_shared_axis(self, sharex=None, sharey=None):
             nrows = axes.nrows
@@ -1231,7 +1313,7 @@ def ax_pos2fig_pos(ax, value, direction='x'):
     return x0 + delta*value
 
 # %% Experimental
-def publication_font():
+def publication_font(size=9):
     """Set font options for publication quality font.
 
     Change this function accordingly to your preferences.
@@ -1241,14 +1323,14 @@ def publication_font():
     """
     # set default font
     matplotlib.rcParams['font.family']          = 'cmr10'
-    matplotlib.rcParams['font.size']            = 9
+    matplotlib.rcParams['font.size']            = size
     plt.rcParams["axes.formatter.use_mathtext"] = True
 
     # math text
     matplotlib.rcParams['mathtext.fontset'] = 'cm'  # Change mathtext to CMR ("latex")
     matplotlib.rcParams['svg.fonttype']     = 'none'  # Change text to text, and not paths.
 
-def default_font():
+def default_font(size=10):
     """Set font options to Matplotlib's default.
 
     Returns:
@@ -1256,7 +1338,7 @@ def default_font():
     """
     # set default font
     matplotlib.rcParams['font.family'] = 'sans-serif'
-    matplotlib.rcParams['font.size']   = 10
+    matplotlib.rcParams['font.size']   = size
     plt.rcParams["axes.formatter.use_mathtext"] = False
 
     # math text

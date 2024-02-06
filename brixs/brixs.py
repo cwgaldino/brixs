@@ -668,33 +668,38 @@ class Spectrum(metaclass=_Meta):
         header = ''
         attrs = self._get_user_attrs()
         for name in attrs:
-            if self.__dict__[name] is None:
-                header += f'{name}: None'  + '\n'
-            elif isinstance(self.__dict__[name], str):
-                temp2 = str(self.__dict__[name]).replace('\n','\\n')
-                header += f'{name}: \"{temp2}\"'  + '\n'
-            elif isinstance(self.__dict__[name], dict) or isinstance(self.__dict__[name], MutableMapping):
+            try:
+                if self.__dict__[name] is None:
+                    header += f'{name}: None'  + '\n'
+                elif isinstance(self.__dict__[name], str):
+                    temp2 = str(self.__dict__[name]).replace('\n','\\n')
+                    header += f'{name}: \"{temp2}\"'  + '\n'
+                elif isinstance(self.__dict__[name], dict) or isinstance(self.__dict__[name], MutableMapping):
+                    if verbose:
+                        type_ = str(type(self.__dict__[name]))
+                        print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
+                elif isinstance(self.__dict__[name], Iterable):
+                    header += f'{name}: {list(self.__dict__[name])}'  + '\n'
+                elif numanip.is_number(self.__dict__[name]):
+                    tosave = str(self.__dict__[name])
+                    if tosave[-1] == '\n':
+                        tosave = tosave[:-1]
+                    header += f'{name}: {tosave}'  + '\n'
+                else:
+                    temp2 = str(self.__dict__[name]).replace('\n','\\n')
+                    header += f'{name}: \"{temp2}\"'  + '\n'
+            except:
                 if verbose:
                     type_ = str(type(self.__dict__[name]))
                     print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
-            elif isinstance(self.__dict__[name], Iterable):
-                header += f'{name}: {list(self.__dict__[name])}'  + '\n'
-            elif numanip.is_number(self.__dict__[name]):
-                tosave = str(self.__dict__[name])
-                if tosave[-1] == '\n':
-                    tosave = tosave[:-1]
-                header += f'{name}: {tosave}'  + '\n'
-            else:
-                temp2 = str(self.__dict__[name]).replace('\n','\\n')
-                header += f'{name}: \"{temp2}\"'  + '\n'
         return header[:-1]
 
     def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Attrs are saved as comments if only_data is False. Saving attrs to file
-        is tricky because requires converting variables to string. Only attrs 
-        that are of type: string, number, and list of number and strings are 
+        is not always reliable because requires converting variables to string. 
+        Only attrs that are of type: string, number, and list of number and strings are 
         saved somewhat correctly. Dictionaries are not saved. 
 
 
@@ -1657,14 +1662,14 @@ class Spectrum(metaclass=_Meta):
 
         self.peaks.find(x=s.x, y=s.y, prominence=prominence, width=width, moving_average_window=moving_average_window)
 
-    def fit_peak(self, asymmetry=None, moving_average_window=4, method='least_squares', ranges=None):     
+    def fit_peak(self, asymmetry=False, moving_average_window=1, method='least_squares', ranges=None):     
         """Fits one peak. Initial guess is based on the maximum y value.
 
         Args:
             asymmetry (bool or dict, optional): if True, fits each half of the
-                with a different width.
+                with a different width. Default is False
             moving_average_window (int, optional): window size for smoothing the
-                data for finding the peak. Default is 4.
+                data for finding the peak. Default is 1.
             method (str, optional): Name of the fitting method to use. See methods
                 available on `lmfit.minimize()`_ documentation.
             ranges (list): a pair of values or a list of pairs. Each pair represents
@@ -1683,13 +1688,14 @@ class Spectrum(metaclass=_Meta):
             x0 = s0.x
             y0 = s0.y
 
-        # asymmetry
-        if asymmetry is None:
-            asymmetry = False
-
         # smoothing
-        x = arraymanip.moving_average(x0, moving_average_window)
-        y = arraymanip.moving_average(y0, moving_average_window)
+        assert moving_average_window > 0, f'moving_average_window must be positive different than 0, not {moving_average_window}'
+        if moving_average_window == 1:
+            x = x0
+            y = y0
+        else:
+            x = arraymanip.moving_average(x0, moving_average_window)
+            y = arraymanip.moving_average(y0, moving_average_window)
 
         # guess amp and c
         amp = max(y)
@@ -2149,10 +2155,10 @@ class Spectra(metaclass=_Meta):
         elif isinstance(item, slice):
             ss = Spectra(self._data[item])
 
-            # transfer attrs
-            for attr in self._get_user_attrs():
-                value = copy.deepcopy(self.__dict__[attr])
-                ss.__setattr__(attr, value)
+            # # transfer attrs
+            # for attr in self._get_user_attrs():
+            #     value = copy.deepcopy(self.__dict__[attr])
+            #     ss.__setattr__(attr, value)
 
             return ss        
         else:
@@ -2496,14 +2502,13 @@ class Spectra(metaclass=_Meta):
         self._calculated_shift  = None
         self._calculated_roll   = None
 
-    def reorder_by_attr(self, attr, attrs=None, decreasing=False):
+    def reorder_by_attr(self, attr, attrs2reorder=None, decreasing=False):
         """Reorder spectra based on a attr. attr list is also sorted.
-        
-        Attr must be a list of numbers with same lenght of number of spectra.
-
+    
         Args:
-            attr (str): name of the reference attr.
-            attrs (list, optional): list of str with names of other attrs that 
+            attr (str): name of the reference attr. The attr must be a list of 
+                numbers with same lenght of number of spectra.
+            attrs (list of str, optional): list of other attrs that 
                 must also be sorted based on the ref attr.
             decreasing (bool, optional): if True, small attr value comes last.
         
@@ -2517,22 +2522,28 @@ class Spectra(metaclass=_Meta):
         assert isinstance(ref, Iterable), 'ref attr must be an iterable type'
         assert len(ref) == len(self), f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}'
         
-        for a in attrs:
-            temp = self.__getattribute__(attr)
-            assert isinstance(temp, Iterable), f'{a} must be an iterable type'
-            assert len(temp) == len(self), f'Lenght of attr {a} must be the same as the number of spectra.\nlenght of attr: {len(a)}\nnumber of spectra: {len(self)}'
+        if attrs2reorder is not None:
+            for a in attrs2reorder:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{a} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {a} must be the same as the number of spectra.\nlenght of attr: {len(a)}\nnumber of spectra: {len(self)}'
 
         # sort
         self.data = arraymanip.sort(ref, self.data)
         self.__setattr__(attr, arraymanip.sort(ref, ref))
-        for a in attrs:
-            temp = self.__getattribute__(a)
-            self.__setattr__(a, arraymanip.sort(ref, temp))
+        if attrs2reorder is not None:
+            for a in attrs2reorder:
+                temp = self.__getattribute__(a)
+                self.__setattr__(a, arraymanip.sort(ref, temp))
 
         # flip order if decreasing is True
         if decreasing:
             self.data = self.data[::-1]
             self.__setattr__(attr, self.__getattribute__(attr)[::-1])
+            if attrs2reorder is not None:
+                for a in attrs2reorder:
+                    temp = self.__getattribute__(a)
+                    self.__setattr__(a, self.__getattribute__(a)[::-1])
 
     def get_by_attr(self, attr, value, closest=True, verbose=True):
         """Return spectrum with attr closest to value.
@@ -2638,7 +2649,7 @@ class Spectra(metaclass=_Meta):
 
         # set filenames
         if zfill is None:
-            zfill = figmanip.n_digits(len(self)-1)[0]
+            zfill = figmanip.n_digits(len(self)-1)
 
         # saving
         # if verbose: print('saving {} files...')
@@ -4639,7 +4650,7 @@ class Spectra(metaclass=_Meta):
 
     # experimental
     def sequential_plot(self, xlim=None, ylim=None, keep=None, update_function=None, **kwargs):
-        """plot where you can use up and down keys to flip through spectra.
+        """[EXPERIMENTAL] plot where you can use up and down keys to flip through spectra.
 
         Warning: 
             Only one plot can be open at a time. Also, some default 
@@ -4801,7 +4812,7 @@ class Spectra(metaclass=_Meta):
 
     # experimental
     def sequential_plot2(self, xlim=None, ylim=None, keep=None, update_function=None, **kwargs):
-        """plot where you can use arrows to flip through spectra.
+        """[EXPERIMENTAL] plot where you can use arrows to flip through spectra.
 
         Warning:
             Old version, zoom is reset every time. Only one plot can be open at a time.
@@ -4925,7 +4936,7 @@ class Spectra(metaclass=_Meta):
 
     # experimental
     def shift_plot(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, update_function=None, **kwargs):
-        """flip through spectra (up/down keys), shift spectrum (a/d keys)
+        """[EXPERIMENTAL] flip through spectra (up/down keys), shift spectrum (a/d keys)
 
         Warning: 
             Only one plot can be open at a time. Also, some default 
@@ -4946,7 +4957,7 @@ class Spectra(metaclass=_Meta):
 
                 >>> def update_function(ss, __i):
                 >>>     plt.title(__i)
-                >>>     ss[__i].plot(color='black', marker='o')
+                >>>     ss[__i].plot(shift=ss._calculated_shift[__i])
             
                 where ``__i`` is updated in every iteraction.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
@@ -5117,7 +5128,7 @@ class Spectra(metaclass=_Meta):
     
     # experimental
     def shift_plot2(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, update_function=None, **kwargs):
-        """flip through spectra (up/down keys), shift spectrum (left/right keys)
+        """[EXPERIMENTAL] flip through spectra (up/down keys), shift spectrum (left/right keys)
 
         Warning:
             Old version, zoom is reset every time. Only one plot can be open at a time.
@@ -5275,7 +5286,7 @@ class Spectra(metaclass=_Meta):
     
     # experimental
     def roll_plot(self, xlim=None, ylim=None, vlines=None, keep=None, update_function=None, **kwargs):
-        """flip through spectra (up/down keys), roll spectrum (a/d keys).
+        """[EXPERIMENTAL] flip through spectra (up/down keys), roll spectrum (a/d keys).
 
         Warning: 
             Only one plot can be open at a time. Also, some default 
@@ -5464,7 +5475,7 @@ class Spectra(metaclass=_Meta):
 
     # experimental
     def roll_plot2(self, xlim=None, ylim=None, vlines=None, keep=None, update_function=None, **kwargs):
-        """flip through spectra (up/down keys), roll spectrum (left/right keys)
+        """[EXPERIMENTAL] flip through spectra (up/down keys), roll spectrum (left/right keys)
 
         Warning:
             Old version, zoom is reset every time. Only one plot can be open at a time.
@@ -5822,10 +5833,14 @@ class Spectra(metaclass=_Meta):
             s.find_peaks(prominence=prominence, width=width, moving_average_window=moving_average_window, ranges=ranges)
         self.copy_peaks_from_spectra()
 
-    def fit_peak(self, asymmetry=False, method='least_squares', ranges=None, verbose=False):
+    def fit_peak(self, asymmetry=False, moving_average_window=1, method='least_squares', ranges=None, verbose=False):
         """Fit one peak for all spectra recursively. Wrapper for `lmfit.minimize()`_.
 
         Args:
+            asymmetry (bool or dict, optional): if True, fits each half of the
+                with a different width. Default is False
+            moving_average_window (int, optional): window size for smoothing the
+                data for finding the peak. Default is 1.
             method (str, optional): Name of the fitting method to use. See methods
                 available on `lmfit.minimize()`_ documentation.
             ranges (list): a pair of values or a list of pairs. Each pair represents
@@ -5840,7 +5855,7 @@ class Spectra(metaclass=_Meta):
         for i, s in enumerate(self):
             if verbose:
                 print(f'{i+1}/{len(self)}')
-            s.fit_peak(asymmetry=asymmetry, method=method, ranges=ranges)
+            s.fit_peak(asymmetry=asymmetry, moving_average_window=moving_average_window, method=method, ranges=ranges)
         self.copy_peaks_from_spectra()
 
         # THIS IS FOR FITTING ONE PEAK SIMULTANOUSLY

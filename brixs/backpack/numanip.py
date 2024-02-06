@@ -34,31 +34,60 @@ def round_to_1(x):
     """return the most significant digit"""
     return round(x, -int(np.floor(np.log10(abs(x)))))
 
-def n_decimal_places(number):
+def n_decimal_places(number, count_zero=False):
     """Return the number of decimal places of a number.
 
     Args:
         number (float or int): number.
+        count_zero (bool, optional): if an integer is type float, it will came
+            out with a zero after the decimal point, eg, `145.0` instead of `145`.
+            count_zero == False will not count zeros after the decimal point.
+            Default is False.
 
     Returns:
         number of decimal places in number.
     """
 
-    return abs(decimal.Decimal(str(number)).as_tuple().exponent)
+    n = abs(decimal.Decimal(str(number)).as_tuple().exponent)
+    if count_zero == False and n == 1:
+        if str(number)[-1] == '0':
+            return 0
+    return n
 
-def n_digits(number):
+def n_digits(number, count_zero=False):
     """Return the number of digits of a number.
 
     Args:
         number (float or int): number.
+        count_zero (bool, optional): if number is type float, it will came
+            out with a zero after the decimal point, eg, `145.0` instead of `145`.
+            count_zero == False will not count zeros after the decimal point.
+            Default is False
 
     Returns:
-        a tuple with number of digits and number of decimal places.
+        number of digits
     """
-    if n_decimal_places(number) != 0:
-        return (len(str(int(np.around(number))) ), n_decimal_places(number))
-    else:
-        return (len(str(int(np.around(number))) ), 0)
+    a = len(str(int(number)))
+    b = n_decimal_places(number, count_zero=count_zero)
+
+    # fix zero (minus sign when number > -1 and < 0)
+    if int(number) == 0 and number < 0:
+        a += 1
+
+    # if int return a
+    if type(number) == int:
+        return a
+    
+    # if float
+    if count_zero == False and b == 1:
+        if str(number)[-1] == '0':
+            b = 0
+        else:
+            b += 1
+    elif b != 0:
+        b += 1
+
+    return a + b
     
 def factors(n):
     """Return a tuple with all the factors of a number."""

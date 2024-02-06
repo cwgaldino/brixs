@@ -455,7 +455,11 @@ def flatten(x):
     if len(x) == 0:
         return x
 
-    return np.array(x).flatten()
+    if len(np.array(x).shape) == 1:
+        return x
+
+    return np.concatenate(x).ravel()
+    # return np.array(x, dtype=object).flatten()
 
     # if type(x) == list or type(x) == tuple:
     #     if isinstance(x[0], list) or isinstance(x[0], tuple):

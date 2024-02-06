@@ -69,6 +69,9 @@ axes[3].set_ylabel('Intensity (arb. units)')
 
 # %% mode peaks (ev/bin)
 popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, mode='peak')
+for i, p in enumerate(popt):
+    print('calib'+ str(i) + ' = [' + str(popt[i][0]) + ', ' + str(popt[i][1]) + ']')
+print('calib  = [calib0, calib1, calib2]')
 calib0 = [0.004556657343031468, 516.1910040053092]
 calib1 = [0.004539722713328706, 515.696903029858]
 calib2 = [0.004565239596075693, 515.2262740278696]
@@ -80,9 +83,12 @@ curvature2 = [2.8209855702191653e-06, -0.004759568633407643, 0.03754642287537074
 curvature  = [curvature0, curvature1, curvature2] # see ADRESS curvature correction example
  
 popt, sss = ADRESS.calib(folderpath, prefix, 17, 26, nbins=2000, curvature=curvature)
-calib0_subpixel = [0.018228083877778765, 516.1699816340371]
-calib1_subpixel = [0.018147251168973262, 515.696753572465]
-calib2_subpixel = [0.018262961090482758, 515.2192036580997]
+for i, p in enumerate(popt):
+    print('calib_subpixel'+ str(i) + ' = [' + str(popt[i][0]) + ', ' + str(popt[i][1]) + ']')
+print('calib_subpixel  = [calib_subpixel0, calib_subpixel1, calib_subpixel2]')
+calib_subpixel0 = [0.018228083877778765, 516.1699816340371]
+calib_subpixel1 = [0.018147251168973262, 515.696753572465]
+calib_subpixel2 = [0.018262961090482758, 515.2192036580997]
 
 
 # %% read ADRESS files with calibration factor =================================

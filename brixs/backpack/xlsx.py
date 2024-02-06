@@ -13,53 +13,213 @@ import types
 # %% ------------------------- Special Imports ---------------------------- %% #
 try:
     import openpyxl
+    from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
+    from openpyxl.utils import get_column_letter
 except ModuleNotFoundError:
     pass
 
-def xlsx(filepath, sheetname):
-    filepath = Path(filepath)
+def new_xlsx(filepath, sheetname=None):
+    """Open a new file
 
-    xlsx = openpyxl.load_workbook(str(filepath), data_only=True)
-    sheet = xlsx[sheetname]
+    Args:
+        filepath (Path or str): filepath for new xlsx file.
+        sheetname (str, optional): name fo the first sheet (active sheet).
+    
+    Returns:
+        sheet object
+    """
+
+    # initialize new xlsx
+    xlsx = openpyxl.Workbook()
+
+    # grab the first Sheet
+    sheet = xlsx.active
+    if sheetname is not None:
+        sheet.title = str(sheetname)
     sheet.filepath = filepath
 
-    sheet.refresh = types.MethodType(refresh, sheet)
+    # connect to methods
+    _connect2methods(sheet)
 
-    sheet.is_merged = types.MethodType(is_merged, sheet)
-
-    sheet.update_header = types.MethodType(update_header, sheet)
-    sheet.check_header = types.MethodType(check_header, sheet)
-    sheet.column_number_from_header = types.MethodType(column_number_from_header, sheet)
-
-    sheet.get_column = types.MethodType(get_column, sheet)
-    sheet.search_rows = types.MethodType(search_rows, sheet)
-    sheet.get_dataset = types.MethodType(get_dataset, sheet)
-    sheet.get_dataset_info = types.MethodType(get_dataset_info, sheet)
-
-
-    sheet.update_header()
+    # save xlsx
+    xlsx.save(str(filepath))
 
     return sheet
 
-def refresh(self):
+def _connect2methods(sheet):
+    """Connect support methods to Sheet object.
+
+    Args:
+        sheet (sheet object): sheet to connect to support methods.
+
+    Returns:
+        None
+    """
+    sheet.save             = types.MethodType(_save, sheet)
+    sheet.set_row          = types.MethodType(_set_row, sheet)
+    sheet.set_row_fill     = types.MethodType(_set_row_fill, sheet)
+    sheet.set_row_font     = types.MethodType(_set_row_font, sheet)
+    sheet.set_col_width    = types.MethodType(_set_col_width, sheet)
+    sheet.get_col_width    = types.MethodType(_get_col_width, sheet)
+
+    # maybe obsolete
+    sheet.refresh          = types.MethodType(_refresh, sheet)
+    sheet.is_merged        = types.MethodType(_is_merged, sheet)
+    sheet.update_header    = types.MethodType(_update_header, sheet)
+    sheet.check_header     = types.MethodType(_check_header, sheet)
+    sheet.get_column       = types.MethodType(_get_column, sheet)
+    sheet.search_rows      = types.MethodType(_search_rows, sheet)
+    sheet.get_dataset      = types.MethodType(_get_dataset, sheet)
+    sheet.get_dataset_info = types.MethodType(_get_dataset_info, sheet)
+    sheet.column_number_from_header = types.MethodType(_column_number_from_header, sheet)
+    return 
+
+def xlsx(filepath, sheetname=None):
+    """Open xlsx file.
+
+    Args:
+        filepath (Path, str): filepath to xlsx
+        sheetname (str, optional): Sheet name. If None, the first sheet will be
+            selected. Default is None.
+
+    Return:
+        sheet object.
+    """
+    filepath = Path(filepath)
+
+
+
+    xlsx           = openpyxl.load_workbook(str(filepath))#, data_only=True)
+
+    if sheetname is None:
+        sheet = xlsx.active
+    else:
+        sheet = xlsx[sheetname]
+    sheet.filepath = filepath
+
+    _connect2methods(sheet)
+
+    return sheet
+
+# %% ------------------------- Support methods ---------------------------- %% #
+def _save(self, filepath=None):
+    """Save xlsx from sheet object
+    
+    Args:
+        filepath (Path or str, optional): if None, it will search for filepath
+            in Sheet.filepath
+            
+    Returns:
+        None
+    """
+    if filepath is None:
+        try:
+            filepath = str(self.filepath)
+        except AttributeError:
+            raise AttributeError('sheet.filepath is not defined')
+    
+    self.parent.save(filepath)
+    return
+
+def _set_row(self, values, row, start_col=1):
+    """Write values in a row.
+
+    Args:
+        values (list): list with values
+        row (int): row number
+        start_col (int, optional): column to start placing values. Default is 1
+
+    Returns:
+        None
+    """
+    for col, val in enumerate(values, start=0):
+        self.cell(row=row, column=start_col+col).value = val   
+
+def _set_row_fill(self, color, row, start_col=1, stop_col=None):
+    """Write values in a row.
+
+    Args:
+        color (str): HEX value of a color
+        row (int): row number
+        start_col (int, optional): column to start filling. Default is 1
+        stop_col (int, optional): column to stop filling. If None, the max
+            number of used columns will be used. Default is None.
+
+    Returns:
+        None
+    """
+    for col  in range(start_col, stop_col+1):
+        self.cell(row=row, column=col).fill = PatternFill("solid", fgColor=color)
+
+def _set_row_font(self, row, bold=False, color='000000', start_col=1, stop_col=None):
+    """Write values in a row.
+
+    Args:
+        row (int): row number
+        bold (bool): Bold if True
+        color (str): HEX value of a color
+        start_col (int, optional): column to start filling. Default is 1
+        stop_col (int, optional): column to stop filling. If None, the max
+            number of used columns will be used. Default is None.
+
+    Returns:
+        None
+    """
+    for col  in range(start_col, stop_col+1):
+        self.cell(row=row, column=col).font = Font(b=bold, color=color)
+
+def _set_col_width(self, col, width):
+    """Set column width
+    
+    Args:
+        col (str or int): columns number or letter
+        width (int): width value
+        
+    Returns:
+        None
+    """
+    if isinstance(col, str) == False:
+        col = get_column_letter(col)
+    self.column_dimensions[col].width = width
+
+def _get_col_width(self, col):
+    """Set column width
+    
+    Args:
+        col (str or int): columns number or letter
+        width (int): width value
+        
+    Returns:
+        None
+    """
+    if isinstance(col, str) == False:
+        col = get_column_letter(col)
+    return self.column_dimensions[col].width
+
+
+
+
+
+# %% old (possibly obsolete) -------------------------------------------------
+def _refresh(self):
     filepath = Path(self.filepath)
 
     # self._parent.save(str(filepath.resolve()))
     sheetname = self.title
-    sheet = initialize(filepath, sheetname)
+    sheet     = xlsx(filepath, sheetname)
     return sheet
 
-def update_header(self, row=0):
+def _update_header(self, row=0):
     header = [None]*self.max_column
     for i, column in enumerate(self.iter_cols(min_row=row, max_row=row)):
         header[i] = column[0].value
     self.header = header
 
-def check_header(self):
+def _check_header(self):
     if 'header' not in self.__dict__.keys():
         AttributeError('Header does not seem to be defined for this sheet.\nRun Sheet.update_header()')
 
-def column_number_from_header(self, column):
+def _column_number_from_header(self, column):
 
     if type(column)==str:
         self.check_header()
@@ -69,7 +229,7 @@ def column_number_from_header(self, column):
             raise ValueError(f'Cannot find {column} in header')
     return column
 
-def get_column(self, column, min_row, max_row):
+def _get_column(self, column, min_row, max_row):
     # preallocation
     data = [None]*(max_row-min_row+1)
 
@@ -84,13 +244,13 @@ def get_column(self, column, min_row, max_row):
         data[i] = row[0].value
     return data
 
-def search_rows(self, string, column):
+def _search_rows(self, string, column):
     column = self.column_number_from_header(column)
     for i, row in enumerate(self.iter_rows(min_col=column, max_col=column)):
         if string == row[0].value:
             return row[0].row
 
-def is_merged(self, column, row):
+def _is_merged(self, column, row):
     column = self.column_number_from_header(column)
     for ranges in self.merged_cells.ranges:
         if row >= ranges.min_row and row <= ranges.max_row:
@@ -99,7 +259,7 @@ def is_merged(self, column, row):
     else:
         return False
 
-def get_dataset_info(self, name, column):
+def _get_dataset_info(self, name, column):
     column_dataset = self.column_number_from_header('dataset')
     row = self.search_rows(name, column_dataset)
 
@@ -116,7 +276,7 @@ def get_dataset_info(self, name, column):
     else:
         return self.get_column(column=column, min_row=row, max_row=row)
 
-def get_dataset(self, name):
+def _get_dataset(self, name):
     column = self.column_number_from_header('dataset')
     row = self.search_rows(name, column)
 

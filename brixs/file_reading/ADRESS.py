@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 from collections.abc import Iterable
 import copy
+from datetime import datetime, timedelta
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import brixs as br
@@ -25,10 +26,15 @@ def _unpack_attrs_xas(s):
     else:
         s.pol = 'LH'
 
+    # sample position
+    s.SampleX = float(s.Manipulator_X.split()[0])
+    s.SampleY = float(s.Manipulator_Y.split()[0])
+    s.SampleZ = float(s.Manipulator_Z.split()[0])
+
     s.T    = round(float(s.Cryostat_temperature[:-1]), 1)
     s.th   = round(float(s.Manipulator_Theta[:-3]), 1)
     s.slit = round(float(s.Exit_slit[:-3]), 1)
-    s.label = f'{s.pol}, {s.T} K, th {s.th}, {s.slit}'
+    s.label = f'{s.pol}, {s.T} K, th {s.th}, slit {s.slit}'
 
 def _read_xas(filepath):
     """Read xas file from ADRESS beamline.
@@ -62,10 +68,16 @@ def _read_xas(filepath):
     header = br.load_Comments(filepath)[1:-7]
     nd = {}
     for line in header:
-        split = line[1:].split(':')
-        name  = split[0].strip()
-        value = split[1].strip()
-        nd[name] = value
+        if line.startswith('# Start-time'):
+            split = line[1:].split(':')
+            name  = split[0].strip()
+            value = ':'.join(split[1:]).split('.')[0].strip()
+            nd[name] = value
+        else:
+            split = line[1:].split(':')
+            name  = split[0].strip()
+            value = split[1].strip()
+            nd[name] = value
 
     # save attr to object
     for attr in nd:
@@ -73,14 +85,13 @@ def _read_xas(filepath):
         setattr(TEY, attr2, nd[attr])
         setattr(TFY, attr2, nd[attr])
         setattr(RMU, attr2, nd[attr])
-    
+        
     # additional attrs
     for s in (TEY, TFY, RMU):
         _unpack_attrs_xas(s)
-        s.xlabel = 'energy'
-    TEY.ylabel = 'TEY'
-    TFY.ylabel = 'TFY'
-    RMU.ylabel = 'RMU'
+    TEY.mode = 'TEY'
+    TFY.mode = 'TFY'
+    RMU.mode = 'RMU'
 
     return TEY, TFY, RMU
 
@@ -255,6 +266,9 @@ def _read(filepath, type_='spectrum'):
     ################
     nd = {key: val[:] for key, val in f['entry']['instrument']['NDAttributes'].items()}
     nd['ModifiedDate'] = br.get_modified_date(filepath)  # modified date
+    for key in nd:
+        if isinstance(nd[key], np.ndarray):
+            nd[key] = list(nd[key])
 
     ########
     # data # 
@@ -300,6 +314,7 @@ def raw(*args, **kwargs):
 
         >>> data from all 3 ccd's
         >>> ss   = ADRESS.raw(folderpath, prefix, scan)
+        >>> ss[0], ss[1], ss[2] will have data from each ccd
         >>> pes  = ADRESS.raw(folderpath, prefix, scan, type_='pe')
         >>> bads = ADRESS.raw(folderpath, prefix, scan, type_='bad')
     
@@ -404,9 +419,9 @@ def raw(*args, **kwargs):
             ss[i].scan = scan
             ss[i].ccd = i
         ss.scan = scan
-        for attr in ss[0]._get_user_attrs():
-            setattr(ss, attr, getattr(ss[0], attr))
-        del ss.ccd
+        # for attr in ss[0]._get_user_attrs():
+        #     setattr(ss, attr, getattr(ss[0], attr))
+        # del ss.ccd
         return ss
     elif type_.lower() in ['photon events', 'pe']:
         pes = [0]*3
@@ -449,7 +464,8 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
             polynomial coeff. with highest power first. Default is None.
         offset (number, optional): calibration offset. If calib are polynomial
             coeff., offset is added to the const. term. If calib is a number 
-            (multiplicative factor), offset is a hard shift on the x-coord.
+            (multiplicative factor), offset is a hard shift on the x-coord. This
+            redefine the zero energy position of the detector.
     
     Note:
         If rebining, calib factor must be in terms of subpixels and not bins.
@@ -469,7 +485,7 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
     ##################
     if isinstance(scan, Iterable):
         ss = br.Spectra()
-        for s in scan:
+        for j, s in enumerate(scan):
             if nbins is not None:
                 ss1 = br.Spectra(3)
                 if curvature is None:
@@ -478,17 +494,48 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
                 for i, pe in enumerate(pes):
                     pe.set_shift(p=curvature[i])
                     ss1[i] = pe.calculate_spectrum(nbins=nbins)
+
+                # #####################################
+                # # transfer attrs from the first ccd #
+                # #####################################
+                # for attr in pes[0]._get_user_attrs():
+                #     ss1.__setattr__(attr, pes[0].__getattribute__(attr))
+
             else:
                 ss1 = raw(folderpath=folderpath, prefix=prefix, scan=s)
 
-            # align and sum
+            ##########################
+            # align and sum each ccd #
+            ##########################
             ss1.align()
             s = ss1.calculate_sum()
             ss.append(s)
 
-        # transfer attrs
-        for attr in ss1[0]._get_user_attrs():
-            ss.__setattr__(attr, ss1[0].__dict__[attr])
+            #######################################################
+            # transfer attrs from first ccd to the Spectra object #
+            #######################################################
+            if j == 0:
+                for attr in ss1[0]._get_user_attrs():
+                    ss.__setattr__(attr, [ss1[0].__getattribute__(attr), ])
+            else:
+                for attr in ss1[0]._get_user_attrs():
+                    ss.__setattr__(attr, ss.__getattribute__(attr) + [ss1[0].__getattribute__(attr), ])
+        del ss.ccd
+
+        #######################
+        # align and sum scans #
+        #######################
+        ss.align()
+        s = ss.calculate_sum()
+
+        #####################################
+        # transfer attrs to summed spectrum #
+        #####################################
+        for attr in ss._get_user_attrs():
+            s.__setattr__(attr, ss.__getattribute__(attr))
+        # print(s.E)
+        s.scan = scan
+
     ############
     # one scan #
     ############
@@ -504,19 +551,19 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
         else:
             ss = raw(folderpath=folderpath, prefix=prefix, scan=scan)
 
-    #################
-    # align and sum #
-    #################
-    ss.align()
-    s = ss.calculate_sum()
+        ##########################
+        # align and sum each ccd #
+        ##########################
+        ss.align()
+        s = ss.calculate_sum()
 
-    ##################
-    # transfer attrs #
-    ##################
-    for attr in ss[0]._get_user_attrs():
-        s.__setattr__(attr, ss[0].__dict__[attr])
-    del s.ccd
-    s.scan = scan
+        #######################################################
+        # transfer attrs from the first ccd to final spectrum #
+        #######################################################
+        for attr in ss[0]._get_user_attrs():
+            s.__setattr__(attr, ss[0].__dict__[attr])
+        del s.ccd
+        s.scan = scan
 
     ######################
     # calibrate and zero #
@@ -527,7 +574,10 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
             if offset is not None:
                 calib[-1] += offset
             s.set_calib(calib)
-            s.set_shift(-s.E)
+            if isinstance(scan, Iterable):
+                s.set_shift(-np.mean(s.E))
+            else:
+                s.set_shift(-s.E)
         else:
             s.set_calib(calib)
             if offset is not None:
@@ -586,7 +636,8 @@ def sequence(folderpath, prefix, scans, nbins=None, curvature=None, calib=None, 
             polynomial coeff. with highest power first. Default is None.
         offset (number, optional): calibration offset. If calib are polynomial
             coeff., offset is added to the const. term. If calib is a number 
-            (multiplicative factor), offset is a hard shift on the x-coord.
+            (multiplicative factor), offset is a hard shift on the x-coord. This
+            redefine the zero energy position of the detector.
     
     Note:
         If rebining, calib factor must be in terms of subpixels and not bins.
@@ -698,6 +749,65 @@ def calib(folderpath, prefix, start=None, stop=None, scans=None, nbins=None, cur
         popt[ccd], model, r2 = s.polyfit(deg=1)        
 
     return popt, sss
+
+# %% -------------------------- Archiver functions ------------------------ %% #
+def str2datetime(string):
+    date, time = string.split()
+    year, month, day = date.split('-')
+    hour, minute, second = time.split(':')
+    return datetime(day=int(day), month=int(month), year=int(year), hour=int(hour), minute=int(minute), second=int(second.split('.')[0]))
+
+def read_archiver(filepath):
+
+    # open file
+    filepath = Path(filepath)
+    with filepath.open("r") as f:
+        txt = f.read().split('\n')[:-1]
+        
+    # create new dict with nearest function
+    class MyDict(dict):
+        def nearest(self, day, month, year=2023, hour=0, minute=0, second=0):
+            pivot = datetime(year, month, day, hour, minute)
+            return self['time'].index(min(self['time'], key=lambda x: abs(x - pivot)))
+        
+        def get_range(self, start=None, stop=None, elapsed=0):
+            """elapsed in seconds"""
+            assert start is not None or stop is not None, 'start and stop cannot both be None'
+
+            if start is None:
+                if type(stop) == str:
+                    stop = str2datetime(stop)
+                start = stop - timedelta(seconds=elapsed)
+            elif stop is None:
+                if type(start) == str:
+                    start = str2datetime(start)
+                stop = start+timedelta(seconds=elapsed)
+            else:
+                if type(start) == str:
+                    start = str2datetime(start)
+                if type(stop) == str:
+                    stop = str2datetime(stop)
+            start = self.nearest(day=start.day, month=start.month, year=start.year, hour=start.hour, minute=start.minute, second=start.second)
+            stop  = self.nearest(day=stop.day, month=stop.month, year=stop.year, hour=stop.hour, minute=stop.minute, second=stop.second)
+            return {'time': self['time'][start:stop],
+                    'RMU': self['RMU'][start:stop],
+                    'TFY': self['TFY'][start:stop],
+                    'TEY': self['TEY'][start:stop]}
+
+    # sort columns
+    data = MyDict(time=[], TEY=[], TFY=[], RMU=[])
+    for line in txt:
+        if line.startswith('#') or line.startswith('\n') or '#N/A' in line:
+            pass
+        else:
+            temp = line.split('\t')
+            if len(temp) == 4:
+                data['time'].append(datetime.strptime(temp[0].split('.')[0], '%m/%d/%Y %H:%M:%S'))
+                data['TEY'].append(float(temp[1]))
+                data['TFY'].append(float(temp[2]))
+                data['RMU'].append(float(temp[3]))
+        
+    return data
 
 # %% -------------------------- high level functions ---------------------- %% #
 def _calculate_energy_map(self):
