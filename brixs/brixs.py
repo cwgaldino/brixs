@@ -328,15 +328,15 @@ class Spectrum(metaclass=_Meta):
     def data(self):
         raise AttributeError('Cannot delete object.')
 
-    @property
-    def area(self):
-        return self.calculate_area()
-    @area.setter
-    def area(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @area.deleter
-    def area(self):
-        raise AttributeError('Cannot delete object.')
+    # @property
+    # def area(self):
+    #     return self.calculate_area()
+    # @area.setter
+    # def area(self, value):
+    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    # @area.deleter
+    # def area(self):
+    #     raise AttributeError('Cannot delete object.')
 
     #########################
     # write-only attributes #
@@ -420,7 +420,7 @@ class Spectrum(metaclass=_Meta):
         final._step         = self.step
         final._monotonicity = self.monotonicity
 
-        # for attr in self._get_user_attrs():
+        # for attr in self.get_attrs():
         #     value = copy.deepcopy(self.__dict__[attr])
         #     final.__setattr__(attr, value)
 
@@ -445,7 +445,7 @@ class Spectrum(metaclass=_Meta):
         final._step = self.step
         final._monotonicity = self.monotonicity
         
-        # for attr in self._get_user_attrs():
+        # for attr in self.get_attrs():
         #     value = copy.deepcopy(self.__dict__[attr])
         #     final.__setattr__(attr, value)
 
@@ -470,7 +470,7 @@ class Spectrum(metaclass=_Meta):
         final._step = self.step
         final._monotonicity = self.monotonicity
         
-        # for attr in self._get_user_attrs():
+        # for attr in self.get_attrs():
         #     value = copy.deepcopy(self.__dict__[attr])
         #     final.__setattr__(attr, value)
 
@@ -501,7 +501,7 @@ class Spectrum(metaclass=_Meta):
         final._step = self.step
         final._monotonicity = self.monotonicity
         
-        # for attr in self._get_user_attrs():
+        # for attr in self.get_attrs():
         #     value = copy.deepcopy(self.__dict__[attr])
         #     final.__setattr__(attr, value)
 
@@ -525,10 +525,9 @@ class Spectrum(metaclass=_Meta):
             s = Spectrum(x=x, y=y)
 
             # transfer attrs
-            for attr in self._get_user_attrs():
+            for attr in self.get_attrs():
                 value = copy.deepcopy(self.__dict__[attr])
                 s.__setattr__(attr, value)
-
             return s
         else:
             raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
@@ -553,10 +552,36 @@ class Spectrum(metaclass=_Meta):
         """return list with default attrs."""
         return ['_x', '_y', '_filepath', '_step', '_monotonicity', '_peaks']
     
-    def _get_user_attrs(self):
+    def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key not in self._default_attrs() and key.startswith('_') == False]
     
+    def remove_attrs(self):
+        """Delete all user defined attrs."""
+        for attr in self.get_attrs():
+            self.__delattr__(attr)
+
+    def copy_attrs_from(self, s):
+        """Copy user defined attributes from another brixs object.
+
+        Args:
+            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
+                to copy user defined attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
+
+        # transfer attrs
+        for attr in s.get_attrs():
+            value = copy.deepcopy(s.__dict__[attr])
+            self.__setattr__(attr, value)
+
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
 
@@ -634,39 +659,13 @@ class Spectrum(metaclass=_Meta):
                 raise AttributeError(error_message)        
         return args
 
-    def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in self._get_user_attrs():
-            self.__delattr__(attr)
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s._get_user_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
     #################
     # save and load #
     #################
     def _create_header(self, verbose=False):
         """Gather attrs to be saved to a file."""
         header = ''
-        attrs = self._get_user_attrs()
+        attrs = self.get_attrs()
         for name in attrs:
             try:
                 if self.__dict__[name] is None:
@@ -1253,21 +1252,21 @@ class Spectrum(metaclass=_Meta):
         #special
         # self.peaks.clear()
 
-    def remove(self, *args, **kwargs):
-        """Remove datapoints within a range.
+    # def remove(self, *args, **kwargs):
+    #     """Remove datapoints within a range.
 
-        Args:
-            ranges (list, optional): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
+    #     Args:
+    #         ranges (list, optional): a pair of values or a list of pairs. Each pair represents
+    #             the start and stop of a data range from x. Use None to indicate
+    #             the minimum or maximum x value of the data.
 
-        Returns:
-            None
-        """
-        ranges = self._validate_ranges(*args, **kwargs)
-        x, y   = arraymanip.extract(self.x, self.y, ranges, invert=True)
-        self._x = x
-        self._y = y
+    #     Returns:
+    #         None
+    #     """
+    #     ranges = self._validate_ranges(*args, **kwargs)
+    #     x, y   = arraymanip.extract(self.x, self.y, ranges, invert=True)
+    #     self._x = x
+    #     self._y = y
 
     def crop(self, start=None, stop=None):
         """Crop edges of the dataset.
@@ -1370,9 +1369,9 @@ class Spectrum(metaclass=_Meta):
                 self._peaks = s.peaks
 
                 # user defined attrs
-                for attr in self._get_user_attrs():
+                for attr in self.get_attrs():
                     self.__delattr__(attr)
-                for attr in s._get_user_attrs():
+                for attr in s.get_attrs():
                     self.__setattr__(attr, s.__dict__[attr])
             else:
                 raise TypeError('Only type br.Spectrum can be copied to type br.Spectrum')
@@ -1384,7 +1383,7 @@ class Spectrum(metaclass=_Meta):
             s = self._extract(*args, **kwargs)
 
             # transfer attrs
-            for attr in self._get_user_attrs():
+            for attr in self.get_attrs():
                 value = copy.deepcopy(self.__dict__[attr])
                 s.__setattr__(attr, value)
 
@@ -1403,7 +1402,7 @@ class Spectrum(metaclass=_Meta):
         s    = Spectrum(x=x, y=y)
 
         # transfer attrs
-        for attr in self._get_user_attrs():
+        for attr in self.get_attrs():
             value = copy.deepcopy(self.__dict__[attr])
             s.__setattr__(attr, value)
 
@@ -1426,7 +1425,7 @@ class Spectrum(metaclass=_Meta):
         s._peaks = self.peaks
 
         # transfer attrs
-        for attr in self._get_user_attrs():
+        for attr in self.get_attrs():
             value = copy.deepcopy(self.__dict__[attr])
             s.__setattr__(attr, value)
 
@@ -1477,6 +1476,27 @@ class Spectrum(metaclass=_Meta):
             s = self.copy()
         return np.trapz(y=s.y, x=s.x)
 
+    def calculate_x_sum(self, *args, **kwargs):
+        """Returns sum of x elements within a range.
+        
+        Usage:
+            s.calculate_x_sum()  # returns the x sum for the whole dataset
+            s.calculate_x_sum((0, 10), (90, 100))  # returns the x sum from data beteen x=0 and 10 and between x=90 and 100
+
+        Args:
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+
+        Returns:
+            number
+        """
+        if kwargs != {} or args != ():
+            s = self._extract(*args, **kwargs)
+        else:
+            s = self.copy()
+        return sum(s.x)
+
     def calculate_y_sum(self, *args, **kwargs):
         """Returns sum of y elements within a range.
         
@@ -1506,7 +1526,7 @@ class Spectrum(metaclass=_Meta):
 
         Args:
             deg (int): degree of the fitting polynomial.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
+            ranges (list, ooptional): a pair of values or a list of pairs. Each pair represents
                 the start and stop of a data range from x. Use None to indicate
                 the minimum or maximum x value of the data.
 

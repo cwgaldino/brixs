@@ -1,25 +1,19 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Spectrum example"""
+"""Spectrum object is an object that stores a x and y array 
 
-# %% imports ===================================================================
+It has pre-defined methods for operating in this x and y arrays
+
+New methods and attrs can be defined on the go
+"""
+
+# %% ---------------------------- imports --------------------------------- %% #
 import brixs as br
 import numpy as np
 import matplotlib.pyplot as plt
+plt.ion()
 
-from pathlib import Path
-import copy
-
-# %% autoreload and matplotlib backend (ignore) ================================
-if br.is_notebook():
-    from IPython import get_ipython
-    get_ipython().run_line_magic('matplotlib', 'qt5')
-    get_ipython().run_line_magic('load_ext', 'autoreload')
-    get_ipython().run_line_magic('autoreload', '2')
-else:
-    plt.ion()
-
-# %% example ===================================================================
+# %% ---------------------- quick Example --------------------------------- %% #
 x = np.linspace(-5, 5, 100)
 y = np.sin(x)
 
@@ -27,166 +21,268 @@ s = br.Spectrum(x, y)
 
 plt.figure()
 s.plot()
-plt.show()
 
-# %% Initialization ============================================================
-# s = br.Spectrum(x, y)
-# s = br.Spectrum(y)
-# s = br.Spectrum(filepath)
+# %% ---------------------- Example 1: Initialization --------------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
 
-s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
+# Spectrum object can be initialized in many ways
+s1 = br.Spectrum(x=x, y=y)
+s1 = br.Spectrum(x, y)
+s1 = br.Spectrum(y)
+s1 = br.Spectrum(y=y)
 
-# filepath must point to a two column txt or csv file
-# s = br.Spectrum('<filepath>')
+# x and y data
+print(s1.x)
+print(s1.y)
+print(s1.data)
 
-# %% data reading functions are defined for some beamlines =====================
-filepath = Path(r'./Cu_0005_d1.h5')
-s = br.ADRESS.read(filepath)
+# attributes can be associated with spectrum object
+s1.temperature = 10
+s1.composition = [9, 3, 5, 6]
+s1.string      = 'test'
+s1.dictionary  = {'a': 10, 'b':5}
+print(s1.temperature)
+print(s1.composition)
+print(s1.string)
+print(s1.dictionary)
 
-# some attributes
-print('x axis: ', s.x)
-print('y axis: ', s.y)
-print('Integrated area: ', s.area)
+# get a list of all defined attrs and remove all attrs
+print(s1.get_attrs())
+# s1.remove_attrs()
 
-# exclusive of ADRESS dataset
-print(s.th)
-print(s.slit)
+# item selection will return the x, y pair
+print(s[0])
 
-# plotting 
-fig = br.figure()  # br.figure is the same as plt.figure, but has additional functionality
-s.plot()
+# items can be deleted
+print(s.x)
+del s[0]
+print(s.x)
 
-# %% save and load =============================================================
-s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
+# as for right now, items cannot be changed (this might change in the future)
+# s[2] = (9, 10)  # error
 
-# parameters can be set
-s.temperature = 10
-print(s.temperature)
+# one can save and load an spectrum
+s1.save('examples/spectrum_0.dat')
+s2 = br.Spectrum('examples/spectrum_0.dat')
 
-# save
-s.save(r'test.txt')
-
-# load
-s2 = br.Spectrum(r'test.txt')
-
-# parameters are saved
+# attrs are saved and loaded with spectrum
+# Note that, dictionaries and more complex attrs are not saved
 print(s2.temperature)
+# print(s2.dictionary)  # ERROR
+
+# attrs can be copied between spectrum objects
+s2.copy_attrs_from(s1)
+print(s2.dictionary)
 
 
-# %% Spectrum can be operated on (y axis) ======================================
-s_B = br.Spectrum(y=[0.1, 1, 2, 3, 4, 5])
-s_C = br.Spectrum(y=[5, 4, 3, 2, 1, 0.1])
+# %% ---------------------- Example 2: operations ------------------------- %% #
+s1 = br.Spectrum(y=[1, 2, 3, 4, 5])
+s1.temperature = 10
+s2 = br.Spectrum(y=[5, 4, 3, 2, 1])
+s2.temperature = 20
 
-s_A = s_B + s_C
-s_A = s_B - s_C
-s_A = s_B * s_C
-s_A = s_B / s_C  # s_C cannot contain zeros in the y axis
-s_A = s_B + 2.2
-s_A = s_B - 2
-s_A = s_B * 2
-s_A = s_B / 2
+# Spectrum can be operated on (y axis)
+s3 = s1 + s2
+s3 = s1 - s2
+s3 = s1 * s2
+s3 = s1 / s2  # in this case, s_C cannot contain zeros on the y axis
+s3 = s1 + 2.2
+s3 = s1 - 2
+s3 = s1 * 2
+s3 = s1 / 2
 
-# parameters from the first term are transferred
-s_B.temperature = 10
-s_A = s_B + s_C
-print(s_A.temperature)
-s_A = s_C + s_B
-print(s_A.temperature)  # ERROR
+# Note that this does not work
+# s3 = 2 * s1  # ERROR
+# but this works
+s3 = s1 * 2
 
-# %% check x axis ==============================================================
-s_A = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6], y=[1, 1, 1, 1, 1, 1, 1])
-print(s_A.step)
-s_A.check_step()
-print(s_A.step)
-s_A.check_monotonicity()
-print(s_A.monotonicity)
+# attrs are not transferred
+# print(s3.temperature)  # ERROR
 
-s_A = br.Spectrum(x=[0, 2, 4, 6, 8, 10, 12], y=[1, 1, 1, 1, 1, 1, 1])
-s_A.check_step()
-print(s_A.step)
-s_A.check_monotonicity()
-print(s_A.monotonicity)
+# %% ---------------------- Example 3: x axis verification ---------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6]
+y = [1, 1, 1, 1, 1, 1, 1]
 
-s_A = br.Spectrum(x=[0, 1.1, 2, 2.3, 7, 10, 12], y=[1, 1, 1, 1, 1, 1, 1])
-s_A.check_step()  # ERROR
-s_A.check_monotonicity()
-print(s_A.monotonicity)
+# s.step returns the separation value between two items of the x-axis
+s = br.Spectrum(x, y)  # initialization
+print(s.step)          # None
+s.check_step()         # calculate step
+print(s.step)          # 1
 
-s_A = br.Spectrum(x=[6, 5, 4, 3, 2, 1, 0], y=[1, 1, 1, 1, 1, 1, 1])
-s_A.check_step()
-print(s_A.step)
-s_A.check_monotonicity()
-print(s_A.monotonicity)
+# Irregular steps will raise an error
+x = [0, 1.1, 2, 2.3, 7, 10, 12]
+s = br.Spectrum(x, y)
+# s.check_step()  # ERROR
 
-s_A = br.Spectrum(x=[0, 12, 5, 1, 8, 6, 2], y=[0, 1, 2, 3, 4, 5, 6])
-s_A.check_monotonicity()  # ERROR
-s_A.fix_monotonicity()
-s_A.check_monotonicity()
-print(s_A.monotonicity)
-print(s_A.x)
-print(s_A.y)
+# s.monotonicity returns the x-axis monotonicity (`increasing`, `decreasing`)
+s = br.Spectrum(x, y)   # initialization
+print(s.monotonicity)   # None
+s.check_monotonicity()  # calculate monotonicity
+print(s.monotonicity)   # increasing
 
+# irregular monotonicity will raise and error
+x=[0, 12, 5, 1, 8, 6, 2]
+s = br.Spectrum(x, y)
+# s.check_monotonicity()  # ERROR
+s.fix_monotonicity()    # fix monotonicity
+s.check_monotonicity()  # calculate monotonicity after fixing
+print(s.monotonicity)
+print(s.x)
 
-# %% modifiers =================================================================
-s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
+# %% ----------------------- Example 4: bese modifiers -------------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
+s = br.Spectrum(x, y)
 
-# offset
-fig = br.figure()
-s.plot()
-s.set_offset(20)
-s.plot()
+# spectrum has 3 base modifiers acting on the x-axis
+s.calib
+s.shift
+s.roll
 
-# modifiers can be set via the attribute
+# and 2 base modifiers acting on the y-axis
+s.offset
+s.factor
+
+# modifiers can be set via the attribute or via function
 s.offset = 30
-s.plot()
+s.set_offset(30)
 
-# %% There are two ways of applying a shift in the x axis =====================
-s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
+# calib will multiply the x-axis by a number
+# shift will add a value to the x-axis
+# roll will roll the x-axis by an integer value (see np.roll())
+# offset will add a value to the y-axis
+# factor will multiply the y-axis by a number
 
-# hard shift. Y axis is fully preserved, x is modified
-print('x axis before: ', s.x)
-fig = br.figure()
-s.plot(label='before')
-s.set_shift(10)
-s.plot(label='after')
-plt.legend()
-print('x axis after: ', s.x)
+# %% ----------------------- Example 5: modifiers ------------------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
+s = br.Spectrum(x, y)
 
-# roll shift. both axis are preserved. Only integer shifts allowed.
-# Data is "rolled" in the array
-# The edges of the data became meaningless
-fig = br.backpack.figure()
-s.plot(label='before')
-s.set_roll(3)
-s.plot(label='after')
-plt.legend()
+# these are the defined modifiers
+s.floor()      # uses s.offset to make the average value of the y-axis zero
+s.flip()       # uses s.calib to flip the x-axis (multiply by -1) 
+s.normalize()  # uses s.offset to make the average value of the y-axis goes to value
+# s.interp()   # interpolate data
+s.crop()       # remove the start and end of the dataset
+s.switch()     # switch x- and y-axis
 
+# %% ----------------------- Example 6: copying --------------------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
+s1 = br.Spectrum(x, y)
 
-# %% manipulation ==============================================================
-s = br.Spectrum(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0, 1, 2, 3, 4, 4, 3, 2, 1, 0])
-s2 = copy.deepcopy(s)
+s2 = br.Spectrum()
+s2.copy(s1)
 
-fig = br.backpack.figure()
-s.plot(label='initial')
-s2.interp(start=0, stop=10, num=100)
-s2.plot(label='interp')
+s2 = s1.copy()
 
-s2.crop(start=2, stop=None)
-s2.plot(label='crop')
+# %% ---------------------- Example 7: calculate -------------------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
+s = br.Spectrum(x, y)
 
-s2 = s2 + 50
-s2.plot(label='offset')
-s2.floor()
-s2.plot(label='floor')
+# returns a spectrum type
+sder   = s.derivative()
+smooth = s.smooth()
 
-s2.flip()
-s2.plot(label='flip')
+# returns a number
+area = s.calculate_area()
+xsum = s.calculate_x_sum()
+ysum = s.calculate_y_sum()
+area = s.calculate_area()
 
-s2.normalize(50, [-10, -9])
-s2.plot(label='nomalize')
+# index finding
+i  = s.index(x=4)
+yv = s.x2y(x=4)
 
-s3 = s.copy([[0, 2], [5, 7], [9, None]])
-s3.plot(label='extracted', marker='o')
+# simple polynomial fitting
+popt, fit, R2 = s.polyfit(deg=2)
 
-plt.legend()
+# %% ----------------------- Example 8: plotting -------------------------- %% #
+x = np.linspace(0, 10, 100)
+y = br.gaussian(x=x, amp=4, c=4, sigma=0.4) + br.gaussian(x=x, amp=2, c=8, sigma=0.2)
+s = br.Spectrum(x, y)
 
+br.figure()  # same as plt.figure(), but with additional features
+s.plot()     # same as plt.plot(s.x, s.y)
+s.plot(shift=1, offset=1)     # quickly adjustments can be made
+
+# note, opening a new figure with br.figure() allows for sending the x and y 
+# values where the mouse cursor is to the the clipboard by left and right 
+# mouse button click. Pressing the wheel copies the image. Double left click
+# prints the figure coordinates (from 0 to 1).
+
+# %% --------------------- Example 9: peak finding ------------------------ %% #
+x = np.linspace(0, 10, 100)
+y = br.gaussian_fwhm(x=x, amp=4, c=4, w=1) + br.gaussian_fwhm(x=x, amp=2, c=8, w=1)
+s = br.Spectrum(x, y)
+
+# uses scipy.signal.find_peaks()
+s.find_peaks()
+print(s.peaks)  # print list of peaks found
+
+print(s.peaks[0])
+print(s.peaks[1])
+
+# peaks can be removed
+s.peaks.remove(0)
+
+# peaks can be added
+s.peaks.append(amp=4, c=4, w=1)
+
+# peaks can be modifies
+s.peaks[1]['amp'].value = 3
+
+# one can calculate a spectrum from peaks
+s2 = s.peaks.calculate_spectrum()
+
+# quick plot
+br.figure()  
+s.plot(marker='o') 
+s.peaks.plot()     # place a marker at every peak found  
+s2.plot()
+
+# %% --------------------- Example 10: peak fitting ----------------------- %% #
+x = np.linspace(0, 10, 100)
+y = br.gaussian_fwhm(x=x, amp=4, c=4, w=1) + br.gaussian_fwhm(x=x, amp=2, c=8, w=1)
+s = br.Spectrum(x, y)
+
+# fit one peak
+s.fit_peak(ranges=(0, 5))
+print(s.peaks)
+one_peak = s.peaks.calculate_spectrum()
+
+# find all peaks and fit
+s.find_peaks()
+s.fit_peaks() 
+fit = s.peaks.calculate_spectrum()
+
+# quick plot
+br.figure()  
+s.plot(marker='o') 
+fit.plot()
+one_peak.plot()   
+
+# %% ----------------- Example 11: defining new methods ------------------- %% #
+x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
+s1 = br.Spectrum(x, y)
+
+# define new function that acts on x and y
+def new_function(self, value):
+    """Adds a value to the y-axis"""
+    self.y = self.y + value
+
+# attaches function to type Spectrum
+br.Spectrum.new_function = new_function
+
+# from now one, every spectrum type will have new_function defined.
+# even spectrum types created before defying new_function
+s2 = br.Spectrum(x, y)
+
+s1.new_function(5)
+print(s1.y)
+
+s2.new_function(2)
+print(s2.y)
