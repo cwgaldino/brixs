@@ -9,8 +9,9 @@ import numpy as np
 import datetime
 from copy import deepcopy
 import collections
-from .interact import query
+from .interact import query, is_linux, is_windows, is_mac
 import json
+import fnmatch
 # try:
 #     from detect_delimiter import detect
 # except ModuleNotFoundError:
@@ -127,7 +128,7 @@ def rm(filepath):
     filepath = Path(filepath).unlink()
 
 
-def filelist(dirpath='.', string='*'):
+def filelist(dirpath='.', string='*', case_sensitive=True):
     """Returns a list with all the files containing `string` in its name.
 
     Note:
@@ -136,8 +137,11 @@ def filelist(dirpath='.', string='*'):
     Args:
         dirpath (str or pathlib.Path, optional): list with full file directory
             paths.
-        string (str, optional): file names without this string will be ignored.
+        string (str, optional): pattern. only filenames with this string will be considered.
             Use '*' for matching anything. Default is '*'.
+        case_sensitive (bool or None, optional): Default is True. If None, 
+            case_sensitive will matches paths using platform-specific casing rules.
+            Typically, case-sensitive on POSIX, and case-insensitive on Windows.
 
     Return:
         list
@@ -150,11 +154,21 @@ def filelist(dirpath='.', string='*'):
     if '*' not in string:
         string = '*' + string + '*'
 
-    temp = list(dirpath.glob(string))
+    # on linux and mac, glob is naturally case sensitive
+    if (is_linux or is_mac) and case_sensitive == False:
+        rule = re.compile(fnmatch.translate(string), re.IGNORECASE)
+        temp = [dirpath/name for name in os.listdir(dirpath) if rule.match(name)]
+    # on windows, glob is naturally case INsensitive
+    elif is_windows and case_sensitive:
+        temp = list(dirpath.glob(pattern=string))
+        match = re.compile(fnmatch.translate(str(dirpath/string))).match
+        temp  = [path for path in temp if match(str(path))]
+    else:
+        temp = list(dirpath.glob(pattern=string))
 
+    # sort and return
     temp2 = [filepath.name for filepath in temp]
-
-    return [x for _,x in sorted(zip(temp2,temp))]
+    return [x for _,x in sorted(zip(temp2, temp))]
 
 
 def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='list'):

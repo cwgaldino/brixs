@@ -23,7 +23,6 @@ try:
 except ModuleNotFoundError:
     pass
 
-
 def operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
     system = platform.system().lower()
@@ -136,7 +135,11 @@ def query(question, default="yes"):
                              "('y' or 'n').\n")
 
 # %% clipboard functions =======================================================
-import win32clipboard
+try:
+    import win32clipboard
+except ModuleNotFoundError:
+    pass
+
 from io import BytesIO
 try:
     from PIL import Image as _image
