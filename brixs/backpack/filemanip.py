@@ -118,7 +118,6 @@ def rmdir(dirpath, not_found_ok=False):
             item.unlink()
     dirpath.rmdir()
 
-
 def rm(filepath):
     """Remove a file.
 
@@ -126,7 +125,6 @@ def rm(filepath):
         filepath (string or pathlib.Path): filepath.
     """
     filepath = Path(filepath).unlink()
-
 
 def filelist(dirpath='.', string='*', case_sensitive=True):
     """Returns a list with all the files containing `string` in its name.
