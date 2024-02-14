@@ -103,18 +103,19 @@ class Spectrum(metaclass=_Meta):
         x (array): vector with x-coordinate values
         y (array): vector with y-coordinate values
         filepath (str or pathlib.Path): filepath associated with data.
-        step (number or None, read only): step size of the x-array.
-        monotonicity (str or None, read only): monotonicity of the x-array.
-        peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.
+        peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.       
 
-    Computed (read-only) attributes:
+    **Computed attributes (also read-only):**
         data (array)
-            2 column data (x, y)
+            2 column data (x, y). Computed when calling s.data
 
-        area (number) 
-            area under the curve.
+        step (number or None)
+            step size of the x-array. Computed via s.check_step()
 
-    Write-only attributes:
+        monotonicity (str or None)
+            monotonicity of the x-array. Computed via s.check_monotonicity()
+
+    **Write-only attributes:**
         calib
             calls s.set_calib()
 
@@ -796,9 +797,9 @@ class Spectrum(metaclass=_Meta):
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
-        This a very simple loading function that works well with two column text
-        files. If file has more columns than two columns, the first two columns
-        will be loaded. Use `usecols` to select columns, for example:
+        This a very simple loading function that works well with column text
+        files (xy files). If file has more columns than two columns, the first two columns
+        will be loaded by default. Use `usecols` to select columns, for example:
         
         usecols = (1, 4) 
 
@@ -810,10 +811,10 @@ class Spectrum(metaclass=_Meta):
                 If the filename extension is .gz or .bz2, the file is first 
                 decompressed. Last used filepath is saved to an attr s.filepath.
             only_data (bool, optional): If True, header and footer are ignored and
-                only data is loaded.
+                only data is loaded. Default is False.
             verbose (book, optional): Default is False. If True, it will print
                 an warning when attributes cannot be loaded from the file.
-            **kwargs: kwargs are passed to ``plt.genfromtxt()`` that loads the data.
+            **kwargs: kwargs are passed to ``numpy.genfromtxt()`` that loads the data.
 
         If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
 
@@ -1825,41 +1826,38 @@ class Spectra(metaclass=_Meta):
         data (list of :py:attr:`Spectrum`): list with :py:attr:`Spectrum` objects.
         folderpath (str or pathlib.Path): folderpath associated with data.
         filepath (str or pathlib.Path): filepath associated with data.
-        step (number, read only): step size for x-coordinates.
-        length (number, read only): length of x-coordinates vector.
-        x (number, read only): x-coordinates.
-        monotonicity (str or None, read only): monotonicity of the x-array.
         peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.
+        
 
     **Computed (read-only) attributes:**
-        area (list)
-            area of each spectrum
+        step (number)
+            step size for x-coordinates. Computed via ss.check_step()
 
-        sum (:py:attr:`Spectrum`)
-            sum of every spectrum
+        length (number)
+            length of x-coordinates vector. Comuted via ss.check_length()
 
-        average (:py:attr:`Spectrum`)
-            average of every spectrum
+        x (number) 
+            x-coordinates. Computed via ss.check_same_x()
 
-        map (:py:attr:`Image`)
-            2D representation of spectra
+        monotonicity (str or None)
+            monotonicity of the x-array. Computed via ss.check_monotonicity()
 
         calculated_shift (list)
-            calculated x add. factor
+            calculated x additive factor. Computed via ss.calculate_shift()
 
         calculated_offset (list)
-            calculated y additive factor
+            calculated y additive factor. Computed via ss.calculate_offset()
 
         calculated_roll (list)
-            calculated x roll
+            calculated x roll. Computed via ss.calculate_roll()
 
         calculated_calib (list)
-            calculated x multiplicative factor
+            calculated x multiplicative factor. Computed via ss.calculate_calib()
 
         calculated_factor (list)
-            calculated y multiplicative factor
+            calculated y multiplicative factor. Computed via ss.calculate_factor()
 
-    Write-only attributes:
+    **Write-only attributes:**
         calib
             calls s.set_calib()
 
@@ -2064,47 +2062,47 @@ class Spectra(metaclass=_Meta):
     ###################################
     # computed (read-only) attributes #
     ###################################
-    @property
-    def area(self):
-        temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self[i].area
-        return temp
-    @area.setter
-    def area(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @area.deleter
-    def area(self):
-        raise AttributeError('Cannot delete object.')
+    # @property
+    # def area(self):
+    #     temp = [0]*len(self)
+    #     for i in range(len(self)):
+    #         temp[i] = self[i].area
+    #     return temp
+    # @area.setter
+    # def area(self, value):
+    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    # @area.deleter
+    # def area(self):
+    #     raise AttributeError('Cannot delete object.')
 
-    @property
-    def sum(self):
-        return self.calculate_sum()
-    @sum.setter
-    def sum(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @sum.deleter
-    def sum(self):
-        raise AttributeError('Attribute cannot be deleted.')
+    # @property
+    # def sum(self):
+    #     return self.calculate_sum()
+    # @sum.setter
+    # def sum(self, value):
+    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    # @sum.deleter
+    # def sum(self):
+    #     raise AttributeError('Attribute cannot be deleted.')
 
-    @property
-    def average(self):
-        return self.calculate_average()
-    @average.setter
-    def average(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @average.deleter
-    def average(self):
-        raise AttributeError('Attribute cannot be deleted.')
+    # @property
+    # def average(self):
+    #     return self.calculate_average()
+    # @average.setter
+    # def average(self, value):
+    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    # @average.deleter
+    # def average(self):
+    #     raise AttributeError('Attribute cannot be deleted.')
 
-    @property
-    def map(self):
-        return self.calculate_map()
-    @map.setter
-    def map(self, value):
-        raise AttributeError('Attribute is "read only". Cannot set attribute.')
-    @map.deleter
-    def map(self):
+    # @property
+    # def map(self):
+    #     return self.calculate_map()
+    # @map.setter
+    # def map(self, value):
+    #     raise AttributeError('Attribute is "read only". Cannot set attribute.')
+    # @map.deleter
+    # def map(self):
         raise AttributeError('Attribute cannot be deleted.')
 
     #########################
@@ -2176,7 +2174,7 @@ class Spectra(metaclass=_Meta):
             ss = Spectra(self._data[item])
 
             # # transfer attrs
-            # for attr in self._get_user_attrs():
+            # for attr in self.get_attrs():
             #     value = copy.deepcopy(self.__dict__[attr])
             #     ss.__setattr__(attr, value)
 
@@ -2223,10 +2221,15 @@ class Spectra(metaclass=_Meta):
                           '_calculated_offset', '_calculated_calib', 
                           '_monotonicity', '_x', '_step', '_length']
     
-    def _get_user_attrs(self):
+    def get_attrs(self):
         """return attrs that are user defined."""
         return [key for key in self.__dict__.keys() if key not in self._default_attrs() and key.startswith('_') == False]
     
+    def remove_attrs(self):
+        """Delete all user defined attrs."""
+        for attr in self.get_attrs():
+            self.__delattr__(attr)
+
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
 
@@ -2695,7 +2698,7 @@ class Spectra(metaclass=_Meta):
         self._folderpath = folderpath
         if verbose: print('Done!')
     
-    def load(self, folderpath=None, string='*', verbose=False):
+    def load(self, folderpath=None, string='*', only_data=False, verbose=False, **kwargs):
         """Load data from text files. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
@@ -2703,7 +2706,21 @@ class Spectra(metaclass=_Meta):
                 Last used folderpath is used.
             string (str, optional): file names without this string will be ignored.
                 Use '*' for matching anything. Default is '*'.
-            verbose (bool, optional): turn verbose on and off. Default is `False`.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is loaded. Default is False.
+            verbose (bool, optional): If True, it prints the progress of loading. 
+                Default is `False`.
+            **kwargs: kwargs are passed to ``numpy.genfromtxt()`` that loads the data.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (', ').
+            comments (str, optional): The character used to indicate the start
+                of a comment. Default is ``#``. Attributes picked up
+                from the header will be loaded too.
+            usecols (tuple, optional): Default is (0, 1).
 
         Returns:
             None
@@ -2712,15 +2729,8 @@ class Spectra(metaclass=_Meta):
         """
         # reset data
         self._data = []
-
         if folderpath is None:
             folderpath = self.folderpath
-        
-        # if isinstance(folderpath, str) or isinstance(folderpath, Path): 
-        #     fl = filemanip.filelist(dirpath=folderpath, string=string)
-        #     self.folderpath = folderpath
-        # else:
-        #     raise TypeError(f'folderpath is unknown format: {folderpath}')
         
         # check if folder points to a folder and exists
         folderpath = Path(folderpath)
@@ -2736,7 +2746,9 @@ class Spectra(metaclass=_Meta):
         for i, filepath in enumerate(fl):
             if verbose: print(f'Loading: {folderpath}')
             if verbose: print(f'    {i+1}/{len(fl)}: {filepath.name}')
-            self.append(Spectrum(filepath=filepath))
+            s = Spectrum()
+            s.load(filepath=filepath, only_data=only_data, **kwargs)
+            self.append(s)
 
         if verbose: print('Done!')
 
@@ -2760,7 +2772,7 @@ class Spectra(metaclass=_Meta):
     def _create_header(self, verbose=False):
         """Gather attrs to be saved to a file."""
         header = ''
-        attrs = self._get_user_attrs()
+        attrs = self.get_attrs()
         for name in attrs:
             value = self.__getattribute__(name)
             if value is None:
@@ -2913,8 +2925,26 @@ class Spectra(metaclass=_Meta):
         Args:
             filepath (str or pathlib.Path, optional): filepath. If None, the 
                 last used filepath is used.
-            onl
-        if usecols
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is saved to the file.
+            verbose (book, optional): Default is False. If True, it will print
+                an warning when attributes cannot be loaded from the file.
+            **kwargs: kwargs are passed to ``numpy.genfromtxt()`` that loads the data.
+
+        If not specified, the following parameters are passed to `numpy.genfromtxt()`_:
+
+        Args:
+            delimiter (str, optional): String or character separating columns.
+                Use ``\\t`` for tab. Default is comma (', ').
+            comments (str, optional): The character used to indicate the start
+                of a comment. Default is ``#``. Attributes picked up
+                from the header will be loaded too.
+            usecols (tuple, optional): Default is (0, 1).
+            
+        Returns:
+            None
+
+        .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
@@ -3780,9 +3810,9 @@ class Spectra(metaclass=_Meta):
                 self._peaks = ss.peaks
 
                 # user defined attrs
-                for attr in self._get_user_attrs():
+                for attr in self.get_attrs():
                     self.__delattr__(attr)
-                for attr in ss._get_user_attrs():
+                for attr in ss.get_attrs():
                     self.__setattr__(attr, ss.__dict__[attr])
             else:
                 raise TypeError('Only type br.Spectra can be copied to type br.Spectra')
@@ -3794,7 +3824,7 @@ class Spectra(metaclass=_Meta):
             ss = self._extract(*args, **kwargs)
 
             # transfer attrs
-            for attr in self._get_user_attrs():
+            for attr in self.get_attrs():
                 value = copy.deepcopy(self.__dict__[attr])
                 ss.__setattr__(attr, value)
 
@@ -3815,7 +3845,7 @@ class Spectra(metaclass=_Meta):
         
         # transfer attrs
         default_attrs = final._default_attrs()
-        for attr in self._get_user_attrs():
+        for attr in self.get_attrs():
             if attr not in default_attrs:
                 value = copy.deepcopy(self.__dict__[attr])
                 final.__setattr__(attr, value)
@@ -3848,7 +3878,7 @@ class Spectra(metaclass=_Meta):
         
         # transfer attrs
         default_attrs = final._default_attrs()
-        for attr in self._get_user_attrs():
+        for attr in self.get_attrs():
             if attr not in default_attrs:
                 value = copy.deepcopy(self.__dict__[attr])
                 final.__setattr__(attr, value)
@@ -3883,7 +3913,7 @@ class Spectra(metaclass=_Meta):
         
         # transfer attrs
         default_attrs = final._default_attrs()
-        for attr in self._get_user_attrs():
+        for attr in self.get_attrs():
             if attr not in default_attrs:
                 value = copy.deepcopy(self.__dict__[attr])
                 final.__setattr__(attr, value)
@@ -3928,7 +3958,7 @@ class Spectra(metaclass=_Meta):
         
         # transfer attrs
         default_attrs = final._default_attrs()
-        for attr in self._get_user_attrs():
+        for attr in self.get_attrs():
             if attr not in default_attrs:
                 value = copy.deepcopy(self.__dict__[attr])
                 final.__setattr__(attr, value)

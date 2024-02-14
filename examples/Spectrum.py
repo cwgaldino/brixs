@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Spectrum object is an object that stores a x and y array 
+"""A Spectrum object is an object that stores x and y values.
 
-It has pre-defined methods for operating in this x and y arrays
-
-New methods and attrs can be defined on the go
+Attrs can be associated with the Spectrum object. Also, it has pre-defined 
+methods for operating on these x and y values. New methods and attrs can be 
+defined on the fly.
 """
 
 # %% ---------------------------- imports --------------------------------- %% #
@@ -27,9 +27,10 @@ x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
 
 # Spectrum object can be initialized in many ways
+s1 = br.Spectrum()  # empty spectrum
 s1 = br.Spectrum(x=x, y=y)
 s1 = br.Spectrum(x, y)
-s1 = br.Spectrum(y)
+s1 = br.Spectrum(y)  # if x is not defined, x will be an array from 1 to len(y)
 s1 = br.Spectrum(y=y)
 
 # x and y data
@@ -54,7 +55,7 @@ print(s1.get_attrs())
 # item selection will return the x, y pair
 print(s[0])
 
-# items can be deleted
+# items (x, y pairs) can be deleted
 print(s.x)
 del s[0]
 print(s.x)
@@ -65,6 +66,15 @@ print(s.x)
 # one can save and load an spectrum
 s1.save('examples/spectrum_0.dat')
 s2 = br.Spectrum('examples/spectrum_0.dat')
+# xy-type files can be loaded 
+# Comments must be marked with `#` and columns must be separated by `,` (comma) 
+# The first column must be the x array
+
+# spectrum can also be loaded via load function
+s2 = br.Spectrum()
+s2.load('examples/spectrum_0.dat', comments='#')
+# load function have args that allow for more loading options
+# for instance the comments tag can be set
 
 # attrs are saved and loaded with spectrum
 # Note that, dictionaries and more complex attrs are not saved
