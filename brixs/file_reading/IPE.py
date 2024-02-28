@@ -38,6 +38,7 @@ def zero(self, peak = 1000, ranges = 10):
     s.crop(peak-ranges/2, peak+ranges/2)
     s.fit_peak(asymmetry=False, moving_average_window=1, ranges=[(peak-ranges/3, peak+ranges/3)])
     self.set_shift(value=-s.peaks[0]['c'].value)
+    return s.peaks[0]['c'].value
 
 def calc_spectrum(self:br.PhotonEvents, n:float):
     return self.calculate_spectrum(nbins = int((max(self.y)-min(self.y))*n))
@@ -332,10 +333,12 @@ def curvature(folderpath, prefix, x_min=0, x_max=3300):
 
 #
 
-def read3(label, folderpath, prefix, x_min=0, x_max=3300, calib1=[1,0], calib2=[1,0],
-          peak=[800,800], ranges=[100,100], n=1, 
-          plot=True, xlim=[1,3300], zero=True, curvature=False,
-          sum_='', plot_spe=False):
+def read3(folderpath, prefix, label='', 
+          calib1=[1,0], calib2=[1,0], sum_=1, bpp=1,
+          peak=[0,0], ranges=[100,100], 
+          seq_plot=False, spe_plot=False, spec_plot=True,
+          plt_range=[], zero=True, curvature=False, 
+          x_min=1, x_max=3300):
     x_all = list()
     y_all = list()
     ss = br.Spectra()
@@ -344,13 +347,20 @@ def read3(label, folderpath, prefix, x_min=0, x_max=3300, calib1=[1,0], calib2=[
     E = list()
     TA = list()
     TB = list()
+    Ry = list()
     x = list()
     y = list()
     data_ = list()
     files = glob.glob(folderpath+prefix+'*.h5')
     len_ = len(files)
+    
+    if calib1==[1,0] and calib2==[1,0]:
+        zero=False
+        peak=[800,800]
+        ranges=[200,200]
+        
 
-    if sum_ in [0,1,False, 'False','0','1']:
+    if sum_ in [0,1,False, 'False','0','1', '']:
         sum_=1
 
     elif sum_ in [True, 'all']:
@@ -361,28 +371,33 @@ def read3(label, folderpath, prefix, x_min=0, x_max=3300, calib1=[1,0], calib2=[
     for i, p in enumerate(files):
         file = h5py.File(p, 'r')
         data_.append(file['entry']['data']['data'][:])
-        NDAttr = file['entry']['instrument']['NDAttributes'][:]
-        E.append(NDAttr['Energy'])
-        TA.append(NDAttr['TempA'])
-        TB.append(NDAttr['TempA'])
+        NDAttr = file['entry']['instrument']['NDAttributes']
+        Ry.append(NDAttr['RIXS_Ry'][:][0])
+        E.append(NDAttr['Energy'][:][0])
+        TA.append(NDAttr['TempA'][:][0])
+        TB.append(NDAttr['TempA'][:][0])
         x_all.extend(data_[i][:,2])
         y_all.extend(data_[i][:,col])
         file.close()
-    
-    if plot_spe:
-        pe_ = br.PhotonEvents(x_all, y_all)
+        
+    pe_ = br.PhotonEvents()
+    if spe_plot:
+        pe_.x = x_all
+        pe_.y = y_all
         plt.figure()
         pe_.plot()
         plt.show()
-
+    
+    E = [np.average(E[i:i+sum_]) for i in range(0, len_, sum_)]
     datas = [data_[i:i+sum_] for i in range(0, len_, sum_)]
-    for data in datas:
+    for j, data in enumerate(datas):
         for subdata in data:
             x.extend(subdata[:,2])
             y.extend(subdata[:,col])
 
         pe = br.PhotonEvents(x, y)
         pe.xlim = [x_min, x_max]
+        #pe.ylim = ranges
         
         pe1 = pe.copy()
         pe2 = pe.copy()
@@ -391,29 +406,33 @@ def read3(label, folderpath, prefix, x_min=0, x_max=3300, calib1=[1,0], calib2=[
         pe2.xlim = [1651, x_max]
         
         ### Photon Events to Zero:
-        s1 = pe1.calculate_spectrum(nbins = int(1590*n))
-        s2 = pe2.calculate_spectrum(nbins = int(1590*n))
+        s1 = pe1.calculate_spectrum(nbins = int(1590*bpp))
+        s2 = pe2.calculate_spectrum(nbins = int(1590*bpp))
         s1.label=f'CCD1 {i}'
         s2.label=f'CCD2 {i}'
         s1.fix_monotonicity()
         s2.fix_monotonicity()
+        
+        if zero:
+            s1.set_shift(value=-(E[j]-calib1[1])/calib1[0])
+            s2.set_shift(value=-(E[j]-calib2[1])/calib2[0])
 
         ss1.append(s1)
         ss2.append(s2)
 
     ss1.interp()
     ss2.interp()
-
+    
     ss1.align(ranges=[peak[0]-ranges[0]/2, peak[0]+ranges[0]/2])
     ss2.align(ranges=[peak[1]-ranges[1]/2, peak[1]+ranges[1]/2])
     
-    ss1.xlabel = "Energy [eV]" if calib1[0] != 1 else "Pixel"
-    ss2.xlabel = "Energy [eV]" if calib2[0] != 1 else "Pixel"
+    ss1.xlabel = "Energy loss[eV]" if calib1[0] != 1 else "Pixel"
+    ss2.xlabel = "Energy loss[eV]" if calib2[0] != 1 else "Pixel"
     
     ss1.ylabel = "Intensity [ph]"
     ss2.ylabel = "Intensity [ph]"
 
-    if plot:
+    if seq_plot:
         ss1.sequential_plot()
         ss2.sequential_plot()
 
@@ -424,8 +443,8 @@ def read3(label, folderpath, prefix, x_min=0, x_max=3300, calib1=[1,0], calib2=[
     sum_s2.fix_monotonicity()
 
     if zero:
-        sum_s1.zero(peak=peak[0], ranges=ranges[0])
-        sum_s2.zero(peak=peak[1], ranges=ranges[1])
+        shift1=sum_s1.zero(peak=0, ranges=ranges[0])
+        shift2=sum_s2.zero(peak=0, ranges=ranges[1])
         
     ### px to Energy
     sum_s1.calib = -calib1[0]
@@ -437,15 +456,25 @@ def read3(label, folderpath, prefix, x_min=0, x_max=3300, calib1=[1,0], calib2=[
     ss.align()
     s = ss.calculate_sum()
     
-    s.label = label or 'Total Spectrum'
-    s.xlabel = "Energy [eV]" if calib[0] != 1 else "Pixel"
-    s.ylabel = "Intensity [ph.eV]"
-    if plot:
+    E = round(np.average(E),2)
+    Ry = round(np.average(Ry),2)
+    T = round(np.average(TB),2)
+    s.label = label or f'E={E}eV T={T}K Ry={Ry}°'
+    s.xlabel = "Energy loss[eV]" if calib1[0] != 1 and calib2[0] != 1 else "Pixel"
+    s.ylabel = "Photon counts[ph.eV]"
+    if spec_plot:
+        if not plt_range and zero:
+            plt_range=[-50*calib1[0],500*calib1[0]]
+        else:
+            s.calib = -1
+            plt_range=None
+ 
         plt.figure()
-        s.plot(ranges=xlim, label=s.label)
+        s.plot(ranges=plt_range, label=s.label)
+        plt.xlabel(s.xlabel)
+        plt.ylabel(s.ylabel)
         plt.legend()
         plt.show()
     
-    return s, [ss1, ss2]
-
+    return s, [ss1, ss2, pe_]
 # %%
