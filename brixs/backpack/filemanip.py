@@ -124,6 +124,10 @@ def rm(filepath):
     Args:
         filepath (string or pathlib.Path): filepath.
     """
+    filepath = Path(filepath)
+
+    if filepath.is_dir(): 
+        raise IsADirectoryError('Is a directory: `{filepath}`\nPlease, use br.rmdir() for directories')
     filepath = Path(filepath).unlink()
 
 def filelist(dirpath='.', string='*', case_sensitive=True):

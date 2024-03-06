@@ -7,6 +7,10 @@ from .brixs import PhotonEvents
 from .brixs import Spectrum
 from .brixs import Spectra
 from .peaks import Peaks
+from .model import Model
+
+# finder
+from .finder import *
 
 # # file reading
 # from .file_reading import PEAXIS

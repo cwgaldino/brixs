@@ -14,8 +14,14 @@ def is_integer(n):
         return True
     elif isinstance(n, np.int32):
         return True
+    elif isinstance(n, np.int64):
+        return True
     elif isinstance(n, float):
         return n.is_integer()
+    elif isinstance(n, str):
+        try: is_integer(float(n))
+        except ValueError:
+            return False
     else:
         return False
     
@@ -27,6 +33,10 @@ def is_number(n):
         return True
     elif isinstance(n, numbers.Number):
         return True
+    elif isinstance(n, str):
+        try: is_number(float(n))
+        except ValueError:
+            return False
     else:
         False
 

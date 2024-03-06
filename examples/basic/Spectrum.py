@@ -1,10 +1,35 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""A Spectrum object is an object that stores x and y values.
+"""A Spectrum object `s` stores x and y arrays
 
-Attrs can be associated with the Spectrum object. Also, it has pre-defined 
-methods for operating on these x and y values. New methods and attrs can be 
-defined on the fly.
+>>> x = np.linspace(-5, 5, 100)
+>>> y = np.sin(x)
+>>> s = br.Spectrum(x, y)
+
+One can easily get the x and y values from `s`
+
+>>> s.x
+>>> s.y
+
+Methods operate on these x and y values
+
+>>> print(s.y[1])
+>>> s.set_offset(2)
+>>> print(s.y[1])
+
+help for each method is available through python's built-in help function
+
+>>> help(s.set_offset)
+
+Attrs can be added to `s` on the go
+
+>>> s.new_attr = 10
+
+New methods can also be added on the go (see advanced examples)
+
+>>> br.Spectrum.new_method = new_method
+
+See below for a more complete description.
 """
 
 # %% ---------------------------- imports --------------------------------- %% #
@@ -38,7 +63,7 @@ print(s1.x)
 print(s1.y)
 print(s1.data)
 
-# attributes can be associated with spectrum object
+# attributes can be added to spectrum object
 s1.temperature = 10
 s1.composition = [9, 3, 5, 6]
 s1.string      = 'test'
@@ -77,13 +102,12 @@ s2.load('examples/spectrum_0.dat', comments='#')
 # for instance the comments tag can be set
 
 # attrs are saved and loaded with spectrum
-# Note that, dictionaries and more complex attrs are not saved
+# Note that, dictionaries and more complex attrs are not saved (this might change in the future)
 print(s2.temperature)
 # print(s2.dictionary)  # ERROR
 
 # attrs can be copied between spectrum objects
 s2.copy_attrs_from(s1)
-print(s2.dictionary)
 
 
 # %% ---------------------- Example 2: operations ------------------------- %% #
@@ -140,7 +164,7 @@ s.check_monotonicity()  # calculate monotonicity after fixing
 print(s.monotonicity)
 print(s.x)
 
-# %% ----------------------- Example 4: bese modifiers -------------------- %% #
+# %% ----------------------- Example 4: base modifiers -------------------- %% #
 x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
 s = br.Spectrum(x, y)
@@ -167,7 +191,7 @@ s.set_offset(30)
 # %% ----------------------- Example 5: modifiers ------------------------- %% #
 x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
-s = br.Spectrum(x, y)
+s = br.Spectrum()
 
 # these are the defined modifiers
 s.floor()      # uses s.offset to make the average value of the y-axis zero
@@ -182,9 +206,11 @@ x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
 s1 = br.Spectrum(x, y)
 
+# coping syntax 1
 s2 = br.Spectrum()
 s2.copy(s1)
 
+# coping syntax 2
 s2 = s1.copy()
 
 # %% ---------------------- Example 7: calculate -------------------------- %% #
@@ -200,7 +226,6 @@ smooth = s.smooth()
 area = s.calculate_area()
 xsum = s.calculate_x_sum()
 ysum = s.calculate_y_sum()
-area = s.calculate_area()
 
 # index finding
 i  = s.index(x=4)
@@ -222,77 +247,3 @@ s.plot(shift=1, offset=1)     # quickly adjustments can be made
 # values where the mouse cursor is to the the clipboard by left and right 
 # mouse button click. Pressing the wheel copies the image. Double left click
 # prints the figure coordinates (from 0 to 1).
-
-# %% --------------------- Example 9: peak finding ------------------------ %% #
-x = np.linspace(0, 10, 100)
-y = br.gaussian_fwhm(x=x, amp=4, c=4, w=1) + br.gaussian_fwhm(x=x, amp=2, c=8, w=1)
-s = br.Spectrum(x, y)
-
-# uses scipy.signal.find_peaks()
-s.find_peaks()
-print(s.peaks)  # print list of peaks found
-
-print(s.peaks[0])
-print(s.peaks[1])
-
-# peaks can be removed
-s.peaks.remove(0)
-
-# peaks can be added
-s.peaks.append(amp=4, c=4, w=1)
-
-# peaks can be modifies
-s.peaks[1]['amp'].value = 3
-
-# one can calculate a spectrum from peaks
-s2 = s.peaks.calculate_spectrum()
-
-# quick plot
-br.figure()  
-s.plot(marker='o') 
-s.peaks.plot()     # place a marker at every peak found  
-s2.plot()
-
-# %% --------------------- Example 10: peak fitting ----------------------- %% #
-x = np.linspace(0, 10, 100)
-y = br.gaussian_fwhm(x=x, amp=4, c=4, w=1) + br.gaussian_fwhm(x=x, amp=2, c=8, w=1)
-s = br.Spectrum(x, y)
-
-# fit one peak
-s.fit_peak(ranges=(0, 5))
-print(s.peaks)
-one_peak = s.peaks.calculate_spectrum()
-
-# find all peaks and fit
-s.find_peaks()
-s.fit_peaks() 
-fit = s.peaks.calculate_spectrum()
-
-# quick plot
-br.figure()  
-s.plot(marker='o') 
-fit.plot()
-one_peak.plot()   
-
-# %% ----------------- Example 11: defining new methods ------------------- %% #
-x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-y = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
-s1 = br.Spectrum(x, y)
-
-# define new function that acts on x and y
-def new_function(self, value):
-    """Adds a value to the y-axis"""
-    self.y = self.y + value
-
-# attaches function to type Spectrum
-br.Spectrum.new_function = new_function
-
-# from now one, every spectrum type will have new_function defined.
-# even spectrum types created before defying new_function
-s2 = br.Spectrum(x, y)
-
-s1.new_function(5)
-print(s1.y)
-
-s2.new_function(2)
-print(s2.y)
