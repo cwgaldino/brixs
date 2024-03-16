@@ -1127,12 +1127,14 @@ class Model(lmfit.Parameters):
         ################
         # x and y data #
         ################
-        if (temp, br.Spectrum):
+        if isinstance(temp, br.Spectrum):
             xs = [temp.x, ]
             ys = [temp.y, ]
-        elif (temp, br.Spectra):
+        elif isinstance(temp, br.Spectra):
             xs = [s.x for s in temp]
             ys = [s.y for s in temp]
+        else:
+            raise('there is not parent br.Spectrum/br.Spectra object associated with this fitting model')
 
         #####################
         # residual function #

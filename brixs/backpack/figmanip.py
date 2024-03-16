@@ -4,22 +4,16 @@
 
 
 # %% ------------------------- Standard Imports --------------------------- %% #
-import sys
 import copy
 from pathlib import Path
 import numpy as np
 import warnings
-from subprocess import Popen, PIPE
-
-from collections import OrderedDict
-try:
-    from bs4 import BeautifulSoup
-except ModuleNotFoundError:
-    pass
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import brixs as br
 import tempfile
+from types import MethodType
+from string import ascii_lowercase
 
 # %% ------------------------- Matplotlib Imports ------------------------- %% #
 import matplotlib
@@ -29,11 +23,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib import colormaps
+from collections.abc import Iterable
+from cycler import cycler
 
 # %% ------------------------- backpack Imports --------------------------- %% #
 from .arraymanip import index
 from .interact import copy2clipboard, png2clipboard, svg2clipboard, operating_system
-from .numanip import n_digits, n_decimal_places, round_to_1, is_integer
+from .numanip import n_decimal_places, round_to_1
 
 # %% ------------------------- Initial definitions ------------------------ %% #
 is_windows = operating_system() == 'windows'
@@ -65,7 +61,8 @@ def set_cycler(n='tab10', ls=1):
     Returns:
         None
     """
-    from cycler import cycler
+    # reset cycler
+    reset_cycler()
 
     # set default
     if n is None:
@@ -108,21 +105,21 @@ def set_cycler(n='tab10', ls=1):
     # adjust lists
     number_of_colors     = len(colors)
     number_of_linestyles = len(linestyles)
-    colors     = colors*number_of_linestyles
-    linestyles = list(np.repeat(linestyles, number_of_colors))
+    colors               = colors*number_of_linestyles
+    linestyles           = list(np.repeat(linestyles, number_of_colors))
     
     # set colormap and linestyles
     plt.rc('axes', prop_cycle=(cycler('color', colors) + cycler('linestyle', linestyles)))
 
-    # reset cycler
-    br.reset_cycler()
+    # # reset cycler
+    # reset_cycler()
 
 def get_available_colormaps():
     """returns a list of available colormaps"""
     return list(colormaps)
 
 def set_cycler_from_colormap(name, n):
-    """Sets a color cycler based on a colormap.
+    """Sets a color cycler based on a colormap. 
 
     Args:
         name (str): name of the colormap
@@ -317,31 +314,54 @@ def maximize():
 
 # %% ================================ figure ============================== %% #
 def figure(**kwargs):
-    """Create figure object.
+    """Create figure object. Wrapper for `plt.figure()`_.
 
-    This command is the same as ``plt.figure()``, but is attaches the function
-    :py:func:`onclick` to the figure so everytime you click on the figure, it
-    calls :py:func:`onclick`.
+    Mouse click behavior:
 
-    If figsize is passed as an argument, grid is disabled.
+        Right click:
+            x value is copied to the clipboard.
+        Left click OR (y + Right click):
+            y value is copied to the clipboard.
+        Middle click:
+            Figure is saved as svg or png in the default folder and copied to the clipboard
+            (see :py:func:`set_onclick()`).
+
+    The following br.settings affect figure:
+
+        br.settings.FIGURE_POSITION
+        br.settings.FIGURE_FORCE_ON_TOP
+        br.settings.FIGURE_DPI
+        br.settings.FIGURE_SIZE
+        br.settings.FIGURE_GRID
 
     Args:
-        **kwargs: kwargs are passed to ``plt.figure()``.
+        **kwargs: kwargs are passed to `plt.figure()`.
 
-    See Also:
-        :py:func:`onclick`
+    Note:
+        This function overwrites the behavior of `figsize` parameters. In
+        plt.figure(figsize=(w, h)), w and h must be given in inches. However,
+        br.figure(figsize=(w, h)) accepts w and h in cm. 
+    
+    Returns:
+        figure object
+    
+    .. _plt.figure(): https://matplotlib.org/stable/api/figure_api.html
     """   
-    # open figure and initialize event callbacks
+    # figsize in cm
+    if 'figsize' in kwargs:
+        kwargs['figsize'] = (cm2inch(kwargs['figsize'][0]), cm2inch(kwargs['figsize'][1]))
+
+    # initizalize figure
     fig = plt.figure(**kwargs)
-    fig = _fix_figure(fig, **kwargs)
+
+    # event callbacks
+    fig = _apply_figure_adjustments(fig, **kwargs)
     return fig
 
-# maybe obsolete
-def _fix_figure(fig, **kwargs):
-    """adds onclick functionality to figures
-    """
-    cid1 = fig.canvas.mpl_connect('button_press_event', onclick)
-    # cid2 = fig.canvas.mpl_connect('resize_event', onmove)
+def _apply_figure_adjustments(fig, **kwargs):
+    """adds onclick functionality to figures"""
+    cid1 = fig.canvas.mpl_connect('button_press_event', _onclick)
+    # cid2 = fig.canvas.mpl_connect('resize_event', _onmove)
 
     # position
     if br.settings.FIGURE_POSITION is not None:
@@ -382,60 +402,24 @@ def _fix_figure(fig, **kwargs):
         else:
             set_window_position()
             br.settings._figure_count = 0
+
+    # grid function
+    fig._grid = False
+    fig.grid  = MethodType(_grid, fig)
+
     return fig
 
-def onmove(event):
-    if br.br.settings.FIGURE_FIX_RESOLUTION:
-        fig = plt.gcf()
-        fig.set_dpi(fig.old_dpi)
-        # time.sleep(1)
-
-        # dpi
-        
-
-        # adjust size
-        # set_window_size(fig.old_size)
-        
-        # # before
-        # old_size = fig.old_size
-        # old_dpi  = fig.old_dpi
-
-        # # current
-        # size = (event.width, event.height)
-        # dpi  = old_dpi
-        
-        # if old_size == size:
-        #     print('same')
-        # else:
-        #     print('changed')
-        #     print(size, old_size)
-
-        #     # new (corrected)
-        #     new_size = size
-        #     new_dpi  = dpi*old_size[0]/(size[0])
-        #     print(new_dpi)
-
-        #     # set
-        #     # fig.set_dpi(new_dpi)
-        #     fig.old_size = new_size
-        #     # set_window_size(new_size)
-
-        # # print('moved')
-        # # print(new_dpi)
-        # # # print('old size: ' + str(old_size))
-        # # # print('new size: ' + str(new_size))
-    pass
-
-# %% ============================== on click ============================== %% #
-def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None):
-    """Set the default format for saving figures using :py:func:`onclick()`.
+def set_onclick_save_defaults(format='svg', resolution=300, folder=None):
+    """Set the default format for saving figures using Middle click press on a figure.
 
     Args:
         format (string, optional): 'svg' or 'png'.
         resolution (int, optional): resolution for png images in dpi.
         folder (string or pathlib.Path): folderpath to save figures.
+    
+    Returns:
+        None
     """
-
     global onclick_fig_format, onclick_resolution, onclick_folder, onclick_round_x, onclick_round_y
     if format == 'png':
         onclick_fig_format = 'png'
@@ -448,19 +432,11 @@ def set_onclick(format='svg', resolution=300, round_x=2, round_y=2, folder=None)
     else:
         onclick_folder = Path(folder)
 
-    if round_x is None:
-        onclick_round_x = None
-    else:
-        onclick_round_x = round_x
-
-    if round_y is None:
-        onclick_round_y = None
-    else:
-        onclick_round_y = round_y
-
-def onclick(event):
+def _onclick(event):
     """This function is called every time a mouse key is pressed over a figure.
 
+    Double Right click:
+        prints cursor position in terms of figure coordinates.
     Right click:
         x value is copied to the clipboard.
     Left click OR (y + Right click):
@@ -482,15 +458,15 @@ def onclick(event):
     # print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
     #       ('double' if event.dblclick else 'single', event.button,
     #        event.x, event.y, event.xdata, event.ydata))
-    try:
-        onclick_round_y
-    except NameError:
-        onclick_round_y = 2
+    # try:
+    #     onclick_round_y
+    # except NameError:
+    #     onclick_round_y = 2
 
-    try:
-        onclick_round_x
-    except NameError:
-        onclick_round_x = 2
+    # try:
+    #     onclick_round_x
+    # except NameError:
+    #     onclick_round_x = 2
 
     ################
     # double click #
@@ -585,9 +561,233 @@ def onclick(event):
             except TypeError:
                 pass
 
+def _onmove(event):
+    """This function is called every time the figure changes position on the screen."""
+    if br.br.settings.FIGURE_FIX_RESOLUTION:
+        fig = plt.gcf()
+        fig.set_dpi(fig.old_dpi)
+        # time.sleep(1)
+
+        # dpi
+        
+
+        # adjust size
+        # set_window_size(fig.old_size)
+        
+        # # before
+        # old_size = fig.old_size
+        # old_dpi  = fig.old_dpi
+
+        # # current
+        # size = (event.width, event.height)
+        # dpi  = old_dpi
+        
+        # if old_size == size:
+        #     print('same')
+        # else:
+        #     print('changed')
+        #     print(size, old_size)
+
+        #     # new (corrected)
+        #     new_size = size
+        #     new_dpi  = dpi*old_size[0]/(size[0])
+        #     print(new_dpi)
+
+        #     # set
+        #     # fig.set_dpi(new_dpi)
+        #     fig.old_size = new_size
+        #     # set_window_size(new_size)
+
+        # # print('moved')
+        # # print(new_dpi)
+        # # # print('old size: ' + str(old_size))
+        # # # print('new size: ' + str(new_size))
+    pass
+
+# %% subplots
+def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, **fig_kw):
+    """Create a figure and a set of subplots. Wrapper for `plt.subplots()`_.
+
+    Args:
+        nrows, ncols (int): Number of rows/columns of the subplot grid.
+        sharex, sharey (bool or str, optional): Share the x or y axis between 
+            axes. Options are: True, False, 'all', 'row', 'col'. Default is False
+        hspace, wspace (float, optional): The amount of height/width reserved for space 
+            between subplots, expressed as a fraction of the average axis 
+            height/width. Default is 0.3.
+        width_ratios, height_ratios (list, optional): Defines the relative heights/widths of the 
+            ows/columns. Each row/column gets a relative height/width of 
+            ratios[i] / sum(ratios). If not given, all rows/columns will have 
+            the same width. 
+        **fig_kw: All additional keyword arguments are passed to the br.figure call
+    
+    Returns:
+        fig, axes
+    
+    .. _plt.subplots(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.subplots.html
+    """
+    #########
+    # check #
+    #########
+    assert nrows > 0, 'nrows must be > 0'
+    assert ncols > 0, 'ncols must be > 0'
+
+    ###############
+    # gridspec_kw #
+    ###############
+    # ratios
+    if width_ratios is None:
+        width_ratios=[1]*ncols
+    if height_ratios is None:
+        height_ratios=[1]*nrows
+
+    # final
+    gridspec_kw = {}
+    gridspec_kw['wspace']        = wspace 
+    gridspec_kw['hspace']        = hspace 
+    gridspec_kw['width_ratios']  = width_ratios 
+    gridspec_kw['height_ratios'] = height_ratios 
+
+    ##########
+    # fig_kw #
+    ##########
+    if 'figsize' in fig_kw:
+        fig_kw['figsize'] = (cm2inch(fig_kw['figsize'][0]), cm2inch(fig_kw['figsize'][1]))
+
+    ############
+    # subplots #
+    ############
+    fig, _axes = plt.subplots(nrows, ncols, 
+                              sharex=sharex,
+                              sharey=sharey,
+                              gridspec_kw=gridspec_kw, **fig_kw)
+    fig = _apply_figure_adjustments(fig, **fig_kw)
+
+    #################
+    # fatten output #
+    #################
+    axes = [0]*(ncols*nrows)
+    if ncols == 1 and nrows == 1:
+        _axes.row = 0
+        _axes.col = 0
+        axes[0] = _axes
+    elif nrows == 1:
+        for i, ax in enumerate(_axes):
+            ax.row = 0
+            ax.col = i
+            axes[i] = ax
+    elif ncols == 1:
+        for i, ax in enumerate(_axes):
+            ax.row = i
+            ax.col = 0
+            axes[i] = ax
+    else:
+        for i, row in enumerate(_axes):
+            for j, ax in enumerate(row):
+                ax.row = i
+                ax.col = j
+                axes[i*ncols+j] = ax
+    # try:
+    #     for i, ax in enumerate(br.flatten(_axes)):
+    #         axes[i] = ax
+    # except TypeError:
+    #     axes[0] = _axes
+
+    ####################
+    # new axes methods #
+    ####################
+    for ax in axes:
+        ax.remove_xlabel = MethodType(remove_xlabel, ax)
+        ax.remove_ylabel = MethodType(remove_ylabel, ax)
+
+        ax.remove_xticklabels = MethodType(remove_xticklabels, ax)
+        ax.remove_yticklabels = MethodType(remove_yticklabels, ax)
+
+    return fig, axes
+
+def merge_axes(ax1, ax2):
+    """merge axes created via plt.subplots
+
+    Args:
+        ax1, ax2 (axes object): axes to be merged.
+
+    Returns
+        merged axes object
+    """
+    # check if axes came from the same figure
+    assert ax1.figure == ax1.figure, 'axes must come from the same figure'
+
+    # check if axes are neighbors and the same size
+    xmin1 = ax1._subplotspec.rowspan.start
+    xmax1 = ax1._subplotspec.rowspan.stop
+    ymin1 = ax1._subplotspec.colspan.start
+    ymax1 = ax1._subplotspec.colspan.stop
+
+    xmin2 = ax2._subplotspec.rowspan.start
+    xmax2 = ax2._subplotspec.rowspan.stop
+    ymin2 = ax2._subplotspec.colspan.start
+    ymax2 = ax2._subplotspec.colspan.stop
+
+    assert xmin1 == xmin2 or ymin1 == ymin2, 'axes must be neighbors'
+    if xmin1 == xmin2:
+        assert (xmax1 - xmin1) == (xmax2 - xmin2), 'axes must have the same height'
+    elif ymin1 == ymin2:
+        assert (ymax1 - ymin1) == (ymax2 - ymin2), 'axes must have the same width'
+
+    # get new grid coordinates
+    xmin = min(xmin1, xmin2)
+    xmax = max(xmax1, xmax2)
+    ymin = min(ymin1, ymin2)
+    ymax = max(ymax1, ymax2)
+
+    # add subplot
+    gs = ax1.get_gridspec()
+    ax3 = ax1.figure.add_subplot(gs[xmin:xmax, ymin:ymax])
+
+    # remove the underlying axes
+    ax1.remove()
+    ax2.remove()
+
+    return ax3
+
+# %% figure grid
+def _grid(self, visible=None):
+    
+    if visible is None:
+        if self._grid == False:
+            visible = True
+        else:
+            visible = False
+    elif visible == True:
+        if self._grid != False:
+            return
+    elif visible == False:
+        if self._grid == False:
+            return
+
+    if visible:
+        self._grid = self.add_axes([0, 0, 1, 1], alpha=0.5)
+        self._grid.patch.set_alpha(0.5)
+
+        br.set_xticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
+        br.set_yticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
+        
+        self._grid.grid(which='major', color='red', lw=0.5)
+        self._grid.grid(which='minor', color='black', ls=':', lw=0.5)
+    
+        for v in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
+            br.text(ax=self._grid, s=v, x=v, loc='lower', horizontalalignment='center')
+            br.text(ax=self._grid, s=v, y=v, loc='left')
+    else:
+        self._grid.set_visible(False)
+        del self._grid
+        self._grid = False
+    return
+
+
 # %% ==================================== font ============================ %% #
 def publication_font(size=9):
-    """Set font options for publication quality font.
+    """Set font options for publication quality font (cmr10).
 
     Change this function accordingly to your preferences.
 
@@ -620,7 +820,7 @@ def default_font(size=10):
 
 # %% ================================== text ============================== %% #
 def rtext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
-    """Create text at the x coordinate on the right side of the last curve ploted
+    """Create text at x coordinate on the right side of the last curve plotted
 
     Args:
         x (number): x coordinate for the text
@@ -630,10 +830,12 @@ def rtext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
         will be used. Default is None
         copy_color (bool, optional): if True, the color of the text will match
         the color of the curve. Default is False
-        **kwargs: kwargs are passed to plt.text()
+        **kwargs: kwargs are passed to `plt.text()`_
 
     Returns:
         matplotlib.text.Text
+    
+    .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
     """
     if ax is None:
         ax = plt.gca()
@@ -656,7 +858,7 @@ def rtext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
     return ax.text(x + xoffset, y, s, kwargs)
 
 def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
-    """Create text at the x coordinate on the left side of the last curve ploted
+    """Create text at x coordinate on the left side of the last curve plotted
 
     Args:
         x (number): x coordinate for the text
@@ -666,10 +868,12 @@ def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
         will be used. Default is None
         copy_color (bool, optional): if True, the color of the text will match
         the color of the curve. Default is False
-        **kwargs: kwargs are passed to plt.text()
+        **kwargs: kwargs are passed to `plt.text()`_
 
     Returns:
         matplotlib.text.Text
+    
+    .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
     """
     if ax is None:
         ax = plt.gca()
@@ -693,9 +897,11 @@ def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
     return ax.text(x + xoffset, y, s, **kwargs)
 
 def text(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
-    """Write text to a pre-defined locations
+    """Write text to a pre-defined locations. Wrapper for `plt.text()`_.
 
-    text is writen in axes coord (i.e. text does not move with the data).
+    Text is written in axes coord (i.e. text does not move with the data). The 
+    coordinate system of the Axes; (0, 0) is bottom left of the axes, and (1, 1)
+    is top right of the axes.
 
     Args:
         s (str): text string
@@ -707,16 +913,19 @@ def text(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
         x, y (number): x and y in axes coordinates (0, 1). Overwrites loc.
         ax (axes, optional): axes to put the text on. If None, the current axes 
         will be used. Default is None
-        **kwargs: kwargs are passed to plt.text()
+        **kwargs: kwargs are passed to `plt.text()`_
 
     Returns:
         matplotlib.text.Text
+    
+    .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
     """
     if ax is None:
         ax = plt.gca()
 
     if x is not None and y is not None:
-        return ax.text(x, y, s, transform=fig.transAxes, **kwargs)
+        # return ax.text(x, y, s, transform=fig.transAxes, **kwargs)
+        return ax.text(x, y, s, transform=ax.transAxes, **kwargs)
 
     # get figure size
     # w, h = ax.get_figure().get_size_inches()
@@ -818,13 +1027,55 @@ def text(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
     # inv    = ax.transData.inverted()
     # _x, _y = inv.transform((_x, _y))
     # # print(_x)
-    print(f'x={_x}, y={_y}')
+    # print(f'x={_x}, y={_y}')
 
     # final
     # print(kwargs)
     return ax.text(_x, _y, s, transform=ax.transAxes, **kwargs)
     # return ax.text(x, y, s, transform=fig.transFigure, **kwargs)
     # return ax.text(x, y, s, **kwargs)
+
+def label_axes(axes, loc='best'):
+    """put letters from `(a)` to `(z)` in axes.
+
+    Args:
+        axes (axes object or list): axes list
+        locs (str or list, optional): The location of the text. If list, list
+            must be same length as number of axes. Options are
+            'center', 'best',
+            'upper left', 'upper right', 'lower left', 'lower right', 
+            'upper center', 'lower center', 'center left', 'center right'. 
+            Default is 'best'.
+
+    Returns:
+        list with text object
+    """
+    # fix axes
+    if isinstance(axes, Iterable) == False:
+        axes = [axes, ]
+
+    # fix locs
+    if isinstance(loc, str):
+        loc = [loc]*axes
+    
+    assert len(axes) == len(loc), 'number of axes must be the same as locs'
+
+    i = 0
+    final = []
+    for ax in axes:
+        letter = ascii_lowercase[i]
+        final.append(text(s='(' + letter + ')', ax=ax, loc=loc[i]))
+        i += 1
+    return final
+
+# %% ================================= label ============================== %% #
+def remove_xlabel(ax):
+    """remove xlabel from axes"""
+    ax.set_xlabel('')
+
+def remove_ylabel(ax):
+    """remove ylabel from axes"""
+    ax.set_ylabel('')
 
 # %% ================================= ticks ============================== %% #
 # get ticks showing
@@ -850,377 +1101,394 @@ def get_yticks_showing(ax):
     """
     return [y for y in ax.get_yticks() if y >= ax.get_ylim()[0] and y <= ax.get_ylim()[1]]
 
-# set ticks (developers note: maybe in the future, write a core function here)
-def set_xticks(ax=None, start=None, stop=None, pad=None, n_ticks=None, ticks_sep=None, n_minor_ticks=None, fontproperties=None, **kwargs):
+# set ticks
+def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set x ticks of a plot.
 
+    Usage:
+        For setting up major ticks:
+
+            set_ticks(start, stop, n_ticks)
+            set_ticks(start, stop, ticks_sep)
+            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
+            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(ticks)                      # manually define each tick position
+            set_ticks(ticks, labels)              # manually define each tick position and label
+
+        For setting up minor ticks:
+
+            set_ticks(n_minor_ticks)             # equally spaced minor ticks
+            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_ticks)               # manually define each minor tick position
+
     Args:
-        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
-            last ax will be used.
-        start (float or int): start value for ticks (not the plot edge --- see ``pad``)
-        stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
-        n_ticks (int): Number of ticks. Ticks separation is calculated 
-            accordingly. Overwrites ticks_sep.
-        ticks_sep (float or int): Ticks separation.
-        n_minor_ticks (int): Number of minor ticks between two major ticks.
+        ax (matplotlib.axes, optional): axes object to set ticks.
+
+        *Major ticks*
+        start, stop (number, optional): major ticks start/stop value. Use None
+            to not keep current start/stop value. Default is None.
+        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
+            n_ticks overwrites ticks_sep. Default is None.
+        ticks, labels (Iterable, optional): Iterable with tick positions and labels.
+        Overwrites start, stop, n_ticks, ticks_sep.
+        
+        *Padding (plotting limits)*
+        pad (number or tuple, optional): padding between plot edge and 
+            closest tick in terms of ticks separation. If tuple, first value 
+            applies to the left edge and second value to the right edge. 
+            Typically, padding should be between a value between 0 and 1. If pad
+            is None, plot limits remain unchanged. However, if pad is None and 
+            start/stop are defined, pad is set to (0, 0). Default is None.
+
+        *Minor ticks*
+        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        ticks between two major ticks or minor tick separation. n_minor_ticks
+        overwrites minor_ticks_sep. Default is None.
+        minor_ticks (Iterable, optional): Iterable with minor tick positions.
+        Overwrites n_minor_ticks and minor_ticks_sep.
+
+        *font*
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
-        pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
-        # n_decimal_places (int): Number of decimal places to use for tick labels.
-        direction (str, optional): default is 'out', possible values are 'in' and 'out'
 
-    Note:
-        To set minor and major ticks 'manually' use `xaxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
+        *ticks parameters*
+        **kwargs: kwargs are passed to `ax.tick_params()`_ that sets tick parameters.
 
-            _ = ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
+        If not specified, the following parameters are passed to `ax.tick_params()`_:
 
-        Set labels manually by using:
+        Args:
+            which ('major', 'minor', 'both', optional): The group of ticks to which the parameters 
+                are applied. Default is 'both'.
+            direction ('in', 'out', 'inout', optional): Puts ticks inside the 
+                Axes, outside the Axes, or both. Default is 'in'
+            bottom, top (bool, optional): Whether to draw the bottom/top ticks.
+                Default is True.
 
-            _ = ax.set_yticklabels([1, 2, 3, 4, 5, 6])
-
+    Returns:
+        None
+    
+    .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
     """
+    ############
+    # get axis #
+    ############
     if ax is None:
         ax = plt.gca()
 
-    # get ticks showing
-    # ticks_showing = get_xticks_showing(ax=ax)
+    ######################
+    # default parameters #
+    ######################
+    if 'axis' not in kwargs:
+        kwargs['axis'] = 'x'
+    if 'direction' not in kwargs:
+        kwargs['direction'] = 'in'
+    if 'bottom' not in kwargs:
+        kwargs['bottom'] = True
+    if 'top' not in kwargs:
+        kwargs['top'] = True
 
-    ## collecting kwargs
-    # n_ticks   = None
-    # ticks_sep = None
-    # n_minor_ticks  = None
-    # fontproperties = None
-    # pad            = None
-    # n_decimal_places = None
-
-    # # % tick params
-    # tick_params = {'bottom': True,
-    #                 'top': True,
-    #                 # 'right': True,
-    #                 # 'left': True,
-    #                 'labelbottom': True,
-    #                 # 'labelleft': True,
-    #                 # 'labelright': False,
-    #                 'labeltop': False,
-    #                 'direction': 'out'}
-    # for attr in tick_params:
-    #     if attr in kwargs:
-    #         tick_params[attr] = kwargs.pop(attr)
-    #         if attr != 'direction':
-    #             assert type(tick_params[attr]) == bool, f'{attr} must be True or False'
-    # assert tick_params['direction'] in ('in', 'out',  'inout'), 'invalid value for direction.\nMust be either `in` or `out`'
-    
-    # % start and stop
-    # if 'start' in kwargs:
-    #     start = kwargs.pop('start')
-    # # if start is None:
-    # #     start = ticks_showing[-1]
-    # #     for line in ax.get_lines():
-    # #         if start > min(line.get_xdata()):
-    # #             start = min(line.get_xdata())
-    # if 'stop' in kwargs:
-    #     stop = kwargs.pop('stop')
-    # # if stop is None:
-    # #     stop = ticks_showing[0]
-    # #     for line in ax.get_lines():
-    # #         if stop < max(line.get_xdata()):
-    # #             stop = max(line.get_xdata())
-    
-    # # % minor ticks
-    # if 'n_minor_ticks' in kwargs:
-    #     n_minor_ticks = kwargs.pop('n_minor_ticks')
-
-    # # % font  
-    # if 'fontproperties' in kwargs:
-    #     fontproperties = kwargs.pop('fontproperties')
-
-    # # % padding
-    # if 'pad' in kwargs:
-    #     pad = kwargs.pop('pad')
-
-    # # % n decimal places
-    # if 'n_decimal_places' in kwargs:
-    #     n_decimal_places = kwargs.pop('n_decimal_places')
-
-    
-    # # % n_ticks and tick_sep
-    # if 'n_ticks' in kwargs:
-    #     n_ticks = kwargs.pop('n_ticks')
-    # if 'ticks_sep' in kwargs:
-    #     ticks_sep = kwargs.pop('ticks_sep')
-
-    # if 'zorder' not in kwargs:
-    #     kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
-
-    if n_ticks is not None:
-        if n_ticks < 2:
-            raise ValueError('n_ticks needs to be bigger or equal than 2.')
-    if n_ticks is None and ticks_sep is None:
-        # n_ticks = len(ticks_showing)
-        ticks_showing = get_xticks_showing(ax=ax)
-        ticks_sep = np.mean(np.diff(ticks_showing))
-
-    
-    # # raise error for non recognized args
-    # if len(kwargs.keys()) > 0:
-    #     raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
-
-
-    # % Ticks ======================
-    if start is None and stop is None and pad is None:
-        # ticks = ticks_showing
-        # start = ticks[0]
-        # stop  = ticks[-1]
-        pass
-    else:
-        # initial
+    #####################
+    # major ticks setup #
+    #####################
+    if ticks is None:
         if n_ticks is not None:
-            ticks   = np.linspace(start, stop, n_ticks)
+            assert n_ticks > 1, 'n_ticks needs to be > 1.'
+        if start is not None or stop is not None or n_ticks is not None or ticks_sep is not None:
+            if start is not None and stop is not None and n_ticks is not None:
+                ticks = np.linspace(start, stop, n_ticks)
+            elif start is not None and stop is not None and ticks_sep is not None:
+                ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+            elif start is not None and n_ticks is not None and ticks_sep is not None:
+                stop = start + n_ticks*ticks_sep
+                ticks = np.linspace(start, stop, n_ticks)
+            elif n_ticks is not None:
+                ticks_showing = get_xticks_showing(ax=ax)
+                start = ticks_showing[0]
+                stop  = ticks_showing[-1]
+                ticks = np.linspace(start, stop, n_ticks)
+            else:
+                raise ValueError('Invalid input. See help(br.set_xticks) for help.')
+            
+            # set ticks
+            _ = ax.xaxis.set_ticks(ticks)
+
+            # set label font
+            if fontproperties is not None:
+                _ = ax.set_xticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
+            
+            # if start/stop is defined, select pad to (0, 0)
+            if pad is None:
+                pad = (0, 0)
+    else:
+        assert isinstance(ticks, Iterable), 'ticks must be iterable'
+        assert len(ticks) > 1, 'ticks must have length > 1'
+        _ = ax.xaxis.set_ticks(ticks)
+
+        # set labels
+        if labels is not None:
+            assert isinstance(labels, Iterable), 'ticks must be iterable'
+            assert len(ticks) == len(labels), 'len(ticks) must be the same as len(labels)'
+            if fontproperties is not None:
+                _ = ax.set_xticklabels(labels, fontproperties=fontproperties, visible=True)
+            else:
+                _ = ax.set_xticklabels(labels)
         else:
-            ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+            if fontproperties is not None:
+                _ = ax.set_xticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
 
-        assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
+    ##########
+    # limits #
+    ##########
+    if pad is not None:
+        if isinstance(pad, Iterable) == False:
+            assert br.is_number(pad), 'pad must be a number or a tuple/list with length 2'
+            pad = (pad, pad)
 
-        # ticks shift to get better values (include zero)
-        if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
-            ticks = ticks-ticks[br.index(ticks, 0)]
-        elif stop-start > 5: # If zero is not included, round ticks if range is larger than 5
-            ticks = ticks-(ticks[0]-int(ticks[0]))
+        # check
+        assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
+        assert br.is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
+        assert br.is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
-        # ticks edges
-        if ticks[-1]+np.mean(np.diff(ticks))*0.5 < stop:
-            ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
-        if ticks[0]-np.mean(np.diff(ticks))*0.8 > start:
-            ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
-
-        # limits
-        if pad is None:
-            min_lim = start
-            max_lim = stop
-        else:
-            try:
-                if len(pad) == 2:
-                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
-                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[1]
-                else:
-                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
-                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[0]
-            except TypeError:
-                min_lim = ticks[0] - (ticks[1]-ticks[0])*pad
-                max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad
-
-        # # decimal places to show
-        # if n_decimal_places is not None:
-        #     ticks = [np.round(tick, n_decimal_places) for tick in ticks]
-
-
-        # applying changes ======================
-        # print(ticks)
-    
-
-        # set ticks
-        if fontproperties is not None:
-            dummy = ax.set_xticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
-        else:
-            dummy = ax.set_xticks(ticks)
-
-        # limits
+        # set limits
+        ticks_sep = ticks[1]  - ticks[0]
+        min_lim   = ticks[0]  - ticks_sep*pad[0]
+        max_lim   = ticks[-1] + ticks_sep*pad[1]
         ax.set_xlim((min_lim, max_lim), auto=False)
 
-    # minor ticks
-    if n_minor_ticks is not None:
-        ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+    ###############
+    # minor ticks #
+    ###############
+    if minor_ticks is None:
+        if n_minor_ticks is not None:
+            ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+        elif minor_ticks_sep is not None:
+            ticks_sep     = ticks[1] - ticks[0]
+            n_minor_ticks = int(round(ticks_sep/minor_ticks_sep))
+            ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+    else:
+        assert isinstance(ticks, Iterable), 'minor_ticks must be iterable'
+        assert len(ticks) > 0, 'minor_ticks must have length > 0'
+        _ = ax.xaxis.set_ticks(minor_ticks, minor=True)
 
-    # direction
-    for which in ('major', 'minor'):
-        ax.tick_params(which=which, axis='x', **kwargs)
+    ###################
+    # tick parameters #
+    ###################
+    ax.tick_params(**kwargs)
     
     return
 
-def set_yticks(ax=None, start=None, stop=None, pad=None, n_ticks=None, ticks_sep=None, n_minor_ticks=None, fontproperties=None, **kwargs):
+def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
 
+    Usage:
+        For setting up major ticks:
+
+            set_ticks(start, stop, n_ticks)
+            set_ticks(start, stop, ticks_sep)
+            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
+            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(ticks)                      # manually define each tick position
+            set_ticks(ticks, labels)              # manually define each tick position and label
+
+        For setting up minor ticks:
+
+            set_ticks(n_minor_ticks)             # equally spaced minor ticks
+            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_ticks)               # manually define each minor tick position
+
     Args:
-        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
-            last ax will be used.
-        start (float or int): start value for ticks (not the plot edge --- see ``pad``)
-        stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
-        n_ticks (int): Number of ticks. Ticks separation is calculated 
-            accordingly. Overwrites ticks_sep.
-        ticks_sep (float or int): Ticks separation.
-        n_minor_ticks (int): Number of minor ticks between two major ticks.
+        ax (matplotlib.axes, optional): axes object to set ticks.
+
+        *Major ticks*
+        start, stop (number, optional): major ticks start/stop value. Use None
+            to not keep current start/stop value. Default is None.
+        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
+            n_ticks overwrites ticks_sep. Default is None.
+        ticks, labels (Iterable, optional): Iterable with tick positions and labels.
+        Overwrites start, stop, n_ticks, ticks_sep.
+        
+        *Padding (plotting limits)*
+        pad (number or tuple, optional): padding between plot edge and 
+            closest tick in terms of ticks separation. If tuple, first value 
+            applies to the left edge and second value to the right edge. 
+            Typically, padding should be between a value between 0 and 1. If pad
+            is None, plot limits remain unchanged. However, if pad is None and 
+            start/stop are defined, pad is set to (0, 0). Default is None.
+
+        *Minor ticks*
+        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        ticks between two major ticks or minor tick separation. n_minor_ticks
+        overwrites minor_ticks_sep. Default is None.
+        minor_ticks (Iterable, optional): Iterable with minor tick positions.
+        Overwrites n_minor_ticks and minor_ticks_sep.
+
+        *font*
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
-        pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
-        # n_decimal_places (int): Number of decimal places to use for tick labels.
-        direction (str, optional): default is 'out', possible values are 'in' and 'out'
 
-    Note:
-        To set minor and major ticks 'manually' use `xaxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
+        *ticks parameters*
+        **kwargs: kwargs are passed to `ax.tick_params()`_ that sets tick parameters.
 
-            _ = ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
+        If not specified, the following parameters are passed to `ax.tick_params()`_:
 
-        Set labels manually by using:
+        Args:
+            which ('major', 'minor', 'both', optional): The group of ticks to which the parameters 
+                are applied. Default is 'both'.
+            direction ('in', 'out', 'inout', optional): Puts ticks inside the 
+                Axes, outside the Axes, or both. Default is 'in'
+            left, right (bool, optional): Whether to draw the left/right ticks.
+                Default is True.
 
-            _ = ax.set_yticklabels([1, 2, 3, 4, 5, 6])
-
+    Returns:
+        None
+    
+    .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
     """
+    ############
+    # get axis #
+    ############
     if ax is None:
         ax = plt.gca()
 
-    # get ticks showing
-    # ticks_showing = get_xticks_showing(ax=ax)
+    ######################
+    # default parameters #
+    ######################
+    if 'axis' not in kwargs:
+        kwargs['axis'] = 'y'
+    if 'direction' not in kwargs:
+        kwargs['direction'] = 'in'
+    if 'left' not in kwargs:
+        kwargs['left'] = True
+    if 'right' not in kwargs:
+        kwargs['right'] = True
 
-    ## collecting kwargs
-    # n_ticks   = None
-    # ticks_sep = None
-    # n_minor_ticks  = None
-    # fontproperties = None
-    # pad            = None
-    # n_decimal_places = None
-
-    # # % tick params
-    # tick_params = {'bottom': True,
-    #                 'top': True,
-    #                 # 'right': True,
-    #                 # 'left': True,
-    #                 'labelbottom': True,
-    #                 # 'labelleft': True,
-    #                 # 'labelright': False,
-    #                 'labeltop': False,
-    #                 'direction': 'out'}
-    # for attr in tick_params:
-    #     if attr in kwargs:
-    #         tick_params[attr] = kwargs.pop(attr)
-    #         if attr != 'direction':
-    #             assert type(tick_params[attr]) == bool, f'{attr} must be True or False'
-    # assert tick_params['direction'] in ('in', 'out',  'inout'), 'invalid value for direction.\nMust be either `in` or `out`'
-    
-    # % start and stop
-    # if 'start' in kwargs:
-    #     start = kwargs.pop('start')
-    # # if start is None:
-    # #     start = ticks_showing[-1]
-    # #     for line in ax.get_lines():
-    # #         if start > min(line.get_xdata()):
-    # #             start = min(line.get_xdata())
-    # if 'stop' in kwargs:
-    #     stop = kwargs.pop('stop')
-    # # if stop is None:
-    # #     stop = ticks_showing[0]
-    # #     for line in ax.get_lines():
-    # #         if stop < max(line.get_xdata()):
-    # #             stop = max(line.get_xdata())
-    
-    # # % minor ticks
-    # if 'n_minor_ticks' in kwargs:
-    #     n_minor_ticks = kwargs.pop('n_minor_ticks')
-
-    # # % font  
-    # if 'fontproperties' in kwargs:
-    #     fontproperties = kwargs.pop('fontproperties')
-
-    # # % padding
-    # if 'pad' in kwargs:
-    #     pad = kwargs.pop('pad')
-
-    # # % n decimal places
-    # if 'n_decimal_places' in kwargs:
-    #     n_decimal_places = kwargs.pop('n_decimal_places')
-
-    
-    # # % n_ticks and tick_sep
-    # if 'n_ticks' in kwargs:
-    #     n_ticks = kwargs.pop('n_ticks')
-    # if 'ticks_sep' in kwargs:
-    #     ticks_sep = kwargs.pop('ticks_sep')
-
-    if n_ticks is not None:
-        if n_ticks < 2:
-            raise ValueError('n_ticks needs to be bigger or equal than 2.')
-    if n_ticks is None and ticks_sep is None:
-        # n_ticks = len(ticks_showing)
-        ticks_showing = get_yticks_showing(ax=ax)
-        # print(ticks_showing)
-        ticks_sep     = np.mean(np.diff(ticks_showing))
-
-    
-    # # raise error for non recognized args
-    # if len(kwargs.keys()) > 0:
-    #     raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
-
-
-    # % Ticks ======================
-    if start is None and stop is None and pad is None:
-        # ticks = ticks_showing
-        # start = ticks[0]
-        # stop  = ticks[-1]
-        pass
-    else:
-        # initial
+    #####################
+    # major ticks setup #
+    #####################
+    if ticks is None:
         if n_ticks is not None:
-            ticks   = np.linspace(start, stop, n_ticks)
+            assert n_ticks > 1, 'n_ticks needs to be > 1.'
+        if start is not None or stop is not None or n_ticks is not None or ticks_sep is not None:
+            if start is not None and stop is not None and n_ticks is not None:
+                ticks = np.linspace(start, stop, n_ticks)
+            elif start is not None and stop is not None and ticks_sep is not None:
+                ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+            elif start is not None and n_ticks is not None and ticks_sep is not None:
+                stop = start + n_ticks*ticks_sep
+                ticks = np.linspace(start, stop, n_ticks)
+            elif n_ticks is not None:
+                ticks_showing = get_yticks_showing(ax=ax)
+                start = ticks_showing[0]
+                stop  = ticks_showing[-1]
+                ticks = np.linspace(start, stop, n_ticks)
+            else:
+                raise ValueError('Invalid input. See help(br.set_yticks) for help.')
+            
+            # set ticks
+            _ = ax.yaxis.set_ticks(ticks)
+
+            # set label font
+            if fontproperties is not None:
+                _ = ax.set_yticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
+            
+            # if start/stop is defined, select pad to (0, 0)
+            if pad is None:
+                pad = (0, 0)
+    else:
+        assert isinstance(ticks, Iterable), 'ticks must be iterable'
+        assert len(ticks) > 1, 'ticks must have length > 1'
+        _ = ax.yaxis.set_ticks(ticks)
+
+        # set labels
+        if labels is not None:
+            assert isinstance(labels, Iterable), 'ticks must be iterable'
+            assert len(ticks) == len(labels), 'len(ticks) must be the same as len(labels)'
+            if fontproperties is not None:
+                _ = ax.set_yticklabels(labels, fontproperties=fontproperties, visible=True)
+            else:
+                _ = ax.set_yticklabels(labels)
         else:
-            ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+            if fontproperties is not None:
+                _ = ax.set_yticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
 
-        assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
+    ##########
+    # limits #
+    ##########
+    if pad is not None:
+        if isinstance(pad, Iterable) == False:
+            assert br.is_number(pad), 'pad must be a number or a tuple/list with length 2'
+            pad = (pad, pad)
 
-        # ticks shift to get better values (include zero)
-        if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
-            ticks = ticks-ticks[br.index(ticks, 0)]
-        elif stop-start > 5: # If zero is not included, round ticks if range is larger than 5
-            ticks = ticks-(ticks[0]-int(ticks[0]))
+        # check
+        assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
+        assert br.is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
+        assert br.is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
-        # ticks edges
-        if ticks[-1]+np.mean(np.diff(ticks))*0.5 < stop:
-            ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
-        if ticks[0]-np.mean(np.diff(ticks))*0.8 > start:
-            ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
-
-        # limits
-        if pad is None:
-            min_lim = start
-            max_lim = stop
-        else:
-            try:
-                if len(pad) == 2:
-                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
-                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[1]
-                else:
-                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
-                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[0]
-            except TypeError:
-                min_lim = ticks[0] - (ticks[1]-ticks[0])*pad
-                max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad
-
-        # # decimal places to show
-        # if n_decimal_places is not None:
-        #     ticks = [np.round(tick, n_decimal_places) for tick in ticks]
-
-
-        # applying changes ======================
-        # print(ticks)
-    
-
-        # set ticks
-        if fontproperties is not None:
-            dummy = ax.set_yticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
-        else:
-            dummy = ax.set_yticks(ticks)
-
-        # limits
+        # set limits
+        ticks_sep = ticks[1]  - ticks[0]
+        min_lim   = ticks[0]  - ticks_sep*pad[0]
+        max_lim   = ticks[-1] + ticks_sep*pad[1]
         ax.set_ylim((min_lim, max_lim), auto=False)
 
-    # minor ticks
-    if n_minor_ticks is not None:
-        ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+    ###############
+    # minor ticks #
+    ###############
+    if minor_ticks is None:
+        if n_minor_ticks is not None:
+            ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+        elif minor_ticks_sep is not None:
+            ticks_sep     = ticks[1] - ticks[0]
+            n_minor_ticks = int(round(ticks_sep/minor_ticks_sep))
+            ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+    else:
+        assert isinstance(ticks, Iterable), 'minor_ticks must be iterable'
+        assert len(ticks) > 0, 'minor_ticks must have length > 0'
+        _ = ax.yaxis.set_ticks(minor_ticks, minor=True)
 
-    # direction
-    for which in ('major', 'minor'):
-        ax.tick_params(which=which, axis='y', **kwargs)
+    ###################
+    # tick parameters #
+    ###################
+    ax.tick_params(**kwargs)
     
     return
 
-# maybe obsolete
-def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
+# remove tick labels
+def remove_xticklabels(ax):
+    """remove x tick labels from axes"""
+    ax.tick_params(labelbottom=False, labeltop=False)  
+
+def remove_yticklabels(ax):
+    """remove y tick labels from axes"""
+    ax.tick_params(labelleft=False, labelright=False)  
+
+# obsolete
+def _remove_ticks_edge(ax):
+    """Remove ticks that fall over the edges of the plot.
+
+    This is useful when ticks are thicker than the plot edge lines.
+
+    Args:
+        ax (matplotlib.axes.Axes): axes instance.
+    """
+    ticks = ax.xaxis.get_major_ticks()
+
+    if ax.get_xticks()[0] == ax.get_xlim()[0]:
+        ticks[0].tick1line.set_visible(False)
+        ticks[0].tick2line.set_visible(False)
+
+    if ax.get_xticks()[-1] == ax.get_xlim()[-1]:
+        ticks[-1].tick1line.set_visible(False)
+        ticks[-1].tick2line.set_visible(False)
+
+    ticks = ax.yaxis.get_major_ticks()
+
+    if ax.get_yticks()[0] == ax.get_ylim()[0]:
+        ticks[0].tick1line.set_visible(False)
+        ticks[0].tick2line.set_visible(False)
+
+    if ax.get_yticks()[-1] == ax.get_ylim()[-1]:
+        ticks[-1].tick1line.set_visible(False)
+        ticks[-1].tick2line.set_visible(False)
+
+def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
     """Set ticks of a plot.
 
     Args:
@@ -1549,36 +1817,460 @@ def set_ticks(ax=None, axis='x', autoscale=True, **kwargs):
     #                 # on_xlim_changed()
     #                 ax.callbacks.connect('xlim_changed', on_xlim_changed)
 
-def remove_ticks_edge(ax):
-    """Remove ticks that fall over the edges of the plot.
-
-    This is useful when ticks are thicker than the plot edge lines.
+def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, ticks_sep=None, n_minor_ticks=None, fontproperties=None, **kwargs):
+    """Set y ticks of a plot.
 
     Args:
-        ax (matplotlib.axes.Axes): axes instance.
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+        start (float or int): start value for ticks (not the plot edge --- see ``pad``)
+        stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
+        n_ticks (int): Number of ticks. Ticks separation is calculated 
+            accordingly. Overwrites ticks_sep.
+        ticks_sep (float or int): Ticks separation.
+        n_minor_ticks (int): Number of minor ticks between two major ticks.
+        fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
+        pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
+        # n_decimal_places (int): Number of decimal places to use for tick labels.
+        direction (str, optional): default is 'out', possible values are 'in' and 'out'
+
+    Note:
+        To set minor and major ticks 'manually' use `xaxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
+
+            _ = ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
+
+        Set labels manually by using:
+
+            _ = ax.set_yticklabels([1, 2, 3, 4, 5, 6])
+
     """
-    ticks = ax.xaxis.get_major_ticks()
+    if ax is None:
+        ax = plt.gca()
 
-    if ax.get_xticks()[0] == ax.get_xlim()[0]:
-        ticks[0].tick1line.set_visible(False)
-        ticks[0].tick2line.set_visible(False)
+    # get ticks showing
+    # ticks_showing = get_xticks_showing(ax=ax)
 
-    if ax.get_xticks()[-1] == ax.get_xlim()[-1]:
-        ticks[-1].tick1line.set_visible(False)
-        ticks[-1].tick2line.set_visible(False)
+    ## collecting kwargs
+    # n_ticks   = None
+    # ticks_sep = None
+    # n_minor_ticks  = None
+    # fontproperties = None
+    # pad            = None
+    # n_decimal_places = None
 
-    ticks = ax.yaxis.get_major_ticks()
+    # # % tick params
+    # tick_params = {'bottom': True,
+    #                 'top': True,
+    #                 # 'right': True,
+    #                 # 'left': True,
+    #                 'labelbottom': True,
+    #                 # 'labelleft': True,
+    #                 # 'labelright': False,
+    #                 'labeltop': False,
+    #                 'direction': 'out'}
+    # for attr in tick_params:
+    #     if attr in kwargs:
+    #         tick_params[attr] = kwargs.pop(attr)
+    #         if attr != 'direction':
+    #             assert type(tick_params[attr]) == bool, f'{attr} must be True or False'
+    # assert tick_params['direction'] in ('in', 'out',  'inout'), 'invalid value for direction.\nMust be either `in` or `out`'
+    
+    # % start and stop
+    # if 'start' in kwargs:
+    #     start = kwargs.pop('start')
+    # # if start is None:
+    # #     start = ticks_showing[-1]
+    # #     for line in ax.get_lines():
+    # #         if start > min(line.get_xdata()):
+    # #             start = min(line.get_xdata())
+    # if 'stop' in kwargs:
+    #     stop = kwargs.pop('stop')
+    # # if stop is None:
+    # #     stop = ticks_showing[0]
+    # #     for line in ax.get_lines():
+    # #         if stop < max(line.get_xdata()):
+    # #             stop = max(line.get_xdata())
+    
+    # # % minor ticks
+    # if 'n_minor_ticks' in kwargs:
+    #     n_minor_ticks = kwargs.pop('n_minor_ticks')
 
-    if ax.get_yticks()[0] == ax.get_ylim()[0]:
-        ticks[0].tick1line.set_visible(False)
-        ticks[0].tick2line.set_visible(False)
+    # # % font  
+    # if 'fontproperties' in kwargs:
+    #     fontproperties = kwargs.pop('fontproperties')
 
-    if ax.get_yticks()[-1] == ax.get_ylim()[-1]:
-        ticks[-1].tick1line.set_visible(False)
-        ticks[-1].tick2line.set_visible(False)
+    # # % padding
+    # if 'pad' in kwargs:
+    #     pad = kwargs.pop('pad')
+
+    # # % n decimal places
+    # if 'n_decimal_places' in kwargs:
+    #     n_decimal_places = kwargs.pop('n_decimal_places')
+
+    
+    # # % n_ticks and tick_sep
+    # if 'n_ticks' in kwargs:
+    #     n_ticks = kwargs.pop('n_ticks')
+    # if 'ticks_sep' in kwargs:
+    #     ticks_sep = kwargs.pop('ticks_sep')
+
+    if n_ticks is not None:
+        if n_ticks < 2:
+            raise ValueError('n_ticks needs to be bigger or equal than 2.')
+    if n_ticks is None and ticks_sep is None:
+        # n_ticks = len(ticks_showing)
+        ticks_showing = get_xticks_showing(ax=ax)
+        # print(ticks_showing)
+        ticks_sep     = np.mean(np.diff(ticks_showing))
+
+    
+    # # raise error for non recognized args
+    # if len(kwargs.keys()) > 0:
+    #     raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
+
+
+    # % Ticks ======================
+    if start is None and stop is None and pad is None:
+        # ticks = ticks_showing
+        # start = ticks[0]
+        # stop  = ticks[-1]
+        pass
+    else:
+        # initial
+        if n_ticks is not None:
+            ticks   = np.linspace(start, stop, n_ticks)
+        else:
+            ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+
+        assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
+
+        # ticks shift to get better values (include zero)
+        if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
+            ticks = ticks-ticks[br.index(ticks, 0)]
+        elif stop-start > 5: # If zero is not included, round ticks if range is larger than 5
+            ticks = ticks-(ticks[0]-int(ticks[0]))
+
+        # ticks edges
+        if ticks[-1]+np.mean(np.diff(ticks))*0.5 < stop:
+            ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
+        if ticks[0]-np.mean(np.diff(ticks))*0.8 > start:
+            ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
+
+        # limits
+        if pad is None:
+            min_lim = start
+            max_lim = stop
+        else:
+            try:
+                if len(pad) == 2:
+                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
+                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[1]
+                else:
+                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
+                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[0]
+            except TypeError:
+                min_lim = ticks[0] - (ticks[1]-ticks[0])*pad
+                max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad
+
+        # # decimal places to show
+        # if n_decimal_places is not None:
+        #     ticks = [np.round(tick, n_decimal_places) for tick in ticks]
+
+
+        # applying changes ======================
+        # print(ticks)
+    
+
+        # set ticks
+        if fontproperties is not None:
+            dummy = ax.set_xticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
+        else:
+            dummy = ax.set_xticks(ticks)
+
+        # limits
+        ax.set_xlim((min_lim, max_lim), auto=False)
+
+    # minor ticks
+    if n_minor_ticks is not None:
+        ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+
+    # direction
+    for which in ('major', 'minor'):
+        ax.tick_params(which=which, axis='x', **kwargs)
+    
+    return
+
+def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, ticks_sep=None, n_minor_ticks=None, fontproperties=None, **kwargs):
+    """Set y ticks of a plot.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+        start (float or int): start value for ticks (not the plot edge --- see ``pad``)
+        stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
+        n_ticks (int): Number of ticks. Ticks separation is calculated 
+            accordingly. Overwrites ticks_sep.
+        ticks_sep (float or int): Ticks separation.
+        n_minor_ticks (int): Number of minor ticks between two major ticks.
+        fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
+        pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
+        # n_decimal_places (int): Number of decimal places to use for tick labels.
+        direction (str, optional): default is 'out', possible values are 'in' and 'out'
+
+    Note:
+        To set minor and major ticks 'manually' use `xaxis.set_ticks() <https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.XAxis.set_ticks.html>`_, for example::
+
+            _ = ax.xaxis.set_ticks([1, 2, 3, 4, 5, 6], minor=True)
+
+        Set labels manually by using:
+
+            _ = ax.set_yticklabels([1, 2, 3, 4, 5, 6])
+
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    # get ticks showing
+    # ticks_showing = get_xticks_showing(ax=ax)
+
+    ## collecting kwargs
+    # n_ticks   = None
+    # ticks_sep = None
+    # n_minor_ticks  = None
+    # fontproperties = None
+    # pad            = None
+    # n_decimal_places = None
+
+    # # % tick params
+    # tick_params = {'bottom': True,
+    #                 'top': True,
+    #                 # 'right': True,
+    #                 # 'left': True,
+    #                 'labelbottom': True,
+    #                 # 'labelleft': True,
+    #                 # 'labelright': False,
+    #                 'labeltop': False,
+    #                 'direction': 'out'}
+    # for attr in tick_params:
+    #     if attr in kwargs:
+    #         tick_params[attr] = kwargs.pop(attr)
+    #         if attr != 'direction':
+    #             assert type(tick_params[attr]) == bool, f'{attr} must be True or False'
+    # assert tick_params['direction'] in ('in', 'out',  'inout'), 'invalid value for direction.\nMust be either `in` or `out`'
+    
+    # % start and stop
+    # if 'start' in kwargs:
+    #     start = kwargs.pop('start')
+    # # if start is None:
+    # #     start = ticks_showing[-1]
+    # #     for line in ax.get_lines():
+    # #         if start > min(line.get_xdata()):
+    # #             start = min(line.get_xdata())
+    # if 'stop' in kwargs:
+    #     stop = kwargs.pop('stop')
+    # # if stop is None:
+    # #     stop = ticks_showing[0]
+    # #     for line in ax.get_lines():
+    # #         if stop < max(line.get_xdata()):
+    # #             stop = max(line.get_xdata())
+    
+    # # % minor ticks
+    # if 'n_minor_ticks' in kwargs:
+    #     n_minor_ticks = kwargs.pop('n_minor_ticks')
+
+    # # % font  
+    # if 'fontproperties' in kwargs:
+    #     fontproperties = kwargs.pop('fontproperties')
+
+    # # % padding
+    # if 'pad' in kwargs:
+    #     pad = kwargs.pop('pad')
+
+    # # % n decimal places
+    # if 'n_decimal_places' in kwargs:
+    #     n_decimal_places = kwargs.pop('n_decimal_places')
+
+    
+    # # % n_ticks and tick_sep
+    # if 'n_ticks' in kwargs:
+    #     n_ticks = kwargs.pop('n_ticks')
+    # if 'ticks_sep' in kwargs:
+    #     ticks_sep = kwargs.pop('ticks_sep')
+
+    if n_ticks is not None:
+        if n_ticks < 2:
+            raise ValueError('n_ticks needs to be bigger or equal than 2.')
+    if n_ticks is None and ticks_sep is None:
+        # n_ticks = len(ticks_showing)
+        ticks_showing = get_yticks_showing(ax=ax)
+        # print(ticks_showing)
+        ticks_sep     = np.mean(np.diff(ticks_showing))
+
+    
+    # # raise error for non recognized args
+    # if len(kwargs.keys()) > 0:
+    #     raise AttributeError(f'Args not recognized: {list(kwargs.keys())}')
+
+
+    # % Ticks ======================
+    if start is None and stop is None and pad is None:
+        # ticks = ticks_showing
+        # start = ticks[0]
+        # stop  = ticks[-1]
+        pass
+    else:
+        # initial
+        if n_ticks is not None:
+            ticks   = np.linspace(start, stop, n_ticks)
+        else:
+            ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+
+        assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
+
+        # ticks shift to get better values (include zero)
+        if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
+            ticks = ticks-ticks[br.index(ticks, 0)]
+        elif stop-start > 5: # If zero is not included, round ticks if range is larger than 5
+            ticks = ticks-(ticks[0]-int(ticks[0]))
+
+        # ticks edges
+        if ticks[-1]+np.mean(np.diff(ticks))*0.5 < stop:
+            ticks = np.append(ticks, ticks[-1]+np.mean(np.diff(ticks)))
+        if ticks[0]-np.mean(np.diff(ticks))*0.8 > start:
+            ticks = np.append(ticks[0]-np.mean(np.diff(ticks)), ticks)
+
+        # limits
+        if pad is None:
+            min_lim = start
+            max_lim = stop
+        else:
+            try:
+                if len(pad) == 2:
+                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
+                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[1]
+                else:
+                    min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
+                    max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad[0]
+            except TypeError:
+                min_lim = ticks[0] - (ticks[1]-ticks[0])*pad
+                max_lim = ticks[-1] + (ticks[1]-ticks[0])*pad
+
+        # # decimal places to show
+        # if n_decimal_places is not None:
+        #     ticks = [np.round(tick, n_decimal_places) for tick in ticks]
+
+
+        # applying changes ======================
+        # print(ticks)
+    
+
+        # set ticks
+        if fontproperties is not None:
+            dummy = ax.set_yticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
+        else:
+            dummy = ax.set_yticks(ticks)
+
+        # limits
+        ax.set_ylim((min_lim, max_lim), auto=False)
+
+    # minor ticks
+    if n_minor_ticks is not None:
+        ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
+
+    # direction
+    for which in ('major', 'minor'):
+        ax.tick_params(which=which, axis='y', **kwargs)
+    
+    return
+
+# %% ============================= legend ================================= %% #
+def legend(*args, **kwargs):
+    """Place a legend on the Axes. Wrapper for `plt.legend()`_
+
+    Args:
+        *args, **kwargs: args and kwargs passed to `plt.legend()`_
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        coord (tuple): (x, y) coordinates in data coordinates to place legend. 
+            (x, y) places the corner of the legend specified by `loc` at x, y.
+            If None, this is ignored. Default is None. Overwrites `bbox_to_anchor`.
+        
+    If not specified, the following parameters are passed to `ax.legend()`_:
+
+    Args:
+        labelspacing (float, optional): The vertical space between the legend 
+            entries, in font-size units. Default is 0.5
+        frameon (bool, optional): Whether the legend should be drawn on a patch 
+            (frame). Default is False
+
+    Returns:
+        legend object
+
+    .. _plt.legend(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html
+    """
+    # get axes
+    ax = None
+    if 'ax' in kwargs:
+        ax = kwargs.pop('ax')
+    if ax is None:
+        ax = plt.gca()
+
+    # default attrs
+    if 'labelspacing' not in kwargs:
+        kwargs['labelspacing'] = 0.1
+    if 'frameon' not in kwargs:
+        kwargs['frameon'] = False
+
+    # get coord
+    if 'coord' in kwargs:
+        coord = kwargs.pop('coord')
+
+    # legend
+    if coord is not None:   
+        # check
+        assert isinstance(coord, Iterable), 'coord must be a tuple of type (x, y)'
+        assert len(coord) == 2, 'coord must be a tuple of type (x, y)'
+
+        # covert to Data coordinates to axes coordinates
+        _x, _y = ax.transData.transform(coord)
+        x, y = ax.transAxes.inverted().transform((_x, _y)) 
+
+        if 'loc' not in kwargs:
+            kwargs['loc'] = "upper left"
+        if 'bbox_to_anchor' not in kwargs:
+            kwargs['bbox_to_anchor'] = (x, y)
+
+    return ax.legend(*args, **kwargs)
 
 # %% ================================ rectangle =========================== %% #
 def rectangle(xlim, ylim, ax=None, **kwargs):
+    """plot a rectangle. Wrapper for `plt.Rectangle()`_.
+
+    Args:
+        xlim, ylim (tuple): xmin, xmax, ymin, ymax coordinates of the rectangle
+        in data coordinates.
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        **kwargs: kwargs are passed to `plt.Rectangle()`_
+
+    If not specified, the following parameters are passed to `ax.tick_params()`_:
+
+    Args:
+        linewidth (number, optional): Set the patch linewidth in points. 
+            Default is 0.6.
+        facecolor (color or None, optional): Set the patch face color. 
+            Default is 'none'
+        edgecolor (color or None, optional): Set the patch edge color. 
+            Default is gray.
+        alpha (number, optional): Set the alpha value used for blending 
+            - not supported on all backends. Default is 0.5
+        zorder (number, optional): Set the zorder for the artist. 
+            Artists with lower zorder values are drawn first. Default is such 
+            that rectangle is ploted on top of all other curves.
+        
+    Returns:
+        rectangle object 
+    
+    .. _plt.Rectangle(): https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html#matplotlib.patches.Rectangle
+    """
     if ax is None:
         ax = plt.gca()
 
@@ -1596,14 +2288,16 @@ def rectangle(xlim, ylim, ax=None, **kwargs):
     rect = plt.Rectangle((xlim[0], ylim[0]), xlim[1]-xlim[0], ylim[1]-ylim[0], **kwargs)
     ax.add_patch(rect)
 
-    return 
+    return rect
 
 # %% ================================== zoom ============================== %% #
-def zoom(start, stop, ax=None, ymargin=2):
+def zoom(start, stop, ax=None, ymargin=5):
     """Zoom up portion of current figure from start to stop.
 
     Args:
-        start (float or int): initial x value.
+        start, stop (float): initial and final x value.
+        ax (axes, optional): axes to put the text on. If None, the current axes 
+        will be used. Default is None
         ymargin (number, optional): margin value between data and the edges of
             plot in percentage of the y data range.
     """
@@ -1643,69 +2337,130 @@ def zoom(start, stop, ax=None, ymargin=2):
         ax.set_ylim(ymin-m, ymax+m)
         ax.set_xlim(start, stop)
 
-def zoom2(start, stop, ymargin=2):
-    """Zoom up portion of current figure from start to stop.
+# %% ================================= inset ============================== %% #
+def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
+    """add inset to axes. Inset will have all curves from axes
 
     Args:
-        start (float or int): initial x value.
-        ymargin (number, optional): margin value between data and the edges of
-            plot in percentage of the y data range.
+        xlim, ylim (tuple): (xi, xf), (yi, yf) coordinates of inset in data 
+            coordinates.
+        ax (axes, optional): axes to get inset data from. If None, the current axes 
+            will be used. Default is None
+        xticks_kwargs, yticks_kwargs (dictionary, optional): kwargs for 
+            br.set_xticks() and br.set_yticks() functions to set the inset ticks
+            and plot limits. Default is None.
+        rect (bool, optional): if True, rectangle will be draw in the main axes
+            at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
+        rect_xlim, rect_ylim (tuple, optional): if defines the rectangle edges.
+            overwrites limits defined by xticks_kwargs, yticks_kwargs. 
+        ax2putinset (axex, optional): axes to put inset in. If None, the current axes 
+            will be used. Default is None
+
+    Returns:    
+        inset axes object
     """
-    fig = plt.gcf()
+    if ax is None:
+        ax = plt.gca()
+    if ax2putinset is None:
+        ax2putInset = ax
 
-    ymax = None
-    ymin = None
+    x_init      = xlim[0]
+    x_final     = xlim[1]
+    y_init      = ylim[0]
+    y_final     = ylim[1]
 
-    for axis in fig.axes:
-        for line in axis.get_lines():
+    # create inset
+    inset = ax.get_figure().add_axes(_ax_box2fig_box(ax2putInset, [x_init, y_init, x_final, y_final]))
 
-            x = line.get_data()[0]
-            y = line.get_data()[1]
+    for line in ax2putInset.get_lines():
+        line2, = inset.plot(line.get_xdata(), line.get_ydata(),
+                            ls=line.get_linestyle(),
+                            linewidth=line.get_linewidth(),
+                            marker = line.get_marker(),
+                            markevery=line.get_markevery(),
+                            ms=line.get_markersize(),
+                            color=line.get_color(),
+                            alpha=line.get_alpha(),
+                            markerfacecolor=line.get_markerfacecolor(),
+                            markeredgewidth=line.get_markeredgewidth(),
+                            label=line.get_label())
+    
 
-            _, y = br.extract(x=x, y=y, ranges=(start, stop))
-            ymin_temp = min(y)
-            ymax_temp = max(y)
+    if xticks_kwargs is not None:
+        set_xticks(ax=inset, **xticks_kwargs)
+    if yticks_kwargs is not None:
+        set_yticks(ax=inset, **yticks_kwargs)
 
-            if ymin is None:
-                    ymin = copy.copy(ymin_temp)
-                    ymax = copy.copy(ymax_temp)
-            try:
-                if ymax_temp > ymax:
-                    ymax = copy.copy(ymax_temp)
-                if ymin_temp < ymin:
-                    ymin = copy.copy(ymin_temp)
-            except UnboundLocalError:
-                warnings.warn("All data are outside of the required range. Cannot zoom.")
-    m = (ymax-ymin)*ymargin/100
-    plt.ylim(ymin-m, ymax+m)
-    plt.xlim(start, stop)
+    # Rectangle
+    if rect:
+        if 'linewidth' not in kwargs or 'lw' not in kwargs:
+            kwargs['linewidth'] = 0.6
+        if 'facecolor' not in kwargs or 'fc' not in kwargs:
+            kwargs['fc'] = 'none'
+        if 'edgecolor' not in kwargs:
+            kwargs['edgecolor'] = 'gray'
+        if 'alpha' not in kwargs:
+            kwargs['alpha'] = 0.5
+        if 'zorder' not in kwargs:
+            kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
 
-def savefigs(filepath, figs='all'):
-    """Save multiple matplotlib figures in a pdf.
+        if rect_xlim is None:
+            rect_xlim = (inset.get_xlim()[0], inset.get_xlim()[1]-inset.get_xlim()[0])
+            print(f'rect_xlim={rect_xlim}')
+        if rect_ylim is None:
+            rect_ylim = (inset.get_ylim()[0],  inset.get_ylim()[1]-inset.get_ylim()[0])
+            print(f'rect_ylim={rect_ylim}')
+        
+        _ = ax2putInset.spines['left'].get_linewidth()
+        rect = plt.Rectangle((rect_xlim[0], rect_ylim[0]), rect_xlim[1], rect_ylim[1], **kwargs)
+        ax2putInset.add_patch(rect)
+
+    return inset
+
+def _ax_box2fig_box(ax, points):
+    """Transform 'bbox like' axis position values to percentage fig position.
+
+    Useful for positioning insets.
 
     Args:
-        filepath (string or pathlib.Path): filepath
-        figs (list, optional): list with the figure numbers to save. Use 'all'
-            to save all opened figures.
+        ax (matplotlib.axes.Axes): axes instance.
+        points (list): list like ``[x_init, y_init, x_final, y_final]``
+
+    Returns:
+        'bbox like' figure positions ``[x_init, y_init, delta_x, delta_y]``.
     """
-    # check extension
-    if Path(filepath).suffix == '.pdf':
-        pass
+    [x_init, y_init, x_final, y_final] = points
+
+    x_init  = _ax_pos2fig_pos(ax, x_init, direction='x')
+    y_init  = _ax_pos2fig_pos(ax, y_init, direction='y')
+    delta_x = _ax_pos2fig_pos(ax, x_final, direction='x') - x_init
+    delta_y = _ax_pos2fig_pos(ax, y_final, direction='y') - y_init
+
+    return [x_init, y_init, delta_x, delta_y]
+
+def _ax_pos2fig_pos(ax, value, direction='x'):
+    """Transform axis position values to figure percentage position.
+
+    Args:
+        ax (matplotlib.axes.Axes): axes instance.
+        value (float): value
+        direction (string, optional): 'x' or 'y'.
+
+    Returns:
+        Figure positions from 0 to 1.
+    """
+    if direction == 'x':
+        point1 = (ax.get_xlim()[0], ax.get_position().xmin)
+        point2 = (ax.get_xlim()[1], ax.get_position().xmax)
     else:
-        filepath = Path(filepath).with_suffix('.pdf')
+        point1 = (ax.get_ylim()[0], ax.get_position().ymin)
+        point2 = (ax.get_ylim()[1], ax.get_position().ymax)
+    delta = (point2[1]-point1[1])/(point2[0]-point1[0])
+    x0 = point2[1] - (delta*point2[0])
 
-    if figs == 'all':
-        figs = [plt.figure(n) for n in plt.get_fignums()]
+    return x0 + delta*value
 
-    if len(figs) > 1:
-        pp = PdfPages(str(filepath))
-        for fig in figs:
-            fig.savefig(pp, format='pdf')
-        pp.close()
-    else:
-        plt.savefig(str(filepath), format='pdf')
-
-# %% ================================= units ============================== %% #
+# %% ======================== units and conversion ======================== %% #
 def cm2pt(*tupl):
     """Convert values from cm to pt.
 
@@ -1769,203 +2524,239 @@ def mm2inch(*tupl):
     else:
         return tuple(i/inch for i in tupl)
 
+def rgb2hex(rgb, max_rgb_value=1):
+    """Return hex value.
+
+    Args:
+        rgb (tuple): rgb values ([255 255 255])
+        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+        hex value
+    """
+    if max(rgb) > max_rgb_value:
+        raise ValueError(f'rgb={rgb} maximum value is bigger than max_rgb_value.')
+    return mpl.colors.to_hex([x/max_rgb_value for x in rgb])
+
+def hex2rgb(string, max_rgb_value=1):
+    """Return rgb value.
+
+    Args:
+        string (string): hex value as string.
+        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+        rgb value (tuple)
+    """
+    return [x*max_rgb_value for x in mpl.colors.to_rgb(string)]
+
 # %% ================================= lines ============================== %% #
-def vlines(x, ymin=None, ymax=None, colors=None, linestyles='--', label='', ax=None, **kwargs):
+def vlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+    """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
+
+    Args:
+        x (float or array): x coordinates where to plot the lines.
+        ymin, ymax (float, optional): Respective beginning and end of 
+            each line. If None, infinite lines are plotted. Default is None.
+        colors (color or list, optional): line colors. Default is black
+        linestyles (string or list, optional): linestyles. Default is '--'.
+        labels (string or list, optional): labels. Default is ''.
+        **kwargs: kwargs are passed to `plt.vlines()`_ or `plt.axvline()`_
+
+    Returns:
+        list with Line2D objects.
+        
+    .. _plt.axvline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html  
+    .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
+    """
+    # get axis
     if ax is None:
         ax = plt.gca()
 
-    if ymin is None:
-        ymin = ax.get_ylim()[0]
-    if ymax is None:
-        ymax = ax.get_ylim()[1]
+    # fix attrs
+    if isinstance(x, Iterable) == False:
+        x = [x, ]
 
-    ax.vlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, label=label, **kwargs)
-
-def hlines(y, xmin=None, xmax=None, colors=None, linestyles='--', label='', ax=None, **kwargs):
-    if ax is None:
-        ax = plt.gca()
-
-    if xmin is None:
-        xmin = ax.get_xlim()[0]
-    if xmax is None:
-        xmax = ax.get_xlim()[1]
-
-    ax.hlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, label=label, **kwargs)
-
-# %% ======= others (not sure what is useful here anymore (REVIEW) ======== %% #
-def ax_box2fig_box(ax, points):
-    """Transform 'bbox like' axis position values to percentage fig position.
-
-    Useful for positioning insets.
-
-    Args:
-        ax (matplotlib.axes.Axes): axes instance.
-        points (list): list like ``[x_init, y_init, x_final, y_final]``
-
-    Returns:
-        'bbox like' figure positions ``[x_init, y_init, delta_x, delta_y]``.
-    """
-    [x_init, y_init, x_final, y_final] = points
-
-    x_init  = ax_pos2fig_pos(ax, x_init, direction='x')
-    y_init  = ax_pos2fig_pos(ax, y_init, direction='y')
-    delta_x = ax_pos2fig_pos(ax, x_final, direction='x') - x_init
-    delta_y = ax_pos2fig_pos(ax, y_final, direction='y') - y_init
-
-    return [x_init, y_init, delta_x, delta_y]
-
-def ax_pos2fig_pos(ax, value, direction='x'):
-    """Transform axis position values to figure percentage position.
-
-    Args:
-        ax (matplotlib.axes.Axes): axes instance.
-        value (float): value
-        direction (string, optional): 'x' or 'y'.
-
-    Returns:
-        Figure positions from 0 to 1.
-    """
-    if direction == 'x':
-        point1 = (ax.get_xlim()[0], ax.get_position().xmin)
-        point2 = (ax.get_xlim()[1], ax.get_position().xmax)
+    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
+        assert len(x) == len(colors), 'color must be the same length as x'
     else:
-        point1 = (ax.get_ylim()[0], ax.get_position().ymin)
-        point2 = (ax.get_ylim()[1], ax.get_position().ymax)
-    delta = (point2[1]-point1[1])/(point2[0]-point1[0])
-    x0 = point2[1] - (delta*point2[0])
+        colors = [colors]*len(x)
+    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
+        assert len(x) == len(linestyles), 'linestyles must be the same length as x'
+    else:
+        linestyles = [linestyles]*len(x)
+    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
+        assert len(x) == len(labels), 'labels must be the same length as x'
+    else:
+        labels = [labels]*len(x)
+        
+    # plot
+    final = []
+    if ymin is None and ymax is None:
+        for i, _x in enumerate(x):
+            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
+    else:
+        for i, _x in enumerate(x):
+            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
+    return final
 
-    return x0 + delta*value
-
-def ungroup_svg(filepath, outfilepath=None):
-    """Ungroup all objects in svg files created by matplotlib.
-
-    Text with latex equations are kept grouped.
-
-    Ticks are cloned. The parent ticks will be at the left upper corner of the figure.
+def hlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+    """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
 
     Args:
-        filepath (string or pathlib.Path): path to svg file.
-        outfilepath (string or pathlib.Path, optional): path for svg output file.
-            If None, it will use the input filepath and the file will be overwrited.
+        y (float or array): y coordinates where to plot the lines.
+        xmin, xmax (float, optional): Respective beginning and end of 
+            each line. If None, infinite lines are plotted. Default is None.
+        colors (color or list, optional): line colors. Default is black
+        linestyles (string or list, optional): linestyles. Default is '--'.
+        labels (string or list, optional): labels. Default is ''.
+        **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
 
-    See Also:
-        :py:func:`soft_ungroup`
-
-    Notes:
-        Use :py:func:`soft_ungroup` to better preserve the structure
-        of the svg file in case :py:func:`ungroup` returns strange results.
+    Returns:
+        list with Line2D objects.
+        
+    .. _plt.axhline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axhline.html  
+    .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
     """
-    # get soup
-    filepath = Path(filepath)
-    f = filepath.open()
-    soup = BeautifulSoup(f, features = 'xml')
-    f.close()
+    # get axis
+    if ax is None:
+        ax = plt.gca()
 
-    # file prefix
-    script_tags = soup.find_all('svg')
-    prefix = script_tags[0].prettify().split('<g')[0]
+    # fix attrs
+    if isinstance(y, Iterable) == False:
+        y = [y, ]
 
-    # end of file
-    endOfFile = script_tags[0].prettify().split('</g>')[-1]
+    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
+        assert len(y) == len(colors), 'color must be the same length as y'
+    else:
+        colors = [colors]*len(y)
+    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
+        assert len(y) == len(linestyles), 'linestyles must be the same length as y'
+    else:
+        linestyles = [linestyles]*len(y)
+    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
+        assert len(y) == len(labels), 'labels must be the same length as y'
+    else:
+        labels = [labels]*len(y)
+        
+    # plot
+    final = []
+    if xmin is None and xmax is None:
+        for i, _y in enumerate(y):
+            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
+    else:
+        for i, _y in enumerate(y):
+            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
+    return final
 
-    # find objs
-    script_tags = soup.find_all(['use', 'path', 'def', 'text'])
-    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
-    for i in range(len(script_tags)):
+# %% =============================== Gradient ============================= %% #
+# linear
+def _linear_gradient(start, end, n=10, max_rgb_value=1):
+    """Returns a gradient list of n colors between two hex colors.
 
-        if script_tags[i].name == 'text':  # keep text with latex equations grouped
-            if 'transform' in script_tags[i].parent.attrs:
-                objs[i] = str(script_tags[i].parent.prettify())
-            else:
-                objs[i] = str(script_tags[i].prettify())
+    Args:
+        start (tuple): rgb start value.
+        end (tuple): rgb final value.
+        n (int, optional): number of intermediate colors.
+        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Note:
+        see https://bsouthga.dev/posts/color-gradients-with-python.
+
+    Returns:
+        list with rgb colors.
+    """
+    # Starting and ending colors in RGB form
+    start = hex2rgb(start, 255)
+    end = hex2rgb(end, 255)
+    # Initilize a list of the output colors with the starting color
+    RGB_list = [start]
+    # Calcuate a color at each evenly spaced value of t from 1 to n
+    for t in range(1, n):
+        # Interpolate RGB vector for color at the current value of t
+        temp = [int(start[j] + (float(t)/(n-1))*(end[j]-start[j]))/255*max_rgb_value for j in range(3)]
+        # Add it to our list of output colors
+        RGB_list.append(temp)
+    return RGB_list
+
+def linear_gradient(colors, n, max_rgb_value=1):
+    """Returns a list of colors forming linear gradients between colors.
+
+    Note:
+        see https://bsouthga.dev/posts/color-gradients-with-python
+
+    Args:
+      colors (tuple): list with rgb values.
+      n (int, optional): number of intermediate colors.
+      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+      list with rgb colors.
+    """
+    # The number of colors per individual linear gradient
+    n_out = int(float(n) / (len(colors) - 1))
+    # returns dictionary defined by color_dict()
+    RGB_list = _linear_gradient(colors[0], colors[1], n_out, max_rgb_value=255)
+
+    if len(colors) > 2:
+        for col in range(1, len(colors) - 1):
+            next = _linear_gradient(colors[col], colors[col+1], n_out, max_rgb_value=255)
+        for color in next[1:]:
+            RGB_list.append(color)
+    return [[x/255*max_rgb_value for x in color] for color in RGB_list]
+
+# benzier
+fact_cache = {} # Value cache
+def _factorial(n):
+    """Memoized factorial function used by the _bernstein() function."""
+    try:
+        return fact_cache[n]
+    except(KeyError):
+        if n == 1 or n == 0:
+            result = 1
         else:
-            # include obj
-            objs[i] = str(script_tags[i].prettify())
+            result = n*_factorial(n-1)
+        fact_cache[n] = result
+        return result
 
-    # prepare output
-    output = copy.copy(prefix)
-    for id in objs:
-        output += objs[id]
-    output += endOfFile
+def _bernstein(t, n, i):
+    """Bernstein coefficient used by the bezier_gradient() function."""
+    binom = _factorial(n)/float(_factorial(i)*_factorial(n - i))
+    return binom*((1-t)**(n-i))*(t**i)
 
-    # save
-    if outfilepath is None:
-        outfilepath = filepath
-    else:
-        outfilepath = Path(outfilepath)
-    f = outfilepath.open('w')
-    f.write(output)
-    f.close()
+def bezier_gradient(colors, n=100, max_rgb_value=1):
+    """Returns a list of rgb colors forming a bezier gradient between colors.
 
-def soft_ungroup_svg(filepath, outfilepath=None):
-    """Ungroup objects in svg file (each object stands in a group by itself).
+    Note:
+        see https://bsouthga.dev/posts/color-gradients-with-python.
 
     Args:
-        filepath (string or pathlib.Path): path to svg file.
-        outfilepath (string or pathlib.Path, optional): path for svg output file.
-            If None, it will use the input filepath and the file will be overwrited.
+      colors (tuple): list with hex values.
+      n (int, optional): number of intermediate colors.
+      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
 
-    See Also:
-        :py:func:`ungroup`
-
-    Notes:
-        This differs from :py:func:`ungroup` as it better preserves the structure
-        of the svg file, but Objects are still kept in groups.
+    Returns:
+      list with rgb colors.
     """
-    # get soup
-    filepath = Path(filepath)
-    f = filepath.open()
-    soup = BeautifulSoup(f, features = 'xml')
-    f.close()
+    # RGB vectors for each color, use as control points
+    RGB_list = [hex2rgb(color, 255) for color in colors]
+    degree = len(RGB_list) - 1
 
-    # file prefix
-    script_tags = soup.find_all('svg')
-    prefix = script_tags[0].prettify().split('<g')[0]
+    def bezier_interp(t):
+        """Define an interpolation function for this specific curve."""
+        # List of all summands
+        summands = [list(map(lambda x: int(_bernstein(t, degree, i)*x), c)) for i, c in enumerate(RGB_list)]
+        # Output color
+        out = [0, 0, 0]
+        # Add components of each summand together
+        for vector in summands:
+            for c in range(3):
+                out[c] += vector[c]
+        return out
 
-    # end of file
-    endOfFile = script_tags[0].prettify().split('</g>')[-1]
-
-    # find objs
-    script_tags = soup.find_all('g')
-    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
-    for i in range(len(script_tags)):
-        if 'id' in script_tags[i].attrs:
-
-            if script_tags[i].attrs['id'].startswith(('figure', 'axes', 'xtick', 'matplotlib.axis', 'xtick', 'ytick')):
-                pass
-            else:
-                # print(script_tags[i].attrs['id'])
-                del_list = []
-                for j in range(len(script_tags[i].contents)):
-                    try:
-                        if 'id' in script_tags[i].contents[j].attrs:
-                            del_list.append(j)
-                    except AttributeError:
-                        pass
-                del_list = [x-n for n,x in enumerate(del_list)]
-                for j in del_list:
-                    del script_tags[i].contents[j]
-
-                # include obj
-                objs[script_tags[i].attrs['id']] = str(script_tags[i])#.prettify()
-
-    # prepare output
-    output = copy.copy(prefix)
-    for id in objs:
-        output += objs[id]
-    output += endOfFile
-
-    # save
-    if outfilepath is None:
-        outfilepath = filepath
-    else:
-        outfilepath = Path(outfilepath)
-    f = outfilepath.open('w')
-    f.write(output)
-    f.close()
+    return [[x/255*max_rgb_value for x in bezier_interp(float(t)/(n-1))] for t in range(n)]
 
 # %% =============================== Experimental ========================= %% #
-# %% gridspec
 import types
 def gridspec(nrows, ncols, instructions=None, **kwargs):
     """[EXPERIMENTAL] instructions = row_init, row_final, col_init, col_final, hspace, wspace"""
@@ -2032,83 +2823,7 @@ def gridspec(nrows, ncols, instructions=None, **kwargs):
 
     return fig, axes
 
-# %% subplots
-def subplots(nrows, ncols, sharex=False, sharey=False, hspace=None, wspace=None, width_ratios=None, height_ratios=None, gridspec_kw=None, **fig_kw):
-    """[EXPERIMENTAL] quickly create multiple plots
-
-    """
-    class myarray(list):
-        def remove_label_from_shared_axis(self, sharex=None, sharey=None):
-            nrows = axes.nrows
-            ncols = axes.ncols
-            if sharex is None:
-                sharex = axes.sharex
-            if sharey is None:
-                sharey = axes.sharey
-            if sharey:
-                keep = np.arange(0, nrows*ncols, ncols)
-                print(keep)
-                for i in range(nrows*ncols):
-                    if i not in keep:
-                        self[i].yaxis.label.set_visible(False)
-            if sharex:
-                for i in range(0, (nrows-1)*ncols):
-                    self[i].xaxis.label.set_visible(False)
-    
-    axes = myarray([0]*(ncols*nrows))
-    axes.nrows  = nrows
-    axes.ncols  = ncols
-    axes.sharex = sharex
-    axes.sharey = sharey
-
-    # ratios
-    if width_ratios is None:
-        width_ratios=[1]*ncols
-    if height_ratios is None:
-        height_ratios=[1]*nrows
-    
-    if hspace is None:
-        hspace = .3
-    if wspace is None:
-        wspace = .3
-
-    if sharex:
-        hspace = 0
-    if sharey:
-        wspace = 0
-
-    # gridspec_kw
-    if gridspec_kw is None:
-        gridspec_kw = {}
-    if 'wspace' not in gridspec_kw:
-        gridspec_kw['wspace'] = wspace 
-    if 'hspace' not in gridspec_kw:
-        gridspec_kw['hspace'] = hspace 
-    if 'width_ratios' not in gridspec_kw:
-        gridspec_kw['width_ratios'] = width_ratios 
-    if 'height_ratios' not in gridspec_kw:
-        gridspec_kw['height_ratios'] = height_ratios 
-    if 'wspace' not in gridspec_kw:
-        gridspec_kw['wspace'] = hspace 
-
-    fig, _axes = plt.subplots(nrows, ncols, 
-                              sharex=sharex,
-                              sharey=sharey,
-                              gridspec_kw=gridspec_kw, **fig_kw)
-    fig = _fix_figure(fig, **fig_kw)
-
-    del gridspec_kw
-
-    try:
-        for i, ax in enumerate(br.flatten(_axes)):
-            axes[i] = ax
-    except TypeError:
-        axes[0] = _axes
-
-    return fig, axes
-
-# %% subplotadjust
-def subplots_adjust(fig=None, left=None, bottom=None, right=None, top=None, labelleft=True, labelbottom=True, labelright=False, labeltop=False, fontsize=None):
+def _subplots_adjust(fig=None, left=None, bottom=None, right=None, top=None, labelleft=True, labelbottom=True, labelright=False, labeltop=False, fontsize=None):
     """
 
     manual adjust use fig.subplots_adjust(left=left, bottom=bottom, right=right, top=top) 
@@ -2170,244 +2885,160 @@ def subplots_adjust(fig=None, left=None, bottom=None, right=None, top=None, labe
     print(f'left={left}, right={right}, bottom={bottom}, top={top}')
     fig.subplots_adjust(left=left, right=right, bottom=bottom, top=top) 
 
-# %% legend
-def legend(ax=None, coord=False, **kwargs):
-    """same as plt.legend, but allows to move legend to axes coordinates
+def _savefigs(filepath, figs='all'):
+    """Save multiple matplotlib figures in a pdf.
 
     Args:
-        ax (axes)
-        coord (tuple): axes coordinates.
-
-    Returns:
-
+        filepath (string or pathlib.Path): filepath
+        figs (list, optional): list with the figure numbers to save. Use 'all'
+            to save all opened figures.
     """
-    if ax is None:
-        ax = plt.gca()
+    # check extension
+    if Path(filepath).suffix == '.pdf':
+        pass
+    else:
+        filepath = Path(filepath).with_suffix('.pdf')
 
-    if 'labelspacing' not in kwargs:
-        kwargs['labelspacing'] = 0.1
-    if 'frameon' not in kwargs:
-        kwargs['frameon'] = False
+    if figs == 'all':
+        figs = [plt.figure(n) for n in plt.get_fignums()]
 
-    if coord:
-        # conversion legend axes bbox to coordinates (not sure if universal)
-        x = coord[0]
-        y = coord[1]
+    if len(figs) > 1:
+        pp = PdfPages(str(filepath))
+        for fig in figs:
+            fig.savefig(pp, format='pdf')
+        pp.close()
+    else:
+        plt.savefig(str(filepath), format='pdf')
 
-        # x
-        x0, xf   = ax.get_xlim()
-        x0_, xf_ = -0.04, 0.95
+try:
+    from bs4 import BeautifulSoup
+    from collections import OrderedDict
+except ModuleNotFoundError:
+    pass
+def _ungroup_svg(filepath, outfilepath=None):
+    """Ungroup all objects in svg files created by matplotlib.
 
-        a = (xf_ - x0_)/(xf - x0)
-        b = x0_
+    Text with latex equations are kept grouped.
 
-        x_ = a*(x - x0) + b
-
-        # y
-        y0, yf   = ax.get_ylim()
-        y0_, yf_ = 0.08, 1.02
-
-        a = (yf_ - y0_)/(yf - y0)
-        b = y0_
-
-        y_ = a*(y - y0) + b
-
-        # save
-        print(f'loc="upper left", bbox_to_anchor=({x_}, {y_})')
-        kwargs['loc'] = "upper left"
-        kwargs['bbox_to_anchor'] = (x_, y_)
-
-    return ax.legend(**kwargs)
-
-# %% inset
-def inset(xlim, ylim, ax=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, xticks_kwargs=None, yticks_kwargs=None, **kwargs):
-    """
-    """
-    if ax is None:
-        ax = plt.gca()
-    if ax2putinset is None:
-        ax2putInset = ax
-
-    x_init      = xlim[0]
-    x_final     = xlim[1]
-    y_init      = ylim[0]
-    y_final     = ylim[1]
-
-    # create inset
-    inset = ax.get_figure().add_axes(br.ax_box2fig_box(ax2putInset, [x_init, y_init, x_final, y_final]))
-
-    for line in ax2putInset.get_lines():
-        line2, = inset.plot(line.get_xdata(), line.get_ydata(),
-                            ls=line.get_linestyle(),
-                            linewidth=line.get_linewidth(),
-                            marker = line.get_marker(),
-                            markevery=line.get_markevery(),
-                            ms=line.get_markersize(),
-                            color=line.get_color(),
-                            alpha=line.get_alpha(),
-                            markerfacecolor=line.get_markerfacecolor(),
-                            markeredgewidth=line.get_markeredgewidth(),
-                            label=line.get_label())
-    
-
-    if xticks_kwargs is not None:
-        set_xticks(ax=inset, **xticks_kwargs)
-    if yticks_kwargs is not None:
-        set_yticks(ax=inset, **yticks_kwargs)
-
-    # Rectangle
-    if rect:
-        if 'linewidth' not in kwargs or 'lw' not in kwargs:
-            kwargs['linewidth'] = 0.6
-        if 'facecolor' not in kwargs or 'fc' not in kwargs:
-            kwargs['fc'] = 'none'
-        if 'edgecolor' not in kwargs:
-            kwargs['edgecolor'] = 'gray'
-        if 'alpha' not in kwargs:
-            kwargs['alpha'] = 0.5
-        if 'zorder' not in kwargs:
-            kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
-
-        if rect_xlim is None:
-            rect_xlim = (inset.get_xlim()[0], inset.get_xlim()[1]-inset.get_xlim()[0])
-            print(f'rect_xlim={rect_xlim}')
-        if rect_ylim is None:
-            rect_ylim = (inset.get_ylim()[0],  inset.get_ylim()[1]-inset.get_ylim()[0])
-            print(f'rect_ylim={rect_ylim}')
-        
-        _ = ax2putInset.spines['left'].get_linewidth()
-        rect = plt.Rectangle((rect_xlim[0], rect_ylim[0]), rect_xlim[1], rect_ylim[1], **kwargs)
-        ax2putInset.add_patch(rect)
-
-    return inset
- 
-
-# %% =============================== Gradient ============================= %% #
-def rgb2hex(rgb, max_rgb_value=1):
-    """Return hex value.
+    Ticks are cloned. The parent ticks will be at the left upper corner of the figure.
 
     Args:
-        rgb (tuple): rgb values ([255 255 255])
-        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+        filepath (string or pathlib.Path): path to svg file.
+        outfilepath (string or pathlib.Path, optional): path for svg output file.
+            If None, it will use the input filepath and the file will be overwrited.
 
-    Returns:
-        hex value."""
-    if max(rgb) > max_rgb_value:
-        raise ValueError(f'rgb={rgb} maximum value is bigger than max_rgb_value.')
-    return mpl.colors.to_hex([x/max_rgb_value for x in rgb])
+    See Also:
+        :py:func:`soft_ungroup`
 
-def hex2rgb(string, max_rgb_value=1):
-    """Return rgb value.
-
-    Args:
-        string (string): hex value as string.
-        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Returns:
-        rgb value (tuple)."""
-    return [x*max_rgb_value for x in mpl.colors.to_rgb(string)]
-
-def _linear_gradient(start, end, n=10, max_rgb_value=1):
-    """Returns a gradient list of n colors between two hex colors.
-
-    Args:
-        start (tuple): rgb start value.
-        end (tuple): rgb final value.
-        n (int, optional): number of intermediate colors.
-        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Note:
-        see https://bsouthga.dev/posts/color-gradients-with-python.
-
-    Returns:
-        list with rgb colors.
+    Notes:
+        Use :py:func:`soft_ungroup` to better preserve the structure
+        of the svg file in case :py:func:`ungroup` returns strange results.
     """
-    # Starting and ending colors in RGB form
-    start = hex2rgb(start, 255)
-    end = hex2rgb(end, 255)
-    # Initilize a list of the output colors with the starting color
-    RGB_list = [start]
-    # Calcuate a color at each evenly spaced value of t from 1 to n
-    for t in range(1, n):
-        # Interpolate RGB vector for color at the current value of t
-        temp = [int(start[j] + (float(t)/(n-1))*(end[j]-start[j]))/255*max_rgb_value for j in range(3)]
-        # Add it to our list of output colors
-        RGB_list.append(temp)
-    return RGB_list
+    # get soup
+    filepath = Path(filepath)
+    f = filepath.open()
+    soup = BeautifulSoup(f, features = 'xml')
+    f.close()
 
-def linear_gradient(colors, n, max_rgb_value=1):
-    """Returns a list of colors forming linear gradients between colors.
+    # file prefix
+    script_tags = soup.find_all('svg')
+    prefix = script_tags[0].prettify().split('<g')[0]
 
-    Note:
-        see https://bsouthga.dev/posts/color-gradients-with-python
+    # end of file
+    endOfFile = script_tags[0].prettify().split('</g>')[-1]
 
-    Args:
-      colors (tuple): list with rgb values.
-      n (int, optional): number of intermediate colors.
-      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+    # find objs
+    script_tags = soup.find_all(['use', 'path', 'def', 'text'])
+    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
+    for i in range(len(script_tags)):
 
-    Returns:
-      list with rgb colors.
-    """
-    # The number of colors per individual linear gradient
-    n_out = int(float(n) / (len(colors) - 1))
-    # returns dictionary defined by color_dict()
-    RGB_list = _linear_gradient(colors[0], colors[1], n_out, max_rgb_value=255)
-
-    if len(colors) > 2:
-        for col in range(1, len(colors) - 1):
-            next = _linear_gradient(colors[col], colors[col+1], n_out, max_rgb_value=255)
-        for color in next[1:]:
-            RGB_list.append(color)
-    return [[x/255*max_rgb_value for x in color] for color in RGB_list]
-
-# Value cache
-fact_cache = {}
-def _factorial(n):
-    """Memoized factorial function used by the  _bernstein() function."""
-    try:
-        return fact_cache[n]
-    except(KeyError):
-        if n == 1 or n == 0:
-            result = 1
+        if script_tags[i].name == 'text':  # keep text with latex equations grouped
+            if 'transform' in script_tags[i].parent.attrs:
+                objs[i] = str(script_tags[i].parent.prettify())
+            else:
+                objs[i] = str(script_tags[i].prettify())
         else:
-            result = n*_factorial(n-1)
-        fact_cache[n] = result
-        return result
+            # include obj
+            objs[i] = str(script_tags[i].prettify())
 
-def _bernstein(t, n, i):
-    """Bernstein coefficient used by the bezier_gradient() function."""
-    binom = _factorial(n)/float(_factorial(i)*_factorial(n - i))
-    return binom*((1-t)**(n-i))*(t**i)
+    # prepare output
+    output = copy.copy(prefix)
+    for id in objs:
+        output += objs[id]
+    output += endOfFile
 
-def bezier_gradient(colors, n=100, max_rgb_value=1):
-    """Returns a list of rgb colors forming a bezier gradient between colors.
+    # save
+    if outfilepath is None:
+        outfilepath = filepath
+    else:
+        outfilepath = Path(outfilepath)
+    f = outfilepath.open('w')
+    f.write(output)
+    f.close()
 
-    Note:
-        see https://bsouthga.dev/posts/color-gradients-with-python.
+def _soft_ungroup_svg(filepath, outfilepath=None):
+    """Ungroup objects in svg file (each object stands in a group by itself).
 
     Args:
-      colors (tuple): list with hex values.
-      n (int, optional): number of intermediate colors.
-      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+        filepath (string or pathlib.Path): path to svg file.
+        outfilepath (string or pathlib.Path, optional): path for svg output file.
+            If None, it will use the input filepath and the file will be overwrited.
 
-    Returns:
-      list with rgb colors.
+    See Also:
+        :py:func:`ungroup`
+
+    Notes:
+        This differs from :py:func:`ungroup` as it better preserves the structure
+        of the svg file, but Objects are still kept in groups.
     """
-    # RGB vectors for each color, use as control points
-    RGB_list = [hex2rgb(color, 255) for color in colors]
-    degree = len(RGB_list) - 1
+    # get soup
+    filepath = Path(filepath)
+    f = filepath.open()
+    soup = BeautifulSoup(f, features = 'xml')
+    f.close()
 
-    def bezier_interp(t):
-        """Define an interpolation function for this specific curve."""
-        # List of all summands
-        summands = [list(map(lambda x: int(_bernstein(t, degree, i)*x), c)) for i, c in enumerate(RGB_list)]
-        # Output color
-        out = [0, 0, 0]
-        # Add components of each summand together
-        for vector in summands:
-            for c in range(3):
-                out[c] += vector[c]
-        return out
+    # file prefix
+    script_tags = soup.find_all('svg')
+    prefix = script_tags[0].prettify().split('<g')[0]
 
-    return [[x/255*max_rgb_value for x in bezier_interp(float(t)/(n-1))] for t in range(n)]
+    # end of file
+    endOfFile = script_tags[0].prettify().split('</g>')[-1]
+
+    # find objs
+    script_tags = soup.find_all('g')
+    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
+    for i in range(len(script_tags)):
+        if 'id' in script_tags[i].attrs:
+
+            if script_tags[i].attrs['id'].startswith(('figure', 'axes', 'xtick', 'matplotlib.axis', 'xtick', 'ytick')):
+                pass
+            else:
+                # print(script_tags[i].attrs['id'])
+                del_list = []
+                for j in range(len(script_tags[i].contents)):
+                    try:
+                        if 'id' in script_tags[i].contents[j].attrs:
+                            del_list.append(j)
+                    except AttributeError:
+                        pass
+                del_list = [x-n for n,x in enumerate(del_list)]
+                for j in del_list:
+                    del script_tags[i].contents[j]
+
+                # include obj
+                objs[script_tags[i].attrs['id']] = str(script_tags[i])#.prettify()
+
+    # prepare output
+    output = copy.copy(prefix)
+    for id in objs:
+        output += objs[id]
+    output += endOfFile
+
+    # save
+    if outfilepath is None:
+        outfilepath = filepath
+    else:
+        outfilepath = Path(outfilepath)
+    f = outfilepath.open('w')
+    f.write(output)
+    f.close()

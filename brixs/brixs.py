@@ -2367,7 +2367,7 @@ class Spectra(metaclass=_Meta):
         ###################################
         # asserting validity of the input #
         ###################################
-        error_message = 'Wrong input. Spectrum cannot be added. Please, use one ' +\
+        error_message = 'Wrong input. Spectrum cannot be appended. Please, use one ' +\
                         'of the examples below:\n' +\
                         '\n' +\
                         'ss = br.Spectra()\n' +\
@@ -4712,6 +4712,20 @@ class Spectra(metaclass=_Meta):
             final.append(s.calculate_x_sum(*args, **kwargs))
 
         return final
+
+    def calculate_y_average_per_spectrum(self, *args, **kwargs):
+        """returs a list of the average y value within range for each spectrum
+
+        Args:
+            ranges (list): a pair of values or a list of pairs. Each pair represents
+                the start and stop of a data range from x. Use None to indicate
+                the minimum or maximum x value of the data.
+                
+        Returns:
+            list
+        """
+
+        return [np.mean(s._extract(*args, **kwargs).y) for s in self]
 
     def polyfit(self, deg, *args, **kwargs):
         """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
