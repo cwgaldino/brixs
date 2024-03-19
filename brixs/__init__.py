@@ -11,6 +11,8 @@ from .model import Model
 
 # finder
 from .finder import *
+from .finder import _get_function_args_and_default_values
+from .finder import _args2kwargs
 
 # # file reading
 # from .file_reading import PEAXIS

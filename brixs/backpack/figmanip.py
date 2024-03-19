@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Everyday use functions that eases matplotlib figure manipulation."""
 
-
 # %% ------------------------- Standard Imports --------------------------- %% #
 import copy
 from pathlib import Path
@@ -26,15 +25,10 @@ from matplotlib import colormaps
 from collections.abc import Iterable
 from cycler import cycler
 
-# %% ------------------------- backpack Imports --------------------------- %% #
-from .arraymanip import index
-from .interact import copy2clipboard, png2clipboard, svg2clipboard, operating_system
-from .numanip import n_decimal_places, round_to_1
-
 # %% ------------------------- Initial definitions ------------------------ %% #
-is_windows = operating_system() == 'windows'
-is_linux   = operating_system() == 'linux'
-is_mac     = operating_system() == 'mac'
+is_windows = br.operating_system() == 'windows'
+is_linux   = br.operating_system() == 'linux'
+is_mac     = br.operating_system() == 'mac'
 
 # %% ================================ colors ============================== %% #
 def get_available_colors():
@@ -500,11 +494,11 @@ def _onclick(event):
         with tempfile.NamedTemporaryFile("r+b", delete=True) as fd:
             if onclick_fig_format == 'svg':
                 plt.savefig(fd)
-                svg2clipboard(fd)
+                br.svg2clipboard(fd)
             elif onclick_fig_format == 'png':
                 plt.savefig(fd, dpi=onclick_resolution)
-                png2clipboard(fd)
-            print(f'figure copied to clipboard as {onclick_fig_format}')
+                br.png2clipboard(fd)
+            # print(f'figure copied to clipboard as {onclick_fig_format}')
     ###############
     # right click #
     ###############
@@ -515,9 +509,9 @@ def _onclick(event):
             try:
                 lim = ax.get_ylim()
                 delta = lim[1] - lim[0]
-                r21 = round_to_1(delta)
+                r21 = br.round_to_1(delta)
                 if r21 < 1:
-                    n = n_decimal_places(r21)*2
+                    n = br.n_decimal_places(r21)*2
                 elif r21 >= 1 and r21 < 2:
                     n = 3
                 elif r21 >= 2 and r21 < 100:
@@ -529,8 +523,8 @@ def _onclick(event):
                 final = round(event.ydata, n)
                 if n == 0:
                     final = int(final)
-                copy2clipboard(str(final))
-                print('y coordinate copied to clipboard')
+                br.copy2clipboard(str(final))
+                # print('y coordinate copied to clipboard')
             except TypeError:
                 pass
     ###############
@@ -542,9 +536,9 @@ def _onclick(event):
             try:
                 lim = ax.get_xlim()
                 delta = lim[1] - lim[0]
-                r21 = round_to_1(delta)
+                r21 = br.round_to_1(delta)
                 if r21 < 1:
-                    n = n_decimal_places(r21)*2
+                    n = br.n_decimal_places(r21)*2
                 elif r21 >= 1 and r21 < 2:
                     n = 3
                 elif r21 >= 2 and r21 < 100:
@@ -556,8 +550,8 @@ def _onclick(event):
                 final = round(event.xdata, n)
                 if n == 0:
                     final = int(final)
-                copy2clipboard(str(final))
-                print('x coordinate copied to clipboard')
+                br.copy2clipboard(str(final))
+                # print('x coordinate copied to clipboard')
             except TypeError:
                 pass
 
@@ -652,7 +646,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
     # fig_kw #
     ##########
     if 'figsize' in fig_kw:
-        fig_kw['figsize'] = (cm2inch(fig_kw['figsize'][0]), cm2inch(fig_kw['figsize'][1]))
+        fig_kw['figsize'] = cm2inch(fig_kw['figsize'][0], fig_kw['figsize'][1])
 
     ############
     # subplots #
@@ -704,52 +698,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
         ax.remove_yticklabels = MethodType(remove_yticklabels, ax)
 
     return fig, axes
-
-def merge_axes(ax1, ax2):
-    """merge axes created via plt.subplots
-
-    Args:
-        ax1, ax2 (axes object): axes to be merged.
-
-    Returns
-        merged axes object
-    """
-    # check if axes came from the same figure
-    assert ax1.figure == ax1.figure, 'axes must come from the same figure'
-
-    # check if axes are neighbors and the same size
-    xmin1 = ax1._subplotspec.rowspan.start
-    xmax1 = ax1._subplotspec.rowspan.stop
-    ymin1 = ax1._subplotspec.colspan.start
-    ymax1 = ax1._subplotspec.colspan.stop
-
-    xmin2 = ax2._subplotspec.rowspan.start
-    xmax2 = ax2._subplotspec.rowspan.stop
-    ymin2 = ax2._subplotspec.colspan.start
-    ymax2 = ax2._subplotspec.colspan.stop
-
-    assert xmin1 == xmin2 or ymin1 == ymin2, 'axes must be neighbors'
-    if xmin1 == xmin2:
-        assert (xmax1 - xmin1) == (xmax2 - xmin2), 'axes must have the same height'
-    elif ymin1 == ymin2:
-        assert (ymax1 - ymin1) == (ymax2 - ymin2), 'axes must have the same width'
-
-    # get new grid coordinates
-    xmin = min(xmin1, xmin2)
-    xmax = max(xmax1, xmax2)
-    ymin = min(ymin1, ymin2)
-    ymax = max(ymax1, ymax2)
-
-    # add subplot
-    gs = ax1.get_gridspec()
-    ax3 = ax1.figure.add_subplot(gs[xmin:xmax, ymin:ymax])
-
-    # remove the underlying axes
-    ax1.remove()
-    ax2.remove()
-
-    return ax3
-
+    
 # %% figure grid
 def _grid(self, visible=None):
     
@@ -769,15 +718,15 @@ def _grid(self, visible=None):
         self._grid = self.add_axes([0, 0, 1, 1], alpha=0.5)
         self._grid.patch.set_alpha(0.5)
 
-        br.set_xticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
-        br.set_yticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
+        set_xticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
+        set_yticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
         
         self._grid.grid(which='major', color='red', lw=0.5)
         self._grid.grid(which='minor', color='black', ls=':', lw=0.5)
     
         for v in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
-            br.text(ax=self._grid, s=v, x=v, loc='lower', horizontalalignment='center')
-            br.text(ax=self._grid, s=v, y=v, loc='left')
+            note(ax=self._grid, s=v, x=v, loc='lower', horizontalalignment='center')
+            note(ax=self._grid, s=v, y=v, loc='left')
     else:
         self._grid.set_visible(False)
         del self._grid
@@ -896,8 +845,8 @@ def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
     print(f'x={x + xoffset}, y={y}')
     return ax.text(x + xoffset, y, s, **kwargs)
 
-def text(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
-    """Write text to a pre-defined locations. Wrapper for `plt.text()`_.
+def note(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
+    """Write text to a pre-defined locations (auto-position text). Wrapper for `plt.text()`_.
 
     Text is written in axes coord (i.e. text does not move with the data). The 
     coordinate system of the Axes; (0, 0) is bottom left of the axes, and (1, 1)
@@ -934,8 +883,9 @@ def text(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
     leg = ax.get_legend()
 
     # create ghost legend
-    line, = ax.plot([])
-    temp  = ax.legend(handles=[line], labels=[''], loc='upper left')
+    plt.autoscale(False)
+    # line, = ax.plot([])
+    temp  = ax.legend(labels=[''], loc='upper left')
     
     # _ = plt.gca().add_artist(leg)
     # leg  = ax.legend(line, [''], loc=loc)
@@ -1035,14 +985,14 @@ def text(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
     # return ax.text(x, y, s, transform=fig.transFigure, **kwargs)
     # return ax.text(x, y, s, **kwargs)
 
-def label_axes(axes, loc='best'):
+def label_axes(axes, loc='upper left'):
     """put letters from `(a)` to `(z)` in axes.
 
     Args:
         axes (axes object or list): axes list
         locs (str or list, optional): The location of the text. If list, list
             must be same length as number of axes. Options are
-            'center', 'best',
+            'center',
             'upper left', 'upper right', 'lower left', 'lower right', 
             'upper center', 'lower center', 'center left', 'center right'. 
             Default is 'best'.
@@ -1056,7 +1006,7 @@ def label_axes(axes, loc='best'):
 
     # fix locs
     if isinstance(loc, str):
-        loc = [loc]*axes
+        loc = [loc]*len(axes)
     
     assert len(axes) == len(loc), 'number of axes must be the same as locs'
 
@@ -1064,23 +1014,382 @@ def label_axes(axes, loc='best'):
     final = []
     for ax in axes:
         letter = ascii_lowercase[i]
-        final.append(text(s='(' + letter + ')', ax=ax, loc=loc[i]))
+        final.append(note(s='(' + letter + ')', ax=ax, loc=loc[i]))
         i += 1
     return final
+
+# %% add to axes
+def _rtext(self, x, s, yoffset=0, xoffset=0, copy_color=False, **kwargs):
+    """Create text at x coordinate on the right side of the last curve plotted
+
+    Args:
+        x (number): x coordinate for the text
+        s (str): text string
+        xoffset, yoffset (number, optional): offset between the curve and the text.
+        copy_color (bool, optional): if True, the color of the text will match
+        the color of the curve. Default is False
+        **kwargs: kwargs are passed to `plt.text()`_
+
+    Returns:
+        matplotlib.text.Text
+    
+    .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
+    """
+    return rtext(x=x, s=s, yoffset=yoffset, xoffset=xoffset, ax=self, copy_color=copy_color, **kwargs)
+mpl.axes.Axes.rtext = _rtext
+
+def _ltext(self, x, s, yoffset=0, xoffset=0, copy_color=False, **kwargs):
+    """Create text at x coordinate on the left side of the last curve plotted
+
+    Args:
+        x (number): x coordinate for the text
+        s (str): text string
+        xoffset, yoffset (number, optional): offset between the curve and the text.
+        copy_color (bool, optional): if True, the color of the text will match
+        the color of the curve. Default is False
+        **kwargs: kwargs are passed to `plt.text()`_
+
+    Returns:
+        matplotlib.text.Text
+    
+    .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
+    """
+    return ltext(x=x, s=s, yoffset=yoffset, xoffset=xoffset, ax=self, copy_color=copy_color, **kwargs)
+mpl.axes.Axes.ltext = _ltext
+
+def _note(self, s, loc='upper left', x=None, y=None, **kwargs):
+    """Write text to a pre-defined locations. Wrapper for `plt.text()`_.
+
+    Text is written in axes coord (i.e. text does not move with the data). The 
+    coordinate system of the Axes; (0, 0) is bottom left of the axes, and (1, 1)
+    is top right of the axes.
+
+    Args:
+        s (str): text string
+        loc (str, optional): location of the text. Supported locations are the
+        same ones for plt.legend(): 'upper right', 'upper left', 'lower left', 
+        'lower right', 'right', 'center left', 'center right', 'lower center', 
+        'upper center', 'center'. Note that 'best' is not a supported value.
+        default is 'upper left'
+        x, y (number): x and y in axes coordinates (0, 1). Overwrites loc.
+        **kwargs: kwargs are passed to `plt.text()`_
+
+    Returns:
+        matplotlib.text.Text
+    
+    .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
+    """
+    return note(s=s, loc=loc, x=x, y=y, ax=self, **kwargs)
+mpl.axes.Axes.note = _note
 
 # %% ================================= label ============================== %% #
 def remove_xlabel(ax):
     """remove xlabel from axes"""
     ax.set_xlabel('')
+    return
+mpl.axes.Axes.remove_xlabel = remove_xlabel
 
 def remove_ylabel(ax):
     """remove ylabel from axes"""
     ax.set_ylabel('')
+    return
+mpl.axes.Axes.remove_ylabel = remove_ylabel
+
+# %% ================================= axes =============================== %% #
+def merge_axes(ax1, ax2):
+    """merge axes created via plt.subplots
+
+    Args:
+        ax1, ax2 (axes object): axes to be merged.
+
+    Returns
+        merged axes object
+    """
+    # check if axes came from the same figure
+    assert ax1.figure == ax1.figure, 'axes must come from the same figure'
+
+    # check if axes are neighbors and the same size
+    xmin1 = ax1._subplotspec.rowspan.start
+    xmax1 = ax1._subplotspec.rowspan.stop
+    ymin1 = ax1._subplotspec.colspan.start
+    ymax1 = ax1._subplotspec.colspan.stop
+
+    xmin2 = ax2._subplotspec.rowspan.start
+    xmax2 = ax2._subplotspec.rowspan.stop
+    ymin2 = ax2._subplotspec.colspan.start
+    ymax2 = ax2._subplotspec.colspan.stop
+
+    assert xmin1 == xmin2 or ymin1 == ymin2, 'axes must be neighbors'
+    if xmin1 == xmin2:
+        assert (xmax1 - xmin1) == (xmax2 - xmin2), 'axes must have the same height'
+    elif ymin1 == ymin2:
+        assert (ymax1 - ymin1) == (ymax2 - ymin2), 'axes must have the same width'
+
+    # get new grid coordinates
+    xmin = min(xmin1, xmin2)
+    xmax = max(xmax1, xmax2)
+    ymin = min(ymin1, ymin2)
+    ymax = max(ymax1, ymax2)
+
+    # add subplot
+    gs = ax1.get_gridspec()
+    ax3 = ax1.figure.add_subplot(gs[xmin:xmax, ymin:ymax])
+
+    # remove the underlying axes
+    ax1.remove()
+    ax2.remove()
+
+    return ax3
+
+def _mergewith(self, ax):
+    """merge axes created via plt.subplots
+
+    Args:
+        ax (axes object): axes to be merged with.
+
+    Returns
+        merged axes object
+    """
+    return merge_axes(self, ax)
+mpl.axes.Axes.mergewith = _mergewith
+
+def add_lspace(value, ax=None):
+    """add space to the left of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    pos = ax.get_position().get_points()
+
+    final = [pos[0][0] + value, 
+             pos[0][1], 
+             0, 
+             0]
+    
+    final[2] = pos[1][0] - final[0]
+    final[3] = pos[1][1] - final[1]
+
+    ax.set_position(final)
+    return
+
+def add_rspace(value, ax=None):
+    """add space to the right of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+    pos = ax.get_position().get_points()
+
+    final = [pos[0][0], 
+             pos[0][1], 
+             0, 
+             0]
+    
+    final[2] = pos[1][0] - final[0]  + value
+    final[3] = pos[1][1] - final[1]
+
+    ax.set_position(final)
+    return
+
+def add_tspace(value, ax=None):
+    """add space to the top of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+    pos = ax.get_position().get_points()
+
+    final = [pos[0][0], 
+             pos[0][1], 
+             0, 
+             0]
+    
+    final[2] = pos[1][0] - final[0]
+    final[3] = pos[1][1] - final[1] + value
+
+    ax.set_position(final)
+    return
+
+def add_bspace(value, ax=None):
+    """add space to the left of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+    pos = ax.get_position().get_points()
+
+    final = [pos[0][0], 
+             pos[0][1] + value, 
+             0, 
+             0]
+    
+    final[2] = pos[1][0] - final[0]
+    final[3] = pos[1][1] - final[1]
+
+    ax.set_position(final)
+    return
+
+def xmove(value, ax=None):
+    """move axes in the x direction
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+    add_lspace(ax, value)
+    add_rspace(ax, value)
+    return
+
+def ymove(value, ax=None):
+    """move axes in the y direction
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    if ax is None:
+        ax = plt.gca()
+    add_tspace(ax, value)
+    add_bspace(ax, value)
+    return
+
+def sharex(axes):
+    """Connect x axis. Cannot be used if the x-axis is already being shared with another Axes"""
+    assert isinstance(axes, Iterable), 'input must be a list of axes'
+    for i, ax in enumerate(axes):
+        ax.sharex(axes[0])
+    return
+# mpl.axes.Axes.share_x_between_multiple_axes = share_x_between_multiple_axes
+
+def sharey(axes):
+    """Connect y axis. Cannot be used if the y-axis is already being shared with another Axes"""
+    assert isinstance(axes, Iterable), 'input must be a list of axes'
+    for i, ax in enumerate(axes):
+        ax.sharey(axes[0])
+    return
+# mpl.axes.Axes.share_y_between_multiple_axes = share_y_between_multiple_axes
+
+# %% add to axes
+def _add_lspace(self, value):
+    """add space to the left of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+
+    Returns:
+        None
+    """
+    return add_lspace(value=value, ax=self)
+mpl.axes.Axes.add_lspace = _add_lspace
+
+def _add_rspace(self, value):
+    """add space to the right of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+
+    Returns:
+        None
+    """
+    return add_rspace(value=value, ax=self)
+mpl.axes.Axes.add_rspace = _add_rspace
+
+def _add_tspace(self, value):
+    """add space to the top of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+
+    Returns:
+        None
+    """
+    return add_tspace(value=value, ax=self)
+mpl.axes.Axes.add_tspace = _add_tspace
+
+def _add_bspace(self, value):
+    """add space to the bottom of an axes
+
+    Args:
+        value (float): value in figure units (0 - 1).
+
+    Returns:
+        None
+    """
+    return add_bspace(value=value, ax=self)
+mpl.axes.Axes.add_bspace = _add_bspace
+
+def _xmove(self, value):
+    """move axes in the x direction
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    return xmove(value=value, ax=self)
+mpl.axes.Axes.xmove = _xmove
+
+def _ymove(self, value):
+    """move axes in the y direction
+
+    Args:
+        value (float): value in figure units (0 - 1).
+        ax (axes): axes to apply change. If None, current axes is selected.
+            Default is None.
+
+    Returns:
+        None
+    """
+    return ymove(value=value, ax=self)
+mpl.axes.Axes.ymove = _ymove
 
 # %% ================================= ticks ============================== %% #
 # get ticks showing
 def get_xticks_showing(ax):
     """get x ticks that are sowing in a plot
+    
     Args:
         ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
             last ax will be used.
@@ -1104,6 +1413,11 @@ def get_yticks_showing(ax):
 # set ticks
 def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set x ticks of a plot.
+
+    Major and minor ticks position, location, and direction changes are applied to all
+    shared axis. However, ticklabel changes are only applyied to the selected
+    axes. Ticklabel parameters: `labelsize`, `labelcolor`, `labelfontfamily`, 
+    `labelbottom`, `labeltop`, `labelleft`, `labelright`, `labelrotation`.
 
     Usage:
         For setting up major ticks:
@@ -1179,12 +1493,14 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ######################
     if 'axis' not in kwargs:
         kwargs['axis'] = 'x'
-    if 'direction' not in kwargs:
-        kwargs['direction'] = 'in'
-    if 'bottom' not in kwargs:
-        kwargs['bottom'] = True
-    if 'top' not in kwargs:
-        kwargs['top'] = True
+    if 'which' not in kwargs:
+        kwargs['which'] = 'both'
+    # if 'direction' not in kwargs:
+    #     kwargs['direction'] = 'in'
+    # if 'bottom' not in kwargs:
+    #     kwargs['bottom'] = True
+    # if 'top' not in kwargs:
+    #     kwargs['top'] = True
 
     #####################
     # major ticks setup #
@@ -1252,7 +1568,7 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
         ticks_sep = ticks[1]  - ticks[0]
         min_lim   = ticks[0]  - ticks_sep*pad[0]
         max_lim   = ticks[-1] + ticks_sep*pad[1]
-        ax.set_xlim((min_lim, max_lim), auto=False)
+        ax.set_xlim((min_lim, max_lim))#, auto=False)
 
     ###############
     # minor ticks #
@@ -1272,12 +1588,24 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ###################
     # tick parameters #
     ###################
-    ax.tick_params(**kwargs)
-    
+    labelparams = ['labelsize', 'labelcolor', 'labelfontfamily', 'labelbottom', 'labeltop', 'labelleft', 'labelright', 'labelrotation']
+    labelparams = {param:kwargs[param] for param in labelparams if param in kwargs}
+    _ = [kwargs.pop(param) for param in labelparams]
+    ax.tick_params(**labelparams)
+
+    for _ax in ax.get_shared_x_axes().get_siblings(ax):
+        _ax.tick_params(**kwargs)
+
     return
 
 def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
+
+    Major and minor ticks position, location, and direction changes are applied to all
+    shared axis. However, ticklabel changes are only applyied to the selected
+    axes. Ticklabel parameters: `labelsize`, `labelcolor`, `labelfontfamily`, 
+    `labelbottom`, `labeltop`, `labelleft`, `labelright`, `labelrotation`.
+
 
     Usage:
         For setting up major ticks:
@@ -1353,12 +1681,14 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ######################
     if 'axis' not in kwargs:
         kwargs['axis'] = 'y'
-    if 'direction' not in kwargs:
-        kwargs['direction'] = 'in'
-    if 'left' not in kwargs:
-        kwargs['left'] = True
-    if 'right' not in kwargs:
-        kwargs['right'] = True
+    if 'which' not in kwargs:
+        kwargs['which'] = 'both'
+    # if 'direction' not in kwargs:
+    #     kwargs['direction'] = 'in'
+    # if 'left' not in kwargs:
+    #     kwargs['left'] = True
+    # if 'right' not in kwargs:
+    #     kwargs['right'] = True
 
     #####################
     # major ticks setup #
@@ -1446,20 +1776,1146 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ###################
     # tick parameters #
     ###################
-    ax.tick_params(**kwargs)
-    
+    labelparams = ['labelsize', 'labelcolor', 'labelfontfamily', 'labelbottom', 'labeltop', 'labelleft', 'labelright', 'labelrotation']
+    labelparams = {param:kwargs[param] for param in labelparams if param in kwargs}
+    _ = [kwargs.pop(param) for param in labelparams]
+    ax.tick_params(**labelparams)
+
+    for _ax in ax.get_shared_y_axes().get_siblings(ax):
+        _ax.tick_params(**kwargs)
+   
     return
 
 # remove tick labels
 def remove_xticklabels(ax):
-    """remove x tick labels from axes"""
-    ax.tick_params(labelbottom=False, labeltop=False)  
+    """remove x tick labels from axes
+    
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+
+    Returns:
+        None
+    """
+    return ax.tick_params(labelbottom=False, labeltop=False)  
 
 def remove_yticklabels(ax):
-    """remove y tick labels from axes"""
-    ax.tick_params(labelleft=False, labelright=False)  
+    """remove y tick labels from axes
+    
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
 
-# obsolete
+    Returns:
+        None
+    """
+    return ax.tick_params(labelleft=False, labelright=False)  
+
+# %% add to axes
+def _get_xticks_showing(self):
+    """get x ticks that are sowing in a plot
+
+    Returns:
+        list
+    """
+    return get_xticks_showing(self)
+mpl.axes.Axes.get_xticks_showing = _get_xticks_showing
+
+def _get_yticks_showing(self):
+    """get y ticks that are sowing in a plot
+
+    Returns:
+        list
+    """
+    return get_yticks_showing(self)
+mpl.axes.Axes.get_yticks_showing = _get_yticks_showing
+
+def _remove_xticklabels(self):
+    """remove x tick labels from axes
+    
+    Returns:
+        None
+    """
+    return remove_xticklabels(self)
+mpl.axes.Axes.remove_xticklabels = _remove_xticklabels
+
+def _remove_yticklabels(self):
+    """remove y tick labels from axes
+    
+    Returns:
+        None
+    """
+    return remove_yticklabels(self)
+mpl.axes.Axes.remove_yticklabels = _remove_yticklabels
+
+def _set_xticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
+    """Set x ticks of a plot.
+
+    Usage:
+        For setting up major ticks:
+
+            set_ticks(start, stop, n_ticks)
+            set_ticks(start, stop, ticks_sep)
+            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
+            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(ticks)                      # manually define each tick position
+            set_ticks(ticks, labels)              # manually define each tick position and label
+
+        For setting up minor ticks:
+
+            set_ticks(n_minor_ticks)             # equally spaced minor ticks
+            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_ticks)               # manually define each minor tick position
+
+    Args:
+        *Major ticks*
+        start, stop (number, optional): major ticks start/stop value. Use None
+            to not keep current start/stop value. Default is None.
+        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
+            n_ticks overwrites ticks_sep. Default is None.
+        ticks, labels (Iterable, optional): Iterable with tick positions and labels.
+        Overwrites start, stop, n_ticks, ticks_sep.
+        
+        *Padding (plotting limits)*
+        pad (number or tuple, optional): padding between plot edge and 
+            closest tick in terms of ticks separation. If tuple, first value 
+            applies to the left edge and second value to the right edge. 
+            Typically, padding should be between a value between 0 and 1. If pad
+            is None, plot limits remain unchanged. However, if pad is None and 
+            start/stop are defined, pad is set to (0, 0). Default is None.
+
+        *Minor ticks*
+        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        ticks between two major ticks or minor tick separation. n_minor_ticks
+        overwrites minor_ticks_sep. Default is None.
+        minor_ticks (Iterable, optional): Iterable with minor tick positions.
+        Overwrites n_minor_ticks and minor_ticks_sep.
+
+        *font*
+        fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
+
+        *ticks parameters*
+        **kwargs: kwargs are passed to `ax.tick_params()`_ that sets tick parameters.
+
+        If not specified, the following parameters are passed to `ax.tick_params()`_:
+
+        Args:
+            which ('major', 'minor', 'both', optional): The group of ticks to which the parameters 
+                are applied. Default is 'both'.
+            direction ('in', 'out', 'inout', optional): Puts ticks inside the 
+                Axes, outside the Axes, or both. Default is 'in'
+            bottom, top (bool, optional): Whether to draw the bottom/top ticks.
+                Default is True.
+
+    Returns:
+        None
+    
+    .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
+    """
+    return set_xticks(ax=self, start=start, stop=stop, n_ticks=n_ticks, ticks_sep=ticks_sep, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_ticks_sep=minor_ticks_sep, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
+mpl.axes.Axes.xticks = _set_xticks
+
+def _set_yticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
+    """Set y ticks of a plot.
+
+    Usage:
+        For setting up major ticks:
+
+            set_ticks(start, stop, n_ticks)
+            set_ticks(start, stop, ticks_sep)
+            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
+            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(ticks)                      # manually define each tick position
+            set_ticks(ticks, labels)              # manually define each tick position and label
+
+        For setting up minor ticks:
+
+            set_ticks(n_minor_ticks)             # equally spaced minor ticks
+            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_ticks)               # manually define each minor tick position
+
+    Args:
+        *Major ticks*
+        start, stop (number, optional): major ticks start/stop value. Use None
+            to not keep current start/stop value. Default is None.
+        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
+            n_ticks overwrites ticks_sep. Default is None.
+        ticks, labels (Iterable, optional): Iterable with tick positions and labels.
+        Overwrites start, stop, n_ticks, ticks_sep.
+        
+        *Padding (plotting limits)*
+        pad (number or tuple, optional): padding between plot edge and 
+            closest tick in terms of ticks separation. If tuple, first value 
+            applies to the left edge and second value to the right edge. 
+            Typically, padding should be between a value between 0 and 1. If pad
+            is None, plot limits remain unchanged. However, if pad is None and 
+            start/stop are defined, pad is set to (0, 0). Default is None.
+
+        *Minor ticks*
+        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        ticks between two major ticks or minor tick separation. n_minor_ticks
+        overwrites minor_ticks_sep. Default is None.
+        minor_ticks (Iterable, optional): Iterable with minor tick positions.
+        Overwrites n_minor_ticks and minor_ticks_sep.
+
+        *font*
+        fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
+
+        *ticks parameters*
+        **kwargs: kwargs are passed to `ax.tick_params()`_ that sets tick parameters.
+
+        If not specified, the following parameters are passed to `ax.tick_params()`_:
+
+        Args:
+            which ('major', 'minor', 'both', optional): The group of ticks to which the parameters 
+                are applied. Default is 'both'.
+            direction ('in', 'out', 'inout', optional): Puts ticks inside the 
+                Axes, outside the Axes, or both. Default is 'in'
+            left, right (bool, optional): Whether to draw the left/right ticks.
+                Default is True.
+
+    Returns:
+        None
+    
+    .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
+    """
+    return set_yticks(ax=self, start=start, stop=stop, n_ticks=n_ticks, ticks_sep=ticks_sep, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_ticks_sep=minor_ticks_sep, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
+mpl.axes.Axes.yticks = _set_yticks
+
+# %% ============================= legend ================================= %% #
+def legend(*args, **kwargs):
+    """Place a legend on the Axes. Wrapper for `plt.legend()`_
+
+    Args:
+        *args, **kwargs: args and kwargs passed to `plt.legend()`_
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        coord (tuple): (x, y) coordinates in data coordinates to place legend. 
+            (x, y) places the corner of the legend specified by `loc` at x, y.
+            If None, this is ignored. Default is None. Overwrites `bbox_to_anchor`.
+        
+    If not specified, the following parameters are passed to `ax.legend()`_:
+
+    Args:
+        labelspacing (float, optional): The vertical space between the legend 
+            entries, in font-size units. Default is 0.5
+        frameon (bool, optional): Whether the legend should be drawn on a patch 
+            (frame). Default is False
+
+    Returns:
+        legend object
+
+    .. _plt.legend(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html
+    """
+    # get axes
+    ax = None
+    if 'ax' in kwargs:
+        ax = kwargs.pop('ax')
+    if ax is None:
+        ax = plt.gca()
+
+    # default attrs
+    if 'labelspacing' not in kwargs:
+        kwargs['labelspacing'] = 0.1
+    if 'frameon' not in kwargs:
+        kwargs['frameon'] = False
+
+    # get coord
+    coord = None
+    if 'coord' in kwargs:
+        coord = kwargs.pop('coord')
+
+    # legend
+    if coord is not None:   
+        # check
+        assert isinstance(coord, Iterable), 'coord must be a tuple of type (x, y)'
+        assert len(coord) == 2, 'coord must be a tuple of type (x, y)'
+
+        # covert to Data coordinates to axes coordinates
+        _x, _y = ax.transData.transform(coord)
+        x, y = ax.transAxes.inverted().transform((_x, _y)) 
+
+        if 'loc' not in kwargs:
+            kwargs['loc'] = "upper left"
+        if 'bbox_to_anchor' not in kwargs:
+            kwargs['bbox_to_anchor'] = (x, y)
+
+    return ax.legend(*args, **kwargs)
+
+def _legend(self, *args, **kwargs):
+    """Place a legend on the Axes. Wrapper for `plt.legend()`_
+
+    Args:
+        *args, **kwargs: args and kwargs passed to `plt.legend()`_
+        coord (tuple): (x, y) coordinates in data coordinates to place legend. 
+            (x, y) places the corner of the legend specified by `loc` at x, y.
+            If None, this is ignored. Default is None. Overwrites `bbox_to_anchor`.
+        
+    If not specified, the following parameters are passed to `ax.legend()`_:
+
+    Args:
+        labelspacing (float, optional): The vertical space between the legend 
+            entries, in font-size units. Default is 0.5
+        frameon (bool, optional): Whether the legend should be drawn on a patch 
+            (frame). Default is False
+
+    Returns:
+        legend object
+
+    .. _plt.legend(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html
+    """
+    kwargs['ax'] = self
+    legend(*args, **kwargs)
+mpl.axes.Axes.leg = _legend
+
+# %% ================================ rectangle =========================== %% #
+def rectangle(xlim, ylim, ax=None, **kwargs):
+    """plot a rectangle. Wrapper for `plt.Rectangle()`_.
+
+    Args:
+        xlim, ylim (tuple): xmin, xmax, ymin, ymax coordinates of the rectangle
+        in data coordinates.
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        **kwargs: kwargs are passed to `plt.Rectangle()`_
+
+    If not specified, the following parameters are passed to `ax.tick_params()`_:
+
+    Args:
+        linewidth (number, optional): Set the patch linewidth in points. 
+            Default is 0.6.
+        facecolor (color or None, optional): Set the patch face color. 
+            Default is 'none'
+        edgecolor (color or None, optional): Set the patch edge color. 
+            Default is gray.
+        alpha (number, optional): Set the alpha value used for blending 
+            - not supported on all backends. Default is 0.5
+        zorder (number, optional): Set the zorder for the artist. 
+            Artists with lower zorder values are drawn first. Default is such 
+            that rectangle is ploted on top of all other curves.
+        
+    Returns:
+        rectangle object 
+    
+    .. _plt.Rectangle(): https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html#matplotlib.patches.Rectangle
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    if 'linewidth' not in kwargs or 'lw' not in kwargs:
+            kwargs['linewidth'] = 0.6
+    if 'facecolor' not in kwargs or 'fc' not in kwargs:
+        kwargs['fc'] = 'none'
+    if 'edgecolor' not in kwargs:
+        kwargs['edgecolor'] = 'gray'
+    if 'alpha' not in kwargs:
+        kwargs['alpha'] = 0.5
+    if 'zorder' not in kwargs:
+        kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
+
+    rect = plt.Rectangle((xlim[0], ylim[0]), xlim[1]-xlim[0], ylim[1]-ylim[0], **kwargs)
+    ax.add_patch(rect)
+
+    return rect
+
+def _rectangle(self, xlim, ylim, **kwargs):
+    """plot a rectangle. Wrapper for `plt.Rectangle()`_.
+
+    Args:
+        xlim, ylim (tuple): xmin, xmax, ymin, ymax coordinates of the rectangle
+        in data coordinates.
+        **kwargs: kwargs are passed to `plt.Rectangle()`_
+
+    If not specified, the following parameters are passed to `ax.tick_params()`_:
+
+    Args:
+        linewidth (number, optional): Set the patch linewidth in points. 
+            Default is 0.6.
+        facecolor (color or None, optional): Set the patch face color. 
+            Default is 'none'
+        edgecolor (color or None, optional): Set the patch edge color. 
+            Default is gray.
+        alpha (number, optional): Set the alpha value used for blending 
+            - not supported on all backends. Default is 0.5
+        zorder (number, optional): Set the zorder for the artist. 
+            Artists with lower zorder values are drawn first. Default is such 
+            that rectangle is ploted on top of all other curves.
+        
+    Returns:
+        rectangle object 
+    
+    .. _plt.Rectangle(): https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html#matplotlib.patches.Rectangle
+    """
+    return rectangle(xlim=xlim, ylim=ylim, ax=self, **kwargs)
+mpl.axes.Axes.rectangle = _rectangle
+
+# %% ================================== zoom ============================== %% #
+def zoom(start, stop, ax=None, ymargin=5):
+    """Zoom up portion of current figure from start to stop.
+
+    Args:
+        start, stop (float): initial and final x value.
+        ax (axes, optional): axes to apply zoom. If None, the current axes 
+        will be used. Default is None
+        ymargin (number, optional): margin value between data and the edges of
+            plot in percentage of the y data range.
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    ymax = None
+    ymin = None
+
+    for line in ax.get_lines():
+
+        x = line.get_data()[0]
+        y = line.get_data()[1]
+
+        try:
+            _, y = br.extract(x=x, y=y, ranges=(start, stop))
+            ymin_temp = min(y)
+            ymax_temp = max(y)
+
+            if ymin is None:
+                    ymin = copy.copy(ymin_temp)
+                    ymax = copy.copy(ymax_temp)
+            try:
+                if ymax_temp > ymax:
+                    ymax = copy.copy(ymax_temp)
+                if ymin_temp < ymin:
+                    ymin = copy.copy(ymin_temp)
+            except UnboundLocalError:
+                warnings.warn("All data are outside of the required range. Cannot zoom.")
+        except RuntimeError:
+            pass
+
+    if ymax is None:
+        ax.set_xlim(start, stop)
+    else:
+        m = (ymax-ymin)*ymargin/100
+        ax.set_ylim(ymin-m, ymax+m)
+        ax.set_xlim(start, stop)
+    return
+
+def _zoom(self, start, stop, ymargin=5):
+    """Zoom up portion of current figure from start to stop.
+
+    Args:
+        start, stop (float): initial and final x value.
+        will be used. Default is None
+        ymargin (number, optional): margin value between data and the edges of
+            plot in percentage of the y data range.
+    """
+    zoom(start=start, stop=stop, ax=self, ymargin=ymargin)
+mpl.axes.Axes.zoom = _zoom
+
+# %% ================================= inset ============================== %% #
+def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
+    """add inset to axes. Inset will have all curves from axes
+
+    Args:
+        xlim, ylim (tuple): (xi, xf), (yi, yf) coordinates of inset in data 
+            coordinates.
+        ax (axes, optional): axes to get inset data from. If None, the current axes 
+            will be used. Default is None
+        xticks_kwargs, yticks_kwargs (dictionary, optional): kwargs for 
+            br.set_xticks() and br.set_yticks() functions to set the inset ticks
+            and plot limits. Default is None.
+        rect (bool, optional): if True, rectangle will be draw in the main axes
+            at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
+        rect_xlim, rect_ylim (tuple, optional): if defines the rectangle edges.
+            overwrites limits defined by xticks_kwargs, yticks_kwargs. 
+        ax2putinset (axex, optional): axes to put inset in. If None, the current axes 
+            will be used. Default is None
+
+    Returns:    
+        inset axes object
+    """
+    if ax is None:
+        ax = plt.gca()
+    if ax2putinset is None:
+        ax2putInset = ax
+
+    x_init      = xlim[0]
+    x_final     = xlim[1]
+    y_init      = ylim[0]
+    y_final     = ylim[1]
+
+    # create inset
+    inset = ax.get_figure().add_axes(_ax_box2fig_box(ax2putInset, [x_init, y_init, x_final, y_final]))
+
+    for line in ax2putInset.get_lines():
+        line2, = inset.plot(line.get_xdata(), line.get_ydata(),
+                            ls=line.get_linestyle(),
+                            linewidth=line.get_linewidth(),
+                            marker = line.get_marker(),
+                            markevery=line.get_markevery(),
+                            ms=line.get_markersize(),
+                            color=line.get_color(),
+                            alpha=line.get_alpha(),
+                            markerfacecolor=line.get_markerfacecolor(),
+                            markeredgewidth=line.get_markeredgewidth(),
+                            label=line.get_label())
+    
+
+    if xticks_kwargs is not None:
+        set_xticks(ax=inset, **xticks_kwargs)
+    if yticks_kwargs is not None:
+        set_yticks(ax=inset, **yticks_kwargs)
+
+    # Rectangle
+    if rect:
+        if 'linewidth' not in kwargs or 'lw' not in kwargs:
+            kwargs['linewidth'] = 0.6
+        if 'facecolor' not in kwargs or 'fc' not in kwargs:
+            kwargs['fc'] = 'none'
+        if 'edgecolor' not in kwargs:
+            kwargs['edgecolor'] = 'gray'
+        if 'alpha' not in kwargs:
+            kwargs['alpha'] = 0.5
+        if 'zorder' not in kwargs:
+            kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
+
+        if rect_xlim is None:
+            rect_xlim = (inset.get_xlim()[0], inset.get_xlim()[1]-inset.get_xlim()[0])
+            print(f'rect_xlim={rect_xlim}')
+        if rect_ylim is None:
+            rect_ylim = (inset.get_ylim()[0],  inset.get_ylim()[1]-inset.get_ylim()[0])
+            print(f'rect_ylim={rect_ylim}')
+        
+        _ = ax2putInset.spines['left'].get_linewidth()
+        rect = plt.Rectangle((rect_xlim[0], rect_ylim[0]), rect_xlim[1], rect_ylim[1], **kwargs)
+        ax2putInset.add_patch(rect)
+
+    return inset
+
+def _ax_box2fig_box(ax, points):
+    """Transform 'bbox like' axis position values to percentage fig position.
+
+    Useful for positioning insets.
+
+    Args:
+        ax (matplotlib.axes.Axes): axes instance.
+        points (list): list like ``[x_init, y_init, x_final, y_final]``
+
+    Returns:
+        'bbox like' figure positions ``[x_init, y_init, delta_x, delta_y]``.
+    """
+    [x_init, y_init, x_final, y_final] = points
+
+    x_init  = _ax_pos2fig_pos(ax, x_init, direction='x')
+    y_init  = _ax_pos2fig_pos(ax, y_init, direction='y')
+    delta_x = _ax_pos2fig_pos(ax, x_final, direction='x') - x_init
+    delta_y = _ax_pos2fig_pos(ax, y_final, direction='y') - y_init
+
+    return [x_init, y_init, delta_x, delta_y]
+
+def _ax_pos2fig_pos(ax, value, direction='x'):
+    """Transform axis position values to figure percentage position.
+
+    Args:
+        ax (matplotlib.axes.Axes): axes instance.
+        value (float): value
+        direction (string, optional): 'x' or 'y'.
+
+    Returns:
+        Figure positions from 0 to 1.
+    """
+    if direction == 'x':
+        point1 = (ax.get_xlim()[0], ax.get_position().xmin)
+        point2 = (ax.get_xlim()[1], ax.get_position().xmax)
+    else:
+        point1 = (ax.get_ylim()[0], ax.get_position().ymin)
+        point2 = (ax.get_ylim()[1], ax.get_position().ymax)
+    delta = (point2[1]-point1[1])/(point2[0]-point1[0])
+    x0 = point2[1] - (delta*point2[0])
+
+    return x0 + delta*value
+
+# %% add to axes
+def _inset(self, xlim, ylim, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
+    """add inset to axes. Inset will have all curves from axes
+
+    Args:
+        xlim, ylim (tuple): (xi, xf), (yi, yf) coordinates of inset in data 
+            coordinates.
+        xticks_kwargs, yticks_kwargs (dictionary, optional): kwargs for 
+            br.set_xticks() and br.set_yticks() functions to set the inset ticks
+            and plot limits. Default is None.
+        rect (bool, optional): if True, rectangle will be draw in the main axes
+            at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
+        rect_xlim, rect_ylim (tuple, optional): if defines the rectangle edges.
+            overwrites limits defined by xticks_kwargs, yticks_kwargs. 
+        ax2putinset (axex, optional): puts inset in a different axes.
+
+    Returns:    
+        inset axes object
+    """
+    return inset(xlim=xlim, ylim=ylim, ax=self, xticks_kwargs=xticks_kwargs, yticks_kwargs=yticks_kwargs, rect=rect, rect_xlim=rect_xlim, rect_ylim=rect_ylim, ax2putinset=ax2putinset, **kwargs)
+mpl.axes.Axes.inset = _inset
+
+# %% ======================== units and conversion ======================== %% #
+def cm2pt(*tupl):
+    """Convert values from cm to pt.
+
+    Args:
+        *Args: single value or a tuple with values to convert
+
+    Returns:
+        A tuple with values converted
+    """
+    if isinstance(tupl[0], tuple):
+        return tuple(i*28.346 for i in tupl[0])
+    else:
+        return tuple(i*28.346 for i in tupl)
+
+def cm2px(*tupl, dpi=None):
+    """Convert values from cm to px.
+
+    Args:
+        *Args: A tuple with values to convert
+        dpi (int): pixel density or dots per inch.
+
+
+    Returns:
+        A tuple with values converted
+    """
+    if dpi is None:
+        dpi = 100
+    inch = 2.54
+    if isinstance(tupl[0], tuple):
+        return tuple(i/inch*dpi for i in tupl[0])
+    else:
+        return tuple(i/inch*dpi for i in tupl)
+
+def cm2inch(*tupl):
+    """Convert values from cm to inches.
+
+    Args:
+        *Args: single value or a tuple with values to convert
+
+    Returns:
+        A tuple with values converted
+    """
+    inch = 2.54
+    if isinstance(tupl[0], tuple):
+        return tuple(i/inch for i in tupl[0])
+    else:
+        return tuple(i/inch for i in tupl)
+
+def mm2inch(*tupl):
+    """Convert values from mm to inches.
+
+    Args:
+        *Args: single value or a tuple with values to convert
+
+    Returns:
+        A tuple with values converted
+    """
+    inch = 2.54/10
+    if isinstance(tupl[0], tuple):
+        return tuple(i/inch for i in tupl[0])
+    else:
+        return tuple(i/inch for i in tupl)
+
+def rgb2hex(rgb, max_rgb_value=1):
+    """Return hex value.
+
+    Args:
+        rgb (tuple): rgb values ([255 255 255])
+        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+        hex value
+    """
+    if max(rgb) > max_rgb_value:
+        raise ValueError(f'rgb={rgb} maximum value is bigger than max_rgb_value.')
+    return mpl.colors.to_hex([x/max_rgb_value for x in rgb])
+
+def hex2rgb(string, max_rgb_value=1):
+    """Return rgb value.
+
+    Args:
+        string (string): hex value as string.
+        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+        rgb value (tuple)
+    """
+    return [x*max_rgb_value for x in mpl.colors.to_rgb(string)]
+
+# %% ================================= lines ============================== %% #
+def axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+    """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
+
+    Args:
+        x (float or array): x coordinates where to plot the lines.
+        ymin, ymax (float, optional): Respective beginning and end of 
+            each line. If None, infinite lines are plotted. Default is None.
+        colors (color or list, optional): line colors. Default is black
+        linestyles (string or list, optional): linestyles. Default is '--'.
+        labels (string or list, optional): labels. Default is ''.
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        **kwargs: kwargs are passed to `plt.vlines()`_ or `plt.axvline()`_
+
+    Returns:
+        list with Line2D objects.
+        
+    .. _plt.axvline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html  
+    .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
+    """
+    # get axis
+    if ax is None:
+        ax = plt.gca()
+
+    # fix attrs
+    if isinstance(x, Iterable) == False:
+        x = [x, ]
+
+    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
+        assert len(x) == len(colors), 'color must be the same length as x'
+    else:
+        colors = [colors]*len(x)
+    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
+        assert len(x) == len(linestyles), 'linestyles must be the same length as x'
+    else:
+        linestyles = [linestyles]*len(x)
+    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
+        assert len(x) == len(labels), 'labels must be the same length as x'
+    else:
+        labels = [labels]*len(x)
+        
+    # plot
+    final = []
+    if ymin is None and ymax is None:
+        for i, _x in enumerate(x):
+            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
+    else:
+        for i, _x in enumerate(x):
+            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
+    return final
+
+def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+    """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
+
+    Args:
+        y (float or array): y coordinates where to plot the lines.
+        xmin, xmax (float, optional): Respective beginning and end of 
+            each line. If None, infinite lines are plotted. Default is None.
+        colors (color or list, optional): line colors. Default is black
+        linestyles (string or list, optional): linestyles. Default is '--'.
+        labels (string or list, optional): labels. Default is ''.
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
+
+    Returns:
+        list with Line2D objects.
+        
+    .. _plt.axhline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axhline.html  
+    .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
+    """
+    # get axis
+    if ax is None:
+        ax = plt.gca()
+
+    # fix attrs
+    if isinstance(y, Iterable) == False:
+        y = [y, ]
+
+    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
+        assert len(y) == len(colors), 'color must be the same length as y'
+    else:
+        colors = [colors]*len(y)
+    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
+        assert len(y) == len(linestyles), 'linestyles must be the same length as y'
+    else:
+        linestyles = [linestyles]*len(y)
+    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
+        assert len(y) == len(labels), 'labels must be the same length as y'
+    else:
+        labels = [labels]*len(y)
+        
+    # plot
+    final = []
+    if xmin is None and xmax is None:
+        for i, _y in enumerate(y):
+            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
+    else:
+        for i, _y in enumerate(y):
+            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
+    return final
+
+# %% add to axes
+def _axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+    """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
+
+    Args:
+        x (float or array): x coordinates where to plot the lines.
+        ymin, ymax (float, optional): Respective beginning and end of 
+            each line. If None, infinite lines are plotted. Default is None.
+        colors (color or list, optional): line colors. Default is black
+        linestyles (string or list, optional): linestyles. Default is '--'.
+        labels (string or list, optional): labels. Default is ''.
+        **kwargs: kwargs are passed to `plt.vlines()`_ or `plt.axvline()`_
+
+    Returns:
+        list with Line2D objects.
+        
+    .. _plt.axvline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html  
+    .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
+    """
+    return vlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
+mpl.axes.Axes.vlines = _axvlines
+
+def _axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+    """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
+
+    Args:
+        y (float or array): y coordinates where to plot the lines.
+        xmin, xmax (float, optional): Respective beginning and end of 
+            each line. If None, infinite lines are plotted. Default is None.
+        colors (color or list, optional): line colors. Default is black
+        linestyles (string or list, optional): linestyles. Default is '--'.
+        labels (string or list, optional): labels. Default is ''.
+        ax (axes, optional): axes. If None, the current axes will be used. Default is None
+        **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
+
+    Returns:
+        list with Line2D objects.
+        
+    .. _plt.axhline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axhline.html  
+    .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
+    """
+    return _hlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
+mpl.axes.Axes.hlines = _axhlines
+
+# %% =============================== Gradient ============================= %% #
+# linear
+def _linear_gradient(start, end, n=10, max_rgb_value=1):
+    """Returns a gradient list of n colors between two hex colors.
+
+    Args:
+        start (tuple): rgb start value.
+        end (tuple): rgb final value.
+        n (int, optional): number of intermediate colors.
+        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Note:
+        see https://bsouthga.dev/posts/color-gradients-with-python.
+
+    Returns:
+        list with rgb colors.
+    """
+    # Starting and ending colors in RGB form
+    start = hex2rgb(start, 255)
+    end = hex2rgb(end, 255)
+    # Initilize a list of the output colors with the starting color
+    RGB_list = [start]
+    # Calcuate a color at each evenly spaced value of t from 1 to n
+    for t in range(1, n):
+        # Interpolate RGB vector for color at the current value of t
+        temp = [int(start[j] + (float(t)/(n-1))*(end[j]-start[j]))/255*max_rgb_value for j in range(3)]
+        # Add it to our list of output colors
+        RGB_list.append(temp)
+    return RGB_list
+
+def linear_gradient(colors, n, max_rgb_value=1):
+    """Returns a list of colors forming linear gradients between colors.
+
+    Note:
+        see https://bsouthga.dev/posts/color-gradients-with-python
+
+    Args:
+      colors (tuple): list with rgb values.
+      n (int, optional): number of intermediate colors.
+      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+      list with rgb colors.
+    """
+    # The number of colors per individual linear gradient
+    n_out = int(float(n) / (len(colors) - 1))
+    # returns dictionary defined by color_dict()
+    RGB_list = _linear_gradient(colors[0], colors[1], n_out, max_rgb_value=255)
+
+    if len(colors) > 2:
+        for col in range(1, len(colors) - 1):
+            next = _linear_gradient(colors[col], colors[col+1], n_out, max_rgb_value=255)
+        for color in next[1:]:
+            RGB_list.append(color)
+    return [[x/255*max_rgb_value for x in color] for color in RGB_list]
+
+# benzier
+fact_cache = {} # Value cache
+def _factorial(n):
+    """Memoized factorial function used by the _bernstein() function."""
+    try:
+        return fact_cache[n]
+    except(KeyError):
+        if n == 1 or n == 0:
+            result = 1
+        else:
+            result = n*_factorial(n-1)
+        fact_cache[n] = result
+        return result
+
+def _bernstein(t, n, i):
+    """Bernstein coefficient used by the bezier_gradient() function."""
+    binom = _factorial(n)/float(_factorial(i)*_factorial(n - i))
+    return binom*((1-t)**(n-i))*(t**i)
+
+def bezier_gradient(colors, n=100, max_rgb_value=1):
+    """Returns a list of rgb colors forming a bezier gradient between colors.
+
+    Note:
+        see https://bsouthga.dev/posts/color-gradients-with-python.
+
+    Args:
+      colors (tuple): list with hex values.
+      n (int, optional): number of intermediate colors.
+      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
+
+    Returns:
+      list with rgb colors.
+    """
+    # RGB vectors for each color, use as control points
+    RGB_list = [hex2rgb(color, 255) for color in colors]
+    degree = len(RGB_list) - 1
+
+    def bezier_interp(t):
+        """Define an interpolation function for this specific curve."""
+        # List of all summands
+        summands = [list(map(lambda x: int(_bernstein(t, degree, i)*x), c)) for i, c in enumerate(RGB_list)]
+        # Output color
+        out = [0, 0, 0]
+        # Add components of each summand together
+        for vector in summands:
+            for c in range(3):
+                out[c] += vector[c]
+        return out
+
+    return [[x/255*max_rgb_value for x in bezier_interp(float(t)/(n-1))] for t in range(n)]
+
+# %% =============================== Experimental ========================= %% #
+def _subplots_adjust(fig=None, left=None, bottom=None, right=None, top=None, labelleft=True, labelbottom=True, labelright=False, labeltop=False, fontsize=None):
+    """
+
+    manual adjust use fig.subplots_adjust(left=left, bottom=bottom, right=right, top=top) 
+    """
+    if fig is None:
+        fig = plt.gcf()
+
+    # figure size
+    xsize, ysize = fig.get_size_inches()
+
+    # font factors
+    # perfect 9 (any size apparently)
+    w_coeff = 0.008
+    h_coff  = 0.024
+
+    # linear coeff
+    a = 0.001
+    b = 0.99
+
+    ymax = []
+    xmax = []
+    for ax in fig.get_axes():
+        # print(ax.get_yticks())
+        temp = [br.n_digits(y) for y in get_yticks_showing(ax=ax)]
+        if len(temp) > 0:
+            ymax += [max(temp), ]
+
+        temp = [br.n_digits(x) for x in get_xticks_showing(ax=ax)]
+        if len(temp) > 0:
+            xmax += [max(temp), ]
+    if len(xmax) == 0:
+        raise ValueError('no axes to apply subplots_adjust')
+    ymax = max(ymax)
+    xmax = max(xmax)
+    # print([br.n_digits(y) for y in get_yticks_showing(ax=ax)])
+
+    if fontsize is None:
+        fontsize = matplotlib.rcParams['font.size']
+    
+    if left is None:
+        left = round((ymax*fontsize*w_coeff + fontsize*h_coff)/xsize, 3)
+    
+    if bottom is None:
+        bottom = round((fontsize*h_coff*1.8)/ysize, 3)
+
+    if right is None:
+        if labelright:
+            right = round((ymax*fontsize*w_coeff + fontsize*h_coff)/xsize, 3)
+        else:
+            right = a*xsize + b
+
+    if top is None:
+        if labeltop:
+            top = round((fontsize*h_coff*1.8)/ysize, 3)
+        else:
+            top = a*ysize + b
+
+
+    print(f'left={left}, right={right}, bottom={bottom}, top={top}')
+    fig.subplots_adjust(left=left, right=right, bottom=bottom, top=top) 
+
+def _savefigs(filepath, figs='all'):
+    """Save multiple matplotlib figures in a pdf.
+
+    Args:
+        filepath (string or pathlib.Path): filepath
+        figs (list, optional): list with the figure numbers to save. Use 'all'
+            to save all opened figures.
+    """
+    # check extension
+    if Path(filepath).suffix == '.pdf':
+        pass
+    else:
+        filepath = Path(filepath).with_suffix('.pdf')
+
+    if figs == 'all':
+        figs = [plt.figure(n) for n in plt.get_fignums()]
+
+    if len(figs) > 1:
+        pp = PdfPages(str(filepath))
+        for fig in figs:
+            fig.savefig(pp, format='pdf')
+        pp.close()
+    else:
+        plt.savefig(str(filepath), format='pdf')
+
+try:
+    from bs4 import BeautifulSoup
+    from collections import OrderedDict
+except ModuleNotFoundError:
+    pass
+def _ungroup_svg(filepath, outfilepath=None):
+    """Ungroup all objects in svg files created by matplotlib.
+
+    Text with latex equations are kept grouped.
+
+    Ticks are cloned. The parent ticks will be at the left upper corner of the figure.
+
+    Args:
+        filepath (string or pathlib.Path): path to svg file.
+        outfilepath (string or pathlib.Path, optional): path for svg output file.
+            If None, it will use the input filepath and the file will be overwrited.
+
+    See Also:
+        :py:func:`soft_ungroup`
+
+    Notes:
+        Use :py:func:`soft_ungroup` to better preserve the structure
+        of the svg file in case :py:func:`ungroup` returns strange results.
+    """
+    # get soup
+    filepath = Path(filepath)
+    f = filepath.open()
+    soup = BeautifulSoup(f, features = 'xml')
+    f.close()
+
+    # file prefix
+    script_tags = soup.find_all('svg')
+    prefix = script_tags[0].prettify().split('<g')[0]
+
+    # end of file
+    endOfFile = script_tags[0].prettify().split('</g>')[-1]
+
+    # find objs
+    script_tags = soup.find_all(['use', 'path', 'def', 'text'])
+    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
+    for i in range(len(script_tags)):
+
+        if script_tags[i].name == 'text':  # keep text with latex equations grouped
+            if 'transform' in script_tags[i].parent.attrs:
+                objs[i] = str(script_tags[i].parent.prettify())
+            else:
+                objs[i] = str(script_tags[i].prettify())
+        else:
+            # include obj
+            objs[i] = str(script_tags[i].prettify())
+
+    # prepare output
+    output = copy.copy(prefix)
+    for id in objs:
+        output += objs[id]
+    output += endOfFile
+
+    # save
+    if outfilepath is None:
+        outfilepath = filepath
+    else:
+        outfilepath = Path(outfilepath)
+    f = outfilepath.open('w')
+    f.write(output)
+    f.close()
+
+def _soft_ungroup_svg(filepath, outfilepath=None):
+    """Ungroup objects in svg file (each object stands in a group by itself).
+
+    Args:
+        filepath (string or pathlib.Path): path to svg file.
+        outfilepath (string or pathlib.Path, optional): path for svg output file.
+            If None, it will use the input filepath and the file will be overwrited.
+
+    See Also:
+        :py:func:`ungroup`
+
+    Notes:
+        This differs from :py:func:`ungroup` as it better preserves the structure
+        of the svg file, but Objects are still kept in groups.
+    """
+    # get soup
+    filepath = Path(filepath)
+    f = filepath.open()
+    soup = BeautifulSoup(f, features = 'xml')
+    f.close()
+
+    # file prefix
+    script_tags = soup.find_all('svg')
+    prefix = script_tags[0].prettify().split('<g')[0]
+
+    # end of file
+    endOfFile = script_tags[0].prettify().split('</g>')[-1]
+
+    # find objs
+    script_tags = soup.find_all('g')
+    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
+    for i in range(len(script_tags)):
+        if 'id' in script_tags[i].attrs:
+
+            if script_tags[i].attrs['id'].startswith(('figure', 'axes', 'xtick', 'matplotlib.axis', 'xtick', 'ytick')):
+                pass
+            else:
+                # print(script_tags[i].attrs['id'])
+                del_list = []
+                for j in range(len(script_tags[i].contents)):
+                    try:
+                        if 'id' in script_tags[i].contents[j].attrs:
+                            del_list.append(j)
+                    except AttributeError:
+                        pass
+                del_list = [x-n for n,x in enumerate(del_list)]
+                for j in del_list:
+                    del script_tags[i].contents[j]
+
+                # include obj
+                objs[script_tags[i].attrs['id']] = str(script_tags[i])#.prettify()
+
+    # prepare output
+    output = copy.copy(prefix)
+    for id in objs:
+        output += objs[id]
+    output += endOfFile
+
+    # save
+    if outfilepath is None:
+        outfilepath = filepath
+    else:
+        outfilepath = Path(outfilepath)
+    f = outfilepath.open('w')
+    f.write(output)
+    f.close()
+
+# %% =============================== Obsolete ============================= %% #
 def _remove_ticks_edge(ax):
     """Remove ticks that fall over the edges of the plot.
 
@@ -1625,7 +3081,7 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
         ticks   = np.linspace(start, stop, n_ticks)
     # ticks shift to get better values (include zero)
     if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
-        ticks = ticks-ticks[index(ticks, 0)]
+        ticks = ticks-ticks[br.index(ticks, 0)]
     elif stop-start > 5:
         ticks = ticks-(ticks[0]-int(ticks[0]))
     # ticks edges
@@ -2182,863 +3638,3 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
         ax.tick_params(which=which, axis='y', **kwargs)
     
     return
-
-# %% ============================= legend ================================= %% #
-def legend(*args, **kwargs):
-    """Place a legend on the Axes. Wrapper for `plt.legend()`_
-
-    Args:
-        *args, **kwargs: args and kwargs passed to `plt.legend()`_
-        ax (axes, optional): axes. If None, the current axes will be used. Default is None
-        coord (tuple): (x, y) coordinates in data coordinates to place legend. 
-            (x, y) places the corner of the legend specified by `loc` at x, y.
-            If None, this is ignored. Default is None. Overwrites `bbox_to_anchor`.
-        
-    If not specified, the following parameters are passed to `ax.legend()`_:
-
-    Args:
-        labelspacing (float, optional): The vertical space between the legend 
-            entries, in font-size units. Default is 0.5
-        frameon (bool, optional): Whether the legend should be drawn on a patch 
-            (frame). Default is False
-
-    Returns:
-        legend object
-
-    .. _plt.legend(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html
-    """
-    # get axes
-    ax = None
-    if 'ax' in kwargs:
-        ax = kwargs.pop('ax')
-    if ax is None:
-        ax = plt.gca()
-
-    # default attrs
-    if 'labelspacing' not in kwargs:
-        kwargs['labelspacing'] = 0.1
-    if 'frameon' not in kwargs:
-        kwargs['frameon'] = False
-
-    # get coord
-    if 'coord' in kwargs:
-        coord = kwargs.pop('coord')
-
-    # legend
-    if coord is not None:   
-        # check
-        assert isinstance(coord, Iterable), 'coord must be a tuple of type (x, y)'
-        assert len(coord) == 2, 'coord must be a tuple of type (x, y)'
-
-        # covert to Data coordinates to axes coordinates
-        _x, _y = ax.transData.transform(coord)
-        x, y = ax.transAxes.inverted().transform((_x, _y)) 
-
-        if 'loc' not in kwargs:
-            kwargs['loc'] = "upper left"
-        if 'bbox_to_anchor' not in kwargs:
-            kwargs['bbox_to_anchor'] = (x, y)
-
-    return ax.legend(*args, **kwargs)
-
-# %% ================================ rectangle =========================== %% #
-def rectangle(xlim, ylim, ax=None, **kwargs):
-    """plot a rectangle. Wrapper for `plt.Rectangle()`_.
-
-    Args:
-        xlim, ylim (tuple): xmin, xmax, ymin, ymax coordinates of the rectangle
-        in data coordinates.
-        ax (axes, optional): axes. If None, the current axes will be used. Default is None
-        **kwargs: kwargs are passed to `plt.Rectangle()`_
-
-    If not specified, the following parameters are passed to `ax.tick_params()`_:
-
-    Args:
-        linewidth (number, optional): Set the patch linewidth in points. 
-            Default is 0.6.
-        facecolor (color or None, optional): Set the patch face color. 
-            Default is 'none'
-        edgecolor (color or None, optional): Set the patch edge color. 
-            Default is gray.
-        alpha (number, optional): Set the alpha value used for blending 
-            - not supported on all backends. Default is 0.5
-        zorder (number, optional): Set the zorder for the artist. 
-            Artists with lower zorder values are drawn first. Default is such 
-            that rectangle is ploted on top of all other curves.
-        
-    Returns:
-        rectangle object 
-    
-    .. _plt.Rectangle(): https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html#matplotlib.patches.Rectangle
-    """
-    if ax is None:
-        ax = plt.gca()
-
-    if 'linewidth' not in kwargs or 'lw' not in kwargs:
-            kwargs['linewidth'] = 0.6
-    if 'facecolor' not in kwargs or 'fc' not in kwargs:
-        kwargs['fc'] = 'none'
-    if 'edgecolor' not in kwargs:
-        kwargs['edgecolor'] = 'gray'
-    if 'alpha' not in kwargs:
-        kwargs['alpha'] = 0.5
-    if 'zorder' not in kwargs:
-        kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
-
-    rect = plt.Rectangle((xlim[0], ylim[0]), xlim[1]-xlim[0], ylim[1]-ylim[0], **kwargs)
-    ax.add_patch(rect)
-
-    return rect
-
-# %% ================================== zoom ============================== %% #
-def zoom(start, stop, ax=None, ymargin=5):
-    """Zoom up portion of current figure from start to stop.
-
-    Args:
-        start, stop (float): initial and final x value.
-        ax (axes, optional): axes to put the text on. If None, the current axes 
-        will be used. Default is None
-        ymargin (number, optional): margin value between data and the edges of
-            plot in percentage of the y data range.
-    """
-    if ax is None:
-        ax = plt.gca()
-
-    ymax = None
-    ymin = None
-
-    for line in ax.get_lines():
-
-        x = line.get_data()[0]
-        y = line.get_data()[1]
-
-        try:
-            _, y = br.extract(x=x, y=y, ranges=(start, stop))
-            ymin_temp = min(y)
-            ymax_temp = max(y)
-
-            if ymin is None:
-                    ymin = copy.copy(ymin_temp)
-                    ymax = copy.copy(ymax_temp)
-            try:
-                if ymax_temp > ymax:
-                    ymax = copy.copy(ymax_temp)
-                if ymin_temp < ymin:
-                    ymin = copy.copy(ymin_temp)
-            except UnboundLocalError:
-                warnings.warn("All data are outside of the required range. Cannot zoom.")
-        except RuntimeError:
-            pass
-
-    if ymax is None:
-        ax.set_xlim(start, stop)
-    else:
-        m = (ymax-ymin)*ymargin/100
-        ax.set_ylim(ymin-m, ymax+m)
-        ax.set_xlim(start, stop)
-
-# %% ================================= inset ============================== %% #
-def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
-    """add inset to axes. Inset will have all curves from axes
-
-    Args:
-        xlim, ylim (tuple): (xi, xf), (yi, yf) coordinates of inset in data 
-            coordinates.
-        ax (axes, optional): axes to get inset data from. If None, the current axes 
-            will be used. Default is None
-        xticks_kwargs, yticks_kwargs (dictionary, optional): kwargs for 
-            br.set_xticks() and br.set_yticks() functions to set the inset ticks
-            and plot limits. Default is None.
-        rect (bool, optional): if True, rectangle will be draw in the main axes
-            at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
-        rect_xlim, rect_ylim (tuple, optional): if defines the rectangle edges.
-            overwrites limits defined by xticks_kwargs, yticks_kwargs. 
-        ax2putinset (axex, optional): axes to put inset in. If None, the current axes 
-            will be used. Default is None
-
-    Returns:    
-        inset axes object
-    """
-    if ax is None:
-        ax = plt.gca()
-    if ax2putinset is None:
-        ax2putInset = ax
-
-    x_init      = xlim[0]
-    x_final     = xlim[1]
-    y_init      = ylim[0]
-    y_final     = ylim[1]
-
-    # create inset
-    inset = ax.get_figure().add_axes(_ax_box2fig_box(ax2putInset, [x_init, y_init, x_final, y_final]))
-
-    for line in ax2putInset.get_lines():
-        line2, = inset.plot(line.get_xdata(), line.get_ydata(),
-                            ls=line.get_linestyle(),
-                            linewidth=line.get_linewidth(),
-                            marker = line.get_marker(),
-                            markevery=line.get_markevery(),
-                            ms=line.get_markersize(),
-                            color=line.get_color(),
-                            alpha=line.get_alpha(),
-                            markerfacecolor=line.get_markerfacecolor(),
-                            markeredgewidth=line.get_markeredgewidth(),
-                            label=line.get_label())
-    
-
-    if xticks_kwargs is not None:
-        set_xticks(ax=inset, **xticks_kwargs)
-    if yticks_kwargs is not None:
-        set_yticks(ax=inset, **yticks_kwargs)
-
-    # Rectangle
-    if rect:
-        if 'linewidth' not in kwargs or 'lw' not in kwargs:
-            kwargs['linewidth'] = 0.6
-        if 'facecolor' not in kwargs or 'fc' not in kwargs:
-            kwargs['fc'] = 'none'
-        if 'edgecolor' not in kwargs:
-            kwargs['edgecolor'] = 'gray'
-        if 'alpha' not in kwargs:
-            kwargs['alpha'] = 0.5
-        if 'zorder' not in kwargs:
-            kwargs['zorder'] = max([_.zorder for _ in ax.get_children()])
-
-        if rect_xlim is None:
-            rect_xlim = (inset.get_xlim()[0], inset.get_xlim()[1]-inset.get_xlim()[0])
-            print(f'rect_xlim={rect_xlim}')
-        if rect_ylim is None:
-            rect_ylim = (inset.get_ylim()[0],  inset.get_ylim()[1]-inset.get_ylim()[0])
-            print(f'rect_ylim={rect_ylim}')
-        
-        _ = ax2putInset.spines['left'].get_linewidth()
-        rect = plt.Rectangle((rect_xlim[0], rect_ylim[0]), rect_xlim[1], rect_ylim[1], **kwargs)
-        ax2putInset.add_patch(rect)
-
-    return inset
-
-def _ax_box2fig_box(ax, points):
-    """Transform 'bbox like' axis position values to percentage fig position.
-
-    Useful for positioning insets.
-
-    Args:
-        ax (matplotlib.axes.Axes): axes instance.
-        points (list): list like ``[x_init, y_init, x_final, y_final]``
-
-    Returns:
-        'bbox like' figure positions ``[x_init, y_init, delta_x, delta_y]``.
-    """
-    [x_init, y_init, x_final, y_final] = points
-
-    x_init  = _ax_pos2fig_pos(ax, x_init, direction='x')
-    y_init  = _ax_pos2fig_pos(ax, y_init, direction='y')
-    delta_x = _ax_pos2fig_pos(ax, x_final, direction='x') - x_init
-    delta_y = _ax_pos2fig_pos(ax, y_final, direction='y') - y_init
-
-    return [x_init, y_init, delta_x, delta_y]
-
-def _ax_pos2fig_pos(ax, value, direction='x'):
-    """Transform axis position values to figure percentage position.
-
-    Args:
-        ax (matplotlib.axes.Axes): axes instance.
-        value (float): value
-        direction (string, optional): 'x' or 'y'.
-
-    Returns:
-        Figure positions from 0 to 1.
-    """
-    if direction == 'x':
-        point1 = (ax.get_xlim()[0], ax.get_position().xmin)
-        point2 = (ax.get_xlim()[1], ax.get_position().xmax)
-    else:
-        point1 = (ax.get_ylim()[0], ax.get_position().ymin)
-        point2 = (ax.get_ylim()[1], ax.get_position().ymax)
-    delta = (point2[1]-point1[1])/(point2[0]-point1[0])
-    x0 = point2[1] - (delta*point2[0])
-
-    return x0 + delta*value
-
-# %% ======================== units and conversion ======================== %% #
-def cm2pt(*tupl):
-    """Convert values from cm to pt.
-
-    Args:
-        *Args: single value or a tuple with values to convert
-
-    Returns:
-        A tuple with values converted
-    """
-    if isinstance(tupl[0], tuple):
-        return tuple(i*28.346 for i in tupl[0])
-    else:
-        return tuple(i*28.346 for i in tupl)
-
-def cm2px(*tupl, dpi=None):
-    """Convert values from cm to px.
-
-    Args:
-        *Args: A tuple with values to convert
-        dpi (int): pixel density or dots per inch.
-
-
-    Returns:
-        A tuple with values converted
-    """
-    if dpi is None:
-        dpi = 100
-    inch = 2.54
-    if isinstance(tupl[0], tuple):
-        return tuple(i/inch*dpi for i in tupl[0])
-    else:
-        return tuple(i/inch*dpi for i in tupl)
-
-def cm2inch(*tupl):
-    """Convert values from cm to inches.
-
-    Args:
-        *Args: single value or a tuple with values to convert
-
-    Returns:
-        A tuple with values converted
-    """
-    inch = 2.54
-    if isinstance(tupl[0], tuple):
-        return tuple(i/inch for i in tupl[0])
-    else:
-        return tuple(i/inch for i in tupl)
-
-def mm2inch(*tupl):
-    """Convert values from mm to inches.
-
-    Args:
-        *Args: single value or a tuple with values to convert
-
-    Returns:
-        A tuple with values converted
-    """
-    inch = 2.54/10
-    if isinstance(tupl[0], tuple):
-        return tuple(i/inch for i in tupl[0])
-    else:
-        return tuple(i/inch for i in tupl)
-
-def rgb2hex(rgb, max_rgb_value=1):
-    """Return hex value.
-
-    Args:
-        rgb (tuple): rgb values ([255 255 255])
-        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Returns:
-        hex value
-    """
-    if max(rgb) > max_rgb_value:
-        raise ValueError(f'rgb={rgb} maximum value is bigger than max_rgb_value.')
-    return mpl.colors.to_hex([x/max_rgb_value for x in rgb])
-
-def hex2rgb(string, max_rgb_value=1):
-    """Return rgb value.
-
-    Args:
-        string (string): hex value as string.
-        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Returns:
-        rgb value (tuple)
-    """
-    return [x*max_rgb_value for x in mpl.colors.to_rgb(string)]
-
-# %% ================================= lines ============================== %% #
-def vlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
-    """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
-
-    Args:
-        x (float or array): x coordinates where to plot the lines.
-        ymin, ymax (float, optional): Respective beginning and end of 
-            each line. If None, infinite lines are plotted. Default is None.
-        colors (color or list, optional): line colors. Default is black
-        linestyles (string or list, optional): linestyles. Default is '--'.
-        labels (string or list, optional): labels. Default is ''.
-        **kwargs: kwargs are passed to `plt.vlines()`_ or `plt.axvline()`_
-
-    Returns:
-        list with Line2D objects.
-        
-    .. _plt.axvline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html  
-    .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
-    """
-    # get axis
-    if ax is None:
-        ax = plt.gca()
-
-    # fix attrs
-    if isinstance(x, Iterable) == False:
-        x = [x, ]
-
-    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
-        assert len(x) == len(colors), 'color must be the same length as x'
-    else:
-        colors = [colors]*len(x)
-    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
-        assert len(x) == len(linestyles), 'linestyles must be the same length as x'
-    else:
-        linestyles = [linestyles]*len(x)
-    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
-        assert len(x) == len(labels), 'labels must be the same length as x'
-    else:
-        labels = [labels]*len(x)
-        
-    # plot
-    final = []
-    if ymin is None and ymax is None:
-        for i, _x in enumerate(x):
-            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
-    else:
-        for i, _x in enumerate(x):
-            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
-    return final
-
-def hlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
-    """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
-
-    Args:
-        y (float or array): y coordinates where to plot the lines.
-        xmin, xmax (float, optional): Respective beginning and end of 
-            each line. If None, infinite lines are plotted. Default is None.
-        colors (color or list, optional): line colors. Default is black
-        linestyles (string or list, optional): linestyles. Default is '--'.
-        labels (string or list, optional): labels. Default is ''.
-        **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
-
-    Returns:
-        list with Line2D objects.
-        
-    .. _plt.axhline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axhline.html  
-    .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
-    """
-    # get axis
-    if ax is None:
-        ax = plt.gca()
-
-    # fix attrs
-    if isinstance(y, Iterable) == False:
-        y = [y, ]
-
-    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
-        assert len(y) == len(colors), 'color must be the same length as y'
-    else:
-        colors = [colors]*len(y)
-    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
-        assert len(y) == len(linestyles), 'linestyles must be the same length as y'
-    else:
-        linestyles = [linestyles]*len(y)
-    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
-        assert len(y) == len(labels), 'labels must be the same length as y'
-    else:
-        labels = [labels]*len(y)
-        
-    # plot
-    final = []
-    if xmin is None and xmax is None:
-        for i, _y in enumerate(y):
-            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
-    else:
-        for i, _y in enumerate(y):
-            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
-    return final
-
-# %% =============================== Gradient ============================= %% #
-# linear
-def _linear_gradient(start, end, n=10, max_rgb_value=1):
-    """Returns a gradient list of n colors between two hex colors.
-
-    Args:
-        start (tuple): rgb start value.
-        end (tuple): rgb final value.
-        n (int, optional): number of intermediate colors.
-        max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Note:
-        see https://bsouthga.dev/posts/color-gradients-with-python.
-
-    Returns:
-        list with rgb colors.
-    """
-    # Starting and ending colors in RGB form
-    start = hex2rgb(start, 255)
-    end = hex2rgb(end, 255)
-    # Initilize a list of the output colors with the starting color
-    RGB_list = [start]
-    # Calcuate a color at each evenly spaced value of t from 1 to n
-    for t in range(1, n):
-        # Interpolate RGB vector for color at the current value of t
-        temp = [int(start[j] + (float(t)/(n-1))*(end[j]-start[j]))/255*max_rgb_value for j in range(3)]
-        # Add it to our list of output colors
-        RGB_list.append(temp)
-    return RGB_list
-
-def linear_gradient(colors, n, max_rgb_value=1):
-    """Returns a list of colors forming linear gradients between colors.
-
-    Note:
-        see https://bsouthga.dev/posts/color-gradients-with-python
-
-    Args:
-      colors (tuple): list with rgb values.
-      n (int, optional): number of intermediate colors.
-      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Returns:
-      list with rgb colors.
-    """
-    # The number of colors per individual linear gradient
-    n_out = int(float(n) / (len(colors) - 1))
-    # returns dictionary defined by color_dict()
-    RGB_list = _linear_gradient(colors[0], colors[1], n_out, max_rgb_value=255)
-
-    if len(colors) > 2:
-        for col in range(1, len(colors) - 1):
-            next = _linear_gradient(colors[col], colors[col+1], n_out, max_rgb_value=255)
-        for color in next[1:]:
-            RGB_list.append(color)
-    return [[x/255*max_rgb_value for x in color] for color in RGB_list]
-
-# benzier
-fact_cache = {} # Value cache
-def _factorial(n):
-    """Memoized factorial function used by the _bernstein() function."""
-    try:
-        return fact_cache[n]
-    except(KeyError):
-        if n == 1 or n == 0:
-            result = 1
-        else:
-            result = n*_factorial(n-1)
-        fact_cache[n] = result
-        return result
-
-def _bernstein(t, n, i):
-    """Bernstein coefficient used by the bezier_gradient() function."""
-    binom = _factorial(n)/float(_factorial(i)*_factorial(n - i))
-    return binom*((1-t)**(n-i))*(t**i)
-
-def bezier_gradient(colors, n=100, max_rgb_value=1):
-    """Returns a list of rgb colors forming a bezier gradient between colors.
-
-    Note:
-        see https://bsouthga.dev/posts/color-gradients-with-python.
-
-    Args:
-      colors (tuple): list with hex values.
-      n (int, optional): number of intermediate colors.
-      max_rgb_value (int, optional): max rgb possible value. Tipically, 1 or 255.
-
-    Returns:
-      list with rgb colors.
-    """
-    # RGB vectors for each color, use as control points
-    RGB_list = [hex2rgb(color, 255) for color in colors]
-    degree = len(RGB_list) - 1
-
-    def bezier_interp(t):
-        """Define an interpolation function for this specific curve."""
-        # List of all summands
-        summands = [list(map(lambda x: int(_bernstein(t, degree, i)*x), c)) for i, c in enumerate(RGB_list)]
-        # Output color
-        out = [0, 0, 0]
-        # Add components of each summand together
-        for vector in summands:
-            for c in range(3):
-                out[c] += vector[c]
-        return out
-
-    return [[x/255*max_rgb_value for x in bezier_interp(float(t)/(n-1))] for t in range(n)]
-
-# %% =============================== Experimental ========================= %% #
-import types
-def gridspec(nrows, ncols, instructions=None, **kwargs):
-    """[EXPERIMENTAL] instructions = row_init, row_final, col_init, col_final, hspace, wspace"""
-    fig = br.figure(**kwargs)
-
-    if instructions is None:
-        instructions = []
-        for row in range(nrows):
-            for col in range(ncols):
-                instructions.append((row, row, col, col, None, None))
-
-    axes = []
-    for instruc in instructions:
-        row_init  = instruc[0]
-        row_final = instruc[1]
-        col_init  = instruc[2]
-        col_final = instruc[3]
-        hspace    = instruc[4]
-        wspace    = instruc[5]
-
-        if row_final is None:
-            row_final = nrows-1
-        if col_final is None:
-            col_final = ncols-1
-
-        if hspace is None:
-            hspace = .3
-        if wspace is None:
-            wspace = .2
-
-        gs = fig.add_gridspec(nrows, ncols, hspace=hspace, wspace=wspace)
-        axes.append(fig.add_subplot(gs[row_init:row_final+1, col_init:col_final+1]))
-
-
-        def _remove_xticklabels(self):
-            self.tick_params(axis='x', labelbottom=False)
-        def _remove_yticklabels(self):
-            self.tick_params(axis='y', labelbottom=False)
-        def _remove_xticks(self, top=True, bottom=True):
-            if bottom: bottom = False
-            if top:    top    = False
-            self.tick_params(axis='x', which='major', top=top, bottom=bottom)
-            self.tick_params(axis='x', which='minor', top=top, bottom=bottom)
-        def _remove_yticks(self, left=True, right=True):
-            if left:  left  = False
-            if right: right = False
-            self.tick_params(axis='y', which='major', left=left, right=right)
-            self.tick_params(axis='y', which='minor', left=left, right=right)
-        def _remove_spline(self, left=False, right=False, top=False, bottom=False):
-            if left:
-                self.spines['left'].set_visible(False)
-            if right:
-                self.spines['right'].set_visible(False)
-            if top:
-                self.spines['top'].set_visible(False)
-            if bottom:
-                self.spines['bottom'].set_visible(False)
-        for ax in axes:
-            ax.remove_xticklabels = types.MethodType(_remove_xticklabels, ax)
-            ax.remove_yticklabels = types.MethodType(_remove_yticklabels, ax)
-            ax.remove_xticks = types.MethodType(_remove_xticks, ax)
-            ax.remove_yticks = types.MethodType(_remove_yticks, ax)
-            ax.remove_spline = types.MethodType(_remove_spline, ax)
-
-    return fig, axes
-
-def _subplots_adjust(fig=None, left=None, bottom=None, right=None, top=None, labelleft=True, labelbottom=True, labelright=False, labeltop=False, fontsize=None):
-    """
-
-    manual adjust use fig.subplots_adjust(left=left, bottom=bottom, right=right, top=top) 
-    """
-    if fig is None:
-        fig = plt.gcf()
-
-    # figure size
-    xsize, ysize = fig.get_size_inches()
-
-    # font factors
-    # perfect 9 (any size apparently)
-    w_coeff = 0.008
-    h_coff  = 0.024
-
-    # linear coeff
-    a = 0.001
-    b = 0.99
-
-    ymax = []
-    xmax = []
-    for ax in fig.get_axes():
-        # print(ax.get_yticks())
-        temp = [br.n_digits(y) for y in get_yticks_showing(ax=ax)]
-        if len(temp) > 0:
-            ymax += [max(temp), ]
-
-        temp = [br.n_digits(x) for x in get_xticks_showing(ax=ax)]
-        if len(temp) > 0:
-            xmax += [max(temp), ]
-    if len(xmax) == 0:
-        raise ValueError('no axes to apply subplots_adjust')
-    ymax = max(ymax)
-    xmax = max(xmax)
-    # print([br.n_digits(y) for y in get_yticks_showing(ax=ax)])
-
-    if fontsize is None:
-        fontsize = matplotlib.rcParams['font.size']
-    
-    if left is None:
-        left = round((ymax*fontsize*w_coeff + fontsize*h_coff)/xsize, 3)
-    
-    if bottom is None:
-        bottom = round((fontsize*h_coff*1.8)/ysize, 3)
-
-    if right is None:
-        if labelright:
-            right = round((ymax*fontsize*w_coeff + fontsize*h_coff)/xsize, 3)
-        else:
-            right = a*xsize + b
-
-    if top is None:
-        if labeltop:
-            top = round((fontsize*h_coff*1.8)/ysize, 3)
-        else:
-            top = a*ysize + b
-
-
-    print(f'left={left}, right={right}, bottom={bottom}, top={top}')
-    fig.subplots_adjust(left=left, right=right, bottom=bottom, top=top) 
-
-def _savefigs(filepath, figs='all'):
-    """Save multiple matplotlib figures in a pdf.
-
-    Args:
-        filepath (string or pathlib.Path): filepath
-        figs (list, optional): list with the figure numbers to save. Use 'all'
-            to save all opened figures.
-    """
-    # check extension
-    if Path(filepath).suffix == '.pdf':
-        pass
-    else:
-        filepath = Path(filepath).with_suffix('.pdf')
-
-    if figs == 'all':
-        figs = [plt.figure(n) for n in plt.get_fignums()]
-
-    if len(figs) > 1:
-        pp = PdfPages(str(filepath))
-        for fig in figs:
-            fig.savefig(pp, format='pdf')
-        pp.close()
-    else:
-        plt.savefig(str(filepath), format='pdf')
-
-try:
-    from bs4 import BeautifulSoup
-    from collections import OrderedDict
-except ModuleNotFoundError:
-    pass
-def _ungroup_svg(filepath, outfilepath=None):
-    """Ungroup all objects in svg files created by matplotlib.
-
-    Text with latex equations are kept grouped.
-
-    Ticks are cloned. The parent ticks will be at the left upper corner of the figure.
-
-    Args:
-        filepath (string or pathlib.Path): path to svg file.
-        outfilepath (string or pathlib.Path, optional): path for svg output file.
-            If None, it will use the input filepath and the file will be overwrited.
-
-    See Also:
-        :py:func:`soft_ungroup`
-
-    Notes:
-        Use :py:func:`soft_ungroup` to better preserve the structure
-        of the svg file in case :py:func:`ungroup` returns strange results.
-    """
-    # get soup
-    filepath = Path(filepath)
-    f = filepath.open()
-    soup = BeautifulSoup(f, features = 'xml')
-    f.close()
-
-    # file prefix
-    script_tags = soup.find_all('svg')
-    prefix = script_tags[0].prettify().split('<g')[0]
-
-    # end of file
-    endOfFile = script_tags[0].prettify().split('</g>')[-1]
-
-    # find objs
-    script_tags = soup.find_all(['use', 'path', 'def', 'text'])
-    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
-    for i in range(len(script_tags)):
-
-        if script_tags[i].name == 'text':  # keep text with latex equations grouped
-            if 'transform' in script_tags[i].parent.attrs:
-                objs[i] = str(script_tags[i].parent.prettify())
-            else:
-                objs[i] = str(script_tags[i].prettify())
-        else:
-            # include obj
-            objs[i] = str(script_tags[i].prettify())
-
-    # prepare output
-    output = copy.copy(prefix)
-    for id in objs:
-        output += objs[id]
-    output += endOfFile
-
-    # save
-    if outfilepath is None:
-        outfilepath = filepath
-    else:
-        outfilepath = Path(outfilepath)
-    f = outfilepath.open('w')
-    f.write(output)
-    f.close()
-
-def _soft_ungroup_svg(filepath, outfilepath=None):
-    """Ungroup objects in svg file (each object stands in a group by itself).
-
-    Args:
-        filepath (string or pathlib.Path): path to svg file.
-        outfilepath (string or pathlib.Path, optional): path for svg output file.
-            If None, it will use the input filepath and the file will be overwrited.
-
-    See Also:
-        :py:func:`ungroup`
-
-    Notes:
-        This differs from :py:func:`ungroup` as it better preserves the structure
-        of the svg file, but Objects are still kept in groups.
-    """
-    # get soup
-    filepath = Path(filepath)
-    f = filepath.open()
-    soup = BeautifulSoup(f, features = 'xml')
-    f.close()
-
-    # file prefix
-    script_tags = soup.find_all('svg')
-    prefix = script_tags[0].prettify().split('<g')[0]
-
-    # end of file
-    endOfFile = script_tags[0].prettify().split('</g>')[-1]
-
-    # find objs
-    script_tags = soup.find_all('g')
-    objs = OrderedDict()  # dict.key() is the layer label, dict.value() is the layer itself
-    for i in range(len(script_tags)):
-        if 'id' in script_tags[i].attrs:
-
-            if script_tags[i].attrs['id'].startswith(('figure', 'axes', 'xtick', 'matplotlib.axis', 'xtick', 'ytick')):
-                pass
-            else:
-                # print(script_tags[i].attrs['id'])
-                del_list = []
-                for j in range(len(script_tags[i].contents)):
-                    try:
-                        if 'id' in script_tags[i].contents[j].attrs:
-                            del_list.append(j)
-                    except AttributeError:
-                        pass
-                del_list = [x-n for n,x in enumerate(del_list)]
-                for j in del_list:
-                    del script_tags[i].contents[j]
-
-                # include obj
-                objs[script_tags[i].attrs['id']] = str(script_tags[i])#.prettify()
-
-    # prepare output
-    output = copy.copy(prefix)
-    for id in objs:
-        output += objs[id]
-    output += endOfFile
-
-    # save
-    if outfilepath is None:
-        outfilepath = filepath
-    else:
-        outfilepath = Path(outfilepath)
-    f = outfilepath.open('w')
-    f.write(output)
-    f.close()

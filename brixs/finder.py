@@ -32,9 +32,15 @@ def processing_function(a, b, c):
     s = <does something with a, b and c and returns s>
     return s
 
+# the parameters a, b, and c are set as attributes of s
+
+    >>> print(s.a)
+    >>> print(s.b)
+    >>> print(s.c)
+
 That's it. 
 
-
+    
 2) manually setting up the finder function, where files will be save in `folderpath`
 
 # verbose for finder can be set (default is True)
@@ -56,6 +62,21 @@ def processing_function(parameters, folderpath):
     save_processed(s=s, parameters=parameters, folderpath=folderpath)
 
     return s
+
+
+If you have a function processing_function(a, b, c) that returns a 
+br.Spectrum type based on parameters `a`, `b`, and `c`. One can set parameters 
+a, b, and c as attributes of the returned Spectrum s by using the @args2attrs 
+decorator
+
+    @br.args2attrs
+    def processing_function(a, b, c):
+        s = <does something with a, b and c and returns s>
+        return s
+    print(s.a)
+    print(s.b)
+    print(s.c)
+
 
 Developers note: in the future, maybe we can make a better way to get the 
 last file number in function _save_processed()
@@ -87,34 +108,55 @@ def finder(func):
         ##########################
         # get function arguments #
         ##########################
-        arguments  = inspect.signature(func).parameters
-        names      = list(arguments.keys())
-        values     = [_.default for _ in list(arguments.values())]
-        # update values passed via args
-        for i, value in enumerate(args):
-            values[i] = value
-        # define parameters
-        parameters = {name:values[i] for i, name in enumerate(names)}
-        # update parameters via kwargs
-        for key in kwargs:
-            parameters[key] = kwargs[key]
+        attr_names, default_values = _get_function_args_and_default_values(func)
+        kwargs = _args2kwargs(attr_names, default_values, args, kwargs)
 
         ########################################################
         # try and find if spectrum has already been calculated #
         ########################################################
-        s = search4processed(parameters=parameters, folderpath=br.finder_folderpath)
+        s = search4processed(parameters=kwargs, folderpath=br.finder_folderpath)
         if s is not None:
             return s
 
         ###############
         # calculation #
         ###############
-        s = func(*args, **kwargs)
+        s = func(**kwargs)
+
+        ######################
+        # save args as attrs #
+        ######################
+        for key in kwargs:
+            s.__setattr__(key, kwargs[key])
         
         ####################################################
         # save spectra so it is not needed to run it again #
         ####################################################
-        br.save_processed(s=s, parameters=parameters, folderpath=br.finder_folderpath)
+        br.save_processed(s=s, parameters=kwargs, folderpath=br.finder_folderpath)
+
+        # returning the value to the original frame
+        return s
+    return inner
+
+def args2attrs(func):
+    def inner(*args, **kwargs):
+               
+        ##########################
+        # get function arguments #
+        ##########################
+        attr_names, default_values = _get_function_args_and_default_values(func)
+        kwargs = _args2kwargs(attr_names, default_values, args, kwargs)
+
+        ###############
+        # calculation #
+        ###############
+        s = func(**kwargs)
+        
+        ######################
+        # save args as attrs #
+        ######################
+        for key in kwargs:
+            s.__setattr__(key, kwargs[key])
 
         # returning the value to the original frame
         return s
@@ -266,5 +308,38 @@ def _save_processed(s, string, folderpath):
     f.write(string + '\n' + str(filepath2save) + '\n')
     f.close() 
 
+#####################
+# Support functions #
+#####################
+def _get_function_args_and_default_values(func):
+    """returns function attrs and default values"""
+    arguments      = inspect.signature(func).parameters
+    attr_names     = list(arguments.keys())
+    default_values = [_.default for _ in list(arguments.values())]
+    return attr_names, default_values
+
+def _args2kwargs(attr_names, default_values, args=[], kwargs={}):
+    """convert (*args, **kwargs) input type to **kwargs and includes default values.
+
+    Args:
+        attr_name (list): list with attr names
+        default_values (list): list with default values for the attrs
+        args, kwargs (list and dict, optional): *args and **kwargs from function call.
+
+    Returns:
+        dict {attr_name: value}
+    """
+    # update values passed via args
+    for i, value in enumerate(args):
+        default_values[i] = value
+
+    # define parameters
+    _kwargs = {name:default_values[i] for i, name in enumerate(attr_names)}
+
+    # update parameters via kwargs
+    for key in kwargs:
+        _kwargs[key] = kwargs[key]
+
+    return _kwargs
 
 
