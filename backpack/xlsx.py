@@ -1,25 +1,42 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Get data from xlsx (excel) files.
-
-Author: Carlos Galdino
-Creation date: 05/01/2023
-"""
+"""Useful functions for everyday use ---> xlsx (excel) files"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path
 import types
 
-# %% ------------------------- Special Imports ---------------------------- %% #
+# %% ============================== xlsx ================================== %% #
+openpyxlok = False
 try:
     import openpyxl
-    from openpyxl.styles import Border, Side, PatternFill, Font, GradientFill, Alignment
+    from openpyxl.styles import PatternFill, Font
     from openpyxl.utils import get_column_letter
+    # from openpyxl.styles import Border, Side,  GradientFill, Alignment
+    openpyxlok = True
 except ModuleNotFoundError:
     pass
 
 def new_xlsx(filepath, sheetname=None):
     """Open a new file
+
+    Usage:
+        # import
+        from xlsx import xlsx, new_xlsx
+
+        # create new xlsx file or open an existing file
+        sheet = new_xlsx(filepath)  # new file
+        sheet = xlsx(filepath)      # existing file
+
+        # function names are self-explanatory
+        sheet.set_row([1, 2, 3, 4], row=2, start_col=4)
+        sheet.set_row_fill(color='ff0000', row=2, start_col=4, stop_col=8)
+        sheet.set_row_font(row=2, bold=True, color='000000', start_col=4, stop_col=8)
+
+        w = sheet.get_col_width(col=5)
+        sheet.set_col_width(col=5, width=w*1.5)
+
+        sheet.save()
 
     Args:
         filepath (Path or str): filepath for new xlsx file.
@@ -28,6 +45,7 @@ def new_xlsx(filepath, sheetname=None):
     Returns:
         sheet object
     """
+    assert openpyxlok, 'new_xlsx() cannot open xlsx file\nError: python package `openpyxl` not found\nmaybe install it via ``pip install openpyxl``' 
 
     # initialize new xlsx
     xlsx = openpyxl.Workbook()
@@ -75,7 +93,25 @@ def _connect2methods(sheet):
     return 
 
 def xlsx(filepath, sheetname=None):
-    """Open xlsx file.
+    """Open xlsx file
+
+    Usage:
+        # import
+        from xlsx import xlsx, new_xlsx
+
+        # create new xlsx file or open an existing file
+        sheet = new_xlsx(filepath)  # new file
+        sheet = xlsx(filepath)      # existing file
+
+        # function names are self-explanatory
+        sheet.set_row([1, 2, 3, 4], row=2, start_col=4)
+        sheet.set_row_fill(color='ff0000', row=2, start_col=4, stop_col=8)
+        sheet.set_row_font(row=2, bold=True, color='000000', start_col=4, stop_col=8)
+
+        w = sheet.get_col_width(col=5)
+        sheet.set_col_width(col=5, width=w*1.5)
+
+        sheet.save()
 
     Args:
         filepath (Path, str): filepath to xlsx
@@ -85,11 +121,11 @@ def xlsx(filepath, sheetname=None):
     Return:
         sheet object.
     """
+    assert openpyxlok, 'xlsx() cannot open xlsx file\nError: python package `openpyxl` not found\nmaybe install it via ``pip install openpyxl``' 
+
     filepath = Path(filepath)
 
-
-
-    xlsx           = openpyxl.load_workbook(str(filepath))#, data_only=True)
+    xlsx = openpyxl.load_workbook(str(filepath))#, data_only=True)
 
     if sheetname is None:
         sheet = xlsx.active
@@ -101,7 +137,7 @@ def xlsx(filepath, sheetname=None):
 
     return sheet
 
-# %% ------------------------- Support methods ---------------------------- %% #
+# %% ============================ Support methods ========================= %% #
 def _save(self, filepath=None):
     """Save xlsx from sheet object
     
@@ -197,10 +233,7 @@ def _get_col_width(self, col):
     return self.column_dimensions[col].width
 
 
-
-
-
-# %% old (possibly obsolete) -------------------------------------------------
+# %% =============================== Obsolete ============================= %% #
 def _refresh(self):
     filepath = Path(self.filepath)
 

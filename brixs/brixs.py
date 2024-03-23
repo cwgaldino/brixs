@@ -2,30 +2,42 @@
 # -*- coding: utf-8 -*-
 """Core brixs module"""
 
-# standard libraries
-import copy
+# %% ------------------------- Standard Imports --------------------------- %% #
+import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
+import copy
 
-# special libraries
+# %% -------------------------- Special Imports --------------------------- %% #
 from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# backpack
-import brixs.backpack.filemanip  as filemanip
-import brixs.backpack.arraymanip as arraymanip
-import brixs.backpack.figmanip   as figmanip
-import brixs.backpack.numanip    as numanip
-import brixs.backpack.interact   as interact
-from .peaks import Peaks
+# %% ----------------------------- backpack ------------------------------- %% #
+import backpack.filemanip  as filemanip
+import backpack.arraymanip as arraymanip
+import backpack.figmanip   as figmanip
+import backpack.numanip    as numanip
+import backpack.numanip    as numanip
+import backpack.interact   as interact
+
+# %% ------------------------------- model -------------------------------- %% #
 from .model import Model
+from .model.peaks import Peaks  # temporary (just for backward compatibility)
 
-# common definitions ===========================================================
+# lmfit check --> move this to model later
+lmfitok = False
+try:
+    import lmfit
+    lmfitok = True
+except:
+    pass  
+
+# %% ------------------------------ settings ------------------------------ %% #
 from .config import settings
+# %%
 
-# support class ================================================================
+# %% =============================== support ============================== %% #
 class _Meta(type):
     """Metaclass to facilitate creation of read-only and non-removable attributes."""
     def __new__(self, class_name, bases, attrs):
@@ -68,7 +80,96 @@ class _Meta(type):
 
         return type(class_name, bases, new_attrs)
 
-# BRIXS ========================================================================
+# %% ====================== modified figure function ======================= %% #
+def figure(**kwargs):
+    """Create figure object. Wrapper for `plt.figure()`_.
+
+    The following br.settings affect figure:
+
+        br.settings.FIGURE_POSITION
+        br.settings.FIGURE_FORCE_ON_TOP
+        br.settings.FIGURE_DPI
+        br.settings.FIGURE_SIZE
+        br.settings.FIGURE_GRID
+
+
+    Mouse click behavior:
+
+        Right click:
+            x value is copied to the clipboard.
+        Left click OR (y + Right click):
+            y value is copied to the clipboard.
+        Middle click:
+            copies cursor position in terms of figure coordinates.
+    Args:
+        **kwargs: kwargs are passed to `plt.figure()`.
+
+    Note:
+        This function overwrites the behavior of `figsize` parameters. In
+        plt.figure(figsize=(w, h)), w and h must be given in inches. However,
+        this function gets `w` and `h` in cm. 
+    
+    Returns:
+        figure object
+    
+    .. _plt.figure(): https://matplotlib.org/stable/api/figure_api.html
+    """
+    fig = figmanip.figure(**kwargs)
+
+    ############
+    # position #
+    ############
+    if settings.FIGURE_POSITION is not None:
+        figmanip.set_window_position(settings.FIGURE_POSITION)
+
+    # #############
+    # # force top #
+    # #############
+    # if br.settings.FIGURE_FORCE_ON_TOP:
+    #     print('aa')
+    #     bring2top()
+
+    ##############
+    # figure DPI #
+    ##############
+    if 'dpi' not in kwargs:
+        if settings.FIGURE_DPI is not None:
+            fig.set_dpi(settings.FIGURE_DPI)
+
+    ########################
+    # figure size and grid #
+    ########################
+    if 'figsize' not in kwargs:
+        if settings.FIGURE_SIZE is not None:
+            figmanip.set_window_size(settings.FIGURE_SIZE)
+
+        # grid
+        if settings.FIGURE_GRID:
+            rows    = settings.FIGURE_GRID[0]
+            columns = settings.FIGURE_GRID[1]
+
+            if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
+                count  = settings._figure_count - 1
+                row    = int((count/columns)%rows)
+                column = count%columns
+
+                if settings.FIGURE_SIZE is None:
+                    height, width = figmanip.get_window_size()
+                else:
+                    height = settings.FIGURE_SIZE[0]
+                    width  = settings.FIGURE_SIZE[1]
+
+                position = (settings.FIGURE_POSITION[0]+row*(height+settings.FIGURE_GRID_OFFSET[0]), settings.FIGURE_POSITION[1]+column*(width+settings.FIGURE_GRID_OFFSET[1]))
+                figmanip.set_window_position(position)
+
+                settings._figure_count += 1
+        else:
+            # set_window_position()
+            settings._figure_count = 0
+    return fig
+# %%
+
+# %% ============================== Spectrum ============================== %% #
 class Spectrum(metaclass=_Meta):
     """Returns a ``Spectrum`` object. 
 
@@ -155,7 +256,8 @@ class Spectrum(metaclass=_Meta):
 
         # special
         self._peaks = Peaks()
-        self._model = Model(parent=self)
+        if lmfitok:
+            self._model = Model(parent=self)
 
         ###################################
         # asserting validity of the input #
@@ -768,7 +870,7 @@ class Spectrum(metaclass=_Meta):
 
         # kwargs
         if 'fmt' not in kwargs: # pick best format
-            decimal = max([figmanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
+            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
             kwargs['fmt'] = f'%.{decimal}f'
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
@@ -1635,10 +1737,13 @@ class Spectrum(metaclass=_Meta):
             x = y
             y = _x
 
+        ###################
+        # figure and axes #
+        ###################
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figmanip.figure()
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
         x = (x*calib) + shift
         y = y*factor + offset
@@ -1814,7 +1919,7 @@ class Spectrum(metaclass=_Meta):
         # fit
         return self.peaks.fit(x, y, method=method, update_peaks=True)
 
-
+# %% =============================== Spectra ============================== %% #
 class Spectra(metaclass=_Meta):
     """Returns a ``spectra`` object.
 
@@ -1941,7 +2046,8 @@ class Spectra(metaclass=_Meta):
 
         # special
         self._peaks = Peaks()
-        self._model = Model(parent=self)
+        if lmfitok:
+            self._model = Model(parent=self)
 
         ###################################
         # asserting validity of the input #
@@ -2934,8 +3040,8 @@ class Spectra(metaclass=_Meta):
 
         # kwargs
         if 'fmt' not in kwargs: # pick best format
-            decimal = max([figmanip.n_decimal_places(x) for x in self.x])
-            temp_decimal = max([figmanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
+            decimal = max([numanip.n_decimal_places(x) for x in self.x])
+            temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
             if temp_decimal > decimal:
                 decimal = copy.deepcopy(temp_decimal)
             kwargs['fmt'] = f'%.{decimal}f'
@@ -4780,10 +4886,13 @@ class Spectra(metaclass=_Meta):
         .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
         .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
         """
+        ###################
+        # figure and axes #
+        ###################
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figmanip.figure()
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
 
         # percentage wise vertical increment
@@ -6142,7 +6251,7 @@ class Spectra(metaclass=_Meta):
 
         self.peaks.fit(xs=xs, ys=ys, method=method)
 
-
+# %% ================================ Image =============================== %% #
 class Image(metaclass=_Meta):
     """Returns a ``Image`` object.
 
@@ -7323,11 +7432,13 @@ class Image(metaclass=_Meta):
         if ax is not None and colorbar is True:
             divider = True 
         
-        # figure
+        ###################
+        # figure and axes #
+        ###################
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figmanip.figure()
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
         # kwargs
         if 'cmap' not in kwargs:
@@ -7429,11 +7540,13 @@ class Image(metaclass=_Meta):
         if ax is not None and colorbar is True:
             divider = True 
         
-        # figure
+        ###################
+        # figure and axes #
+        ###################
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figmanip.figure()
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
         
         # ylim, xlim
         if xlim is not None and ylim is None:
@@ -7983,7 +8096,7 @@ class Image(metaclass=_Meta):
         # _update(self)
         return
 
-
+# %% ============================= PhotonEvents =========================== %% #
 class PhotonEvents(metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
@@ -9038,11 +9151,13 @@ class PhotonEvents(metaclass=_Meta):
         .. _matplotlib.pyplot.scatter(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.scatter.html
         .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
         """
-        # figure
+        ###################
+        # figure and axes #
+        ###################
         if ax is None:
             ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW:
-                figmanip.figure()
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
         # kwargs
         if 's' not in kwargs:

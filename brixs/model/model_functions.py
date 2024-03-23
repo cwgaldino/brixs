@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """Mathematical functions and distributions."""
 
-import numpy as np
+# %% ------------------------- Standard Imports --------------------------- %% #
 from scipy.special import erf
+import numpy as np
 
-
+# %% ========================== model functions =========================== %% #
 def gaussian(x, amp, c, sigma):
     r"""Gaussian distribution.
 
@@ -233,6 +234,7 @@ def heaviside(x, amp, c, flip=False):
         return np.heaviside(c-x, amp)
     else:
         return np.heaviside(x-c, amp)
+
 
 def dirac_delta(x, amp, c):
     r"""Crude implementation of Dirac delta function.

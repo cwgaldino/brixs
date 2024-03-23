@@ -1,26 +1,80 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Everyday use functions for file handling."""
+"""Useful functions for everyday use ---> files and foldersS"""
 
-import os
-import sys
+# %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path
+import collections
 import numpy as np
 import datetime
-from copy import deepcopy
-import collections
-from .interact import query, is_linux, is_windows, is_mac
-import json
-import fnmatch
-# try:
-#     from detect_delimiter import detect
-# except ModuleNotFoundError:
-#     pass
-# %%
 import warnings
+import fnmatch
+import json
+import os
 import re
+
+# %% -------------------------- operating system ------------------------ %% #
+import platform
+def _operating_system():
+    """Return string with name of operating system (windows, linux, or mac)."""
+    system = platform.system().lower()
+    is_windows = system == 'windows'
+    is_linux = system == 'linux'
+    is_mac = system == 'darwin'
+    if is_windows:
+        return 'windows'
+    elif is_linux:
+        return 'linux'
+    elif is_mac:
+        return 'mac'
+    else:
+        raise ValueError('OS not recognized')
+
+is_windows = _operating_system() == 'windows'
+is_linux   = _operating_system() == 'linux'
+is_mac     = _operating_system() == 'mac'
+
+# %% ------------------------ supporting functions ------------------------ %% #
+import sys
+def _query(question, default="yes"):
+    """Ask a yes/no question and return answer.
+
+    Note:
+        It accepts many variations of yes and no as answer, like, "y", "YES", "N", ...
+
+    Args:
+        question (str): string that is presented to the user.
+        default ('yes', 'no' or None): default answer if the user just hits
+            <Enter>. If None, an answer is required of the user.
+
+    Returns:
+        True for "yes" or False for "no".
+    """
+    valid = {"yes": True, "y": True, "ye": True, "Y": True, "YES": True, "YE": True,
+             "no": False, "n": False, "No":True, "NO":True, "N":True}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt + '\n')
+        choice = input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "
+                             "('y' or 'n').\n")
+
 # %%
 
+# %% ================================ files =============================== %% #
 def rename_files(filelist, pattern, new_pattern, ask=True):
     """Change the filename pattern of files.
 
@@ -97,6 +151,7 @@ def rename_files(filelist, pattern, new_pattern, ask=True):
     else:
         warnings.warn('Files NOT renamed.')
 
+# %% ============================== remove/create ========================= %% #
 def mkdir(dirpath):
     dirpath = Path(dirpath)
     dirpath.mkdir(parents=True, exist_ok=True)
@@ -130,6 +185,7 @@ def rm(filepath):
         raise IsADirectoryError('Is a directory: `{filepath}`\nPlease, use br.rmdir() for directories')
     filepath = Path(filepath).unlink()
 
+# %% ========================= file/folder information ==================== %% #
 def filelist(dirpath='.', string='*', case_sensitive=True):
     """Returns a list with all the files containing `string` in its name.
 
@@ -171,7 +227,6 @@ def filelist(dirpath='.', string='*', case_sensitive=True):
     # sort and return
     temp2 = [filepath.name for filepath in temp]
     return [x for _,x in sorted(zip(temp2, temp))]
-
 
 def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='list'):
     """Returns a filelist organized in a dictionary.
@@ -229,7 +284,11 @@ def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='li
     else:
         raise ValueError('return_type not valid')
 
-# 
+def get_modified_date(filepath):
+    """Return modified date of filepath in a datetime object."""
+    return datetime.datetime.fromtimestamp((filepath).stat().st_mtime)
+
+# %% ============================= save/load ============================== %% #
 def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
     """Save text to txt file.
 
@@ -264,7 +323,6 @@ def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
     f.write(string)
     f.close()
 
-
 def load_text(filepath):
     """Load text from txt file.
 
@@ -281,7 +339,6 @@ def load_text(filepath):
     text = f.read()
     f.close()
     return text
-
 
 def save_obj(obj, filepath='./Untitled.txt', check_overwrite=False, pretty_print=True):
     """Save object (array, dictionary, list, etc...) to a txt file.
@@ -303,7 +360,7 @@ def save_obj(obj, filepath='./Untitled.txt', check_overwrite=False, pretty_print
     if check_overwrite:
         if filepath.exists() == True:
             if filepath.is_file() == True:
-                if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                if _query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
                     pass
                 else:
                     warnings.warn('File not saved because user did not allow overwriting.')
@@ -318,7 +375,6 @@ def save_obj(obj, filepath='./Untitled.txt', check_overwrite=False, pretty_print
         else:
             file.write(json.dumps(obj))
 
-
 def _to_int(obj):
     """Change keys of a dictionary from string to int when possible."""
     for key in list(obj.keys()):
@@ -331,7 +387,6 @@ def _to_int(obj):
             obj[new_key] = obj[key]
             del obj[key]
     return obj
-
 
 def load_obj(filepath, dict_keys_to_int=False):
     """Load object (array, dictionary, list, etc...) from a txt file.
@@ -357,11 +412,10 @@ def load_obj(filepath, dict_keys_to_int=False):
             obj = json.load(file)
     return obj
 
-
 def load_Comments(filepath, comment_flag='#', stop_flag='#'):
     """Return comments from text files.
 
-    Comments must be indicated at the begining of the line by the comment flag.
+    Comments must be indicated at the beginning of the line by the comment flag.
 
     Args:
         filepath (str or pathlib.Path): fullpath to file
@@ -370,7 +424,7 @@ def load_Comments(filepath, comment_flag='#', stop_flag='#'):
             comments, e.g. `#f`, or `#L`. Use `None` to read all lines in file (useful for reading
             file with comments not only at the beginning). If `stop_flag` is
             equal to `comment_flag` it will read from the first line with
-            `comment_flag` and keep reading until `comment_flag` does not apper
+            `comment_flag` and keep reading until `comment_flag` does not appear
             anymore (useful to read comments at the beginning of a file).
 
     Returns:
@@ -397,7 +451,7 @@ def load_Comments(filepath, comment_flag='#', stop_flag='#'):
                 elif line[0:l] != comment_flag and comment_started == 1:
                     break
     else:
-        with open(fullpath) as file:
+        with open(filepath) as file:
             for line in file:
                 if line[0:len(stop_flag)] != stop_flag:
                     if line[0:len(comment_flag)] == comment_flag:
@@ -410,7 +464,6 @@ def load_Comments(filepath, comment_flag='#', stop_flag='#'):
         return False
     else:
         return comments[:]
-
 
 def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', header='', footer='', delimiter=', ', comment_flag='# ', newline='\n', check_overwrite=False):
     r"""Save an array or a dictionary in a txt file.
@@ -494,7 +547,6 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
         obj = np.array(obj).transpose()
 
     np.savetxt(filepath, obj, fmt=fmt, delimiter=delimiter, newline=newline, header=header, footer=footer, comments=comment_flag)
-
 
 def load_data(filepath, labels=None, force_array=False, **kwargs):
     """Load data from text file. Wrapper for `np.genfromtxt <https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html>`_.
@@ -606,6 +658,3 @@ def load_data(filepath, labels=None, force_array=False, **kwargs):
     else:
         return data
 
-def get_modified_date(filepath):
-    """Return modified date of filepath in a datetime object."""
-    return datetime.datetime.fromtimestamp((filepath).stat().st_mtime)

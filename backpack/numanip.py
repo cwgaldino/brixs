@@ -1,13 +1,14 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Everyday use functions for number manipulation."""
+"""Useful functions for everyday use ---> int and floats"""
 
-import numpy as np
-import copy
-import decimal
+# %% ------------------------- Standard Imports --------------------------- %% #
 from functools import reduce
+import numpy as np
+import decimal
 import numbers
 
+# %% ============================= functions ============================== %% #
 def is_integer(n):
     """Returns True if number is integer."""
     if isinstance(n, int):

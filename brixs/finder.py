@@ -82,11 +82,15 @@ Developers note: in the future, maybe we can make a better way to get the
 last file number in function _save_processed()
 """
 
+# %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path
 import numpy as np
 
+# %% ------------------------------- brixs -------------------------------- %% #
 import brixs as br
+# %%
 
+# %% ============================== finder ================================ %% #
 ############################
 # run finder via decorator #
 ############################
@@ -132,7 +136,7 @@ def finder(func):
         ####################################################
         # save spectra so it is not needed to run it again #
         ####################################################
-        br.save_processed(s=s, parameters=kwargs, folderpath=br.finder_folderpath)
+        save_processed(s=s, parameters=kwargs, folderpath=br.finder_folderpath)
 
         # returning the value to the original frame
         return s

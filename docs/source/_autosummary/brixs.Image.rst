@@ -22,14 +22,18 @@
       ~Image.crop
       ~Image.fix_curvature
       ~Image.floor
+      ~Image.get_attrs
       ~Image.imshow
       ~Image.linecuts
+      ~Image.linecuts2
       ~Image.load
       ~Image.pcolormesh
       ~Image.plot
       ~Image.possible_nbins
+      ~Image.roll_plot
       ~Image.save
       ~Image.set_roll
+      ~Image.transpose
    
    
 

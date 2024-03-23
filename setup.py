@@ -2,9 +2,9 @@ import setuptools
 
 setuptools.setup(
     name="brixs",
-    version="0.9.2",
-    author="Carlos Galdino, Thiago Mori, Tulio Rocha, Felipe Custodio",
-    author_email="galdino@ifi.unicamp.br, thiago.mori@lnls.br, tulio.rocha@lnls.br, felipe.custodio@lnls.br",
+    version="0.9.6",
+    author="Carlos Galdino, Thiago Mori, Felipe Custodio, Tulio Rocha",
+    author_email="carlos.galdino@psi.ch, thiago.mori@lnls.br, felipe.custodio@lnls.br, tulio.rocha@lnls.br",
     description="python package for processing and analysis of XAS and RIXS spectra ",
     long_description=open('README.rst').read(),
     long_description_content_type="text/x-rst",
@@ -12,7 +12,7 @@ setuptools.setup(
     packages=['brixs'],
     packages_dir={'brixs': './brixs'},
     py_modules=['brixs'],
-    install_requires=['matplotlib>=3.4', 'numpy>=1.15', 'scipy>=1.7', 'lmfit>=1.2.2'],
+    install_requires=['matplotlib>=3.4', 'numpy>=1.15'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

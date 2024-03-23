@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Everyday use functions that eases matplotlib figure manipulation."""
+"""Useful functions for everyday use ---> Matplotlib figures"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
-import copy
+from string import ascii_lowercase
+from types import MethodType
 from pathlib import Path
 import numpy as np
 import warnings
-
-# %% ------------------------- Special Imports ---------------------------- %% #
-import brixs as br
-import tempfile
-from types import MethodType
-from string import ascii_lowercase
+import copy
 
 # %% ------------------------- Matplotlib Imports ------------------------- %% #
 import matplotlib
-from matplotlib.pyplot import get_current_fig_manager
+from matplotlib.pyplot import get_current_fig_manager as _get_current_fig_manager
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -25,10 +21,198 @@ from matplotlib import colormaps
 from collections.abc import Iterable
 from cycler import cycler
 
-# %% ------------------------- Initial definitions ------------------------ %% #
-is_windows = br.operating_system() == 'windows'
-is_linux   = br.operating_system() == 'linux'
-is_mac     = br.operating_system() == 'mac'
+# %% -------------------------- operating system ------------------------ %% #
+import platform
+def _operating_system():
+    """Return string with name of operating system (windows, linux, or mac)."""
+    system = platform.system().lower()
+    is_windows = system == 'windows'
+    is_linux = system == 'linux'
+    is_mac = system == 'darwin'
+    if is_windows:
+        return 'windows'
+    elif is_linux:
+        return 'linux'
+    elif is_mac:
+        return 'mac'
+    else:
+        raise ValueError('OS not recognized')
+
+is_windows = _operating_system() == 'windows'
+is_linux   = _operating_system() == 'linux'
+is_mac     = _operating_system() == 'mac'
+
+# %% ------------------------ supporting functions ------------------------ %% #
+import numbers
+def _is_number(n):
+    """Returns True if variable is number."""
+    if isinstance(n, int):
+        return True
+    elif isinstance(n, float):
+        return True
+    elif isinstance(n, numbers.Number):
+        return True
+    elif isinstance(n, str):
+        try: _is_number(float(n))
+        except ValueError:
+            return False
+    else:
+        False
+
+def _round_to_1(x):
+    """return the most significant digit"""
+    return round(x, -int(np.floor(np.log10(abs(x)))))
+
+def _index(x, value, closest=True):
+    """Returns the first index of the element in array.
+
+    Args:
+        x (list or array): 1D array.
+        value (float or int): value.
+        closest (book, optional): if True, returns the index of the element in 
+            array which is closest to value.
+
+    Returns:
+        index (int)
+    """
+    if closest:
+        return int(np.argmin(np.abs(np.array(x)-value)))
+    else:
+        return np.where(x == value)[0]
+
+def _choose(x, ranges):
+    """Return a mask of x values inside range pairs.
+
+    Args:
+        x (list or array): 1d array.
+        ranges (list): a pair of values or a list of pairs. Each pair represents
+            the start and stop of a data range from x. [[xi, xf], [xi_2, xf_2], ...]
+
+    Returns:
+        1d list.
+    """
+    assert isinstance(x, Iterable), 'input must be a iterable'
+    x = np.array(x)
+
+    try:  # ((start, end), )
+        choose_range = [None]*len(ranges)
+        for i, (x_init, x_final) in enumerate(ranges):
+            choose_range[i] = np.logical_and(x>=x_init, x<=x_final)
+        choose_range = [True if x == 1 else False for x in np.sum(choose_range, axis=0)]
+    except TypeError:  # (start, end)
+        x_init, x_final = ranges
+        choose_range = np.logical_and(x>=x_init, x<=x_final)
+    return choose_range
+
+def _extract(x, y, ranges, invert=False):
+    """Returns specific data ranges from x and y.
+
+    Args:
+        x (list or array): 1D reference vector.
+        y (list or array): 1D y-coordinates or list of several data sets.
+        ranges (list): a pair of values or a list of pairs. Each pair represents
+            the start and stop of a data range from x.
+        invert (bool, optional): if inverted is True, data outside of the data 
+            will be returned. Default is False.
+
+    Returns:
+        x and y arrays. If `y` is 1d, the returned `y` is 1d. If `y` is
+        a multicolumn array then the returned `y` is also multicolumn
+
+
+    Examples:
+
+        if `y` is 1d, the returned `y` is 1d:
+
+        >>> x = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        >>> y = np.array(x)**2
+        >>> ranges = ((0, 3), (7.5, 9))
+        >>> x_sliced, y_sliced = am.extract(x, y, ranges)
+        >>> print(x_sliced)
+        [0 1 2 3 8 9]
+        >>> print(y_sliced)
+        [0 1 4 9 64 81]
+
+        if `y` is multicolumn, the returned `y` is also multicolumn:
+
+        >>> x = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        >>> y = np.zeros((10, 2))
+        >>> y[:, 0] = x**2
+        >>> y[:, 0] = x**3
+        >>> ranges = ((0, 3), (7.5, 9))
+        >>> x_sliced, y_sliced = am.extract(x, y, ranges)
+        >>> print(x_sliced)
+        [0. 1. 2. 3. 8. 9.]
+        >>> print(y_sliced)
+        [[  0.   0.]
+         [  1.   0.]
+         [  8.   0.]
+         [ 27.   0.]
+         [512.   0.]
+         [729.   0.]]
+
+
+    """
+    x = np.array(x)
+    y = np.array(y)
+
+    # if data is all inside ranges, then nothing is done
+    if len(ranges) == 1:
+        if ranges[0][0] <= min(x) and ranges[0][1] >= max(x):
+            if invert:
+                return np.array([]), np.array([])
+            else:
+                return x, y
+
+    choose_range = _choose(x, ranges)
+    # print(choose_range[0:10])
+    if invert:
+        choose_range = np.invert(choose_range)
+    # temp = np.compress(choose_range, np.c_[y.transpose(), x], axis=0)
+    # print(choose_range[0:10])
+    temp = np.compress(choose_range, np.c_[y, x], axis=0)
+    # print(temp)
+    if temp.any():
+        if len(temp[0]) > 2:
+            return temp[:, -1], temp[:, :-1]#.transpose()
+        else:
+            # print('here')
+            return temp[:, -1], temp[:, 0]
+    else:
+        raise RuntimeError('No data points within the selected range.')
+
+import subprocess
+def _copy2clipboard(txt):
+    """Copy text to clipboard.
+
+    on linux it uses ``xclip`` package (``sudo apt install xclip``).
+    """
+    if is_windows:
+        try:
+            # cmd='echo ' + txt.strip() + ' | clip'
+            cmd=f'echo|set /p={txt.strip()}| clip'
+            # cmd='echo ' + txt.strip() + '| Set-Clipboard -Value {$_.Trim()}'
+            subprocess.check_call(cmd, shell=True)
+        except:
+            pass
+    elif is_linux:
+        try:
+            # p = subprocess.Popen(['xsel','-bi'], stdin=subprocess.PIPE)
+            # p.communicate(input=bytes(txt.strip()).encode())
+            # p.communicate(input=bytes(txt.strip(), encoding='utf-8'))
+            # p.communicate(input=txt.strip())
+            with subprocess.Popen(['xclip','-selection', 'clipboard'], stdin=subprocess.PIPE) as pipe:
+                pipe.communicate(input=txt.strip().encode('utf-8'))
+        except:
+            pass
+    elif is_mac:
+        try:
+            cmd='echo '+ txt.strip() + ' | pbcopy'
+            subprocess.check_call(cmd, shell=True)
+        except:
+            pass
+    return
+# %%
 
 # %% ================================ colors ============================== %% #
 def get_available_colors():
@@ -146,35 +330,18 @@ def get_colors_from_colormap(name, n):
     cmap   = matplotlib.cm.get_cmap(name)
     colors = [cmap(j/n) for j in range(n)]
     return colors
+# %%
 
 # %% ================================ window ============================== %% #
-def bring2top():
-    """Brings current window to the top.
-
-    This function was not tested for all available matplotlib backends.
-    """
-    # fig = plt.gcf()
-    # fig.canvas.manager.window.raise_()
-
-    backend = matplotlib.get_backend()
-    if backend.startswith(('Qt5', 'qt5', 'QT5')):
-
-        from PyQt5 import QtCore
-        window = plt.get_current_fig_manager().window
-        window.setWindowFlags(window.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
-        plt.show()
-        # window.setWindowFlags(window.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
-        # plt.show()
-    elif backend.startswith(('tk', 'TK', 'Tk')):
-        plt.gcf().canvas.get_tk_widget().focus_force() 
-    else:
-        figManager = get_current_fig_manager()
-        figManager.window.raise_()
-
 def set_window_position(*args):
     """Change position of a maptplotlib figure on screen.
 
-    Tipically, (0, 0) is the top left corner.
+    Typically, (0, 0) is the top left corner of the display.
+
+    Usage:
+        set_window_position((x, y))
+        set_window_position(x, y)
+
 
     Args:
         *args: A tuple like (x, y) or two separate x, y values (in px). If None,
@@ -191,16 +358,11 @@ def set_window_position(*args):
     elif len(args) == 1 and len(args[0]) == 2:
         x = int(args[0][1])
         y = int(args[0][0])
-    elif len(args) == 0:
-        if br.settings.FIGURE_POSITION is not None:
-            position = (int(br.settings.FIGURE_POSITION[0]), int(br.settings.FIGURE_POSITION[1]))
-            set_window_position(position)
-        return
     else:
         warnings.warn('Wrong input')
         return
 
-    figManager    = get_current_fig_manager()
+    figManager    = _get_current_fig_manager()
     height, width = get_window_size()
 
     try:  # tested on tKinter backend
@@ -210,12 +372,13 @@ def set_window_position(*args):
         try:  # tested on qt4 and qt5 backends
             figManager.window.setGeometry(int(x), int(y), width, height)
         except AttributeError:
-            warnings.warn('Backend not suported.')
-    
+            warnings.warn('Backend not supported.')
+    return
+
 def get_window_position():
     """Return the position of a matplotlib position on the screen.
 
-    Tipically, (0, 0) is the top left corner of your monitor.
+    Typically, (0, 0) is the top left corner of your monitor.
 
     Returns:
         Tuple with the x and y position.
@@ -223,7 +386,7 @@ def get_window_position():
     See Also:
         :py:func:`set_window_position`
     """
-    figManager = get_current_fig_manager()
+    figManager = _get_current_fig_manager()
 
     try:  # tested under tKinter backend
         return (figManager.window.winfo_y(), figManager.window.winfo_x())
@@ -233,6 +396,7 @@ def get_window_position():
         except AttributeError:
             warnings.warn('Backend not suported.')
             return (0, 0)
+    return
 
 def set_window_size(*args):
     """Change the size of the window of a matplotlib figure.
@@ -253,7 +417,7 @@ def set_window_size(*args):
     else:
         return 
     
-    figManager = get_current_fig_manager()
+    figManager = _get_current_fig_manager()
     x,y = get_window_position()
 
     try:  # tested on tKinter backend
@@ -267,6 +431,7 @@ def set_window_size(*args):
 
     # This also works:
     # plt.gcf().set_size_inches(height, width)
+    return
 
 def get_window_size():
     """Returns the size of the window of a matplotlib figure.
@@ -277,7 +442,7 @@ def get_window_size():
     See Also:
         :py:func:`set_window_size`
     """
-    figManager = get_current_fig_manager()
+    figManager = _get_current_fig_manager()
 
     try:  # tested on tKinter backend
         return (figManager.window.winfo_height(), figManager.window.winfo_width())
@@ -291,10 +456,15 @@ def get_window_size():
     
     # this also works, but in inches
     # return list(plt.gcf().get_size_inches())
+    return
+
+def get_window_dpi():
+    """returns figure dpi"""
+    return plt.gcf().dpi
 
 def maximize():
     """Maximize current fig."""
-    figManager = plt.get_current_fig_manager()
+    figManager = plt._get_current_fig_manager()
 
     try:  # tested on tKinter backend
         figManager.frame.Maximize(True)
@@ -305,8 +475,11 @@ def maximize():
         except AttributeError:
             warnings.warn('Backend not suported.')
             return (0, 0)
-
+    return
+# %%
+        
 # %% ================================ figure ============================== %% #
+# figure
 def figure(**kwargs):
     """Create figure object. Wrapper for `plt.figure()`_.
 
@@ -317,24 +490,14 @@ def figure(**kwargs):
         Left click OR (y + Right click):
             y value is copied to the clipboard.
         Middle click:
-            Figure is saved as svg or png in the default folder and copied to the clipboard
-            (see :py:func:`set_onclick()`).
-
-    The following br.settings affect figure:
-
-        br.settings.FIGURE_POSITION
-        br.settings.FIGURE_FORCE_ON_TOP
-        br.settings.FIGURE_DPI
-        br.settings.FIGURE_SIZE
-        br.settings.FIGURE_GRID
-
+            copies cursor position in terms of figure coordinates.
     Args:
         **kwargs: kwargs are passed to `plt.figure()`.
 
     Note:
         This function overwrites the behavior of `figsize` parameters. In
         plt.figure(figsize=(w, h)), w and h must be given in inches. However,
-        br.figure(figsize=(w, h)) accepts w and h in cm. 
+        this function gets `w` and `h` in cm. 
     
     Returns:
         figure object
@@ -354,48 +517,10 @@ def figure(**kwargs):
 
 def _apply_figure_adjustments(fig, **kwargs):
     """adds onclick functionality to figures"""
+
+    #  mouse events
     cid1 = fig.canvas.mpl_connect('button_press_event', _onclick)
     # cid2 = fig.canvas.mpl_connect('resize_event', _onmove)
-
-    # position
-    if br.settings.FIGURE_POSITION is not None:
-        set_window_position()
-    if br.settings.FIGURE_FORCE_ON_TOP:
-        bring2top()
-
-    # size and dpi
-    if 'dpi' not in kwargs:
-        if br.settings.FIGURE_DPI is not None:
-            # kwargs['dpi'] = br.settings.FIGURE_DPI
-            fig.set_dpi(br.settings.FIGURE_DPI)
-    if 'figsize' not in kwargs:
-        if br.settings.FIGURE_SIZE is not None:
-            # kwargs['figsize'] = br.settings.FIGURE_SIZE
-            set_window_size(br.settings.FIGURE_SIZE)
-
-        # grid
-        if br.settings.FIGURE_GRID != (1, 1) and br.settings.FIGURE_GRID:
-            rows    = br.settings.FIGURE_GRID[0]
-            columns = br.settings.FIGURE_GRID[1]
-
-            if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
-                count  = br.settings._figure_count - 1
-                row    = int((count/columns)%rows)
-                column = count%columns
-
-                if br.settings.FIGURE_SIZE is None:
-                    height, width = get_window_size()
-                else:
-                    height = br.settings.FIGURE_SIZE[0]
-                    width  = br.settings.FIGURE_SIZE[1]
-
-                position = (br.settings.FIGURE_POSITION[0]+row*(height+br.settings.FIGURE_GRID_OFFSET[0]), br.settings.FIGURE_POSITION[1]+column*(width+br.settings.FIGURE_GRID_OFFSET[1]))
-                set_window_position(position)
-
-                br.settings._figure_count += 1
-        else:
-            set_window_position()
-            br.settings._figure_count = 0
 
     # grid function
     fig._grid = False
@@ -429,15 +554,12 @@ def set_onclick_save_defaults(format='svg', resolution=300, folder=None):
 def _onclick(event):
     """This function is called every time a mouse key is pressed over a figure.
 
-    Double Right click:
+    Middle click:
         prints cursor position in terms of figure coordinates.
     Right click:
         x value is copied to the clipboard.
     Left click OR (y + Right click):
         y value is copied to the clipboard.
-    Middle click:
-        Figure is saved as svg or png in the default folder and copied to the clipboard
-        (see :py:func:`set_onclick()`).
 
     Note:
         The matplotlib figure must be started by :py:func:`backpack.figmanip.figure`, and not
@@ -466,39 +588,47 @@ def _onclick(event):
     # double click #
     ################
     if event.dblclick:
+        # w, h = plt.gcf().get_size_inches()
+
+        # x = event.x/(w*100)
+        # y = event.y/(h*100)
+
+        # _copy2clipboard([x, y])
+        pass
+    ###############
+    # middle click #
+    ###############
+    elif event.button == 2:
         w, h = plt.gcf().get_size_inches()
 
         x = event.x/(w*100)
         y = event.y/(h*100)
 
-        print([x, y])
-    ###############
-    # middle click #
-    ###############
-    elif event.button == 2:
-        # get variables        
-        global onclick_fig_format, onclick_resolution, onclick_folder
-        try:
-            onclick_fig_format
-        except NameError:
-            onclick_fig_format = 'png'
-        try:
-            onclick_folder
-        except NameError:
-            onclick_folder = Path.cwd()
-        try:
-            onclick_resolution
-        except NameError:
-            onclick_resolution = 300
+        _copy2clipboard([x, y])
 
-        with tempfile.NamedTemporaryFile("r+b", delete=True) as fd:
-            if onclick_fig_format == 'svg':
-                plt.savefig(fd)
-                br.svg2clipboard(fd)
-            elif onclick_fig_format == 'png':
-                plt.savefig(fd, dpi=onclick_resolution)
-                br.png2clipboard(fd)
-            # print(f'figure copied to clipboard as {onclick_fig_format}')
+        # # get variables        
+        # global onclick_fig_format, onclick_resolution, onclick_folder
+        # try:
+        #     onclick_fig_format
+        # except NameError:
+        #     onclick_fig_format = 'png'
+        # try:
+        #     onclick_folder
+        # except NameError:
+        #     onclick_folder = Path.cwd()
+        # try:
+        #     onclick_resolution
+        # except NameError:
+        #     onclick_resolution = 300
+
+        # with tempfile.NamedTemporaryFile("r+b", delete=True) as fd:
+        #     if onclick_fig_format == 'svg':
+        #         plt.savefig(fd)
+        #         _svg2clipboard(fd)
+        #     elif onclick_fig_format == 'png':
+        #         plt.savefig(fd, dpi=onclick_resolution)
+        #         _png2clipboard(fd)
+        #     # print(f'figure copied to clipboard as {onclick_fig_format}')
     ###############
     # right click #
     ###############
@@ -509,9 +639,9 @@ def _onclick(event):
             try:
                 lim = ax.get_ylim()
                 delta = lim[1] - lim[0]
-                r21 = br.round_to_1(delta)
+                r21 = _round_to_1(delta)
                 if r21 < 1:
-                    n = br.n_decimal_places(r21)*2
+                    n = _n_decimal_places(r21)*2
                 elif r21 >= 1 and r21 < 2:
                     n = 3
                 elif r21 >= 2 and r21 < 100:
@@ -523,7 +653,7 @@ def _onclick(event):
                 final = round(event.ydata, n)
                 if n == 0:
                     final = int(final)
-                br.copy2clipboard(str(final))
+                _copy2clipboard(str(final))
                 # print('y coordinate copied to clipboard')
             except TypeError:
                 pass
@@ -536,9 +666,9 @@ def _onclick(event):
             try:
                 lim = ax.get_xlim()
                 delta = lim[1] - lim[0]
-                r21 = br.round_to_1(delta)
+                r21 = _round_to_1(delta)
                 if r21 < 1:
-                    n = br.n_decimal_places(r21)*2
+                    n = _n_decimal_places(r21)*2
                 elif r21 >= 1 and r21 < 2:
                     n = 3
                 elif r21 >= 2 and r21 < 100:
@@ -550,55 +680,12 @@ def _onclick(event):
                 final = round(event.xdata, n)
                 if n == 0:
                     final = int(final)
-                br.copy2clipboard(str(final))
+                _copy2clipboard(str(final))
                 # print('x coordinate copied to clipboard')
             except TypeError:
                 pass
 
-def _onmove(event):
-    """This function is called every time the figure changes position on the screen."""
-    if br.br.settings.FIGURE_FIX_RESOLUTION:
-        fig = plt.gcf()
-        fig.set_dpi(fig.old_dpi)
-        # time.sleep(1)
-
-        # dpi
-        
-
-        # adjust size
-        # set_window_size(fig.old_size)
-        
-        # # before
-        # old_size = fig.old_size
-        # old_dpi  = fig.old_dpi
-
-        # # current
-        # size = (event.width, event.height)
-        # dpi  = old_dpi
-        
-        # if old_size == size:
-        #     print('same')
-        # else:
-        #     print('changed')
-        #     print(size, old_size)
-
-        #     # new (corrected)
-        #     new_size = size
-        #     new_dpi  = dpi*old_size[0]/(size[0])
-        #     print(new_dpi)
-
-        #     # set
-        #     # fig.set_dpi(new_dpi)
-        #     fig.old_size = new_size
-        #     # set_window_size(new_size)
-
-        # # print('moved')
-        # # print(new_dpi)
-        # # # print('old size: ' + str(old_size))
-        # # # print('new size: ' + str(new_size))
-    pass
-
-# %% subplots
+# subplots
 def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, **fig_kw):
     """Create a figure and a set of subplots. Wrapper for `plt.subplots()`_.
 
@@ -613,7 +700,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
             ows/columns. Each row/column gets a relative height/width of 
             ratios[i] / sum(ratios). If not given, all rows/columns will have 
             the same width. 
-        **fig_kw: All additional keyword arguments are passed to the br.figure call
+        **fig_kw: All additional keyword arguments are passed to the plt.figure call
     
     Returns:
         fig, axes
@@ -682,7 +769,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
                 ax.col = j
                 axes[i*ncols+j] = ax
     # try:
-    #     for i, ax in enumerate(br.flatten(_axes)):
+    #     for i, ax in enumerate(flatten(_axes)):
     #         axes[i] = ax
     # except TypeError:
     #     axes[0] = _axes
@@ -698,10 +785,10 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
         ax.remove_yticklabels = MethodType(remove_yticklabels, ax)
 
     return fig, axes
-    
-# %% figure grid
+
+# grid    
 def _grid(self, visible=None):
-    
+    """show figure grid"""
     if visible is None:
         if self._grid == False:
             visible = True
@@ -732,7 +819,7 @@ def _grid(self, visible=None):
         del self._grid
         self._grid = False
     return
-
+# %%
 
 # %% ==================================== font ============================ %% #
 def publication_font(size=9):
@@ -766,7 +853,8 @@ def default_font(size=10):
     # math text
     matplotlib.rcParams['mathtext.fontset'] = 'dejavusans'
     matplotlib.rcParams['svg.fonttype'] = 'path'
-
+# %%
+    
 # %% ================================== text ============================== %% #
 def rtext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
     """Create text at x coordinate on the right side of the last curve plotted
@@ -791,7 +879,7 @@ def rtext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
 
     # get lines
     temp = ax.get_lines()[-1]
-    y = temp.get_ydata()[br.index(temp.get_xdata(), x)] + yoffset
+    y = temp.get_ydata()[_index(temp.get_xdata(), x)] + yoffset
 
     # get color
     if 'color' not in kwargs and copy_color:
@@ -829,7 +917,7 @@ def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
 
     # get lines
     temp = ax.get_lines()[-1]
-    y = temp.get_ydata()[br.index(temp.get_xdata(), x)] + yoffset
+    y = temp.get_ydata()[_index(temp.get_xdata(), x)] + yoffset
 
     # get color
     if 'color' not in kwargs and copy_color:
@@ -1010,12 +1098,20 @@ def label_axes(axes, loc='upper left'):
     
     assert len(axes) == len(loc), 'number of axes must be the same as locs'
 
-    i = 0
+    n = 0
+    j = 0
     final = []
-    for ax in axes:
-        letter = ascii_lowercase[i]
+    for i, ax in enumerate(axes):
+        if i % 26 == 0 and i != 0:
+            j = 0
+            n += 1
+
+        if n > 0:
+            letter = ascii_lowercase[j] + str(n)
+        else:
+            letter = ascii_lowercase[j]
         final.append(note(s='(' + letter + ')', ax=ax, loc=loc[i]))
-        i += 1
+        j += 1
     return final
 
 # %% add to axes
@@ -1081,6 +1177,7 @@ def _note(self, s, loc='upper left', x=None, y=None, **kwargs):
     """
     return note(s=s, loc=loc, x=x, y=y, ax=self, **kwargs)
 mpl.axes.Axes.note = _note
+# %%
 
 # %% ================================= label ============================== %% #
 def remove_xlabel(ax):
@@ -1094,6 +1191,7 @@ def remove_ylabel(ax):
     ax.set_ylabel('')
     return
 mpl.axes.Axes.remove_ylabel = remove_ylabel
+# %%
 
 # %% ================================= axes =============================== %% #
 def merge_axes(ax1, ax2):
@@ -1298,7 +1396,6 @@ def sharex(axes):
     for i, ax in enumerate(axes):
         ax.sharex(axes[0])
     return
-# mpl.axes.Axes.share_x_between_multiple_axes = share_x_between_multiple_axes
 
 def sharey(axes):
     """Connect y axis. Cannot be used if the y-axis is already being shared with another Axes"""
@@ -1306,7 +1403,6 @@ def sharey(axes):
     for i, ax in enumerate(axes):
         ax.sharey(axes[0])
     return
-# mpl.axes.Axes.share_y_between_multiple_axes = share_y_between_multiple_axes
 
 # %% add to axes
 def _add_lspace(self, value):
@@ -1384,8 +1480,10 @@ def _ymove(self, value):
     """
     return ymove(value=value, ax=self)
 mpl.axes.Axes.ymove = _ymove
+# %%
 
 # %% ================================= ticks ============================== %% #
+
 # get ticks showing
 def get_xticks_showing(ax):
     """get x ticks that are sowing in a plot
@@ -1522,7 +1620,7 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
                 stop  = ticks_showing[-1]
                 ticks = np.linspace(start, stop, n_ticks)
             else:
-                raise ValueError('Invalid input. See help(br.set_xticks) for help.')
+                raise ValueError('Invalid input. See help(set_xticks) for help.')
             
             # set ticks
             _ = ax.xaxis.set_ticks(ticks)
@@ -1556,13 +1654,13 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ##########
     if pad is not None:
         if isinstance(pad, Iterable) == False:
-            assert br.is_number(pad), 'pad must be a number or a tuple/list with length 2'
+            assert _is_number(pad), 'pad must be a number or a tuple/list with length 2'
             pad = (pad, pad)
 
         # check
         assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
-        assert br.is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
-        assert br.is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
+        assert _is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
+        assert _is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
         # set limits
         ticks_sep = ticks[1]  - ticks[0]
@@ -1710,7 +1808,7 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
                 stop  = ticks_showing[-1]
                 ticks = np.linspace(start, stop, n_ticks)
             else:
-                raise ValueError('Invalid input. See help(br.set_yticks) for help.')
+                raise ValueError('Invalid input. See help(set_yticks) for help.')
             
             # set ticks
             _ = ax.yaxis.set_ticks(ticks)
@@ -1744,13 +1842,13 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ##########
     if pad is not None:
         if isinstance(pad, Iterable) == False:
-            assert br.is_number(pad), 'pad must be a number or a tuple/list with length 2'
+            assert _is_number(pad), 'pad must be a number or a tuple/list with length 2'
             pad = (pad, pad)
 
         # check
         assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
-        assert br.is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
-        assert br.is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
+        assert _is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
+        assert _is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
         # set limits
         ticks_sep = ticks[1]  - ticks[0]
@@ -1981,9 +2079,10 @@ def _set_yticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks
     """
     return set_yticks(ax=self, start=start, stop=stop, n_ticks=n_ticks, ticks_sep=ticks_sep, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_ticks_sep=minor_ticks_sep, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
 mpl.axes.Axes.yticks = _set_yticks
+# %%
 
 # %% ============================= legend ================================= %% #
-def legend(*args, **kwargs):
+def leg(*args, **kwargs):
     """Place a legend on the Axes. Wrapper for `plt.legend()`_
 
     Args:
@@ -2041,7 +2140,7 @@ def legend(*args, **kwargs):
 
     return ax.legend(*args, **kwargs)
 
-def _legend(self, *args, **kwargs):
+def _leg(self, *args, **kwargs):
     """Place a legend on the Axes. Wrapper for `plt.legend()`_
 
     Args:
@@ -2064,8 +2163,9 @@ def _legend(self, *args, **kwargs):
     .. _plt.legend(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html
     """
     kwargs['ax'] = self
-    legend(*args, **kwargs)
-mpl.axes.Axes.leg = _legend
+    leg(*args, **kwargs)
+mpl.axes.Axes.leg = _leg
+# %%
 
 # %% ================================ rectangle =========================== %% #
 def rectangle(xlim, ylim, ax=None, **kwargs):
@@ -2146,6 +2246,7 @@ def _rectangle(self, xlim, ylim, **kwargs):
     """
     return rectangle(xlim=xlim, ylim=ylim, ax=self, **kwargs)
 mpl.axes.Axes.rectangle = _rectangle
+# %%
 
 # %% ================================== zoom ============================== %% #
 def zoom(start, stop, ax=None, ymargin=5):
@@ -2170,7 +2271,7 @@ def zoom(start, stop, ax=None, ymargin=5):
         y = line.get_data()[1]
 
         try:
-            _, y = br.extract(x=x, y=y, ranges=(start, stop))
+            _, y = _extract(x=x, y=y, ranges=(start, stop))
             ymin_temp = min(y)
             ymax_temp = max(y)
 
@@ -2206,6 +2307,7 @@ def _zoom(self, start, stop, ymargin=5):
     """
     zoom(start=start, stop=stop, ax=self, ymargin=ymargin)
 mpl.axes.Axes.zoom = _zoom
+# %%
 
 # %% ================================= inset ============================== %% #
 def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
@@ -2217,7 +2319,7 @@ def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True
         ax (axes, optional): axes to get inset data from. If None, the current axes 
             will be used. Default is None
         xticks_kwargs, yticks_kwargs (dictionary, optional): kwargs for 
-            br.set_xticks() and br.set_yticks() functions to set the inset ticks
+            set_xticks() and set_yticks() functions to set the inset ticks
             and plot limits. Default is None.
         rect (bool, optional): if True, rectangle will be draw in the main axes
             at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
@@ -2330,7 +2432,6 @@ def _ax_pos2fig_pos(ax, value, direction='x'):
 
     return x0 + delta*value
 
-# %% add to axes
 def _inset(self, xlim, ylim, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
     """add inset to axes. Inset will have all curves from axes
 
@@ -2338,7 +2439,7 @@ def _inset(self, xlim, ylim, xticks_kwargs=None, yticks_kwargs=None, rect=True, 
         xlim, ylim (tuple): (xi, xf), (yi, yf) coordinates of inset in data 
             coordinates.
         xticks_kwargs, yticks_kwargs (dictionary, optional): kwargs for 
-            br.set_xticks() and br.set_yticks() functions to set the inset ticks
+            set_xticks() and set_yticks() functions to set the inset ticks
             and plot limits. Default is None.
         rect (bool, optional): if True, rectangle will be draw in the main axes
             at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
@@ -2351,6 +2452,7 @@ def _inset(self, xlim, ylim, xticks_kwargs=None, yticks_kwargs=None, rect=True, 
     """
     return inset(xlim=xlim, ylim=ylim, ax=self, xticks_kwargs=xticks_kwargs, yticks_kwargs=yticks_kwargs, rect=rect, rect_xlim=rect_xlim, rect_ylim=rect_ylim, ax2putinset=ax2putinset, **kwargs)
 mpl.axes.Axes.inset = _inset
+# %%
 
 # %% ======================== units and conversion ======================== %% #
 def cm2pt(*tupl):
@@ -2441,6 +2543,7 @@ def hex2rgb(string, max_rgb_value=1):
         rgb value (tuple)
     """
     return [x*max_rgb_value for x in mpl.colors.to_rgb(string)]
+# %%
 
 # %% ================================= lines ============================== %% #
 def axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
@@ -2543,8 +2646,7 @@ def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels=''
             final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
     return final
 
-# %% add to axes
-def _axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+def _axvlines(self, x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', **kwargs):
     """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
 
     Args:
@@ -2562,10 +2664,10 @@ def _axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='
     .. _plt.axvline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html  
     .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
     """
-    return vlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
-mpl.axes.Axes.vlines = _axvlines
+    return axvlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
+mpl.axes.Axes.axvlines = _axvlines
 
-def _axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+def _axhlines(self, y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', **kwargs):
     """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
 
     Args:
@@ -2584,8 +2686,9 @@ def _axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='
     .. _plt.axhline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axhline.html  
     .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
     """
-    return _hlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
-mpl.axes.Axes.hlines = _axhlines
+    return axhlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
+mpl.axes.Axes.axhlines = _axhlines
+# %%
 
 # %% =============================== Gradient ============================= %% #
 # linear
@@ -2693,69 +2796,76 @@ def bezier_gradient(colors, n=100, max_rgb_value=1):
         return out
 
     return [[x/255*max_rgb_value for x in bezier_interp(float(t)/(n-1))] for t in range(n)]
+# %%
 
 # %% =============================== Experimental ========================= %% #
-def _subplots_adjust(fig=None, left=None, bottom=None, right=None, top=None, labelleft=True, labelbottom=True, labelright=False, labeltop=False, fontsize=None):
-    """
+def _onmove(event):
+    """This function is called every time the figure changes position on the screen."""
+    # time.sleep(1)
 
-    manual adjust use fig.subplots_adjust(left=left, bottom=bottom, right=right, top=top) 
-    """
-    if fig is None:
-        fig = plt.gcf()
-
-    # figure size
-    xsize, ysize = fig.get_size_inches()
-
-    # font factors
-    # perfect 9 (any size apparently)
-    w_coeff = 0.008
-    h_coff  = 0.024
-
-    # linear coeff
-    a = 0.001
-    b = 0.99
-
-    ymax = []
-    xmax = []
-    for ax in fig.get_axes():
-        # print(ax.get_yticks())
-        temp = [br.n_digits(y) for y in get_yticks_showing(ax=ax)]
-        if len(temp) > 0:
-            ymax += [max(temp), ]
-
-        temp = [br.n_digits(x) for x in get_xticks_showing(ax=ax)]
-        if len(temp) > 0:
-            xmax += [max(temp), ]
-    if len(xmax) == 0:
-        raise ValueError('no axes to apply subplots_adjust')
-    ymax = max(ymax)
-    xmax = max(xmax)
-    # print([br.n_digits(y) for y in get_yticks_showing(ax=ax)])
-
-    if fontsize is None:
-        fontsize = matplotlib.rcParams['font.size']
+    # dpi
     
-    if left is None:
-        left = round((ymax*fontsize*w_coeff + fontsize*h_coff)/xsize, 3)
+
+    # adjust size
+    # set_window_size(fig.old_size)
     
-    if bottom is None:
-        bottom = round((fontsize*h_coff*1.8)/ysize, 3)
+    # # before
+    # old_size = fig.old_size
+    # old_dpi  = fig.old_dpi
 
-    if right is None:
-        if labelright:
-            right = round((ymax*fontsize*w_coeff + fontsize*h_coff)/xsize, 3)
-        else:
-            right = a*xsize + b
+    # # current
+    # size = (event.width, event.height)
+    # dpi  = old_dpi
+    
+    # if old_size == size:
+    #     print('same')
+    # else:
+    #     print('changed')
+    #     print(size, old_size)
 
-    if top is None:
-        if labeltop:
-            top = round((fontsize*h_coff*1.8)/ysize, 3)
-        else:
-            top = a*ysize + b
+    #     # new (corrected)
+    #     new_size = size
+    #     new_dpi  = dpi*old_size[0]/(size[0])
+    #     print(new_dpi)
 
+    #     # set
+    #     # fig.set_dpi(new_dpi)
+    #     fig.old_size = new_size
+    #     # set_window_size(new_size)
 
-    print(f'left={left}, right={right}, bottom={bottom}, top={top}')
-    fig.subplots_adjust(left=left, right=right, bottom=bottom, top=top) 
+    # # print('moved')
+    # # print(new_dpi)
+    # # # print('old size: ' + str(old_size))
+    # # # print('new size: ' + str(new_size))
+    return
+
+def _bring2top():
+    """Brings current window to the top.
+
+    This function was not tested for all available matplotlib backends.
+    """
+    # fig = plt.gcf()
+    # fig.canvas.manager.window.raise_()
+
+    backend = matplotlib.get_backend()
+    if backend.startswith(('Qt5', 'qt5', 'QT5')):
+        print('ff')
+
+        from PyQt5 import QtCore
+        window = plt._get_current_fig_manager().window
+        window.activateWindow()
+        window.raise_()
+        # window.setWindowFlags(window.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+        # plt.show()
+
+        # window.setWindowFlags(window.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
+        # plt.show()
+    elif backend.startswith(('tk', 'TK', 'Tk')):
+        plt.gcf().canvas.get_tk_widget().focus_force() 
+    else:
+        figManager = _get_current_fig_manager()
+        figManager.window.raise_()
+    return
 
 def _savefigs(filepath, figs='all'):
     """Save multiple matplotlib figures in a pdf.
@@ -2914,7 +3024,8 @@ def _soft_ungroup_svg(filepath, outfilepath=None):
     f = outfilepath.open('w')
     f.write(output)
     f.close()
-
+# %%
+    
 # %% =============================== Obsolete ============================= %% #
 def _remove_ticks_edge(ax):
     """Remove ticks that fall over the edges of the plot.
@@ -3081,7 +3192,7 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
         ticks   = np.linspace(start, stop, n_ticks)
     # ticks shift to get better values (include zero)
     if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
-        ticks = ticks-ticks[br.index(ticks, 0)]
+        ticks = ticks-ticks[_index(ticks, 0)]
     elif stop-start > 5:
         ticks = ticks-(ticks[0]-int(ticks[0]))
     # ticks edges
@@ -3402,7 +3513,7 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
 
         # ticks shift to get better values (include zero)
         if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
-            ticks = ticks-ticks[br.index(ticks, 0)]
+            ticks = ticks-ticks[_index(ticks, 0)]
         elif stop-start > 5: # If zero is not included, round ticks if range is larger than 5
             ticks = ticks-(ticks[0]-int(ticks[0]))
 
@@ -3585,7 +3696,7 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
 
         # ticks shift to get better values (include zero)
         if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
-            ticks = ticks-ticks[br.index(ticks, 0)]
+            ticks = ticks-ticks[_index(ticks, 0)]
         elif stop-start > 5: # If zero is not included, round ticks if range is larger than 5
             ticks = ticks-(ticks[0]-int(ticks[0]))
 
@@ -3638,3 +3749,4 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
         ax.tick_params(which=which, axis='y', **kwargs)
     
     return
+# %%

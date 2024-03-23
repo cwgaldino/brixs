@@ -2,22 +2,45 @@
 # -*- coding: utf-8 -*-
 """Module for calculating crystal parameters."""
 
+"""
+     \      /.
+      \    /   .
+       \  /     .
+   th ( \/       .
+   ┌──────────┐  . 2th
+   ├  sample  ┤  .
+   └──────────┘ .
+           \   .
+            \.
+"""
+
+# %% --------------------------- Standard Imports ------------------------- %% #
 import numpy as np
 from scipy.constants import h, speed_of_light, physical_constants
 
+# %% --------------------------- special Imports -------------------------- %% #
 try:
     from pbcpy.base import DirectCell
 except ImportError:
     pass
+# %%
 
-
+# %% =============================== crystal ============================== %% #
 def ev2angstrom(value):
     """Converts value from energy (eV) to photon wavelength (angstrom)."""
     return h*speed_of_light/(physical_constants['electron volt-joule relationship'][0]*value) * 10**10
 
-def momentum_transfer(energy, theta, two_theta):
+def calculate_q_transfer(energy, theta, two_theta):
     """Returns the momentum transfer q=q_f-q_i of a scattering process (in angstrom^-1).
 
+     \      /.
+      \    /   .
+       \  /     .
+   th ( \/      . 2th
+    ---------  . 
+          \   .
+           \.
+    
     Args:
         energy (number): energy (in eV) of the incident beam.
         theta (number): angle (in degrees) between the incident beam and the sample surface.
@@ -59,7 +82,7 @@ def momentum_transfer(energy, theta, two_theta):
 
     return q, q_parallel, q_perpendicular
 
-def lattice(a, b, c, alpha=90, beta=90, gamma=90):
+def _lattice(a, b, c, alpha=90, beta=90, gamma=90):
     """Returns the unit cell and the reciprocal unit cell matrix in real space.
 
     Args:
@@ -93,7 +116,7 @@ def lattice(a, b, c, alpha=90, beta=90, gamma=90):
 
     return lattice, reciprocal_cell1.lattice
 
-def brillouin_zone_size(reciprocal_lattice, h=None, k=None, l=None):
+def _brillouin_zone_size(reciprocal_lattice, h=None, k=None, l=None):
     """Returns the size of the brillouin zone.
 
     Args:
@@ -126,6 +149,6 @@ def momentum2rlu(q, hkl, a, b, c, alpha=90, beta=90, gamma=90):
     Returns:
         number
     """
-    _, rlatt = lattice(a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma)
-    size = brillouin_zone_size(rlatt, h=hkl[0], k=hkl[1], l=hkl[2])
+    _, rlatt = _lattice(a=a, b=b, c=c, alpha=alpha, beta=beta, gamma=gamma)
+    size = _brillouin_zone_size(rlatt, h=hkl[0], k=hkl[1], l=hkl[2])
     return q/size
