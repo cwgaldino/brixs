@@ -480,7 +480,7 @@ def maximize():
         
 # %% ================================ figure ============================== %% #
 # figure
-def figure(**kwargs):
+def figure(*args, **kwargs):
     """Create figure object. Wrapper for `plt.figure()`_.
 
     Mouse click behavior:
@@ -492,7 +492,7 @@ def figure(**kwargs):
         Middle click:
             copies cursor position in terms of figure coordinates.
     Args:
-        **kwargs: kwargs are passed to `plt.figure()`.
+        *args, **kwargs: args and kwargs are passed to `plt.figure()`.
 
     Note:
         This function overwrites the behavior of `figsize` parameters. In
@@ -508,14 +508,14 @@ def figure(**kwargs):
     if 'figsize' in kwargs:
         kwargs['figsize'] = (cm2inch(kwargs['figsize'][0]), cm2inch(kwargs['figsize'][1]))
 
-    # initizalize figure
-    fig = plt.figure(**kwargs)
+    # initialize figure
+    fig = plt.figure(*args, **kwargs)
 
     # event callbacks
-    fig = _apply_figure_adjustments(fig, **kwargs)
+    fig = _apply_figure_adjustments(fig)
     return fig
 
-def _apply_figure_adjustments(fig, **kwargs):
+def _apply_figure_adjustments(fig):
     """adds onclick functionality to figures"""
 
     #  mouse events
@@ -742,7 +742,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
                               sharex=sharex,
                               sharey=sharey,
                               gridspec_kw=gridspec_kw, **fig_kw)
-    fig = _apply_figure_adjustments(fig, **fig_kw)
+    fig = _apply_figure_adjustments(fig)
 
     #################
     # fatten output #

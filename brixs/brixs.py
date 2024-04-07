@@ -81,7 +81,7 @@ class _Meta(type):
         return type(class_name, bases, new_attrs)
 
 # %% ====================== modified figure function ======================= %% #
-def figure(**kwargs):
+def figure(*args, **kwargs):
     """Create figure object. Wrapper for `plt.figure()`_.
 
     The following br.settings affect figure:
@@ -102,7 +102,7 @@ def figure(**kwargs):
         Middle click:
             copies cursor position in terms of figure coordinates.
     Args:
-        **kwargs: kwargs are passed to `plt.figure()`.
+        *args, **kwargs: args and kwargs are passed to `plt.figure()`.
 
     Note:
         This function overwrites the behavior of `figsize` parameters. In
@@ -114,7 +114,7 @@ def figure(**kwargs):
     
     .. _plt.figure(): https://matplotlib.org/stable/api/figure_api.html
     """
-    fig = figmanip.figure(**kwargs)
+    fig = figmanip.figure(*args, **kwargs)
 
     ############
     # position #
@@ -167,6 +167,105 @@ def figure(**kwargs):
             # set_window_position()
             settings._figure_count = 0
     return fig
+
+def subplots(*args, **kwargs):
+    """Create a figure and a set of subplots. Wrapper for `plt.subplots()`_.
+
+    The following br.settings affect figure:
+
+        br.settings.FIGURE_POSITION
+        br.settings.FIGURE_FORCE_ON_TOP
+        br.settings.FIGURE_DPI
+        br.settings.FIGURE_SIZE
+        br.settings.FIGURE_GRID
+
+
+    Mouse click behavior:
+
+        Right click:
+            x value is copied to the clipboard.
+        Left click OR (y + Right click):
+            y value is copied to the clipboard.
+        Middle click:
+            copies cursor position in terms of figure coordinates.
+    
+    Args:
+        nrows, ncols (int): Number of rows/columns of the subplot grid.
+        sharex, sharey (bool or str, optional): Share the x or y axis between 
+            axes. Options are: True, False, 'all', 'row', 'col'. Default is False
+        hspace, wspace (float, optional): The amount of height/width reserved for space 
+            between subplots, expressed as a fraction of the average axis 
+            height/width. Default is 0.3.
+        width_ratios, height_ratios (list, optional): Defines the relative heights/widths of the 
+            ows/columns. Each row/column gets a relative height/width of 
+            ratios[i] / sum(ratios). If not given, all rows/columns will have 
+            the same width. 
+        **fig_kw: All additional keyword arguments are passed to the plt.figure call
+
+
+    Note:
+        This function overwrites the behavior of `figsize` parameters. In
+        plt.figure(figsize=(w, h)), w and h must be given in inches. However,
+        this function gets `w` and `h` in cm. 
+    
+    Returns:
+        fig, axes
+    
+    .. _plt.subplots(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.subplots.html
+    """
+    fig, axes = figmanip.subplots(*args, **kwargs)
+
+    ############
+    # position #
+    ############
+    if settings.FIGURE_POSITION is not None:
+        figmanip.set_window_position(settings.FIGURE_POSITION)
+
+    # #############
+    # # force top #
+    # #############
+    # if br.settings.FIGURE_FORCE_ON_TOP:
+    #     print('aa')
+    #     bring2top()
+
+    ##############
+    # figure DPI #
+    ##############
+    if 'dpi' not in kwargs:
+        if settings.FIGURE_DPI is not None:
+            fig.set_dpi(settings.FIGURE_DPI)
+
+    ########################
+    # figure size and grid #
+    ########################
+    if 'figsize' not in kwargs:
+        if settings.FIGURE_SIZE is not None:
+            figmanip.set_window_size(settings.FIGURE_SIZE)
+
+        # grid
+        if settings.FIGURE_GRID:
+            rows    = settings.FIGURE_GRID[0]
+            columns = settings.FIGURE_GRID[1]
+
+            if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
+                count  = settings._figure_count - 1
+                row    = int((count/columns)%rows)
+                column = count%columns
+
+                if settings.FIGURE_SIZE is None:
+                    height, width = figmanip.get_window_size()
+                else:
+                    height = settings.FIGURE_SIZE[0]
+                    width  = settings.FIGURE_SIZE[1]
+
+                position = (settings.FIGURE_POSITION[0]+row*(height+settings.FIGURE_GRID_OFFSET[0]), settings.FIGURE_POSITION[1]+column*(width+settings.FIGURE_GRID_OFFSET[1]))
+                figmanip.set_window_position(position)
+
+                settings._figure_count += 1
+        else:
+            # set_window_position()
+            settings._figure_count = 0
+    return fig, axes
 # %%
 
 # %% ============================== Spectrum ============================== %% #

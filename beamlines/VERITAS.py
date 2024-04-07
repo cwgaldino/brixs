@@ -11,9 +11,15 @@ import numpy as np
 from collections.abc import Iterable
 import copy
 
-# %% ------------------------- Special Imports ---------------------------- %% #
+# %% ------------------------------ brixs --------------------------------- %% #
 import brixs as br
-import h5py
+
+# %% ------------------------- Special Imports ---------------------------- %% #
+try:
+    import h5py
+except:
+    pass
+
 
 # %% ------------------------------ XAS ----------------------------------- %% #
 def _unpack_attrs_xas(s):

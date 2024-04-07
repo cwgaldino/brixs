@@ -6,15 +6,20 @@ Last edited: Carlos Galdino 03-2023
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
+from datetime import datetime, timedelta
+from collections.abc import Iterable
 from pathlib import Path
 import numpy as np
-from collections.abc import Iterable
 import copy
-from datetime import datetime, timedelta
+
+# %% ------------------------------ brixs --------------------------------- %% #
+import brixs as br
 
 # %% ------------------------- Special Imports ---------------------------- %% #
-import brixs as br
-import h5py
+try:
+    import h5py
+except:
+    pass
 
 # %% ------------------------------ XAS ----------------------------------- %% #
 def _unpack_attrs_xas(s):

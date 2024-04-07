@@ -1,6 +1,27 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Useful functions for everyday use ---> xlsx (excel) files"""
+"""Useful functions for everyday use ---> xlsx (excel) files
+
+Usage
+
+    >>> # import
+    >>> from xlsx import xlsx, new_xlsx
+    >>> 
+    >>> # create new xlsx file or open an existing file
+    >>> sheet = new_xlsx(filepath)  # new file
+    >>> sheet = xlsx(filepath)      # existing file
+    >>> 
+    >>> # function names are self-explanatory
+    >>> sheet.set_row([1, 2, 3, 4], row=2, start_col=4)
+    >>> sheet.set_row_fill(color='ff0000', row=2, start_col=4, stop_col=8)
+    >>> sheet.set_row_font(row=2, bold=True, color='000000', start_col=4, stop_col=8)
+    >>> 
+    >>> w = sheet.get_col_width(col=5)
+    >>> sheet.set_col_width(col=5, width=w*1.5)
+    >>> 
+    >>> sheet.save()
+
+"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path

@@ -12,9 +12,15 @@ import glob
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-# %% ------------------------- Special Imports ---------------------------- %% #
+# %% ------------------------------ brixs --------------------------------- %% #
 import brixs as br
-import h5py
+
+# %% ------------------------- Special Imports ---------------------------- %% #
+try:
+    import h5py
+except:
+    pass
+
 
 # %% --------------------- matplotlib Configurations ------------------------ %% #
 mpl.rcParams['lines.linewidth'] = 1
