@@ -51,7 +51,7 @@ br.finder_verbose = True
 def processing_function(parameters, folderpath):
 
     # try and find if spectrum has already been calculated
-    s = search4processed(parameters, folderpath=folderpath)
+    s = br.search4processed(parameters, folderpath=folderpath)
     if s is not None:
         return s
     

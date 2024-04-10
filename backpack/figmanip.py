@@ -641,7 +641,15 @@ def _onclick(event):
                 delta = lim[1] - lim[0]
                 r21 = _round_to_1(delta)
                 if r21 < 1:
-                    n = _n_decimal_places(r21)*2
+                    i = 0
+                    while r21 < 1:
+                        r21 = r21*10
+                        i += 1
+                        if i == 11: break
+                    if i < 11:
+                        n = i + 2
+                    else:
+                        n = False
                 elif r21 >= 1 and r21 < 2:
                     n = 3
                 elif r21 >= 2 and r21 < 100:
@@ -650,9 +658,13 @@ def _onclick(event):
                     n = 1
                 elif r21 >= 800:
                     n = 0
-                final = round(event.ydata, n)
-                if n == 0:
-                    final = int(final)
+                
+                if n:
+                    final = round(event.ydata, n)
+                    if n == 0:
+                        final = int(final)
+                else:
+                    final = event.ydata
                 _copy2clipboard(str(final))
                 # print('y coordinate copied to clipboard')
             except TypeError:
@@ -668,7 +680,15 @@ def _onclick(event):
                 delta = lim[1] - lim[0]
                 r21 = _round_to_1(delta)
                 if r21 < 1:
-                    n = _n_decimal_places(r21)*2
+                    i = 0
+                    while r21 < 1:
+                        r21 = r21*10
+                        i += 1
+                        if i == 11: break
+                    if i < 11:
+                        n = i + 2
+                    else:
+                        n = False
                 elif r21 >= 1 and r21 < 2:
                     n = 3
                 elif r21 >= 2 and r21 < 100:
@@ -677,9 +697,13 @@ def _onclick(event):
                     n = 1
                 elif r21 >= 800:
                     n = 0
-                final = round(event.xdata, n)
-                if n == 0:
-                    final = int(final)
+
+                if n:
+                    final = round(event.xdata, n)
+                    if n == 0:
+                        final = int(final)
+                else:
+                    final = event.ydata
                 _copy2clipboard(str(final))
                 # print('x coordinate copied to clipboard')
             except TypeError:

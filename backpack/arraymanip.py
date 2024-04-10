@@ -215,6 +215,13 @@ def has_duplicates(array):
         return False
     else:
         return True
+    
+def remove_duplicates(array):
+    """Returns the sorted unique elements of an array. Wrapper for np.unique()"""
+    temp = np.unique(array)
+    if isinstance(array, list):
+        temp = list(temp)
+    return temp
 
 # %% ============================ monotonicity ============================ %% #
 def check_monotonicity(array):

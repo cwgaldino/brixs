@@ -63,6 +63,7 @@ class _settings():
         # internal #
         ############
         self._figure_count = 1
+        self._reserved_words = []
 
         #############
         # help text #
