@@ -92,10 +92,12 @@ class _Meta(type):
         ################
         new_attrs = {}
 
-        if '_reserved' in attrs:
-            for attr in attrs['_reserved']:
-                _property = property(*lazy_reserved(attr))
-                new_attrs[attr] = _property
+        # if '_reserved' in attrs:
+        #     print('reserved')
+        #     for attr in attrs['_reserved']:
+        #         print(attr)
+        #         _property = property(*lazy_reserved(attr))
+        #         new_attrs[attr] = _property
         if '_non_removable' in attrs:
             for attr in attrs['_non_removable']:
                 _property = property(*lazy_non_removable(attr))
@@ -109,6 +111,46 @@ class _Meta(type):
                 new_attrs[name] = value
 
         return type(class_name, bases, new_attrs)
+
+# NEW NEW NEW
+def propag_mod(func):
+    def inner(self, value):
+
+        ##############
+        # save value #
+        ##############
+        if func.__name__ == 'set_shift':
+            self._shift += value
+        elif func.__name__ == 'set_roll':
+            self._roll += value
+        elif func.__name__ == 'set_factor':
+            self._factor *= value
+        elif func.__name__ == 'set_offset':
+            self._offset += value
+        elif func.__name__ == 'set_calib':
+            self._calib *= value
+
+        ###############
+        # calculation #
+        ###############
+        _ = func(self, value)
+
+        ###################
+        # propagate value #
+        ###################
+        if func.__name__ == 'set_shift':
+            self.model.set_shift(value)
+        elif func.__name__ == 'set_roll':
+            self.model.set_shift(value*self.step)
+        elif func.__name__ == 'set_factor':
+            self.model.set_factor(value)
+        elif func.__name__ == 'set_offset':
+            self.model.set_offset(value)
+        elif func.__name__ == 'set_calib':
+            self.model.set_calib(value)
+
+        return
+    return inner
 
 def _copy_func_attrs(s1, s2):
     """copy functionality attrs from s2 object to s1 object"""
@@ -379,7 +421,6 @@ class Spectrum(metaclass=_Meta):
     """
     _read_only     = ['step', 'monotonicity', 'peaks', 'model']
     _non_removable = []
-    _reserved      = settings._reserved_words
 
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
@@ -634,6 +675,11 @@ class Spectrum(metaclass=_Meta):
     #################
     # magic methods #
     #################
+    def __setattr__(self, name, value):
+        if name in settings._forbidden_words['Spectrum']:
+            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+        super().__setattr__(name, value)
+
     def __len__(self):
         if self.x is None:
             return 0
@@ -1231,6 +1277,7 @@ class Spectrum(metaclass=_Meta):
     ##################
     # base modifiers #
     ##################
+    @propag_mod
     def set_calib(self, value):
         """Set calibration value.
 
@@ -1270,6 +1317,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         self.peaks.set_calib(value=value)
 
+    @propag_mod
     def set_shift(self, value):
         """Set shift value.
 
@@ -1294,6 +1342,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         self.peaks.set_shift(value=value)
 
+    @propag_mod
     def set_roll(self, value):
         """Set roll value.
 
@@ -1340,6 +1389,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         self.peaks.set_shift(value=value*self.step)
 
+    @propag_mod
     def set_offset(self, value):
         """Set offset value.
 
@@ -1362,6 +1412,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         self.peaks.set_offset(value=value)
 
+    @propag_mod
     def set_factor(self, value):
         """Set y multiplicative factor.
 
@@ -2150,7 +2201,6 @@ class Spectra(metaclass=_Meta):
                       'calculated_offset', 'calculated_shift',
                       'calculated_roll', 'peaks', 'model']
     _non_removable = []
-    _reserved      = settings._reserved_words
 
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
@@ -2400,6 +2450,11 @@ class Spectra(metaclass=_Meta):
 
     def __repr__(self):
         return str({i:val for i, val in enumerate(self.data)})[1:-1].replace(', ', '\n')
+
+    def __setattr__(self, name, value):
+        if name in settings._forbidden_words['Spectra']:
+            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+        super().__setattr__(name, value)
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -6430,8 +6485,7 @@ class Image(metaclass=_Meta):
     # read only and non-removable arguments
     _read_only     = ['calculated_roll', 'calculated_shift']
     _non_removable = []
-    _reserved      = settings._reserved_words
-
+    
     def __init__(self, *args, **kwargs):
         """Initialize the object instance.
         
@@ -6479,19 +6533,14 @@ class Image(metaclass=_Meta):
         # keyword arguments
         if 'data' in kwargs:
             self.data = kwargs['data']
-            return
-        if 'filepath' in kwargs:
+        elif 'filepath' in kwargs:
             self.load(kwargs['filepath'])
-            return
-        
         # positional arguments
-        if len(args) == 1:
+        elif len(args) == 1:
             if isinstance(args[0], str) or isinstance(args[0], Path):
                 self.load(args[0])
-                return
             else:
                 self.data = args[0]
-                return
 
     ##############
     # attributes #
@@ -6565,6 +6614,8 @@ class Image(metaclass=_Meta):
     ###################################
     @property
     def shape(self):
+        if self._data is None:
+            return None
         return (self.data.shape[0], self.data.shape[1])
     @shape.setter
     def shape(self, value):
@@ -6575,6 +6626,8 @@ class Image(metaclass=_Meta):
 
     @property
     def histogram(self):
+        if self._data is None:
+            return None
         return self.calculate_histogram()
     @histogram.setter
     def histogram(self, value):
@@ -6585,6 +6638,8 @@ class Image(metaclass=_Meta):
 
     @property
     def columns(self):
+        if self._data is None:
+            return None
         ss = Spectra(n=self.shape[1])
         for i in range(self.shape[1]):
             ss[i] = Spectrum(x=self.y_centers, y=self.data[:, i])
@@ -6598,6 +6653,8 @@ class Image(metaclass=_Meta):
 
     @property
     def rows(self):
+        if self._data is None:
+            return None
         ss = Spectra(n=self.shape[0])
         for i in range(self.shape[0]):
             ss[i] = Spectrum(x=self.x_centers, y=self.data[i, :])
@@ -6612,6 +6669,11 @@ class Image(metaclass=_Meta):
     #################
     # magic methods #
     #################
+    def __setattr__(self, name, value):
+        if name in settings._forbidden_words['Image']:
+            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+        super().__setattr__(name, value)
+
     def __len__(self):
         if self._data is None:
             return 0
@@ -8322,7 +8384,6 @@ class PhotonEvents(metaclass=_Meta):
 
     _read_only = ['calculated_shift']
     _non_removable = []
-    _reserved      = settings._reserved_words
     
     def __init__(self, *args, **kwargs): 
         """Initialize the object instance.
@@ -8558,6 +8619,11 @@ class PhotonEvents(metaclass=_Meta):
             return 0
         else:
             return len(self.x)
+
+    def __setattr__(self, name, value):
+        if name in settings._forbidden_words['PhotonEvents']:
+            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+        super().__setattr__(name, value)
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -9373,3 +9439,10 @@ class PhotonEvents(metaclass=_Meta):
 
         return pos
 
+# %%
+for obj in (Spectrum, Spectra, Image, PhotonEvents):
+    obj._shift  = 0
+    obj._roll   = 0
+    obj._offset = 0
+    obj._calib  = 1
+    obj._factor = 1

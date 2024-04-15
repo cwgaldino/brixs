@@ -62,8 +62,12 @@ class _settings():
         ############
         # internal #
         ############
-        self._figure_count = 1
-        self._reserved_words = []
+        self._figure_count   = 1
+        self._forbidden_words = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[]}
+        self._reserved_words  = {'Spectrum':    {'methods':[], 'vars':[], 'pseudovars': []}, 
+                                 'Spectra':     {'methods':[], 'vars':[], 'pseudovars': []}, 
+                                 'Image':       {'methods':[], 'vars':[], 'pseudovars': []}, 
+                                 'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []}}
 
         #############
         # help text #
@@ -93,92 +97,3 @@ class _settings():
 # %% ============================ initialization ========================== %% #
 global settings
 settings = _settings()
-
-# # %% add brixs settings to figure
-# from backpack import figure as _figure
-# def figure(**kwargs):
-#     """Create figure object. Wrapper for `plt.figure()`_.
-
-#     The following br.settings affect figure:
-
-#         br.settings.FIGURE_POSITION
-#         br.settings.FIGURE_FORCE_ON_TOP
-#         br.settings.FIGURE_DPI
-#         br.settings.FIGURE_SIZE
-#         br.settings.FIGURE_GRID
-
-
-#     Mouse click behavior:
-
-#         Right click:
-#             x value is copied to the clipboard.
-#         Left click OR (y + Right click):
-#             y value is copied to the clipboard.
-#         Middle click:
-#             copies cursor position in terms of figure coordinates.
-#     Args:
-#         **kwargs: kwargs are passed to `plt.figure()`.
-
-#     Note:
-#         This function overwrites the behavior of `figsize` parameters. In
-#         plt.figure(figsize=(w, h)), w and h must be given in inches. However,
-#         this function gets `w` and `h` in cm. 
-    
-#     Returns:
-#         figure object
-    
-#     .. _plt.figure(): https://matplotlib.org/stable/api/figure_api.html
-#     """
-#     print('fff')
-#     fig = _figure(**kwargs)
-
-#     ############
-#     # position #
-#     ############
-#     if br.settings.FIGURE_POSITION is not None:
-#         set_window_position()
-
-#     #############
-#     # force top #
-#     #############
-#     if br.settings.FIGURE_FORCE_ON_TOP:
-#         bring2top()
-
-#     ##############
-#     # figure DPI #
-#     ##############
-#     if 'dpi' not in kwargs:
-#         if br.settings.FIGURE_DPI is not None:
-#             fig.set_dpi(br.settings.FIGURE_DPI)
-
-#     ########################
-#     # figure size and grid #
-#     ########################
-#     if 'figsize' not in kwargs:
-#         if br.settings.FIGURE_SIZE is not None:
-#             set_window_size(br.settings.FIGURE_SIZE)
-
-#         # grid
-#         if br.settings.FIGURE_GRID:
-#             rows    = br.settings.FIGURE_GRID[0]
-#             columns = br.settings.FIGURE_GRID[1]
-
-#             if (rows > 1 and columns > 0) or (columns > 1 and rows > 0):
-#                 count  = br.settings._figure_count - 1
-#                 row    = int((count/columns)%rows)
-#                 column = count%columns
-
-#                 if br.settings.FIGURE_SIZE is None:
-#                     height, width = get_window_size()
-#                 else:
-#                     height = br.settings.FIGURE_SIZE[0]
-#                     width  = br.settings.FIGURE_SIZE[1]
-
-#                 position = (br.settings.FIGURE_POSITION[0]+row*(height+br.settings.FIGURE_GRID_OFFSET[0]), br.settings.FIGURE_POSITION[1]+column*(width+br.settings.FIGURE_GRID_OFFSET[1]))
-#                 set_window_position(position)
-
-#                 br.settings._figure_count += 1
-#         else:
-#             # set_window_position()
-#             br.settings._figure_count = 0
-#     return fig

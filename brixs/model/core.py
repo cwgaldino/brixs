@@ -1495,7 +1495,7 @@ if lmfitok:
             
             def function(i1, i2):
                 """function that returns f(x)"""
-                return f"br.voigt_fwhm(x, amp1_{i1}_{i2}, c1_{i1}_{i2}, w1_{i1}_{i2}, m1_{i1}_{i2})"
+                return f"br.model.voigt_fwhm(x, amp1_{i1}_{i2}, c1_{i1}_{i2}, w1_{i1}_{i2}, m1_{i1}_{i2})"
             def min_max_step(i1, i2):
                 """function that returns the min, max and step x value used when creating spectrum"""
                 return f'c1_{i1}_{i2}-w1_{i1}_{i2}*10',  f'c1_{i1}_{i2}+w1_{i1}_{i2}*10', f'w1_{i1}_{i2}/20'

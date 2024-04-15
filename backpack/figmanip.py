@@ -1248,13 +1248,14 @@ def merge_axes(ax1, ax2):
         assert (ymax1 - ymin1) == (ymax2 - ymin2), 'axes must have the same width'
 
     # get new grid coordinates
+    pos = ax1.get_position().get_points()
     xmin = min(xmin1, xmin2)
     xmax = max(xmax1, xmax2)
     ymin = min(ymin1, ymin2)
     ymax = max(ymax1, ymax2)
 
     # add subplot
-    gs = ax1.get_gridspec()
+    gs  = ax1.get_gridspec()
     ax3 = ax1.figure.add_subplot(gs[xmin:xmax, ymin:ymax])
 
     # remove the underlying axes
@@ -1393,8 +1394,8 @@ def xmove(value, ax=None):
     """
     if ax is None:
         ax = plt.gca()
-    add_lspace(ax, value)
-    add_rspace(ax, value)
+    add_lspace(ax=ax, value=value)
+    add_rspace(ax=ax, value=value)
     return
 
 def ymove(value, ax=None):
@@ -1410,8 +1411,8 @@ def ymove(value, ax=None):
     """
     if ax is None:
         ax = plt.gca()
-    add_tspace(ax, value)
-    add_bspace(ax, value)
+    add_tspace(ax=ax, value=value)
+    add_bspace(ax=ax, value=value)
     return
 
 def sharex(axes):

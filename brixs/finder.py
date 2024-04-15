@@ -130,8 +130,8 @@ def finder(func):
         ######################
         # save args as attrs #
         ######################
-        for key in kwargs:
-            s.__setattr__(key, kwargs[key])
+        # for key in kwargs:
+        #     s.__setattr__(key, kwargs[key])
         
         ####################################################
         # save spectra so it is not needed to run it again #
