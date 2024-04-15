@@ -676,9 +676,11 @@ class Spectrum(metaclass=_Meta):
     # magic methods #
     #################
     def __setattr__(self, name, value):
+        print('a')
         if name in settings._forbidden_words['Spectrum']:
             raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
         super().__setattr__(name, value)
+
 
     def __len__(self):
         if self.x is None:

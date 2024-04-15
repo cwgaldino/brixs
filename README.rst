@@ -9,8 +9,8 @@ Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brix
 .. contents:: Table of Contents
 
 
-Introduction
-#############
+Introduction (might be outdate, I'm rewriting it)
+#################################################
 
 BRIXS makes use of object oriented (OO) programming to easy the processing and 
 analysis of data.
@@ -136,62 +136,63 @@ data manipulation that requires comparison between many spectra can be done via
 the Spectra object.
 
 Having only four classes makes the code easy to maintain. 
-Despite of that, BRIXS also have a secondary class
+.. Despite of that, BRIXS also have a secondary class
 
-.. code-block:: python
+.. .. code-block:: python
 
-   peaks = br.Peaks()
+..    peaks = br.Peaks()
 
-which are used for peak finding and fitting. These are nothing more than `LMFIT
-Parameters object <https://lmfit.github.io/lmfit-py/parameters.html#>`_ with some extra features.
+.. which are used for peak finding and fitting. These are nothing more than `LMFIT
+.. Parameters object <https://lmfit.github.io/lmfit-py/parameters.html#>`_ with some extra features.
 
-BRIXS also have additional smaller modules with everyday functions, which we 
-call `backpack functions`.
+.. BRIXS also have additional smaller modules with everyday functions, which we 
+.. call `backpack functions`.
 
-.. code-block:: python
+.. .. code-block:: python
 
-   br.figmanip
-   br.filemanip
-   br.arraymanip
-   br.interact
-   br.model_functions
-   br.xlsx
+..    br.figmanip
+..    br.filemanip
+..    br.arraymanip
+..    br.interact
+..    br.model_functions
+..    br.xlsx
 
-These modules are self-contained and independent of the rest of the project. BRIXS
-depends on them, but they do not depend on BRIXS. Therefore, they can be used independently.
-Their functionality ranges from, array operations to spreadsheet manipulation.
-More specific and focused modules are found in the support folder. 
+.. These modules are self-contained and independent of the rest of the project. BRIXS
+.. depends on them, but they do not depend on BRIXS. Therefore, they can be used independently.
+.. Their functionality ranges from, array operations to spreadsheet manipulation.
+.. More specific and focused modules are found in the support folder. 
 
-All BRIXS classes and modules are independent of `data collection methods` and 
-`data file types`. All the "file reading" functions, which reads a file and converts it
-to one of the 4 major BRIXS objects, are stored in the `file_reading` folder. For
-example, for data collected at ADRESS beamline of PSI, one can use the following
-line of code to get the spectrum from scan number 56,
+.. All BRIXS classes and modules are independent of `data collection methods` and 
+.. `data file types`. All the "file reading" functions, which reads a file and converts it
+.. to one of the 4 major BRIXS objects, are stored in the `file_reading` folder. For
+.. example, for data collected at ADRESS beamline of PSI, one can use the following
+.. line of code to get the spectrum from scan number 56,
 
-.. code-block:: python
+.. .. code-block:: python
 
-   from brixs.file_reading import ADRESS
-   ADRESS.read(folderpath, 'Cu_', 56)
+..    from brixs.file_reading import ADRESS
+..    ADRESS.read(folderpath, 'Cu_', 56)
 
-The modules inside the `file_reading` folder, may be used as an example for 
-writing new modules for other file types.
+.. The modules inside the `file_reading` folder, may be used as an example for 
+.. writing new modules for other file types.
 
 
 Installation
 #############
 
-There are two recommended methods:
+.. There are two recommended methods:
 
-1. Using pip
+.. 1. Using pip (This method isn't recommended for now
 
-.. code-block::    
+.. .. code-block::    
    
-   pip install git+https://github.com/cwgaldino/brixs
+..    pip install git+https://github.com/cwgaldino/brixs
 
 
-or
+.. or
 
-2. Cloning (or downloading) the GitHub repository then adding brixs to the "path":
+.. 2. 
+Cloning (or downloading) the GitHub repository then adding brixs to the "path":
 
 .. code-block:: python
 
@@ -199,6 +200,7 @@ or
     sys.path.append('<path-to-brixs>')
     import brixs as br
 
+Soon, this package will be available via pip.
 
 
 Requirements
@@ -212,7 +214,7 @@ Base (required):
 
 - matplotlib
 
-- lmfit >= 1.2.2
+.. - lmfit >= 1.2.2
 
 Reciprocal space calculations:
 

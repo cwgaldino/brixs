@@ -55,7 +55,7 @@ from .model import voigt_fwhm
 
 # support
 from .finder import *
-from .finder import _get_function_args_and_default_values
+#from .finder import _get_function_args_and_default_values
 
 # beamlines
 from beamlines import *
