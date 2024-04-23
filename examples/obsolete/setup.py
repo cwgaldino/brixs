@@ -9,8 +9,8 @@ setuptools.setup(
     long_description=open('README.rst').read(),
     long_description_content_type="text/x-rst",
     url="https://github.com/cwgaldino/brixs",
-    packages=['brixs'],
-    packages_dir={'brixs': './brixs'},
+    packages=['brixs', 'backpack', 'beamlines'],
+    packages_dir={'brixs': './brixs', 'backpack': './backpack', 'beamlines': './beamlines'},
     py_modules=['brixs'],
     install_requires=['matplotlib>=3.4', 'numpy>=1.15'],
     classifiers=[

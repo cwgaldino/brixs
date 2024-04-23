@@ -19,10 +19,7 @@ import numpy as np
 from scipy.constants import h, speed_of_light, physical_constants
 
 # %% --------------------------- special Imports -------------------------- %% #
-try:
-    from pbcpy.base import DirectCell
-except ImportError:
-    pass
+from pbcpy.base import DirectCell
 # %%
 
 # %% =============================== crystal ============================== %% #

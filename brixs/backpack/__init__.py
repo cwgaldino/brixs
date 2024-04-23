@@ -3,4 +3,4 @@ from .numanip import *
 from .arraymanip import *
 from .figmanip import *
 from .filemanip import *
-from .xlsx import *
+# from .xlsx import *

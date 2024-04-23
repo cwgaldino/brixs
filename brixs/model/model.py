@@ -24,22 +24,16 @@ Description:
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
-import copy
-import numpy as np
-import matplotlib.pyplot as plt
-
-# specific libraries
 from collections.abc import Iterable
+import matplotlib.pyplot as plt
+import numpy as np
+import copy
+
+# %% ------------------------- Special Imports --------------------------- %% #
 from scipy.signal import find_peaks
+# import lmfit
 
-lmfitok = False
-try:
-    import lmfit
-    lmfitok = True
-except:
-    pass    
-
-# BRIXS
+# %% ------------------------- Special Imports --------------------------- %% #
 import brixs as br
 
 # TODO ================================
@@ -54,10 +48,7 @@ import brixs as br
 
 # go to brixs and fix spectrum and spectra
 # on spectra, fix __repr__ for empty spectra
-
-# done
-if lmfitok:
-    # %% Peaks ========================================================================
+if False:
     class ComponentTemplate(object):
 
         ##################
@@ -1684,10 +1675,10 @@ if lmfitok:
                     self.append(amp=amp, c=c, w=w)
             except IndexError:
                 pass
-else:
-    class Model():
-        pass
 
+class Model():
+    def aa(self):
+        print('ggg')
 # %%
 if __name__ == "__main__":
     import lmfit

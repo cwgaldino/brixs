@@ -30,7 +30,7 @@ def _xylabels(title, ax, xlabel, ylabel, grid):
     return
 
 # %% =============================== labels =============================== %% #
-def xas(ax=None, title=None, grid=True):
+def xas(title=None, grid=True, ax=None):
     """Quickly set x and y labels and title in XAS plots."""
     xlabel = 'Photon energy (eV)'
     ylabel = 'Intensity (arb. units)'

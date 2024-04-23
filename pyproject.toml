@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brixs"
+version = "0.9.6"
+dependencies = ["numpy >= 1.15", "matplotlib>=3.4"]
+requires-python = ">=3.7"
+authors = [
+    {name = "Carlos William Galdino", email = "carlos.galdino@psi.ch"},
+    {name = "Thiago Mori",            email = "thiago.mori@lnls.br"},
+    {name = "Felipe Custodio",        email = "felipe.custodio@lnls.br"},
+    {name = "Tulio Rocha",            email = "tulio.rocha@lnls.br"}]
+maintainers = [
+    {name = "Carlos William Galdino", email = "carlos.galdino@psi.ch"},
+    {name = "Felipe Custodio",        email = "felipe.custodio@lnls.br"}]
+description = "python package for processing and analysis of XAS and RIXS spectra"
+readme = "README.rst"    
+license = {file = "LICENSE.txt"}
+keywords = ["RIXS", "XAS", "X-ray", "Synchrotron", "beamline"]
+classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent"]
+
+[project.optional-dependencies]
+model   = ["lmfit", "scipy"]
+crystal = ["pbcpy"]
+full    = ["lmfit", "scipy", "pbcpy"]
+
+[project.urls]
+Documentation = "https://cwgaldino.github.io/brixs"
+Repository    = "https://github.com/cwgaldino/brixs"
+"Bug Tracker" = "https://github.com/cwgaldino/brixs/issues"

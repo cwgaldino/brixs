@@ -90,7 +90,7 @@ class _settings():
     def help(self):
         print(self._help)
     
-    def print(self):
+    def pretty_print(self):
         print(self.__str__())
 # %%
         

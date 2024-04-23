@@ -51,7 +51,7 @@ br.finder_verbose = True
 def processing_function(parameters, folderpath):
 
     # try and find if spectrum has already been calculated
-    s = br.search4processed(parameters, folderpath=folderpath)
+    s = search(parameters, folderpath=folderpath)
     if s is not None:
         return s
     
@@ -59,7 +59,7 @@ def processing_function(parameters, folderpath):
     <include-code-here>
 
     # save spectra so it is not needed to run it again
-    save_processed(s=s, parameters=parameters, folderpath=folderpath)
+    save(s=s, parameters=parameters, folderpath=folderpath)
 
     return s
 
@@ -79,7 +79,7 @@ decorator
 
 
 Developers note: in the future, maybe we can make a better way to get the 
-last file number in function _save_processed()
+last file number in function _save()
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
@@ -94,18 +94,18 @@ import brixs as br
 ############################
 # run finder via decorator #
 ############################
-br.finder_folderpath = ''
-br.finder_verbose    = True
+folderpath = ''
+verbose    = True
 
 import inspect
-def finder(func):
+def track(func):
     def inner(*args, **kwargs):
         
         ######################################################
         # run function directly if folderpath is not defined #
         ######################################################
-        if br.finder_folderpath == '':
-            if br.finder_verbose:
+        if folderpath == '':
+            if verbose:
                 print('cannot check if data was already processed, because finder folder is not defined')
             return func(*args, **kwargs)
         
@@ -118,7 +118,7 @@ def finder(func):
         ########################################################
         # try and find if spectrum has already been calculated #
         ########################################################
-        s = search4processed(parameters=kwargs, folderpath=br.finder_folderpath)
+        s = search(parameters=kwargs, folderpath=folderpath)
         if s is not None:
             return s
 
@@ -136,10 +136,110 @@ def finder(func):
         ####################################################
         # save spectra so it is not needed to run it again #
         ####################################################
-        save_processed(s=s, parameters=kwargs, folderpath=br.finder_folderpath)
+        save(s=s, parameters=kwargs, folderpath=folderpath)
 
         # returning the value to the original frame
         return s
+    return inner
+
+def track2(func):
+    def inner(*args, **kwargs):
+        
+        ######################################################
+        # run function directly if folderpath is not defined #
+        ######################################################
+        if folderpath == '':
+            if verbose:
+                print('cannot check if data was already processed, because finder folderpath is not defined')
+            return func(*args, **kwargs)
+        
+        ##########################
+        # get function arguments #
+        ##########################
+        attr_names, default_values = _get_function_args_and_default_values(func)
+        kwargs = _args2kwargs(attr_names, default_values, args, kwargs)
+
+        ########################################################
+        # try and find if spectrum has already been calculated #
+        ########################################################
+        if 'i1212___' not in kwargs:
+            kwargs['i1212___'] = 0
+        else:
+            raise ValueError('Cannot run finder because one of the parameters is a reserved word "i1212___"')
+        s = search(parameters=kwargs, folderpath=folderpath)
+        if s is not None:
+            total = s.i1212___total
+            del s.i1212___total
+
+            mult    = [None]*total
+            mult[0] = s
+            for i in range(1, total):
+                kwargs['i1212___'] = i
+                mult[i] = search(parameters=kwargs, folderpath=folderpath)
+                del mult[i].i1212___total
+            return mult
+        _ = kwargs.pop('i1212___')
+        
+        ###############
+        # calculation #
+        ###############
+        mult = func(**kwargs)
+        
+        ####################################################
+        # save spectra so it is not needed to run it again #
+        ####################################################
+        for i, s in enumerate(mult):
+            kwargs['i1212___'] = i
+            s.i1212___total    = len(mult)
+            save(s=s, parameters=kwargs, folderpath=folderpath)
+            del s.i1212___total
+
+        # returning the value to the original frame
+        return mult
+    return inner
+
+def trackss(func):
+    def inner(*args, **kwargs):
+        
+        ######################################################
+        # run function directly if folderpath is not defined #
+        ######################################################
+        if folderpath == '':
+            if verbose:
+                print('cannot check if data was already processed, because finder folder is not defined')
+            return func(*args, **kwargs)
+        
+        ##########################
+        # get function arguments #
+        ##########################
+        attr_names, default_values = _get_function_args_and_default_values(func)
+        kwargs = _args2kwargs(attr_names, default_values, args, kwargs)
+
+        ########################################################
+        # try and find if spectrum has already been calculated #
+        ########################################################
+        ss = searchss(parameters=kwargs, folderpath=folderpath)
+        if ss is not None:
+            return ss
+
+        ###############
+        # calculation #
+        ###############
+        ss = func(**kwargs)
+
+        ######################
+        # save args as attrs #
+        ######################
+        # for key in kwargs:
+        #     s.__setattr__(key, kwargs[key])
+        
+        ####################################################
+        # save spectra so it is not needed to run it again #
+        ####################################################
+        save(s=ss, parameters=kwargs, folderpath=folderpath)
+
+        # returning the value to the original frame
+        return ss
     return inner
 
 def args2attrs(func):
@@ -169,19 +269,19 @@ def args2attrs(func):
 ######################################
 # functions for manual finder set up #
 ######################################
-def reset_finder(folderpath=None):
+def reset(folderpath_=None):
     """delete all spectrum and restart finder file"""
-    if folderpath is None:
-        if br.finder_folderpath != '':
-            folderpath = br.finder_folderpath
+    if folderpath_ is None:
+        if folderpath != '':
+            folderpath_ = folderpath
         else:
             raise ValueError('invalid folderpath\nfolderpath argument missing')
-    br.rmdir(folderpath, not_found_ok=True)
-    br.mkdir(folderpath)
-    f = open(folderpath/'finder.txt', 'w')
+    br.rmdir(folderpath_, not_found_ok=True)
+    br.mkdir(folderpath_)
+    f = open(folderpath_/'finder.txt', 'w')
     f.close()
 
-def search4processed(parameters, folderpath):
+def search(parameters, folderpath):
     """Check if data has already been calculated/processed with similar parameters
 
     Args:
@@ -205,15 +305,46 @@ def search4processed(parameters, folderpath):
     for name in names:
         search_string += name + str(parameters[name]) + '_'
 
-    search_result = _search4processed(folderpath=folderpath, string=search_string)
+    search_result = _search(folderpath=folderpath, string=search_string)
     if isinstance(search_result, Path):
-        if br.finder_verbose:
+        if verbose:
             print(f'Loading data already processed: {search_result.name}')
         return br.Spectrum(search_result)
     else:
         return None
 
-def save_processed(parameters, s, folderpath):
+def searchss(parameters, folderpath):
+    """Check if data has already been calculated/processed with similar parameters
+
+    Args:
+        string (str): string to search inside filepath. String must be 
+            representative of all parameters used to process the spectrum
+        folderpath (string or Path): folderpath to save spectra. This folder path
+            must contain a file named 'finder.txt'. If not, one will be created.
+
+    Raises:
+        keyerror: if finder_values have keys that do not match with finder_tags.
+
+    Returns 
+        spectrum if data is found, or None.   
+    """
+    # get names in alphabetical order
+    names = np.sort(list(parameters.keys()))
+
+    # search string
+    search_string = ''
+    for name in names:
+        search_string += name + str(parameters[name]) + '_'
+
+    search_result = _search(folderpath=folderpath, string=search_string)
+    if isinstance(search_result, Path):
+        if verbose:
+            print(f'Loading data already processed: {search_result.name}')
+        return br.Spectra(search_result)
+    else:
+        return None
+    
+def save(parameters, s, folderpath):
     """saves processed/calculated spectrum so one does not have to process it again
 
     Args:
@@ -236,12 +367,12 @@ def save_processed(parameters, s, folderpath):
         search_string += name + str(parameters[name]) + '_'
 
     # save spectrum and put entry in the finder file
-    _save_processed(s=s, string=search_string, folderpath=folderpath)
+    _save(s=s, string=search_string, folderpath=folderpath)
 
 ##################
 # Core functions #
 ##################
-def _search4processed(folderpath, string):
+def _search(folderpath, string):
     """Returns spectrum filepath or filename.
 
     Args:
@@ -276,7 +407,7 @@ def _search4processed(folderpath, string):
             return Path(lines[i+1])
     return None#int(len(lines))
 
-def _save_processed(s, string, folderpath):
+def _save(s, string, folderpath):
     """core function that saves processed/calculated spectrum
     
     Args:
@@ -305,7 +436,10 @@ def _save_processed(s, string, folderpath):
     filepath2save = folderpath/filename
 
     # save spectrum
-    s.save(filepath2save)
+    if isinstance(s, br.Spectrum):
+        s.save(filepath2save)
+    elif isinstance(s, br.Spectra):
+        s.save_all_single_file(filepath2save)
 
     # save string to finder file
     f = open(folderpath/'finder.txt', 'a')

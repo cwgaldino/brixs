@@ -2,23 +2,24 @@
 BRIXS
 #######
 
-BRIXS is a python package for processing and analysis of XAS and RIXS spectra.
+BRIXS is an object-oriented (OO) python package for processing/analysis of XAS and RIXS spectra.
 
 Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
 
 .. contents:: Table of Contents
 
 
-Introduction (might be outdate, I'm rewriting it)
-#################################################
+Introduction (object-oriented vs functional programming)
+##########################################################
 
-BRIXS makes use of object oriented (OO) programming to easy the processing and 
-analysis of data.
-This way, instead of `functions` one would have `classes` and `methods`. 
-This is makes sense because we often see ourselves doing the same operations over 
-and over again for multiple datasets.
+Object-oriented is a programming model that organizes software design 
+around objects, rather than functions. An OO approach makes sense for data 
+processing/analysis of XAS and RIXS because:
 
-For instance, an example of spectrum processing would look something like this 
+1. We often see ourselves doing the same operations over and over for multiple 
+datasets. See comparison below:
+
+Typical example of functional programming style
 
 .. code-block:: python
 
@@ -44,7 +45,7 @@ For instance, an example of spectrum processing would look something like this
    plt.plot(x, y)                   # plot data
    plt.plot(x, gaussian(x, popt*))  # plot fitting 
 
-In a OO approach, the same processing would look like this,
+In an OO approach, the same processing would look like this,
 
 .. code-block:: python
 

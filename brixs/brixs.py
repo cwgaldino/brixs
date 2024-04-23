@@ -17,24 +17,7 @@ from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # %% ----------------------------- backpack ------------------------------- %% #
-import backpack.filemanip  as filemanip
-import backpack.arraymanip as arraymanip
-import backpack.figmanip   as figmanip
-import backpack.numanip    as numanip
-import backpack.numanip    as numanip
-import backpack.interact   as interact
-
-# %% ------------------------------- model -------------------------------- %% #
-from .model import Model
-from .model.peaks import Peaks  # temporary (just for backward compatibility)
-
-# lmfit check --> move this to model later
-lmfitok = False
-try:
-    import lmfit
-    lmfitok = True
-except:
-    pass  
+from .backpack import filemanip, arraymanip, figmanip, numanip, interact
 
 # %% ------------------------------ settings ------------------------------ %% #
 from .config import settings
@@ -419,7 +402,7 @@ class Spectrum(metaclass=_Meta):
         offset
             calls s.set_offset()
     """
-    _read_only     = ['step', 'monotonicity', 'peaks', 'model']
+    _read_only     = ['step', 'monotonicity']#, 'peaks', 'model']
     _non_removable = []
 
     def __init__(self, *args, **kwargs):
@@ -441,11 +424,12 @@ class Spectrum(metaclass=_Meta):
         self._monotonicity = None
 
         # special
-        self._peaks = Peaks()
-        if lmfitok:
-            self._model = Model(parent=self)
-        else:
-            self._model = None
+        # self._peaks = Peaks()
+        # self._peaks = None
+        # if lmfitok:
+        #     self._model = Model(parent=self)
+        # else:
+        #     self._model = None
 
         ###################################
         # asserting validity of the input #
@@ -545,7 +529,7 @@ class Spectrum(metaclass=_Meta):
         ############################
         # reset special attributes #
         ############################
-        self.peaks.clear()
+        # self.peaks.clear()
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
@@ -588,7 +572,7 @@ class Spectrum(metaclass=_Meta):
         ############################
         # reset special attributes #
         ############################
-        self.peaks.clear()
+        # self.peaks.clear()
     @y.deleter
     def y(self):
         raise AttributeError('Cannot delete object.')
@@ -1147,7 +1131,7 @@ class Spectrum(metaclass=_Meta):
         ############################
         # reset special attributes #
         ############################
-        self.peaks.clear()
+        # self.peaks.clear()
 
         ###############
         # read header #
@@ -1217,7 +1201,7 @@ class Spectrum(metaclass=_Meta):
         self._step = np.mean(d)
 
         # special
-        self.peaks._step = self._step
+        # self.peaks._step = self._step
 
     def check_monotonicity(self):
         """Sets monotonicity attribute to 'increasing' or 'decreasing'.
@@ -1317,7 +1301,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         # fix special #
         ###############
-        self.peaks.set_calib(value=value)
+        # self.peaks.set_calib(value=value)
 
     @propag_mod
     def set_shift(self, value):
@@ -1342,7 +1326,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         # fix special #
         ###############
-        self.peaks.set_shift(value=value)
+        # self.peaks.set_shift(value=value)
 
     @propag_mod
     def set_roll(self, value):
@@ -1389,7 +1373,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         # fix special #
         ###############
-        self.peaks.set_shift(value=value*self.step)
+        # self.peaks.set_shift(value=value*self.step)
 
     @propag_mod
     def set_offset(self, value):
@@ -1412,7 +1396,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         # fix special #
         ###############
-        self.peaks.set_offset(value=value)
+        # self.peaks.set_offset(value=value)
 
     @propag_mod
     def set_factor(self, value):
@@ -1438,7 +1422,7 @@ class Spectrum(metaclass=_Meta):
         ###############
         # fix special #
         ###############
-        self.peaks.set_factor(value=value)
+        # self.peaks.set_factor(value=value)
 
     #############
     # modifiers #
@@ -1652,7 +1636,7 @@ class Spectrum(metaclass=_Meta):
         s = Spectrum(x=x, y=y)
 
         # special attrs
-        s._peaks = self.peaks
+        # s._peaks = self.peaks
 
         ##################
         # transfer attrs #
@@ -2064,7 +2048,7 @@ class Spectrum(metaclass=_Meta):
             w = 0.1*(max(self.x)-min(self.x))
 
         # peaks
-        self.peaks.clear()
+        # self.peaks.clear()
         if asymmetry:
             self.peaks.append(amp=amp, c=c, w1=w1, w2=w2)
         else:
@@ -2201,7 +2185,7 @@ class Spectra(metaclass=_Meta):
     _read_only     = ['step', 'length', 'x', 'monotonicity',
                       'calculated_calib', 'calculated_factor',
                       'calculated_offset', 'calculated_shift',
-                      'calculated_roll', 'peaks', 'model']
+                      'calculated_roll']
     _non_removable = []
 
     def __init__(self, *args, **kwargs):
@@ -2226,18 +2210,19 @@ class Spectra(metaclass=_Meta):
         self._monotonicity = None
 
         # calculated values
-        self._calculated_calib   = None
+        self._calculated_calib  = None
         self._calculated_factor = None
         self._calculated_offset = None
         self._calculated_shift  = None
         self._calculated_roll   = None
 
         # special
-        self._peaks = Peaks()
-        if lmfitok:
-            self._model = Model(parent=self)
-        else:
-            self._model = None
+        # self._peaks = Peaks()
+        # self._peaks = None
+        # if lmfitok:
+        #     self._model = Model(parent=self)
+        # else:
+        #     self._model = None
         
         ###################################
         # asserting validity of the input #
