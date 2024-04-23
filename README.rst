@@ -113,7 +113,7 @@ object like,
    x = s.x
    y = s.y
 
-new metadata can be added on the fly,
+also new metadata can be added on the fly,
 
 .. code-block:: python
 
@@ -158,29 +158,90 @@ turned into a spectrum which is handled by the **Spectrum** object. This is the 
 rich object of the BRIXS package so far. Batch operation, data alignment, or any
 data manipulation that requires comparison between many spectra can be done via 
 the **Spectra** object. Having only four classes makes the code easy to maintain. 
+A better description of each object will be given later in this readme. 
 
-BRIXS also have additional functionally from 
+BRIXS also comes with additional functionally from supporting modules. See
+below: 
 
 backpack
+==========
+
+*Backpack* is a module with quality-of-life (QOL) functions. This module is completely
+independent from brixs. As for the time of writing, these are the submodules: 
 
 .. code-block:: python
 
-   br.figmanip
-   br.filemanip
-   br.arraymanip
-   br.interact
-   br.model_functions
-   br.xlsx
+   brixs.figmanip          # matplotlib QOL functions
+   brixs.filemanip         # file reading and saving QOL functions
+   brixs.arraymanip        # array manipulation QOL functions
+   brixs.numanip           # float/int manipulation QOL functions
+   brixs.interact          # user interaction QOL functions
 
-like quality-of-life functions 
+See the documentation (PUT LINK HERE) for a description of the functions available. 
+All functions within *backpack* are readily available when brixs is imported. For
+instance, the function *brixs.arraymanip.check_monotonicity* which checks the 
+monotonicity of an array can be called directly from brixs:
+
+.. code-block:: python
+
+      # import brixs
+      import brixs as br
+
+      # array
+      a = [1, 2, 3, 4, 5, 6]
+
+      # check monotonicity 
+      br.check_monotonicity(a)
 
 finder
+==========
+
+
 
 labels
+==========
+
 
 model 
+==========
+
 
 crystal
+==========
+
+Module with function for calculating momentum transfer in single crystals. 
+It is assumed that the photon hits the crystal surface at a angle th and is 
+scattered in a 2th angle as the drawing below 
+
+     \      /.
+      \    /   .
+       \  /     .
+   th ( \/       .
+   ┌──────────┐  . 2th
+   ├ crystal  ┤  .
+   └──────────┘ .
+           \   .
+            \.
+            
+            
+This module can be used like this
+
+.. code-block:: python
+
+      # import 
+      import brixs.crystal
+
+      # functions available
+      br.ev2angstrom()
+      br.calculate_q_transfer()
+      br.momentum2rlu()
+
+The description of each function can be accessed via the python help() function or 
+by reading the documentation (PUT LINK HERE).
+
+xlsx
+==========
+
 
 
 smaller modules with everyday functions, which we 
@@ -219,11 +280,9 @@ There are two recommended methods:
    
    pip install git+https://github.com/cwgaldino/brixs
 
-
 or
 
-2. 
-Cloning (or downloading) the GitHub repository then adding brixs to the "path":
+2. Cloning (or downloading) the GitHub repository then adding brixs to the "path":
 
 .. code-block:: python
 
@@ -240,10 +299,12 @@ Base (required):
 
 - numpy
 
-- scipy
+
 
 - matplotlib
 
+
+- scipy
 .. - lmfit >= 1.2.2
 
 Reciprocal space calculations:
