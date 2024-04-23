@@ -218,7 +218,7 @@ scattered in a 2th angle as the drawing below
      \      /.
       \    /   .
        \  /     .
-   th   \/       .
+        \/       .
    ┌──────────┐  . 2th
    ├ crystal  ┤  .
    └──────────┘ .
