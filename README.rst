@@ -214,11 +214,11 @@ It is assumed that the photon hits the crystal surface at a angle th and is
 scattered in a 2th angle as the drawing below
 
 ::
-   
+
      \      /.
       \    /   .
        \  /     .
-   th ( \/       .
+   th   \/       .
    ┌──────────┐  . 2th
    ├ crystal  ┤  .
    └──────────┘ .
