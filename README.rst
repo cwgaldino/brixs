@@ -211,8 +211,7 @@ crystal
 
 Module with function for calculating momentum transfer in single crystals. 
 It is assumed that the photon hits the crystal surface at a angle th and is 
-scattered in a 2th angle as the drawing below 
-
+scattered in a 2th angle as the drawing below::
      \      /.
       \    /   .
        \  /     .
@@ -221,8 +220,7 @@ scattered in a 2th angle as the drawing below
    ├ crystal  ┤  .
    └──────────┘ .
            \   .
-            \.
-            
+            \.        
             
 This module can be used like this
 
@@ -239,17 +237,11 @@ This module can be used like this
 The description of each function can be accessed via the python help() function or 
 by reading the documentation (PUT LINK HERE).
 
-xlsx
-==========
 
 
 
-smaller modules with everyday functions, which we 
-call `backpack functions`.
 
-
-
-These modules are self-contained and independent of the rest of the project. BRIXS
+BRIXS
 depends on them, but they do not depend on BRIXS. Therefore, they can be used independently.
 Their functionality ranges from, array operations to spreadsheet manipulation.
 More specific and focused modules are found in the support folder. 
