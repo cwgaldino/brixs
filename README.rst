@@ -244,7 +244,17 @@ Full description of labels can be found inside brixs.addons.labels.py file.
 model 
 ==========
 
-Module for data fitting [FUTURE]. This is not ready yet.
+Module for data fitting. For enabling fitting functionally do
+
+.. code-block:: python
+
+   # enable fitting functionality
+   import brixs.model
+
+   # model functions are then available
+   br.model.gaussian()
+
+This module is not ready yet.
 
 
 beamlines
