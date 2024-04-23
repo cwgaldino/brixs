@@ -6,7 +6,7 @@ BRIXS is an object-oriented (OO) python package for processing/analysis of XAS a
 
 Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
 
-.. contents:: Table of Contents
+WARNING!! We are working on this readme and on the documentation. 
 
 
 Introduction
@@ -196,14 +196,77 @@ monotonicity of an array can be called directly from brixs:
 finder
 ==========
 
+Module for quickly saving and recovering processed spectra so you can avoid 
+running functions multiple types with same input parameters. Finder is imported
+with brixs
 
+.. code-block:: python
+
+   # import brixs
+   import brixs as br
+
+   # set finder folderpath
+   br.finder.folderpath = '<folderpath>'
+
+   # apply the decorator to you function
+   @br.finder.track
+   def processing_function(a, b, c):
+      s = <does something with a, b and c and returns s>
+      return s
+
+   # processing may take a while if it is the first time you run
+   s = processing_function(a=1, b=2, c=3)  
+
+   # if you run processing with same parameters, it runs instantly because 
+   # finder recovers already processed spectrum
+   s = processing_function(a=1, b=2, c=3)  
+
+Full description of finder functionally can be found inside brixs.addons.finder.py file.
 
 labels
 ==========
 
+Module with common x and y labels for xas and rixs plots.
+
+.. code-block:: python
+
+   # this
+   br.labels.xas()
+
+   # is the same as this
+   plt.xlabel('Photon Energy (eV)')
+   plt.ylabel('Intensity')
+
+Full description of labels can be found inside brixs.addons.labels.py file.
+
+
 
 model 
 ==========
+
+Module for data fitting [FUTURE]. This is not ready yet.
+
+
+beamlines
+===========
+
+BRIXS objects and modules are independent of `data collection methods` and 
+`data file types`. All "file reading" functions specific for each lab or beamline
+which reads a file and converts it to one of the 4 major BRIXS objects can be
+found in the `beamlines` folder. 
+
+For example, data collected at I21 beamline of Diamond Light Source, can use 
+imported as a **Image** object using the code below,
+
+.. code-block:: python
+
+   # method 1
+   import brixs.beamlines.I21 as I21
+   im = I21.read(<filepath>)
+
+   # method 2
+   from brixs.beamlines.I21 import read
+   im = read(<filepath>)
 
 
 crystal
@@ -211,21 +274,8 @@ crystal
 
 Module with function for calculating momentum transfer in single crystals. 
 It is assumed that the photon hits the crystal surface at a angle th and is 
-scattered in a 2th angle as the drawing below
-
-:: 
-
-     \      /.
-      \    /   .
-       \  /     .
-        \/       .
-|   ┌──────────┐  . 2th
-|   ├ crystal  ┤  .
-|   └──────────┘ .
-           \   .
-            \.        
-            
-This module can be used like this
+scattered in a 2th angle. See drawing inside brixs.crystal.crystal.py file for 
+more information. This module can be used like this
 
 .. code-block:: python
 
@@ -240,28 +290,12 @@ This module can be used like this
 The description of each function can be accessed via the python help() function or 
 by reading the documentation (PUT LINK HERE).
 
+xlsx
+==========
+
+Module for spreadsheet manipulation [FUTURE]. This is not ready yet.
 
 
-
-
-BRIXS
-depends on them, but they do not depend on BRIXS. Therefore, they can be used independently.
-Their functionality ranges from, array operations to spreadsheet manipulation.
-More specific and focused modules are found in the support folder. 
-
-All BRIXS classes and modules are independent of `data collection methods` and 
-`data file types`. All the "file reading" functions, which reads a file and converts it
-to one of the 4 major BRIXS objects, are stored in the `file_reading` folder. For
-example, for data collected at ADRESS beamline of PSI, one can use the following
-line of code to get the spectrum from scan number 56,
-
-.. code-block:: python
-
-   from brixs.file_reading import ADRESS
-   ADRESS.read(folderpath, 'Cu_', 56)
-
-The modules inside the `file_reading` folder, may be used as an example for 
-writing new modules for other file types.
 
 
 Installation
@@ -290,24 +324,31 @@ or
 Requirements
 ############
 
-Base (required):
+Base (required)
+===============
 
 - numpy
-
-
-
 - matplotlib
 
+Some modules require additional imports:
+
+brixs.model
+============
 
 - scipy
-.. - lmfit >= 1.2.2
+- lmfit
 
-Reciprocal space calculations:
+brixs.crystal
+=============
 
 - pbcpy
 
-Other packages may be required for file reading functions.
+brixs.beamlines
+===============
 
+Some modules here might require 
+
+- h5py
 
 Usage
 #############
