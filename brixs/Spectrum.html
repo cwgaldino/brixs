@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>brixs.Spectrum &mdash; brixs 0.9.6 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=564a08b9"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=4ea706d9"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="brixs.Spectra" href="Spectra.html" />
+    <link rel="prev" title="brixs’s documentation" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            brixs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">brixs.Spectrum</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#brixs.Spectrum"><code class="docutils literal notranslate"><span class="pre">Spectrum</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.x"><code class="docutils literal notranslate"><span class="pre">Spectrum.x</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.y"><code class="docutils literal notranslate"><span class="pre">Spectrum.y</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.filepath"><code class="docutils literal notranslate"><span class="pre">Spectrum.filepath</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.peaks"><code class="docutils literal notranslate"><span class="pre">Spectrum.peaks</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.get_attrs"><code class="docutils literal notranslate"><span class="pre">Spectrum.get_attrs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.remove_attrs"><code class="docutils literal notranslate"><span class="pre">Spectrum.remove_attrs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.copy_attrs_from"><code class="docutils literal notranslate"><span class="pre">Spectrum.copy_attrs_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.copy_modifiers_from"><code class="docutils literal notranslate"><span class="pre">Spectrum.copy_modifiers_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.copy_checks_from"><code class="docutils literal notranslate"><span class="pre">Spectrum.copy_checks_from()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.save"><code class="docutils literal notranslate"><span class="pre">Spectrum.save()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.load"><code class="docutils literal notranslate"><span class="pre">Spectrum.load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.check_step"><code class="docutils literal notranslate"><span class="pre">Spectrum.check_step()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.check_monotonicity"><code class="docutils literal notranslate"><span class="pre">Spectrum.check_monotonicity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.fix_monotonicity"><code class="docutils literal notranslate"><span class="pre">Spectrum.fix_monotonicity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.set_shift"><code class="docutils literal notranslate"><span class="pre">Spectrum.set_shift()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.set_offset"><code class="docutils literal notranslate"><span class="pre">Spectrum.set_offset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.set_factor"><code class="docutils literal notranslate"><span class="pre">Spectrum.set_factor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.set_calib"><code class="docutils literal notranslate"><span class="pre">Spectrum.set_calib()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.set_roll"><code class="docutils literal notranslate"><span class="pre">Spectrum.set_roll()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.floor"><code class="docutils literal notranslate"><span class="pre">Spectrum.floor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.flip"><code class="docutils literal notranslate"><span class="pre">Spectrum.flip()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.normalize"><code class="docutils literal notranslate"><span class="pre">Spectrum.normalize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.copy"><code class="docutils literal notranslate"><span class="pre">Spectrum.copy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.interp"><code class="docutils literal notranslate"><span class="pre">Spectrum.interp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.derivative"><code class="docutils literal notranslate"><span class="pre">Spectrum.derivative()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.smooth"><code class="docutils literal notranslate"><span class="pre">Spectrum.smooth()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.crop"><code class="docutils literal notranslate"><span class="pre">Spectrum.crop()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.switch"><code class="docutils literal notranslate"><span class="pre">Spectrum.switch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.remove"><code class="docutils literal notranslate"><span class="pre">Spectrum.remove()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.calculate_area"><code class="docutils literal notranslate"><span class="pre">Spectrum.calculate_area()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.calculate_x_sum"><code class="docutils literal notranslate"><span class="pre">Spectrum.calculate_x_sum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.calculate_y_sum"><code class="docutils literal notranslate"><span class="pre">Spectrum.calculate_y_sum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.polyfit"><code class="docutils literal notranslate"><span class="pre">Spectrum.polyfit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.index"><code class="docutils literal notranslate"><span class="pre">Spectrum.index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.x2y"><code class="docutils literal notranslate"><span class="pre">Spectrum.x2y()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.plot"><code class="docutils literal notranslate"><span class="pre">Spectrum.plot()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.inspect"><code class="docutils literal notranslate"><span class="pre">Spectrum.inspect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.metadata"><code class="docutils literal notranslate"><span class="pre">Spectrum.metadata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.find_peaks"><code class="docutils literal notranslate"><span class="pre">Spectrum.find_peaks()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.fit_peak"><code class="docutils literal notranslate"><span class="pre">Spectrum.fit_peak()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#brixs.Spectrum.fit_peaks"><code class="docutils literal notranslate"><span class="pre">Spectrum.fit_peaks()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Spectra.html">brixs.Spectra</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Image.html">brixs.Image</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PhotonEvents.html">brixs.PhotonEvents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backpack/filemanip.html">brixs.filemanip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backpack/figmanip.html">brixs.figmanip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backpack/arraymanip.html">brixs.arraymanip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backpack/numanip.html">brixs.numanip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../backpack/interact.html">brixs.interact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../addons/finder.html">brixs.finder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../addons/crystal.html">brixs.crystal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../addons/model.html">brixs.model</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">brixs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">brixs.Spectrum</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/brixs/Spectrum.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="brixs-spectrum">
+<h1>brixs.Spectrum<a class="headerlink" href="#brixs-spectrum" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="brixs.Spectrum">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">brixs.</span></span><span class="sig-name descname"><span class="pre">Spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum" title="Link to this definition"></a></dt>
+<dd><p>Returns a <code class="docutils literal notranslate"><span class="pre">Spectrum</span></code> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – x values (1D list/array).</p></li>
+<li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – y values (1D list/array).</p></li>
+<li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>pathlib.Path</em><em>, </em><em>optional</em>) – filepath to read.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>How to initialize a Spectrum object:</dt><dd><p><strong>Empty</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><strong>From array</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> are 1D arrays (or list). If only y data is passed, a dummy
+x-array will be set.</p>
+<p><strong>From file</strong></p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span><span class="n">filepath</span><span class="o">=&lt;</span><span class="n">filepath</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span><span class="o">&lt;</span><span class="n">filepath</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">filepath</span></code> must point to a xy-type file, where comments
+must be marked with <cite>#</cite> and columns must be separated by <cite>,</cite> (comma).</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectrum.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#brixs.Spectrum.x" title="Link to this definition"></a></dt>
+<dd><p>vector with x-coordinate values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectrum.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#brixs.Spectrum.y" title="Link to this definition"></a></dt>
+<dd><p>vector with y-coordinate values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectrum.filepath">
+<span class="sig-name descname"><span class="pre">filepath</span></span><a class="headerlink" href="#brixs.Spectrum.filepath" title="Link to this definition"></a></dt>
+<dd><p>filepath associated with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str or pathlib.Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="brixs.Spectrum.peaks">
+<span class="sig-name descname"><span class="pre">peaks</span></span><a class="headerlink" href="#brixs.Spectrum.peaks" title="Link to this definition"></a></dt>
+<dd><p>each entry represents a parameter of a peak.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">Peaks</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="simple">
+<dt><strong>Computed attributes (also read-only):</strong></dt><dd><dl class="simple">
+<dt>data (array)</dt><dd><p>2 column data (x, y). Computed when calling s.data</p>
+</dd>
+<dt>step (number or None)</dt><dd><p>step size of the x-array. Computed via s.check_step()</p>
+</dd>
+<dt>monotonicity (str or None)</dt><dd><p>monotonicity of the x-array. Computed via s.check_monotonicity()</p>
+</dd>
+</dl>
+</dd>
+<dt><strong>Write-only attributes:</strong></dt><dd><dl class="simple">
+<dt>calib</dt><dd><p>calls s.set_calib()</p>
+</dd>
+<dt>shift</dt><dd><p>calls s.set_shift()</p>
+</dd>
+<dt>roll</dt><dd><p>calls s.set_roll()</p>
+</dd>
+<dt>factor</dt><dd><p>calls s.set_factor()</p>
+</dd>
+<dt>offset</dt><dd><p>calls s.set_offset()</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.get_attrs">
+<span class="sig-name descname"><span class="pre">get_attrs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.get_attrs" title="Link to this definition"></a></dt>
+<dd><p>return attrs that are user defined.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.remove_attrs">
+<span class="sig-name descname"><span class="pre">remove_attrs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.remove_attrs" title="Link to this definition"></a></dt>
+<dd><p>Delete all user defined attrs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.copy_attrs_from">
+<span class="sig-name descname"><span class="pre">copy_attrs_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.copy_attrs_from" title="Link to this definition"></a></dt>
+<dd><p>Copy user defined attributes from another brixs object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>brixs object</em>) – Either a Spectrum, Spectra, Image, or PhotonEvents
+to copy user defined attributes from.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.copy_modifiers_from">
+<span class="sig-name descname"><span class="pre">copy_modifiers_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.copy_modifiers_from" title="Link to this definition"></a></dt>
+<dd><p>Copy modifiers attributes from another brixs object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>brixs object</em>) – Either a Spectrum, Spectra, Image, or PhotonEvents
+to copy user defined attributes from.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.copy_checks_from">
+<span class="sig-name descname"><span class="pre">copy_checks_from</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.copy_checks_from" title="Link to this definition"></a></dt>
+<dd><p>Copy modifiers attributes from another brixs.Spectrum object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>brixs object</em>) – Spectrum to copy check attributes from.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.save" title="Link to this definition"></a></dt>
+<dd><p>Save data to a text file. Wrapper for <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html">numpy.savetxt()</a>.</p>
+<p>Attrs are saved as comments if only_data is False. Saving attrs to file
+is not always reliable because requires converting variables to string.
+Only attrs that are of type: string, number, and list of number and strings are
+saved somewhat correctly. Dictionaries are not saved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>string</em><em> or </em><em>path object</em><em>, </em><em>optional</em>) – filepath or file handle.
+If the filename ends in .gz, the file is automatically saved in
+compressed gzip format. If None, filepath can be inferred from a
+user defined attr ‘s.filepath’. Default is None. Last used
+dirpath is saved to an attr ss.filepath.</p></li>
+<li><p><strong>only_data</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, header and footer are ignored and
+only data is saved to the file.</p></li>
+<li><p><strong>check_overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, it will check if file exists
+and ask if user wants to overwrite file.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – turn verbose on and off. Default is <cite>False</cite>.</p></li>
+<li><p><strong>*kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">np.savetxt()</span></code> that saves the data.</p></li>
+</ul>
+</dd>
+</dl>
+<p>If not specified, the following parameters are passed to <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html">numpy.savetxt()</a>:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fmt</strong> (<em>string</em><em>, or </em><em>list</em><em>, </em><em>optional</em>) – A single format (like <code class="docutils literal notranslate"><span class="pre">%10.5f</span></code>), or a
+sequence of formats. See numpy’s documentation for more information.
+If not specified, best fmt is calculated based on the
+number of decimal places of the data. Specifying fmt makes the code
+runs a little faster (not much tough, but it might make a difference
+if saving a lot of files).</p></li>
+<li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – String or character separating columns.
+Use <code class="docutils literal notranslate"><span class="pre">\\t</span></code> for tab. Default is comma (”, “).</p></li>
+<li><p><strong>newline</strong> (<em>str</em><em>, </em><em>optional</em>) – String or character separating lines.
+Default is <code class="docutils literal notranslate"><span class="pre">\n</span></code>.</p></li>
+<li><p><strong>header</strong> (<em>bool</em><em>, </em><em>optional</em>) – String that will be written at the beginning of the file.
+Note that, object attributes will be saved at the beginning of the file.
+If only_data=True, header and footer is ignored.</p></li>
+<li><p><strong>comments</strong> (<em>str</em><em>, </em><em>optional</em>) – String that will be prepended to the
+header and footer strings, to mark them as comments. Default is “# “.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.load" title="Link to this definition"></a></dt>
+<dd><p>Load data from a text file. Wrapper for <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html">numpy.genfromtxt()</a>.</p>
+<p>This a very simple loading function that works well with column text
+files (xy files). If file has more columns than two columns, the first two columns
+will be loaded by default. Use <cite>usecols</cite> to select columns, for example:</p>
+<p>usecols = (1, 4)</p>
+<p>If file was saved by br.Spectrum.save(), then the metadata (comments) can be
+recovered. If not, only_data must be set to True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>string</em><em> or </em><em>path object</em><em>, </em><em>optional</em>) – filepath or file handle.
+If the filename extension is .gz or .bz2, the file is first
+decompressed. Last used filepath is saved to an attr s.filepath.</p></li>
+<li><p><strong>only_data</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, header and footer are ignored and
+only data is loaded. Default is False.</p></li>
+<li><p><strong>verbose</strong> (<em>book</em><em>, </em><em>optional</em>) – Default is False. If True, it will print
+an warning when attributes cannot be loaded from the file.</p></li>
+<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">numpy.genfromtxt()</span></code> that loads the data.</p></li>
+</ul>
+</dd>
+</dl>
+<p>If not specified, the following parameters are passed to <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html">numpy.genfromtxt()</a>:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – String or character separating columns.
+Use <code class="docutils literal notranslate"><span class="pre">\t</span></code> for tab. Default is comma (’, ‘).</p></li>
+<li><p><strong>comments</strong> (<em>str</em><em>, </em><em>optional</em>) – The character used to indicate the start
+of a comment. Default is <code class="docutils literal notranslate"><span class="pre">#</span></code>. Attributes picked up
+from the header will be loaded too.</p></li>
+<li><p><strong>usecols</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Default is (0, 1).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.check_step">
+<span class="sig-name descname"><span class="pre">check_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.check_step" title="Link to this definition"></a></dt>
+<dd><p>Checks vector uniformity of the x-coordinates.</p>
+<p>If the step between two data points is the same through out the
+x vector, it sets <code class="xref py py-attr docutils literal notranslate"><span class="pre">step</span></code> with the value of the step size.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_error</strong> (<em>number</em><em>, </em><em>optional</em>) – percentage (of the x step) value</p></li>
+<li><p><strong>error.</strong> (<em>of the max</em>)</p></li>
+<li><p><strong>(</strong><strong>max</strong> (<em>steps</em><em>) </em><em>- min</em><em>(</em><em>steps</em><em>)</em><em>)</em><em>/np.mean</em><em>(</em><em>steps</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If x-coordinates are not uniform.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.check_monotonicity">
+<span class="sig-name descname"><span class="pre">check_monotonicity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.check_monotonicity" title="Link to this definition"></a></dt>
+<dd><p>Sets monotonicity attribute to ‘increasing’ or ‘decreasing’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError if data is not monotonic.</strong> – </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.fix_monotonicity">
+<span class="sig-name descname"><span class="pre">fix_monotonicity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'increasing'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.fix_monotonicity" title="Link to this definition"></a></dt>
+<dd><p>Rearrange (x, y) such as x array is monotonically increasing or decreasing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mode</strong> (<em>str</em><em>, </em><em>optional</em>) – increasing or decreasing.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.set_shift">
+<span class="sig-name descname"><span class="pre">set_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.set_shift" title="Link to this definition"></a></dt>
+<dd><p>Set shift value.</p>
+<p>Adds a value to the x-coordinates. y-coordinates are fully preserved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – shift value (value will be added to x-coordinates).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.set_offset">
+<span class="sig-name descname"><span class="pre">set_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.set_offset" title="Link to this definition"></a></dt>
+<dd><p>Set offset value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>value</em>) – offset value (value will be added to y-coordinates).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.set_factor">
+<span class="sig-name descname"><span class="pre">set_factor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.set_factor" title="Link to this definition"></a></dt>
+<dd><p>Set y multiplicative factor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>number</em>) – multiplicative factor (y-coordinates will be
+multiplied by this value).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.set_calib">
+<span class="sig-name descname"><span class="pre">set_calib</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.set_calib" title="Link to this definition"></a></dt>
+<dd><p>Set calibration value.</p>
+<p>Calibration can be applied through a function, list, or number:</p>
+<ol class="arabic simple">
+<li><p>If number, x-coordinates will be multiplied by this value.</p></li>
+<li><dl class="simple">
+<dt>If list, polynomial coeff. (highest power first) is expected and</dt><dd><p>a function new_x = f(x) will be set using np.polyval().</p>
+</dd>
+</dl>
+</li>
+<li><p>If function, a function of type new_x = f(x) is expected.</p></li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>For list (2) and functions (3), the modification is applied directly on
+the x array and the calibration value is not saved in at s.calib</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>number</em><em>, </em><em>list</em><em>, </em><em>function</em>) – calibration value.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.set_roll">
+<span class="sig-name descname"><span class="pre">set_roll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.set_roll" title="Link to this definition"></a></dt>
+<dd><p>Set roll value.</p>
+<p>Roll array elements for the x-coordinates. Elements that roll beyond the
+last position are re-introduced at the first. y-coordinates are fully
+preserved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>float</em><em> or </em><em>int</em>) – roll value.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.floor">
+<span class="sig-name descname"><span class="pre">floor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.floor" title="Link to this definition"></a></dt>
+<dd><p>Sets zero value for y-coordinates.</p>
+<dl>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># to bring the avg of all data points to zero.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Brings the avg between x=0 and 10 and between x=90 and 100 to zero</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – Pair of x-coordinate values or a list of
+pairs. Each pair represents the start and stop of a data range.
+Use None to indicate the minimum or maximum x value of the data.
+The mean value of the y-coordinates inside the defined range
+will be set to zero.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.flip">
+<span class="sig-name descname"><span class="pre">flip</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.flip" title="Link to this definition"></a></dt>
+<dd><p>Flip sign of x axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.normalize" title="Link to this definition"></a></dt>
+<dd><p>Set a factor such as the average y between ranges is equal to value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>number</em>) – value. Default is 1.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data. If None, the maximum
+y value of the data is set to 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="Spectra.html#brixs.Spectra.calculate_factor" title="brixs.Spectra.calculate_factor"><code class="xref py py-func docutils literal notranslate"><span class="pre">Spectra.calculate_factor()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.copy">
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.copy" title="Link to this definition"></a></dt>
+<dd><p>Return a copy of the data within a range.</p>
+<dl>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># full copy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s2</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># s2 is now a copy of s2</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># s2 will have only data between x=0 and 10 and between x=90 and 100</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s2</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="n">copy</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Spectrum</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.interp">
+<span class="sig-name descname"><span class="pre">interp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.interp" title="Link to this definition"></a></dt>
+<dd><p>Interpolate data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>number</em><em>, </em><em>optional</em>) – The starting value of the sequence. If None,
+the minium x value will be used.</p></li>
+<li><p><strong>stop</strong> (<em>number</em><em>, </em><em>optional</em>) – The end value of the sequence. If None,
+the maximum x value will be used.</p></li>
+<li><p><strong>num</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of samples to generate.</p></li>
+<li><p><strong>step</strong> (<em>number</em><em>, </em><em>optional</em>) – Spacing between values. This overwrites <code class="docutils literal notranslate"><span class="pre">num</span></code>.</p></li>
+<li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – The x-coordinates at which to
+evaluate the interpolated values. This overwrites all other arguments.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>None:</dt><dd><p>If none arguments is given, this function will adjust x to have regular spacing.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>spectrum with x array interpolated</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.derivative">
+<span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.derivative" title="Link to this definition"></a></dt>
+<dd><p>Returns the derivative of y-coordinates as a function of x-coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>order</strong> (<em>number</em><em>, </em><em>optional</em>) – derivative order. Default is 1.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Derivative spectrum</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.smooth">
+<span class="sig-name descname"><span class="pre">smooth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.smooth" title="Link to this definition"></a></dt>
+<dd><p>Returns the moving average of the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n</strong> (<em>int</em><em>, </em><em>optional</em>) – number of points to average. Default is 8.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>spectrum of length given by (len(x)-n+1).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.crop">
+<span class="sig-name descname"><span class="pre">crop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.crop" title="Link to this definition"></a></dt>
+<dd><p>Crop edges of the dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>number</em><em>, </em><em>optional</em>) – start x value. If None, the minimum value of
+x will be used.</p></li>
+<li><p><strong>stop</strong> (<em>number</em><em>, </em><em>optional</em>) – final x value. If None, the maximum value of
+x will be used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>spectrum</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.switch">
+<span class="sig-name descname"><span class="pre">switch</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.switch" title="Link to this definition"></a></dt>
+<dd><p>Switch x and y axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>spectrum</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.remove" title="Link to this definition"></a></dt>
+<dd><p>Remove datapoints within a range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ranges</strong> (<em>list</em><em>, </em><em>optional</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>spectrum</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.calculate_area">
+<span class="sig-name descname"><span class="pre">calculate_area</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.calculate_area" title="Link to this definition"></a></dt>
+<dd><p>Returns the calculated area under the curve. Wrapper for <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.trapz.html">numpy.trapz()</a>.</p>
+<dl>
+<dt>Usage:</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">calculate_area</span><span class="p">()</span>       <span class="c1"># returns the area for the whole dataset</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">calculate_area</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1"># returns the area between x=0 and 10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">calculate_area</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>  <span class="c1"># Warning (see below)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>the last line of the <cite>Usage section</cite> works, but will
+typically not return a desirable value, because the <code class="docutils literal notranslate"><span class="pre">trapz()</span></code>
+algorithm will consider the area between 10 and 90 as a rectangle.
+The correct approach in this case would be to calculated the area
+between 0 and 10 and between 90 and 100 separately.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">area</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">calculate_area</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span> <span class="o">+</span> <span class="n">s</span><span class="o">.</span><span class="n">calculate_area</span><span class="p">(</span><span class="mi">90</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>this behavior might change in the future.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.calculate_x_sum">
+<span class="sig-name descname"><span class="pre">calculate_x_sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.calculate_x_sum" title="Link to this definition"></a></dt>
+<dd><p>Returns sum of x elements within a range.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p>s.calculate_x_sum()  # returns the x sum for the whole dataset
+s.calculate_x_sum((0, 10), (90, 100))  # returns the x sum from data between x=0 and 10 and between x=90 and 100</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.calculate_y_sum">
+<span class="sig-name descname"><span class="pre">calculate_y_sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.calculate_y_sum" title="Link to this definition"></a></dt>
+<dd><p>Returns sum of y elements within a range.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p>s.calculate_y_sum()  # returns the y sum for the whole dataset
+s.calculate_y_sum((0, 10), (90, 100))  # returns the y sum from data beteen x=0 and 10 and between x=90 and 100</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.polyfit">
+<span class="sig-name descname"><span class="pre">polyfit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.polyfit" title="Link to this definition"></a></dt>
+<dd><p>Fit data with a polynomial. Wrapper for <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html">numpy.polyfit()</a>.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p>popt, model, R2 = polyfit(deg)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>deg</strong> (<em>int</em>) – degree of the fitting polynomial.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em><em>, </em><em>ooptional</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>popt, f(x) model, R2</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.index">
+<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">closest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.index" title="Link to this definition"></a></dt>
+<dd><p>Return the index value for a given x.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>number</em>) – x value.</p></li>
+<li><p><strong>closest</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, x does not have to be exact and
+the index which is closest to the x value is returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.x2y">
+<span class="sig-name descname"><span class="pre">x2y</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">closest</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.x2y" title="Link to this definition"></a></dt>
+<dd><p>Return the y value associated with a given x.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>number</em>) – x value.</p></li>
+<li><p><strong>closest</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, x does not have to be exact and
+the index which is closest to the x value is returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>y number</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roll</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calib</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">switch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.plot" title="Link to this definition"></a></dt>
+<dd><p>Plot spectrum. Wrapper for <a class="reference external" href="https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html">matplotlib.pyplot.plot()</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
+<li><p><strong>offset</strong> (<em>number</em><em>, </em><em>optional</em>) – defines a vertical offset. Default is 0.</p></li>
+<li><p><strong>shift</strong> (<em>number</em><em>, </em><em>optional</em>) – horizontal shift value. Default is 0.</p></li>
+<li><p><strong>factor</strong> (<em>number</em><em>, </em><em>optional</em>) – multiplicative factor on the y axis.
+Default is 1.</p></li>
+<li><p><strong>calib</strong> (<em>number</em><em>, </em><em>optional</em>) – multiplicative factor on the x axis.
+Default is 1.</p></li>
+<li><p><strong>smooth</strong> (<em>int</em><em>, </em><em>optional</em>) – number of points to average data (moving average).
+Default is 1.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p></li>
+<li><p><strong>switch</strong> (<em>bool</em><em>, </em><em>optional</em>) – Switch x and y axis.</p></li>
+<li><p><strong>**kwargs</strong> – kwargs are passed to <code class="docutils literal notranslate"><span class="pre">plt.plot()</span></code> that plots the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D">Line2D</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.inspect">
+<span class="sig-name descname"><span class="pre">inspect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.inspect" title="Link to this definition"></a></dt>
+<dd><p>Plots data in a inspection window.</p>
+<p>If the mouse pointer hovers over a datapoint, the index of this datapoint is showed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.metadata" title="Link to this definition"></a></dt>
+<dd><p>Opens a windows with all user defined variables for inspection.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.find_peaks">
+<span class="sig-name descname"><span class="pre">find_peaks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prominence</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moving_average_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.find_peaks" title="Link to this definition"></a></dt>
+<dd><p>Find peaks. Wrapper for <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html">scipy.signal.find_peaks()</a>.</p>
+<p>Sets <a class="reference internal" href="#brixs.Spectrum.peaks" title="brixs.Spectrum.peaks"><code class="xref py py-attr docutils literal notranslate"><span class="pre">peaks</span></code></a> attribute.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prominence</strong> (<em>number</em><em>, </em><em>optional</em>) – minimum prominence of peaks in percentage
+of the maximum prominence [max(y) - min(y)]. Default is 5.</p></li>
+<li><p><strong>width</strong> (<em>number</em><em>, </em><em>optional</em>) – minimum number of data points defining a peak.</p></li>
+<li><p><strong>moving_average_window</strong> (<em>int</em><em>, </em><em>optional</em>) – window size for smoothing the
+data for finding peaks. Default is 4.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.fit_peak">
+<span class="sig-name descname"><span class="pre">fit_peak</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">asymmetry</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moving_average_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'least_squares'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.fit_peak" title="Link to this definition"></a></dt>
+<dd><p>Fits one peak. Initial guess is based on the maximum y value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>asymmetry</strong> (<em>bool</em><em> or </em><em>dict</em><em>, </em><em>optional</em>) – if True, fits each half of the
+with a different width. Default is False</p></li>
+<li><p><strong>moving_average_window</strong> (<em>int</em><em>, </em><em>optional</em>) – window size for smoothing the
+data for finding the peak. Default is 1.</p></li>
+<li><p><strong>method</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the fitting method to use. See methods
+available on <a class="reference external" href="https://lmfit.github.io/lmfit-py/fitting.html">lmfit.minimize()</a> documentation.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="brixs.Spectrum.fit_peaks">
+<span class="sig-name descname"><span class="pre">fit_peaks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'least_squares'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Spectrum.fit_peaks" title="Link to this definition"></a></dt>
+<dd><p>Fit peaks. Wrapper for <a class="reference external" href="https://lmfit.github.io/lmfit-py/fitting.html">lmfit.minimize()</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>yerr</strong> (<em>array</em><em>, </em><em>optional</em>) – data uncertainty.</p></li>
+<li><p><strong>method</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the fitting method to use. See methods
+available on <a class="reference external" href="https://lmfit.github.io/lmfit-py/fitting.html">lmfit.minimize()</a> documentation.</p></li>
+<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+the start and stop of a data range from x. Use None to indicate
+the minimum or maximum x value of the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="brixs’s documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Spectra.html" class="btn btn-neutral float-right" title="brixs.Spectra" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Carlos Galdino.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
