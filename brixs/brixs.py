@@ -94,60 +94,6 @@ class _Meta(type):
                 new_attrs[name] = value
 
         return type(class_name, bases, new_attrs)
-
-# NEW NEW NEW
-def propag_mod(func):
-    def inner(self, value):
-
-        ##############
-        # save value #
-        ##############
-        if func.__name__ == 'set_shift':
-            self._shift += value
-        elif func.__name__ == 'set_roll':
-            self._roll += value
-        elif func.__name__ == 'set_factor':
-            self._factor *= value
-        elif func.__name__ == 'set_offset':
-            self._offset += value
-        elif func.__name__ == 'set_calib':
-            self._calib *= value
-
-        ###############
-        # calculation #
-        ###############
-        _ = func(self, value)
-
-        ###################
-        # propagate value #
-        ###################
-        if func.__name__ == 'set_shift':
-            self.model.set_shift(value)
-        elif func.__name__ == 'set_roll':
-            self.model.set_shift(value*self.step)
-        elif func.__name__ == 'set_factor':
-            self.model.set_factor(value)
-        elif func.__name__ == 'set_offset':
-            self.model.set_offset(value)
-        elif func.__name__ == 'set_calib':
-            self.model.set_calib(value)
-
-        return
-    return inner
-
-def _copy_func_attrs(s1, s2):
-    """copy functionality attrs from s2 object to s1 object"""
-    for attr in settings._reserved_words:
-        attr = '_' + attr
-        if hasattr(s2, attr):
-            value = copy.deepcopy(s2.__dict__[attr])
-            s1.__setattr__(attr, value)
-
-def _copy_user_attrs(s1, s2):
-    """copy user attrs from s2 object to s1 object"""
-    for attr in s2.get_attrs():
-        value = copy.deepcopy(s2.__dict__[attr])
-        s1.__setattr__(attr, value)
 # %%
 
 # %% ====================== modified figure function ======================= %% #
@@ -423,13 +369,11 @@ class Spectrum(metaclass=_Meta):
         self._step         = None
         self._monotonicity = None
 
-        # special
-        # self._peaks = Peaks()
-        # self._peaks = None
-        # if lmfitok:
-        #     self._model = Model(parent=self)
-        # else:
-        #     self._model = None
+        # modifiers
+        self._calib  = 1
+        self._factor = 1
+        self._shift  = 0
+        self._offset = 0
 
         ###################################
         # asserting validity of the input #
@@ -465,7 +409,7 @@ class Spectrum(metaclass=_Meta):
         # loading data #
         ################
         # if x is available, x must be set first.
-        # Otherwise, when y is set, it will create a fake x axis using np.arange()
+        # Otherwise, when y is set, it will create a fake x axis using np.arrange()
 
         # keyword arguments
         if 'y' in kwargs:
@@ -608,11 +552,17 @@ class Spectrum(metaclass=_Meta):
     #########################
     # write-only attributes #
     #########################
+    pass
+
+    #######################
+    # modifier attributes #
+    #######################
     @property
     def calib(self):
-        pass
+        return self._calib
     @calib.setter
     def calib(self, value):
+        self.set_calib(1/self._calib)
         self.set_calib(value)
     @calib.deleter
     def calib(self):
@@ -620,29 +570,21 @@ class Spectrum(metaclass=_Meta):
 
     @property
     def shift(self):
-        pass
+        return self._shift
     @shift.setter
     def shift(self, value):
+        self.set_shift(-self._shift)
         self.set_shift(value)
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def roll(self):
-        pass
-    @roll.setter
-    def roll(self, value):
-        self.set_roll(value)
-    @roll.deleter
-    def roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
     def offset(self):
-        pass
+        return self._offset
     @offset.setter
     def offset(self, value):
+        self.set_offset(-self._offset)
         self.set_offset(value)
     @offset.deleter
     def offset(self):
@@ -650,9 +592,10 @@ class Spectrum(metaclass=_Meta):
 
     @property
     def factor(self):
-        pass
+        return self._factor
     @factor.setter
     def factor(self, value):
+        self.set_factor(1/self._factor)
         self.set_factor(value)
     @factor.deleter
     def factor(self):
@@ -817,13 +760,21 @@ class Spectrum(metaclass=_Meta):
         else:
             raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
         
-    ###########
-    # support #
-    ###########
+    #########
+    # attrs #
+    #########
     def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
+    def _get_modifier_attrs(self):
+        """return functional attrs"""
+        return ['_shift', '_factor', '_calib', '_offset']
+
+    def _get_check_attrs(self):
+        """return check attrs"""
+        return ['_step', '_monotonicity']
+
     def remove_attrs(self):
         """Delete all user defined attrs."""
         for attr in self.get_attrs():
@@ -849,7 +800,49 @@ class Spectrum(metaclass=_Meta):
         for attr in s.get_attrs():
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
+        
+    def copy_modifiers_from(self, s):
+        """Copy modifiers attributes from another brixs object.
 
+        Args:
+            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
+                to copy user defined attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Spectrum):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy modifier attrs from type br.Spectrum to br.Spectrum')
+
+        # transfer attrs
+        for attr in s._get_modifier_attrs(self):
+            self.__setattr__(attr, copy.deepcopy(s.__dict__[attr]))
+
+    def copy_checks_from(self, s):
+        """Copy modifiers attributes from another brixs.Spectrum object.
+
+        Args:
+            s (brixs object): Spectrum to copy check attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Spectrum):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy check attrs from type br.Spectrum to br.Spectrum')
+
+        # transfer attrs
+        for attr in s._get_check_attrs():
+            self.__setattr__(attr, copy.deepcopy(s.__dict__[attr]))
+
+    ###########
+    # support #
+    ###########
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
 
@@ -933,7 +926,9 @@ class Spectrum(metaclass=_Meta):
     def _create_header(self, verbose=False):
         """Gather attrs to be saved to a file."""
         header = ''
-        attrs = self.get_attrs()
+        attrs  = self.get_attrs()
+        attrs += self._get_modifier_attrs()
+        # attrs += self._get_check_attrs()
         for name in attrs:
             try:
                 if self.__dict__[name] is None:
@@ -961,7 +956,7 @@ class Spectrum(metaclass=_Meta):
                     print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
         return header[:-1]
 
-    def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
+    def save(self, filepath, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Attrs are saved as comments if only_data is False. Saving attrs to file
@@ -1008,11 +1003,11 @@ class Spectrum(metaclass=_Meta):
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
         # filepath
-        if filepath is None:
-            if filepath == '':
-                raise TypeError("Missing 1 required argument: 'filepath'")
-            else:
-                filepath = self.filepath               
+        # if filepath is None:
+        #     if filepath == '':
+        #         raise TypeError("Missing 1 required argument: 'filepath'")
+        #     else:
+        #         filepath = self.filepath               
         filepath = Path(filepath)
 
         # check if filepath points to a file
@@ -1127,11 +1122,6 @@ class Spectrum(metaclass=_Meta):
         ##########################
         self._step         = None
         self._monotonicity = None
-
-        ############################
-        # reset special attributes #
-        ############################
-        # self.peaks.clear()
 
         ###############
         # read header #
@@ -1263,16 +1253,104 @@ class Spectrum(metaclass=_Meta):
     ##################
     # base modifiers #
     ##################
-    @propag_mod
+    def set_shift(self, value):
+        """Set shift value.
+
+        Adds a value to the x-coordinates. y-coordinates are fully preserved.
+
+        Args:
+            value (float or int): shift value (value will be added to x-coordinates).
+
+        Returns:
+            None
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if value == 0:
+            return
+        
+        #######
+        # run #
+        #######
+        self._x += value
+        
+        ###############
+        # store value #
+        ###############
+        self._shift += value
+
+    def set_offset(self, value):
+        """Set offset value.
+
+        Args:
+            value (value): offset value (value will be added to y-coordinates).
+
+        Returns:
+            None
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if value == 0:
+            return
+        
+        #######
+        # run #
+        #######
+        self._y = self.y + value
+        
+        ###############
+        # store value #
+        ###############
+        self._offset += value
+
+    def set_factor(self, value):
+        """Set y multiplicative factor.
+
+        Args:
+            value (number): multiplicative factor (y-coordinates will be
+                multiplied by this value).
+
+        Returns:
+            None
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if value == 0:
+            raise ValueError('cannot set factor = 0.')
+        elif value == 1:
+            return
+    
+        #######
+        # run #
+        #######
+        self._y = self.y*value
+
+        ###############
+        # store value #
+        ###############
+        self._factor *= value
+
     def set_calib(self, value):
         """Set calibration value.
 
+        Calibration can be applied through a function, list, or number:
+
+        1. If number, x-coordinates will be multiplied by this value.
+
+        2. If list, polynomial coeff. (highest power first) is expected and
+            a function new_x = f(x) will be set using np.polyval().
+
+        3. If function, a function of type new_x = f(x) is expected.
+
+        Warning:
+            For list (2) and functions (3), the modification is applied directly on 
+            the x array and the calibration value is not saved in at s.calib
+
         Args:
             value (number, list, function): calibration value. 
-                If number, x-coordinates will be multiplied by this value.
-                If list, polynomial coeff. (highest power first) is expected and
-                a function new_x = f(x) will be set using np.polyval().
-                If function, a function of type new_x = f(x) is expected.
 
         Returns:
             None
@@ -1291,6 +1369,8 @@ class Spectrum(metaclass=_Meta):
             elif value == 1:   # if calib is 1, do nothing
                 return
             self._x = self.x*value
+            # store value
+            self._calib *= value
 
         ##########################
         # reset check attributes #
@@ -1298,37 +1378,6 @@ class Spectrum(metaclass=_Meta):
         self._step         = None
         self._monotonicity = None
 
-        ###############
-        # fix special #
-        ###############
-        # self.peaks.set_calib(value=value)
-
-    @propag_mod
-    def set_shift(self, value):
-        """Set shift value.
-
-        Adds a value to the x-coordinates. y-coordinates are fully preserved.
-
-        Args:
-            value (float or int): shift value (value will be added to x-coordinates).
-
-        Returns:
-            None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        if value == 0:
-            return
-        
-        self._x += value
-
-        ###############
-        # fix special #
-        ###############
-        # self.peaks.set_shift(value=value)
-
-    @propag_mod
     def set_roll(self, value):
         """Set roll value.
 
@@ -1336,20 +1385,19 @@ class Spectrum(metaclass=_Meta):
         last position are re-introduced at the first. y-coordinates are fully 
         preserved.
 
-        Value must be lower than the length of the array.
-
         Args:
             value (float or int): roll value.
 
         Returns:
             None
         """
+        # Value must be lower than the length of the array.
         ###################################
         # asserting validity of the input #
         ###################################
         if value == 0:
             return
-        assert value < len(self), 'roll value must be smaller than the array length\nUse s.set_shift() for shifting the x array' 
+        # assert value < len(self), 'roll value must be smaller than the array length\nUse s.set_shift() for shifting the x array' 
         
         ###################################
         # asserting validity of the input #
@@ -1371,58 +1419,9 @@ class Spectrum(metaclass=_Meta):
         self._y = np.roll(self.y, int(value))
 
         ###############
-        # fix special #
+        # store value #
         ###############
-        # self.peaks.set_shift(value=value*self.step)
-
-    @propag_mod
-    def set_offset(self, value):
-        """Set offset value.
-
-        Args:
-            value (value): offset value (value will be added to y-coordinates).
-
-        Returns:
-            None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        if value == 0:
-            return
-        
-        self._y = self.y + value
-
-        ###############
-        # fix special #
-        ###############
-        # self.peaks.set_offset(value=value)
-
-    @propag_mod
-    def set_factor(self, value):
-        """Set y multiplicative factor.
-
-        Args:
-            value (number): multiplicative factor (y-coordinates will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        if value == 0:
-            raise ValueError('cannot set factor = 0.')
-        elif value == 1:
-            return
-    
-        self._y = self.y*value
-
-        ###############
-        # fix special #
-        ###############
-        # self.peaks.set_factor(value=value)
+        self._shift += value*self.step
 
     #############
     # modifiers #
@@ -1532,8 +1531,9 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_modifiers_from(self)
+        s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -1614,8 +1614,9 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_modifiers_from(self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
     
@@ -1635,22 +1636,14 @@ class Spectrum(metaclass=_Meta):
         # create new spectrum
         s = Spectrum(x=x, y=y)
 
-        # special attrs
-        # s._peaks = self.peaks
-
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_modifiers_from(self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
-
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._step         = None
-        self._monotonicity = None
 
     def crop(self, start=None, stop=None):
         """Crop edges of the dataset.
@@ -1685,8 +1678,9 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_modifiers_from(self)
+        s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -1706,8 +1700,9 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        # s.copy_modifiers_from(self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -1731,8 +1726,9 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_modifiers_from(self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
         
         return s
 
@@ -2216,13 +2212,11 @@ class Spectra(metaclass=_Meta):
         self._calculated_shift  = None
         self._calculated_roll   = None
 
-        # special
-        # self._peaks = Peaks()
-        # self._peaks = None
-        # if lmfitok:
-        #     self._model = Model(parent=self)
-        # else:
-        #     self._model = None
+        # modifiers
+        self._calib  = 1
+        self._factor = 1
+        self._shift  = 0
+        self._offset = 0
         
         ###################################
         # asserting validity of the input #
@@ -2381,52 +2375,51 @@ class Spectra(metaclass=_Meta):
     #########################
     # write-only attributes #
     #########################
+    pass
+
+    #######################
+    # modifier attributes #
+    #######################
     @property
     def shift(self):
-        pass
+        return [s.shift for s in self]
     @shift.setter
     def shift(self, value):
+        self.set_shift(value=[-s.shift for s in self])
         self.set_shift(value=value)
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def roll(self):
-        pass
-    @roll.setter
-    def roll(self, value):
-        self.set_roll(value=value)
-    @roll.deleter
-    def roll(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
     def calib(self):
-        pass
+        return [s.calib for s in self]
     @calib.setter
     def calib(self, value):
-        self.set_calib(value)
+        self.set_calib(value=[1/s.calib for s in self])
+        self.set_calib(value=value)
     @calib.deleter
     def calib(self):
         raise AttributeError('Cannot delete object.')
 
     @property
     def factor(self):
-        pass
+        return [s.factor for s in self]
     @factor.setter
     def factor(self, value):
-        self.set_factor(value)
+        self.set_factor(value=[1/s.factor for s in self])
+        self.set_factor(value=value)
     @factor.deleter
     def factor(self):
         raise AttributeError('Cannot delete object.')
 
     @property
     def offset(self):
-        pass
+        return [s.offset for s in self]
     @offset.setter
     def offset(self, value):
-        self.set_offset(value)
+        self.set_offset(value=[-s.offset for s in self])
+        self.set_offset(value=value)
     @offset.deleter
     def offset(self):
         raise AttributeError('Cannot delete object.')
@@ -2500,13 +2493,17 @@ class Spectra(metaclass=_Meta):
     def __delitem__(self, item):
         self.remove(item)
 
-    ###########
-    # support #
-    ###########
+    #########
+    # attrs #
+    #########
     def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
+    def _get_check_attrs(self):
+        """return check attrs"""
+        return ['step', 'length', 'x', 'monotonicity']
+
     def remove_attrs(self):
         """Delete all user defined attrs."""
         for attr in self.get_attrs():
@@ -2533,6 +2530,146 @@ class Spectra(metaclass=_Meta):
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
 
+    def copy_checks_from(self, s):
+        """Copy modifiers attributes from another brixs.Spectrum object.
+
+        Args:
+            s (brixs object): Spectrum to copy check attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Spectrum):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy check attrs from type br.Spectrum to br.Spectrum')
+
+        # transfer attrs
+        for attr in s._get_check_attrs():
+            self.__setattr__(attr, copy.deepcopy(s.__dict__[attr]))
+
+    ###########
+    # attrs 2 #
+    ###########
+    def create_attr_from_spectra(self, attr, name=None):
+        """create new Spectra attr based on Spectrum attrs.
+
+        Example:
+            >>> s1.a = 2
+            >>> s2.a = 5
+            >>> s3.a = 'g'
+            >>> ss = br.Spectra(s1, s2, s3)
+            >>> ss.copy_attr_from_spectra('a')
+            >>> print(ss.a) # --> [2, 5, 'g']
+
+        Args:
+            attr (str): spectrum attribute name. All spectra inside Spectra
+                object must have this attr. 
+            name (str, optional): name of the new Spectra attr. If None, the same
+                name is used.
+
+        Returns:
+            None
+        """
+        # assert all spectra has attr
+        # check if all spectra has attr
+        has = {i: hasattr(s, attr) for i, s in enumerate(self)}
+        if False in [has[i] for i in has]:
+            filtered = [i for i in has if has[i] == False]
+            raise ValueError(f'Some spectra do not have attr: {attr}.\nSpectra without attr:{filtered}')
+
+        # create new attr
+        if name is None: name = attr
+        self.__setattr__(name, [getattr(s, attr) for s in self])
+
+    def reorder_by_attr(self, attr, attrs2reorder=None, decreasing=False):
+        """Reorder spectra based on a Spectra attr.
+
+        Example:
+            >>> ss.a = ['c', 'a', 'e', 'd', 'h', 'i']
+            >>> ss.b = [ 3,   1,   5,   4,   8,   9]
+            >>> ss.reorder_by_attr(attr='b', attrs2reaorder='a')
+            >>> print(ss.b) --> [1, 3, 4, 5, 8, 9]
+            >>> print(ss.a) --> ['a', 'c', 'd', 'e', 'h', 'i']
+    
+        Args:
+            attr (str): name of the reference attr. The attr must be a list of 
+                numbers with same lenght of number of spectra.
+            attrs2reorder (list of str, optional): list of other Spectra attrs that 
+                must also be sorted based on the ref attr.
+            decreasing (bool, optional): if True, small attr value comes last.
+        
+        Returns:
+            None
+        """
+        # get ref attr
+        ref = self.__getattribute__(attr)
+
+        # check validity
+        assert isinstance(ref, Iterable), 'ref attr must be an iterable type'
+        assert len(ref) == len(self), f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}'
+        
+        if attrs2reorder is not None:
+            for a in attrs2reorder:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{a} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {a} must be the same as the number of spectra.\nlenght of attr: {len(a)}\nnumber of spectra: {len(self)}'
+
+        # sort
+        self.data = arraymanip.sort(ref, self.data)
+        self.__setattr__(attr, arraymanip.sort(ref, ref))
+        if attrs2reorder is not None:
+            for a in attrs2reorder:
+                temp = self.__getattribute__(a)
+                self.__setattr__(a, arraymanip.sort(ref, temp))
+
+        # flip order if decreasing is True
+        if decreasing:
+            self.data = self.data[::-1]
+            self.__setattr__(attr, self.__getattribute__(attr)[::-1])
+            if attrs2reorder is not None:
+                for a in attrs2reorder:
+                    temp = self.__getattribute__(a)
+                    self.__setattr__(a, self.__getattribute__(a)[::-1])
+
+    def get_by_attr(self, attr, value, closest=True, verbose=True):
+        """Return spectrum with attr closest to value.
+
+        Only works for numerical attr. If multiple spectrum have same value, it
+        returns the first one.
+
+        Args:
+            attr (str): name of the attr
+            value (number): value to look for
+            closest (bool, optional): if False, returns spectrum only if value is exact.
+            verbose (bool, optional): default is True, prints info about the spectrum.
+        
+        Returns:
+            Spectrum
+        """
+        # check if all spectra has attr
+        has = {i: hasattr(s, attr) for i, s in enumerate(self)}
+        if False in [has[i] for i in has]:
+            filtered = [i for i in has if has[i] == False]
+            raise ValueError(f'Some spectra do not have attr: {attr}.\nSpectra without attr:{filtered}')
+
+        # get attr
+        temp = [getattr(s, attr) for s in self]
+
+        if closest:
+            i = arraymanip.index(temp, value)
+        else:
+            i = temp.index(value)
+
+        if verbose:
+            print(f'Spectrum number {i} have {attr}={temp[i]}')
+                
+        return self[i]
+
+    ###########
+    # support #
+    ###########
     def _validate_ranges(self, *args, **kwargs):
         """Check if ranges is the right format.
 
@@ -2828,142 +2965,6 @@ class Spectra(metaclass=_Meta):
         self._calculated_shift  = None
         self._calculated_roll   = None
 
-    def create_attr_from_spectra(self, attr, name=None):
-        """create new Spectra attr based on Spectrum attrs.
-
-        Example:
-            >>> s1.a = 2
-            >>> s2.a = 5
-            >>> s3.a = 'g'
-            >>> ss = br.Spectra(s1, s2, s3)
-            >>> ss.copy_attr_from_spectra('a')
-            >>> print(ss.a) # --> [2, 5, 'g']
-
-        Args:
-            attr (str): spectrum attribute name. All spectra inside Spectra
-                object must have this attr. 
-            name (str, optional): name of the new Spectra attr. If None, the same
-                name is used.
-
-        Returns:
-            None
-        """
-        # assert all spectra has attr
-        # check if all spectra has attr
-        has = {i: hasattr(s, attr) for i, s in enumerate(self)}
-        if False in [has[i] for i in has]:
-            filtered = [i for i in has if has[i] == False]
-            raise ValueError(f'Some spectra do not have attr: {attr}.\nSpectra without attr:{filtered}')
-
-        # create new attr
-        if name is None: name = attr
-        self.__setattr__(name, [getattr(s, attr) for s in self])
-
-    def reorder_by_attr(self, attr, attrs2reorder=None, decreasing=False):
-        """Reorder spectra based on a Spectra attr.
-
-        Example:
-            >>> ss.a = ['c', 'a', 'e', 'd', 'h', 'i']
-            >>> ss.b = [ 3,   1,   5,   4,   8,   9]
-            >>> ss.reorder_by_attr(attr='b', attrs2reaorder='a')
-            >>> print(ss.b) --> [1, 3, 4, 5, 8, 9]
-            >>> print(ss.a) --> ['a', 'c', 'd', 'e', 'h', 'i']
-    
-        Args:
-            attr (str): name of the reference attr. The attr must be a list of 
-                numbers with same lenght of number of spectra.
-            attrs2reorder (list of str, optional): list of other Spectra attrs that 
-                must also be sorted based on the ref attr.
-            decreasing (bool, optional): if True, small attr value comes last.
-        
-        Returns:
-            None
-        """
-        # get ref attr
-        ref = self.__getattribute__(attr)
-
-        # check validity
-        assert isinstance(ref, Iterable), 'ref attr must be an iterable type'
-        assert len(ref) == len(self), f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}'
-        
-        if attrs2reorder is not None:
-            for a in attrs2reorder:
-                temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{a} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {a} must be the same as the number of spectra.\nlenght of attr: {len(a)}\nnumber of spectra: {len(self)}'
-
-        # sort
-        self.data = arraymanip.sort(ref, self.data)
-        self.__setattr__(attr, arraymanip.sort(ref, ref))
-        if attrs2reorder is not None:
-            for a in attrs2reorder:
-                temp = self.__getattribute__(a)
-                self.__setattr__(a, arraymanip.sort(ref, temp))
-
-        # flip order if decreasing is True
-        if decreasing:
-            self.data = self.data[::-1]
-            self.__setattr__(attr, self.__getattribute__(attr)[::-1])
-            if attrs2reorder is not None:
-                for a in attrs2reorder:
-                    temp = self.__getattribute__(a)
-                    self.__setattr__(a, self.__getattribute__(a)[::-1])
-
-    def get_by_attr(self, attr, value, closest=True, verbose=True):
-        """Return spectrum with attr closest to value.
-
-        Only works for numerical attr. If multiple spectrum have same value, it
-        returns the first one.
-
-        Args:
-            attr (str): name of the attr
-            value (number): value to look for
-            closest (bool, optional): if False, returns spectrum only if value is exact.
-            verbose (bool, optional): default is True, prints info about the spectrum.
-        
-        Returns:
-            Spectrum
-        """
-        # check if all spectra has attr
-        has = {i: hasattr(s, attr) for i, s in enumerate(self)}
-        if False in [has[i] for i in has]:
-            filtered = [i for i in has if has[i] == False]
-            raise ValueError(f'Some spectra do not have attr: {attr}.\nSpectra without attr:{filtered}')
-
-        # get attr
-        temp = [getattr(s, attr) for s in self]
-
-        if closest:
-            i = arraymanip.index(temp, value)
-        else:
-            i = temp.index(value)
-
-        if verbose:
-            print(f'Spectrum number {i} have {attr}={temp[i]}')
-                
-        return self[i]
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
     #################
     # save and load #
     #################
@@ -3134,7 +3135,7 @@ class Spectra(metaclass=_Meta):
     def _create_header(self, verbose=False):
         """Gather attrs to be saved to a file."""
         header = ''
-        attrs = self.get_attrs()
+        attrs  = self.get_attrs()
         for name in attrs:
             value = self.__getattribute__(name)
             if value is None:
@@ -4021,9 +4022,8 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
-        ss._length = self.length
+        ss.copy_checks_from(self)
+        ss.copy_attrs_from(self)
 
         return ss
     
@@ -4038,15 +4038,15 @@ class Spectra(metaclass=_Meta):
         """
         x = np.concatenate([s.x for s in self.data])
         y = np.concatenate([s.y for s in self.data])
-        ss = Spectrum(x=x, y=y)
+        s = Spectrum(x=x, y=y)
         
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
-        return ss
+        return s
 
     def interp(self, start=None, stop=None, num=None, step=None, x=None):
         """Interpolate data.
@@ -4098,8 +4098,8 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
+        # ss.copy_checks_from(self)
+        ss.copy_attrs_from(self)
 
         return ss
     
@@ -4137,32 +4137,14 @@ class Spectra(metaclass=_Meta):
         for _s in self:
             ss.append(_s.crop(start, stop))
 
+
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
-        ss._step         = self.step
-        ss._monotonicity = self.monotonicity
+        ss.copy_checks_from(self)
+        ss.copy_attrs_from(self)
 
         return ss
-
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._length       = None
-        # self._step         = None
-        self._x            = None
-        # self._monotonicity = None
-
-        ###########################
-        # reset calculated values #
-        ###########################
-        # self._calculated_calib   = None
-        # self._calculated_factor = None
-        # self._calculated_offset = None
-        # self._calculated_shift  = None
-        # self._calculated_roll   = None
 
     def switch(self):
         """Switch x and y axis"""
@@ -4176,9 +4158,9 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
-        ss._length = self.length
+        # ss.copy_checks_from(self)
+        ss.copy_attrs_from(self)
+        ss._length = self._length
 
         return ss
 
@@ -4204,13 +4186,13 @@ class Spectra(metaclass=_Meta):
         y = np.zeros(len(x))
         for i in range(len(self)):
             y += ys[:, i]
-        final = Spectrum(x=x, y=y)
+        s = Spectrum(x=x, y=y)
         
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -4243,8 +4225,8 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -4287,8 +4269,8 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(im, self)
-        _copy_user_attrs(im, self)
+        # im.copy_checks_from(self)
+        im.copy_attrs_from(self)
 
         return im
     
@@ -4314,8 +4296,8 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
+        # ss.copy_checks_from(self)
+        ss.copy_attrs_from(self)
 
         return ss
 
@@ -4340,8 +4322,8 @@ class Spectra(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(ss, self)
-        _copy_user_attrs(ss, self)
+        # ss.copy_checks_from(self)
+        ss.copy_attrs_from(self)
 
         return ss
 
@@ -6488,6 +6470,8 @@ class Image(metaclass=_Meta):
         self._data      = None
         self._x_centers = None
         self._y_centers = None
+        self._x_edges   = None
+        self._y_edges   = None
         self._filepath  = ''
 
         self._calculated_roll  = None
@@ -6582,6 +6566,26 @@ class Image(metaclass=_Meta):
     @y_centers.deleter
     def y_centers(self):
         self._y_centers  = np.arange(0, self.data.shape[0])
+
+    @property
+    def x_edges(self):
+        return self._x_edges
+    @x_edges.setter
+    def x_edges(self, value):
+        raise NotImplementedError('this is not implemented yet')
+    @x_edges.deleter
+    def x_edges(self):
+        raise NotImplementedError('this is not implemented yet')
+
+    @property
+    def y_edges(self):
+        return self._y_edges
+    @y_edges.setter
+    def y_edges(self, value):
+        raise NotImplementedError('this is not implemented yet')
+    @y_edges.deleter
+    def y_edges(self):
+        raise NotImplementedError('this is not implemented yet')
 
     @property
     def filepath(self):
@@ -6785,13 +6789,18 @@ class Image(metaclass=_Meta):
     def __truediv__(self, object):
         return self.__div__(object)
 
-    ###########
-    # support #
-    ###########
+    
+    #########
+    # attrs #
+    #########
     def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
+    def _get_center_attrs(self):
+        """return center attrs"""
+        return ['_x_centers', '_y_centers', '_x_edges', '_y_edges']
+
     def copy_attrs_from(self, s):
         """Copy user defined attributes from another brixs object.
 
@@ -6813,6 +6822,29 @@ class Image(metaclass=_Meta):
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
 
+    def copy_centers_from(self, s):
+        """Copy center attributes from another brixs.Image object.
+
+        Args:
+            s (brixs object): Image to copy center attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Image):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Image to type br.Image')
+
+        # transfer attrs
+        for attr in s._get_center_attrs():
+            value = copy.deepcopy(s.__dict__[attr])
+            self.__setattr__(attr, value)
+
+    ###########
+    # support #
+    ###########
     def _calculated_vmin_vmax(self):
         """returns optimal vmin and vmax for visualization
         
@@ -6845,8 +6877,7 @@ class Image(metaclass=_Meta):
         """Gather attrs to be saved to a file."""
         header = ''
         attrs  = self.get_attrs()
-        attrs.append('_x_centers')#] = self.x_centers
-        attrs.append('_y_centers')# = self.y_centers
+        attrs += self._get_center_attrs()
         for name in attrs:
             try:
                 if self.__dict__[name] is None:
@@ -7205,14 +7236,13 @@ class Image(metaclass=_Meta):
         """Return a copy of the object.
 
         Usage:
-            >>> im2.copy(im1)     # im2 is now a copy of im1
+            >>> # full copy
             >>> im2 = im1.copy()  # im2 is now a copy of im1
             >>>
             >>> # im3 will be a croped image of im1
             >>> im3 = im1.copy(x_start, x_stop, y_start, y_stop) 
 
         Args:
-            im (Image, optional): Image to be is copied. See usage.
             x_start, x_stop, y_start, y_stop (int): pixel range in terms of
                 x_centers and y_centers. Interval is inclusive. Use None to 
                 indicate the edge of the image.
@@ -7224,23 +7254,12 @@ class Image(metaclass=_Meta):
                         f'args passed: {args}\n'  +\
                         f'kwargs passed: {kwargs}\n\n'  +\
                         ' === Usage ===\n'  +\
-                        'im2.copy(im1)     # im2 is now a copy of im1\n'  +\
                         'im2 = im1.copy()  # im2 is now a copy of im1\n'  +\
                         'im3 = im1.copy(x_start, x_stop, y_start, y_stop)\n'
-        #############################
-        # check if input is Spectra #
-        #############################
-        im      = None
-        x_start = False
-        if 'im' in kwargs:
-            im = kwargs['im']
-        elif len(args) == 1:
-            if isinstance(args[0], Spectra):
-                im = args[0]
         ###################################
         # check if crop ranges are passed #
         ###################################
-        elif 'x_start' in kwargs or 'x_stop' in kwargs or 'y_start' in kwargs or 'y_stop' in kwargs:
+        if 'x_start' in kwargs or 'x_stop' in kwargs or 'y_start' in kwargs or 'y_stop' in kwargs:
             assert 'x_start' in kwargs and 'x_stop' in kwargs and 'y_start' in kwargs and 'y_stop' in kwargs, error_message
             x_start = kwargs['x_start']
             x_stop  = kwargs['x_stop']
@@ -7251,56 +7270,34 @@ class Image(metaclass=_Meta):
             x_stop  = args[1]
             y_start = args[2]
             y_stop  = args[3]
-        elif len(args) != 4 and len(args) != 0 and len(args) != 1:
+        elif len(args) != 4 and len(args) != 0:
             raise ValueError(error_message)
         elif len(kwargs) != 0:
             for x in list(kwargs.keys()):
-                if x not in ['im', 'x_start', 'x_stop', 'y_start', 'y_stop']:
+                if x not in ['x_start', 'x_stop', 'y_start', 'y_stop']:
                     raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
-
-        ##################################
-        # if Image is passed, copy Image #
-        ##################################
-        if im is not None:
-            if isinstance(im, Image):
-                self._data      = im.data
-                self._x_centers = im.x_centers
-                self._y_centers = im.y_centers
-                self._filepath  = im.filepath
-                self._calculated_roll = im.calculated_roll
-
-                # user defined attrs
-                for attr in self.get_attrs():
-                    self.__delattr__(attr)
-                for attr in im.get_attrs():
-                    self.__setattr__(attr, im.__dict__[attr])
-            else:
-                raise TypeError('Only type br.Spectra can be copied to type br.Spectra')
-            return
+        
         ##################
         # identical copy #
         ##################
-        elif x_start == False:
+        if x_start == False:
             im = Image(data=self.data)
-            im._x_centers = self.x_centers
-            im._y_centers = self.y_centers
-            # im._filepath  = self.filepath
+            im.copy_centers_from(self)
 
-            # transfer attrs
-            for attr in self.get_attrs():
-                value = copy.deepcopy(self.__dict__[attr])
-                im.__setattr__(attr, value)
-
-            return im
         #############################
         # if crop ranges are passed #
         #############################
         else:
             im = self.copy()
             im.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
-            # im._filepath = self.filepath
 
-            return im
+        ##################
+        # transfer attrs #
+        ##################
+        # im.copy_centers_from(self)
+        im.copy_attrs_from(self)
+
+        return im
     
     def binning(self, *args, **kwargs):
         """Compute the 2D histogram of the data (binning of the data).
@@ -7393,13 +7390,17 @@ class Image(metaclass=_Meta):
         # x and y centers
         _x_edges = np.arange(0, self.shape[1]+_bins_size[1]/2, _bins_size[1])
         _y_edges = np.arange(0, self.shape[0]+_bins_size[0]/2, _bins_size[0])
+        
         reduced._x_centers = arraymanip.moving_average(_x_edges, n=2)
         reduced._y_centers = arraymanip.moving_average(_y_edges, n=2)
+        reduced._x_edges = _x_edges
+        reduced._y_edges = _y_edges
 
-        # transfer attrs
-        for attr in self.get_attrs():
-            value = copy.deepcopy(self.__dict__[attr])
-            reduced.__setattr__(attr, value)
+        ##################
+        # transfer attrs #
+        ##################
+        # reduced.copy_centers_from(self)
+        reduced.copy_attrs_from(self)
 
         return reduced
     
@@ -7414,12 +7415,10 @@ class Image(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(im, self)
-        _copy_user_attrs(im, self)
-        im.x_centers = copy.deepcopy(self.x_centers)
-        im.y_centers = copy.deepcopy(self.y_centers)       
-        im._calculated_roll  = None
-        im._calculated_shift = None
+        # im.copy_centers_from(self)
+        im.copy_attrs_from(self)
+        im.x_centers = copy.deepcopy(self.y_centers)
+        im.y_centers = copy.deepcopy(self.x_centers)       
 
         return im
 
@@ -7464,8 +7463,8 @@ class Image(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(im, self)
-        _copy_user_attrs(im, self)
+        # im.copy_centers_from(self)
+        im.copy_attrs_from(self)
         im._x_centers = self.x_centers[x_start:x_stop]
         im._y_centers = self.y_centers[y_start:y_stop]
 
@@ -7505,9 +7504,8 @@ class Image(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
-
+        s.copy_attrs_from(self)
+ 
         return s
 
     def calculate_spectrum(self, axis=1):
@@ -7537,8 +7535,7 @@ class Image(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -8371,7 +8368,7 @@ class PhotonEvents(metaclass=_Meta):
         None
     """
 
-    _read_only = ['calculated_shift']
+    _read_only = ['calculated_shift', 'x_edges', 'y_edges', 'x_centers', 'y_centers']
     _non_removable = []
     
     def __init__(self, *args, **kwargs): 
@@ -8390,6 +8387,11 @@ class PhotonEvents(metaclass=_Meta):
 
         self._xlim = None
         self._ylim = None
+
+        self._x_centers = None
+        self._y_centers = None
+        self._x_edges   = None
+        self._y_edges   = None
 
         self._calculated_shift = None
 
@@ -8639,13 +8641,21 @@ class PhotonEvents(metaclass=_Meta):
         else:
             raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
             
-    ###########
-    # support #
-    ###########    
+    #########
+    # attrs #
+    #########    
     def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
+    def _get_center_attrs(self):
+        """return center attrs"""
+        return ['_x_centers', '_y_centers', '_x_edges', '_y_edges']
+
+    def _get_lim_attrs(self):
+        """return lim attrs"""
+        return ['_xlim', '_ylim']
+
     def remove_attrs(self):
         """Delete all user defined attrs."""
         for attr in self.get_attrs():
@@ -8672,13 +8682,60 @@ class PhotonEvents(metaclass=_Meta):
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
 
+    def copy_lims_from(self, s):
+        """Copy lim attributes from another brixs.PhotonEvents object.
+
+        Args:
+            s (brixs object): PhotonEvents to copy lims attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, PhotonEvents):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.PhotonEvents to br.PhotonEvents')
+
+        # transfer attrs
+        for attr in s._get_lim_attrs():
+            value = copy.deepcopy(s.__dict__[attr])
+            self.__setattr__(attr, value)
+
+    def copy_center_from(self, s):
+        """Copy center attributes from another brixs.PhotonEvents object.
+
+        Args:
+            s (brixs object): PhotonEvents to copy lims attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, PhotonEvents):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.PhotonEvents to br.PhotonEvents')
+
+        # transfer attrs
+        for attr in s._get_center_attrs():
+            value = copy.deepcopy(s.__dict__[attr])
+            self.__setattr__(attr, value)
+
+    ###########
+    # support #
+    ###########
+    pass
+
     #################
     # save and load #
     #################
     def _create_header(self, verbose=False):
         """Gather attrs to be saved to a file."""
         header = ''
-        attrs = self.get_attrs()
+        attrs  = self.get_attrs()
+        attrs += self._get_lim_attrs()
+        attrs += self._get_center_attrs()
         for name in attrs:
             if self.__dict__[name] is None:
                 header += f'{name}: None'  + '\n'
@@ -9006,8 +9063,10 @@ class PhotonEvents(metaclass=_Meta):
         """Return a copy of the object.
 
         Usage:
-            >>> pe2.copy(pe1)     # pe2 is now a copy of ss1
+            >>> # full copy
             >>> pe2 = pe1.copy()  # pe2 is now a copy of ss1
+            >>>
+            >>> # partial copy
             >>> pe3 = pe1.copy(x_start, x_stop, y_start, y_stop)
             >>> pe3 = pe1.copy((x1_start, x1_stop, y1_start, y1_stop))
             >>> pe3 = pe1.copy([(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])
@@ -9023,73 +9082,42 @@ class PhotonEvents(metaclass=_Meta):
                         f'args passed: {args}\n'  +\
                         f'kwargs passed: {kwargs}\n\n'  +\
                         ' === Usage ===\n'  +\
-                        'pe2.copy(pe1)     # pe2 is now a copy of pe1\n'  +\
                         'pe2 = pe1.copy()  # pe2 is now a copy of pe1\n'  +\
                         'pe3 = pe1.copy(x_start, x_stop, y_start, y_stop)\n' +\
                         'pe3 = pe1.copy([(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
-        #############################
-        # check if input is Spectra #
-        #############################
-        pe   = None
-        mask = None
-        if 'pe' in kwargs:
-            pe = kwargs['pe']
-        elif len(args) == 1:
-            if isinstance(args[0], PhotonEvents):
-                pe = args[0]
-            elif isinstance(args[0], Iterable):
-                mask = args[0]
         ############################
         # check if mask are passed #
         ############################
-        elif 'mask' in kwargs:
+        if 'mask' in kwargs:
             mask = kwargs['mask']
         elif len(args) == 4:
             mask = [[args[0], args[1], args[2], args[3]], ]
-        elif len(args) != 4 and len(args) != 0 and len(args) != 1:
+        elif len(args) != 4 and len(args) != 0:
             raise ValueError(error_message)
         elif len(kwargs) != 0:
             for x in list(kwargs.keys()):
-                if x not in ['im', 'mask']:
+                if x not in ['mask']:
                     raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
 
         ##################################
         # if Image is passed, copy Image #
         ##################################
-        if pe is not None:
-            if isinstance(pe, PhotonEvents):
-                self._x        = pe.x
-                self._y        = pe.y
-                self._xlim     = pe.xlim
-                self._ylim     = pe.ylim
-                self._filepath = pe.filepath
-
-                # user defined attrs
-                for attr in self.get_attrs():
-                    self.__delattr__(attr)
-                for attr in pe.get_attrs():
-                    self.__setattr__(attr, pe.__dict__[attr])
-            else:
-                raise TypeError('Only type br.PhotonEvents can be copied to type br.PhotonEvents')
-            return
-        elif mask is not None:
+        if mask is not None:
             pe = self.copy()
             pe.clip(mask=mask)
-            return pe
+
         ####################################
         # Otherwise, return a copy of self #
         ####################################
         else:
             pe = PhotonEvents(x=self.x, y=self.y)
+            pe.copy_lims_from(self)
 
-            pe._xlim     = self.xlim
-            pe._ylim     = self.ylim
-            pe._filepath = self.filepath
-            
-            # transfer attrs
-            for attr in self.get_attrs():
-                value = copy.deepcopy(self.__dict__[attr])
-                pe.__setattr__(attr, value)
+        ##################
+        # transfer attrs #
+        ##################
+        # pe.copy_lims_from(self)
+        pe.copy_attrs_from(self)
 
         return pe
 
@@ -9179,17 +9207,19 @@ class PhotonEvents(metaclass=_Meta):
 
         # Image
         im = Image(temp.transpose())
-        im._x_centers = arraymanip.moving_average(_x_edges, n=2)
-        im._y_centers = arraymanip.moving_average(_y_edges, n=2)
+        _x_centers = arraymanip.moving_average(_x_edges, n=2)
+        _y_centers = arraymanip.moving_average(_y_edges, n=2)
         
-        im.x_edges = _x_edges
-        im.y_edges = _y_edges
+        for obj in (self, im):
+            obj._x_centers = _x_centers
+            obj._y_centers = _y_centers
+            obj._x_edges   = _x_edges
+            obj._y_edges   = _y_edges
 
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(im, self)
-        _copy_user_attrs(im, self)
+        im.copy_attrs_from(self)
 
         return im
 
@@ -9205,8 +9235,8 @@ class PhotonEvents(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(pe, self)
-        _copy_user_attrs(pe, self)
+        # pe.copy_lims_from(self)
+        pe.copy_attrs_from(self)
 
         return pe
 
@@ -9244,8 +9274,8 @@ class PhotonEvents(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(pe, self)
-        _copy_user_attrs(pe, self)
+        pe.copy_lims_from(self)
+        pe.copy_attrs_from(self)
 
         return pe
 
@@ -9286,14 +9316,11 @@ class PhotonEvents(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(pe, self)
-        _copy_user_attrs(pe, self)
+        pe.copy_lims_from(self)
+        pe.copy_attrs_from(self)
 
         return pe
 
-    ########################
-    # calculation and info #
-    ########################
     def calculate_spectrum(self, nbins, axis=1):
         """Integrate data in one direction (sum columns or rows).
 
@@ -9315,16 +9342,18 @@ class PhotonEvents(metaclass=_Meta):
         
         pe = self.copy()
         im = pe.binning(nbins=nbins)
-        s = im.calculate_spectrum(axis=axis)
+        s  = im.calculate_spectrum(axis=axis)
 
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_attrs_from(self)
 
         return s
 
+    ########################
+    # calculation and info #
+    ########################
     def calculate_shift(self, nbins, deg=2, axis=0, limit_size=1000):
         """Calculate intensity misalignments via cross-correlation.
 
@@ -9375,6 +9404,32 @@ class PhotonEvents(metaclass=_Meta):
 
         return popt, model
 
+    def calculate_curvature(self, nbins, deg=2, axis=0, limit_size=1000):
+        """Same as br.pe.calculate_shift()
+        
+        Calculate intensity misalignments via cross-correlation.
+
+        Args:
+            nbins (int, optional): number of bins.
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            axis (int or string, optional): Axis along which elements are shifted.
+                By default, data is shifted in the vertical (0) direction.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of bin columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+
+        Returns:
+            p (np.array, read only): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term. Polynomial as a function of x_centers for 
+                axis=0 or y_centers for axis=1. Default is None.
+            f (function, read only): funcion f(x_centers) for axis=0 or 
+                f(y_centers) for axis=1.
+        """
+        return self.calculate_shift(nbins=nbins, deg=deg, axis=axis, limit_size=limit_size)
+     
     ##########################        
     # plot and visualization #
     ########################## 
@@ -9428,10 +9483,14 @@ class PhotonEvents(metaclass=_Meta):
 
         return pos
 
-# %%
-for obj in (Spectrum, Spectra, Image, PhotonEvents):
-    obj._shift  = 0
-    obj._roll   = 0
-    obj._offset = 0
-    obj._calib  = 1
-    obj._factor = 1
+    def plot_edges(self, ax=None, **kwargs):
+        """[Not implemented]Plot edges after binning
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            **kwargs: kwargs are passed to ``plt.scatter()`` that plots the data.
+
+        Returns:
+            None
+        """
+        raise NotImplementedError('this is not implemented yet')

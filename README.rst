@@ -1,14 +1,13 @@
-#######
+##########################################################
 BRIXS
-#######
+##########################################################
 
 BRIXS is an object-oriented (OO) python package for processing/analysis of XAS and RIXS spectra.
 
 Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
 
-WARNING!! We are working on this readme and on the documentation. 
 
-
+##########################################################
 Introduction
 ##########################################################
 
@@ -137,9 +136,9 @@ Just like metadata, repetitive tasks can be added to the object,
    s1.processing()
    s2.processing()
 
-
-Basics
-#############
+##########################################################
+Core
+##########################################################
 
 BRIXS is based on four major objects:
 
@@ -160,11 +159,15 @@ data manipulation that requires comparison between many spectra can be done via
 the **Spectra** object. Having only four classes makes the code easy to maintain. 
 A better description of each object will be given later in this readme. 
 
-BRIXS also comes with additional functionally from supporting modules. See
-below: 
+##########################################################
+Support modules
+##########################################################
 
+BRIXS also comes with additional functionally from supporting modules.
+
+================================
 backpack
-==========
+================================
 
 *Backpack* is a module with quality-of-life (QOL) functions. This module is completely
 independent from brixs. As for the time of writing, these are the submodules: 
@@ -193,8 +196,9 @@ monotonicity of an array can be called directly from brixs:
       # check monotonicity 
       br.check_monotonicity(a)
 
+================================
 finder
-==========
+================================
 
 Module for quickly saving and recovering processed spectra so you can avoid 
 running functions multiple types with same input parameters. Finder is imported
@@ -223,8 +227,9 @@ with brixs
 
 Full description of finder functionally can be found inside brixs.addons.finder.py file.
 
+================================
 labels
-==========
+================================
 
 Module with common x and y labels for xas and rixs plots.
 
@@ -241,8 +246,9 @@ Full description of labels can be found inside brixs.addons.labels.py file.
 
 
 
-model 
-==========
+================================
+model
+================================
 
 Module for data fitting. For enabling fitting functionally do
 
@@ -257,8 +263,9 @@ Module for data fitting. For enabling fitting functionally do
 This module is not ready yet.
 
 
+================================
 beamlines
-===========
+================================
 
 BRIXS objects and modules are independent of `data collection methods` and 
 `data file types`. All "file reading" functions specific for each lab or beamline
@@ -279,8 +286,9 @@ imported as a **Image** object using the code below,
    im = read(<filepath>)
 
 
+================================
 crystal
-==========
+================================
 
 Module with function for calculating momentum transfer in single crystals. 
 It is assumed that the photon hits the crystal surface at a angle th and is 
@@ -300,16 +308,17 @@ more information. This module can be used like this
 The description of each function can be accessed via the python help() function or 
 by reading the documentation (PUT LINK HERE).
 
-xlsx
-==========
+================================
+xlsl
+================================
 
 Module for spreadsheet manipulation [FUTURE]. This is not ready yet.
 
 
 
-
+##########################################################
 Installation
-#############
+##########################################################
 
 There are two recommended methods:
 
@@ -330,43 +339,43 @@ or
     import brixs as br
 
 
-
+##########################################################
 Requirements
-############
+##########################################################
 
+================================
 Base (required)
-===============
+================================
 
 - numpy
 - matplotlib
 
 Some modules require additional imports:
 
+================================
 brixs.model
-============
+================================
 
 - scipy
 - lmfit
 
+================================
 brixs.crystal
-=============
+================================
 
 - pbcpy
 
+================================
 brixs.beamlines
-===============
+================================
 
 Some modules here might require 
 
 - h5py
 
+##########################################################
 Usage
-#############
+##########################################################
 
 Refer to the examples folder on GitHub for code examples.
 
-
-Documentation
-#############
-
-Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.

@@ -44,6 +44,47 @@ import brixs as br
 
 # copy
 
+# NEW NEW NEW
+def propag_mod(func):
+    def inner(self, value):
+
+        ##############
+        # save value #
+        ##############
+        if func.__name__ == 'set_shift':
+            self._shift += value
+        elif func.__name__ == 'set_roll':
+            self._roll += value
+        elif func.__name__ == 'set_factor':
+            self._factor *= value
+        elif func.__name__ == 'set_offset':
+            self._offset += value
+        elif func.__name__ == 'set_calib':
+            self._calib *= value
+
+        ###############
+        # calculation #
+        ###############
+        _ = func(self, value)
+
+        ###################
+        # propagate value #
+        ###################
+        if func.__name__ == 'set_shift':
+            self.model.set_shift(value)
+        elif func.__name__ == 'set_roll':
+            self.model.set_shift(value*self.step)
+        elif func.__name__ == 'set_factor':
+            self.model.set_factor(value)
+        elif func.__name__ == 'set_offset':
+            self.model.set_offset(value)
+        elif func.__name__ == 'set_calib':
+            self.model.set_calib(value)
+
+        return
+    return inner
+
+
 # save and load
 
 # go to brixs and fix spectrum and spectra
