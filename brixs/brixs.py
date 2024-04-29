@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
 import matplotlib
+import warnings
 import copy
 
 # %% -------------------------- Special Imports --------------------------- %% #
@@ -17,7 +18,7 @@ from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # %% ----------------------------- backpack ------------------------------- %% #
-from .backpack import filemanip, arraymanip, figmanip, numanip, interact
+from .backpack import filemanip, arraymanip, figmanip, numanip, query
 
 # %% ------------------------------ settings ------------------------------ %% #
 from .config import settings
@@ -320,7 +321,6 @@ class Spectrum(metaclass=_Meta):
         x (array): vector with x-coordinate values
         y (array): vector with y-coordinate values
         filepath (str or pathlib.Path): filepath associated with data.
-        peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.       
 
     **Computed attributes (also read-only):**
         data (array)
@@ -1019,7 +1019,7 @@ class Spectrum(metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if interact.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -1950,143 +1950,6 @@ class Spectrum(metaclass=_Meta):
         """
         raise NotImplementedError('This is not implemented yet.')
 
-    ###########
-    # Special #
-    ###########
-    def find_peaks(self, prominence=None, width=4, moving_average_window=4, ranges=None):
-        """Find peaks. Wrapper for `scipy.signal.find_peaks()`_.
-
-        Sets :py:attr:`peaks` attribute.
-
-        Args:
-            prominence (number, optional): minimum prominence of peaks in percentage
-                of the maximum prominence [max(y) - min(y)]. Default is 5.
-            width (number, optional): minimum number of data points defining a peak.
-            moving_average_window (int, optional): window size for smoothing the
-                data for finding peaks. Default is 4.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            None
-
-        .. _scipy.signal.find_peaks(): https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html
-        """
-        if ranges is None:
-            s = self
-        else:
-            s = self._extract(ranges)
-
-        # check monotonicity
-        if s.monotonicity is None:
-            s.check_monotonicity()
-
-        # step
-        if s.step is None:
-            s.check_step()
-
-        self.peaks.find(x=s.x, y=s.y, prominence=prominence, width=width, moving_average_window=moving_average_window)
-
-    def fit_peak(self, asymmetry=False, moving_average_window=1, method='least_squares', ranges=None):     
-        """Fits one peak. Initial guess is based on the maximum y value.
-
-        Args:
-            asymmetry (bool or dict, optional): if True, fits each half of the
-                with a different width. Default is False
-            moving_average_window (int, optional): window size for smoothing the
-                data for finding the peak. Default is 1.
-            method (str, optional): Name of the fitting method to use. See methods
-                available on `lmfit.minimize()`_ documentation.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            None
-        """
-        if ranges is None:
-            x0 = self.x
-            y0 = self.y
-        else:
-            ranges = self._validate_ranges(ranges)
-            s0 = self._extract(ranges)
-            x0 = s0.x
-            y0 = s0.y
-
-        # smoothing
-        assert moving_average_window > 0, f'moving_average_window must be positive different than 0, not {moving_average_window}'
-        if moving_average_window == 1:
-            x = x0
-            y = y0
-        else:
-            x = arraymanip.moving_average(x0, moving_average_window)
-            y = arraymanip.moving_average(y0, moving_average_window)
-
-        # guess amp and c
-        amp = max(y)
-        c = x[np.argmax(y)]
-
-        # guess fwhm
-        try:
-            w1 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][arraymanip.index(y[:np.argmax(y)][::-1], max(y)/2)]
-        except ValueError:
-            w1 = x[np.argmax(y):][arraymanip.index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
-        try:
-            w2 = x[np.argmax(y):][arraymanip.index(y[np.argmax(y):], max(y)/2)] - x[np.argmax(y)]
-        except ValueError:
-            w2 = x[np.argmax(y)] - x[:np.argmax(y)][::-1][arraymanip.index(y[:np.argmax(y)][::-1], max(y)/2)]
-        w = w1 + w2
-
-        # x, y = derivative(moving_average(self.x, 10), moving_average(self.y, 10))
-        # w = np.abs(x[np.argmin(y)] - x[np.argmax(y)])
-        if w == 0:
-            w = 0.1*(max(self.x)-min(self.x))
-
-        # peaks
-        # self.peaks.clear()
-        if asymmetry:
-            self.peaks.append(amp=amp, c=c, w1=w1, w2=w2)
-        else:
-            self.peaks.append(amp=amp, c=c, w=w)
-
-        # fit
-        self.fit_peaks(method=method, ranges=ranges)
-
-    def fit_peaks(self, method='least_squares', ranges=None):
-        """Fit peaks. Wrapper for `lmfit.minimize()`_.
-
-        Args:
-            yerr (array, optional): data uncertainty. 
-            method (str, optional): Name of the fitting method to use. See methods
-                available on `lmfit.minimize()`_ documentation.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            None
-
-        .. _lmfit.minimize(): https://lmfit.github.io/lmfit-py/fitting.html
-        """
-        if ranges is None:
-            self.check_monotonicity()
-            x = self.x
-            y = self.y
-        else:
-            ranges = self._validate_ranges(ranges)
-            s = self._extract(ranges)
-            s.check_monotonicity()
-            x = s.x
-            y = s.y
-
-        # check if peaks is defined
-        if len(self.peaks) == 0:
-            raise ValueError('No peaks to fit.\nRun Spectrum.find_peaks() or set s.peaks manually.')
-
-        # fit
-        return self.peaks.fit(x, y, method=method, update_peaks=True)
-
 # %% =============================== Spectra ============================== %% #
 class Spectra(metaclass=_Meta):
     """Returns a ``spectra`` object.
@@ -2130,9 +1993,7 @@ class Spectra(metaclass=_Meta):
     Attributes:
         data (list of :py:attr:`Spectrum`): list with :py:attr:`Spectrum` objects.
         folderpath (str or pathlib.Path): folderpath associated with data.
-        filepath (str or pathlib.Path): filepath associated with data.
-        peaks (:py:attr:`Peaks`): each entry represents a parameter of a peak.
-        
+        filepath (str or pathlib.Path): filepath associated with data.        
 
     **Computed (read-only) attributes:**
         step (number)
@@ -2776,13 +2637,13 @@ class Spectra(metaclass=_Meta):
         ys = np.zeros((self.length, len(self)))
         for i in range(len(self)):
             ys[:, i] = self[i].y
-        if ranges is None:
-            x = self[0].x
-        else:
-            try:
-                x, ys = arraymanip.extract(self[0].x, ys, ranges=ranges)
-            except RuntimeError:
-                raise RuntimeError(f'It seems like all spectra has no data points within range: {ranges}.\nPlease, fix ranges so all spectra have at least one data point within range.')
+
+        try:
+            x, ys = arraymanip.extract(self.x, ys, ranges=ranges)
+        except RuntimeError:
+            x  = []
+            ys = []
+            warnings.warn(f'It seems like all spectra has no data points within range: {ranges}.\nPlease, fix ranges so all spectra have at least one data point within range.')
         
         return x, ys
     
@@ -3234,23 +3095,14 @@ class Spectra(metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if interact.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
                 else:
                     raise AttributeError('filepath not pointing to a file.')
                 
-        # gather ys
-        x, ys = self._gather_ys(ranges=ranges)
-
-        # kwargs
-        if 'fmt' not in kwargs: # pick best format
-            decimal = max([numanip.n_decimal_places(x) for x in self.x])
-            temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
-            if temp_decimal > decimal:
-                decimal = copy.deepcopy(temp_decimal)
-            kwargs['fmt'] = f'%.{decimal}f'
+        # kargs
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
         if 'newline' not in kwargs:
@@ -3258,13 +3110,28 @@ class Spectra(metaclass=_Meta):
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
 
-        
-        # dataset
-        final = np.zeros((self.length, len(self)+1))
-        final[:, 0]  = x
-        final[:, 1:] = ys
-        
+        # Prepare final data to save
+        if len(self) == 0:
+            final = []
+        else:
+            # gather ys
+            x, ys = self._gather_ys(ranges=ranges)
 
+            # kwargs
+            if 'fmt' not in kwargs: # pick best format
+                decimal = max([numanip.n_decimal_places(x) for x in self.x])
+                temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
+                if temp_decimal > decimal:
+                    decimal = copy.deepcopy(temp_decimal)
+                kwargs['fmt'] = f'%.{decimal}f'
+
+
+            # final data to save
+            final = np.zeros((self.length, len(self)+1))
+            final[:, 0]  = x
+            final[:, 1:] = ys
+            
+        # save
         if only_data:
             if 'header' in kwargs:
                 del kwargs['header']
@@ -3279,7 +3146,6 @@ class Spectra(metaclass=_Meta):
                     kwargs['header'] = self._create_header(verbose=verbose)
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
-
         np.savetxt(Path(filepath), final, **kwargs)
 
     def load_from_single_file(self, filepath=None, only_data=False, verbose=False, **kwargs):
@@ -3436,9 +3302,17 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_step`, :py:func:`Spectra.check_same_x`.
         """
-        # check spectra exists
+        # if zero spectra exists, then length is immediately defined
+        # and a warn is raised
         if len(self) == 0:
-            raise ValueError('no spectra found')
+            self._length = 0
+            warnings.warn('no spectra found')
+            return
+        
+        # if only one spectra exists, then length is immediately defined
+        if len(self) == 1:
+            self._length = len(self.x)
+            return
         
         # collect
         length = [None]*len(self)
@@ -3576,13 +3450,17 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_length`, :py:func:`Spectra.check_step`.
         """
-        # check spectra exists
+        # if zero spectra exists, then x is immediately defined
+        # and a warn is raised
         if len(self) == 0:
-            raise ValueError('no spectra found')
+            warnings.warn('no spectra found')
+            self._x      = []
+            self._length = 0
+            return
         
         # if only one spectra exists, then x is immediately defined
         if len(self) == 1:
-            self._x = self[0].x
+            self._x      = self[0].x
             self._length = len(self.x)
             return
         
@@ -4342,10 +4220,13 @@ class Spectra(metaclass=_Meta):
                 The current options are: 
 
                 1) 'cross-correlation' or 'cc'
+                    align by cross-correlation
 
                 2) 'max'
+                    Align the max point of every spectrum
 
-                3) 'peaks' or 'peak'
+                3) 'peaks' or 'peak' (requires that brixs.addons.fitting is imported)
+                    Fit one peak in each spectrum and align them
 
         Modes may have additional parameters:
 
@@ -4363,12 +4244,12 @@ class Spectra(metaclass=_Meta):
             ref_spectrum (int, optional)
                 index of the spectrum to which all
                 other spectra will be aligned to. Default is 0.
-            ref_peak (int, optional)
-                peak used to calculate shifts. Default is 0.
             ref_value (number, optional)
                 If not None, the center of ref_peak 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function
 
         `max`:
             ref_spectrum (int, optional)
@@ -4436,29 +4317,30 @@ class Spectra(metaclass=_Meta):
         # peaks #
         #########
         elif mode in ['peaks', 'peak']:
-            # check if peaks are defined
-            assert len(self.peaks) > 0, 'Spectra does not have defined peaks.\nMaybe use ss.find_peaks() or ss.copy_peaks_from_spectra().'
+            # check if fitting was imported
+            if hasattr(self, 'fit_peak') == False and callable(self.fit_peak) == False:
+                raise ValueError('cannot calculate shifts via `peaks` because fitting functions are not imported\nPlease import fitting function via `import brixs.addons.fitting`')
 
             # args
-            if 'ref_value' not in kwargs:
+            if 'ref_value' in kwargs:
+                ref_value = kwargs.pop('ref_value')
+            else:
                 ref_value = None
+            if 'ref_spectrum' in kwargs:
+                ref_spectrum = kwargs.pop('ref_spectrum')
             else:
-                ref_value = kwargs['ref_value']
-            if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
-            else:
-                ref_spectrum = kwargs['ref_spectrum']
-            if 'ref_peak' not in kwargs:
-                ref_peak = 0
-            else:
-                ref_peak = kwargs['ref_peak']
+
+            # fit peaks
+            fit, popt, err, fs = self.fit_peak(**kwargs)
+            values = [_[1] for _ in popt]
 
             # calculate peak
             if ref_value is None:
-                p = self.peaks._get_peaks_by_index(i1=ref_peak, i2=ref_spectrum)
-                ref_value = p['c'].value
-            values = self.peaks.get_values('c', ref_peak)
-            values = -np.array(values)+ref_value  
+                ref_value = popt[ref_spectrum][1]
+                values = -np.array(values) + ref_value  
+            else:
+                values = -np.array(values)
         else:
             raise ValueError('mode not valid.\nValid modes: cross-correlation, max, peaks.')
 
@@ -4595,7 +4477,7 @@ class Spectra(metaclass=_Meta):
         # save calculated values
         self._calculated_roll = values
 
-    def calculate_factor(self, mode='fitted peaks', **kwargs):
+    def calculate_factor(self, mode='max', **kwargs):
         """Calculate mult. factor for spectra to be same height.
 
         Result is a list of shift values that is save in the attr:
@@ -4614,8 +4496,6 @@ class Spectra(metaclass=_Meta):
 
                 4) 'peaks'
 
-                5) 'peaks area'
-
         Some modes may have additional parameters:
 
         `max`, `delta`, `area`
@@ -4631,17 +4511,16 @@ class Spectra(metaclass=_Meta):
                 pairs. Each pair represents the start and stop of a data range.
                 Use None to indicate the minimum or maximum x value of the data. 
 
-        `peaks` or `peaks area`
+        `peaks`
             ref_spectrum (int, optional)
-                index of the spectrum to be used as
-                reference. Default is 0.
-            ref_peak (int, optional)
-                peak used as reference. Default is 0.
+                index of the spectrum to which all
+                other spectra will be aligned to. Default is 0.
             ref_value (number, optional)
-                If not None, the amplitude (area)
-                of ref_peak 
+                If not None, the center of ref_peak 
                 for all spectra is set to ref_value. This overwrites ref_spectrum.
                 Default is None.  
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function
 
         Returns:
             None
@@ -4733,37 +4612,32 @@ class Spectra(metaclass=_Meta):
         # peaks #
         #########                
         elif mode == 'peaks' or mode == 'peak':
-            # check if peaks are defined
-            assert len(self.peaks) > 0, 'Spectra does not have defined peaks.\nMaybe use ss.find_peaks() or ss.copy_peaks_from_spectra().'
+            # check if fitting was imported
+            if hasattr(self, 'fit_peak') == False and callable(self.fit_peak) == False:
+                raise ValueError('cannot calculate shifts via `peaks` because fitting functions are not imported\nPlease import fitting function via `import brixs.addons.fitting`')
 
-             # args
-            if 'ref_value' not in kwargs:
+            # args
+            if 'ref_value' in kwargs:
+                ref_value = kwargs.pop('ref_value')
+            else:
                 ref_value = None
+            if 'ref_spectrum' in kwargs:
+                ref_spectrum = kwargs.pop('ref_spectrum')
             else:
-                ref_value = kwargs['ref_value']
-            if 'ref_spectrum' not in kwargs:
                 ref_spectrum = 0
-            else:
-                ref_spectrum = kwargs['ref_spectrum']
-            if 'ref_peak' not in kwargs:
-                ref_peak = 0
-            else:
-                ref_peak = kwargs['ref_peak']
+
+            # fit peaks
+            fit, popt, err, fs = self.fit_peak(**kwargs)
+            values = [_[0] for _ in popt]
 
             # calculate peak
             if ref_value is None:
-                p = self.peaks._get_params_with_index(i1=ref_peak, i2=ref_spectrum)
-                ref_value = p['amp'].value
-            values = self.peaks.get_values('amp', ref_peak)
-            values = ref_value/np.array(values)  
-        
-        ##############
-        # peaks area #
-        ##############
-        elif mode == 'peaks area' or mode == 'peak area':
-            raise NotImplementedError('sorry not implemented yet')
+                ref_value = popt[ref_spectrum][0]
+                values = -np.array(values) + ref_value  
+            else:
+                values = -np.array(values)
         else:
-            raise ValueError('mode not valid.\nValid modes: max, delta, area, peak, peak area.')
+            raise ValueError('mode not valid.\nValid modes: max, delta, area, peaks.')
 
         # save calculated values
         self._calculated_factor = values
@@ -4780,8 +4654,6 @@ class Spectra(metaclass=_Meta):
                 The current options are: 
 
                     1) 'average'
-
-                    2) 'peaks'
         
         Some modes may have additional parameters:
 
@@ -4837,7 +4709,7 @@ class Spectra(metaclass=_Meta):
         elif mode in ['peaks', 'peak']:
             raise NotImplementedError('sorry not implemented yet')
         else:
-            raise ValueError('mode not valid.\nValid modes: average, peaks.')
+            raise ValueError('mode not valid.\nValid modes: average.')
 
         # final 
         self._calculated_offset = values
@@ -6279,134 +6151,6 @@ class Spectra(metaclass=_Meta):
         _update(self)
         return
     
-    ###########
-    # Special #
-    ###########
-    def copy_peaks_from_spectra(self):
-        """Copy peaks from each spectrum.
-
-        Returns:
-            None
-        """
-        self.peaks._copy_from_spectra(self)
-
-    def copy_peaks_to_spectra(self):
-        """Copy peaks to each spectrum
-
-        Returns:
-            None
-        """
-        self.peaks._copy_to_spectra(self)
-
-    def find_peaks(self, prominence=None, width=4, moving_average_window=8, ranges=None):
-        """Find peaks recursively. Wrapper for `scipy.signal.find_peaks()`_.
-
-        Args:
-            prominence (number, optional): minimum prominence of peaks in percentage
-                of the maximum prominence [max(y) - min(y)]. Default is 5.
-            width (number, optional): minimum number of data points defining a peak.
-            moving_average_window (int, optional): window size for smoothing the
-                data for finding peaks. Default is 4.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            None
-
-        .. _scipy.signal.find_peaks(): https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html
-        """
-        for s in self:
-            s.find_peaks(prominence=prominence, width=width, moving_average_window=moving_average_window, ranges=ranges)
-        self.copy_peaks_from_spectra()
-
-    def fit_peak(self, asymmetry=False, moving_average_window=1, method='least_squares', ranges=None, verbose=False):
-        """Fit one peak for all spectra recursively. Wrapper for `lmfit.minimize()`_.
-
-        Args:
-            asymmetry (bool or dict, optional): if True, fits each half of the
-                with a different width. Default is False
-            moving_average_window (int, optional): window size for smoothing the
-                data for finding the peak. Default is 1.
-            method (str, optional): Name of the fitting method to use. See methods
-                available on `lmfit.minimize()`_ documentation.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            None
-
-        .. _lmfit.minimize(): https://lmfit.github.io/lmfit-py/fitting.html
-        """
-        for i, s in enumerate(self):
-            if verbose:
-                print(f'{i+1}/{len(self)}')
-            s.fit_peak(asymmetry=asymmetry, moving_average_window=moving_average_window, method=method, ranges=ranges)
-        self.copy_peaks_from_spectra()
-
-        # THIS IS FOR FITTING ONE PEAK SIMULTANOUSLY
-        # self.peaks.clear()
-
-        # if ranges is None:
-        #     temp = self
-        # else:
-        #     temp = self._extract(ranges=ranges)
-        # xs = [s.x for s in temp]
-        # ys = [s.y for s in temp]
-
-        # for i2 in range(len(self)):
-        #     # guess amp and c
-        #     amp = max(ys[i2])
-        #     c   = xs[i2][np.argmax(ys[i2])]
-
-        #     # guess fwhm
-        #     try:
-        #         w1 = xs[i2][np.argmax(ys[i2])] - xs[i2][:np.argmax(ys[i2])][::-1][arraymanip.index(ys[i2][:np.argmax(ys[i2])][::-1], max(ys[i2])/2)]
-        #     except ValueError:
-        #         w1 = xs[i2][np.argmax(ys[i2]):][arraymanip.index(ys[i2][np.argmax(ys[i2]):], max(ys[i2])/2)] - xs[i2][np.argmax(ys[i2])]
-        #     try:
-        #         w2 = xs[i2][np.argmax(ys[i2]):][arraymanip.index(ys[i2][np.argmax(ys[i2]):], max(ys[i2])/2)] - xs[i2][np.argmax(ys[i2])]
-        #     except ValueError:
-        #         w2 = xs[i2][np.argmax(ys[i2])] - xs[i2][:np.argmax(ys[i2])][::-1][arraymanip.index(ys[i2][:np.argmax(ys[i2])][::-1], max(ys[i2])/2)]
-        #     w = w1 + w2
-        #     if w <= 0:
-        #         w = 0.1*(max(xs[i2])-min(xs[i2]))
-        #     if w <= 0:
-        #         w = 1
-
-        #     # peaks
-        #     if asymmetry:
-        #         self.peaks.append(i2=i2, amp=amp, c=c, w1=w1, w2=w2)
-        #     else:
-        #         self.peaks.append(i2=i2, amp=amp, c=c, w=w)
-
-        # self.peaks.fit(xs=xs, ys=ys, method=method)
-
-    def fit_peaks(self, method='least_squares', ranges=None):
-        """Fit peaks for all spectra SIMULTANEOUSLY. Wrapper for `lmfit.minimize()`_.
-
-        Args:
-            method (str, optional): Name of the fitting method to use. See methods
-                available on `lmfit.minimize()`_ documentation.
-            ranges (list): a pair of values or a list of pairs. Each pair represents
-                the start and stop of a data range from x. Use None to indicate
-                the minimum or maximum x value of the data.
-
-        Returns:
-            None
-
-        .. _lmfit.minimize(): https://lmfit.github.io/lmfit-py/fitting.html
-        """
-        if ranges is None:
-            temp = self
-        else:
-            temp = self._extract(ranges=ranges)
-        xs = [s.x for s in temp]
-        ys = [s.y for s in temp]
-
-        self.peaks.fit(xs=xs, ys=ys, method=method)
-
 # %% ================================ Image =============================== %% #
 class Image(metaclass=_Meta):
     """Returns a ``Image`` object.
@@ -6967,7 +6711,7 @@ class Image(metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if interact.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -7259,6 +7003,7 @@ class Image(metaclass=_Meta):
         ###################################
         # check if crop ranges are passed #
         ###################################
+        x_start = False
         if 'x_start' in kwargs or 'x_stop' in kwargs or 'y_start' in kwargs or 'y_stop' in kwargs:
             assert 'x_start' in kwargs and 'x_stop' in kwargs and 'y_start' in kwargs and 'y_stop' in kwargs, error_message
             x_start = kwargs['x_start']
@@ -7283,7 +7028,6 @@ class Image(metaclass=_Meta):
         if x_start == False:
             im = Image(data=self.data)
             im.copy_centers_from(self)
-
         #############################
         # if crop ranges are passed #
         #############################
@@ -8820,7 +8564,7 @@ class PhotonEvents(metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if interact.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return

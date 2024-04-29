@@ -21,7 +21,7 @@ from matplotlib import colormaps
 from collections.abc import Iterable
 from cycler import cycler
 
-# %% -------------------------- operating system ------------------------ %% #
+# %% -------------------------- operating system -------------------------- %% #
 import platform
 def _operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""

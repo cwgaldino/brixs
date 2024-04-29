@@ -481,7 +481,6 @@ def read_line(filepath, verbose=False):
 
     return diff1, TEY#, TFY, I0
 
-
 # %% ============================== obsolete =============================== %% #
 def _h52dict(f):
     """Converts h5 to dict"""

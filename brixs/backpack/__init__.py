@@ -1,4 +1,4 @@
-from .interact import *
+from .query import *
 from .numanip import *
 from .arraymanip import *
 from .figmanip import *
