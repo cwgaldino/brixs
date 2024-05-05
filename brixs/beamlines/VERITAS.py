@@ -40,7 +40,7 @@ import copy
 
 # %% ------------------------------ brixs --------------------------------- %% #
 import brixs as br
-
+# import matplotlib.pyplot as plt
 # %% ------------------------- Special Imports ---------------------------- %% #
 import h5py
 # %%
@@ -55,7 +55,12 @@ def tree(f, pre=''):
         >>> 
         >>> with h5py.File(<filepath>, 'r') as f:
         >>>     text = tree(f)
+        >>>
+        >>> with h5py.File(<filepath>, 'r') as f:
+        >>>     text = tree(f[entry])
         >>> 
+        >>> print(text)
+        >>>
         >>> br.save_text(text, 'text.txt')
     
     Args:
@@ -136,7 +141,26 @@ def scanlist(filepath):
     """Return list of scans available in filepath"""
     with h5py.File(Path(filepath), 'r') as f:
         prefix = ''.join([i for i in list(f.keys())[0] if not i.isdigit()])
-        return [int(scan.split(prefix)[1]) for scan in list(f.keys())]
+        return [int(_) for _ in np.sort([int(scan.split(prefix)[1]) for scan in list(f.keys())])]
+
+def metadata(attrs, f, verbose=True):
+    for _type in attrs:
+        for name in attrs[_type]:
+            address = attrs[_type][name]
+            try: 
+                if _type == 'string':   
+                    attrs[_type][name] = f[address][()].decode("utf-8")
+                elif _type == 'number':   
+                    attrs[_type][name] = f[address][()]
+                elif _type == 'round':    
+                    attrs[_type][name] = round(f[address][()], 2)
+                elif _type == 'datetime': 
+                    attrs[_type][name] = _str2datetime(f[address][()].decode("utf-8"))
+                elif _type == 'bool':     
+                    attrs[_type][name] = f[address][()][0] == 1
+            except Exception as e:
+                if verbose: print(e)
+                attrs[_type][name] = None
 
 class Images():
     
@@ -214,6 +238,33 @@ def read(filepath, scan, verbose=True):
         # RIXS #
         ########
         if prefix == 'acq':
+
+            #################
+            # metadata list #
+            #################
+            attrs = {'string':   {'script_name':      'entry/current_script_name',
+                                  'command':          'entry/diamond_scan/scan_command',
+                                  'facility_user_id': 'entry/user01/facility_user_id',
+                                  'username':         'entry/user01/name',
+                                  'beamline':         'entry/instrument/beamline',
+                                  'pol':              'entry/instrument/id/polarisation'},
+                    'number':   {'sample_x':         'entry/instrument/manipulator/x',
+                                'sample_y':         'entry/instrument/manipulator/y',
+                                'sample_z':         'entry/instrument/manipulator/z'},
+                    'mean':     {},
+                    'round':    {'E':                'entry/sample/beam/incident_energy',
+                                'exit_slit':        'entry/instrument/s5/v1_gap',
+                                'T':                'entry/instrument/lakeshore336/sample',                                                      
+                                'T_setpoint':       'entry/instrument/lakeshore336/demand',                                                    
+                                'tth':              'entry/instrument/spectrometer/armtth',
+                                'chi':              'entry/instrument/manipulator/chi',                                                                       
+                                'phi':              'entry/instrument/manipulator/phi',                                                                         
+                                'th':               'entry/instrument/manipulator/th',                             },
+                    'datetime': {'start_time':       'entry/start_time',
+                                'end_time':         'entry/end_time'}, 
+                    'bool':     {'finished':         'entry/diamond_scan/scan_finished'}}
+            attrs2 = {'round':   {'exposure_time':    'entry/instrument/andor/count_time'},
+                    'bool':    {'checkbeam' :       'entry/andor/checkbeam'}}
 
             ##################
             # get scan entry #
@@ -366,7 +417,29 @@ def read(filepath, scan, verbose=True):
                 # scan type
                 scan_type = f'mesh scan {motors}'
             else:
-                raise NotImplementedError('reading mesh with 3 scanned motors has not been implemented yet')
+                command = h['title'][()].decode("utf-8")
+                if command.startswith('ascan'):
+                    motors = [command.split(' ')[1], ]
+
+                    # x axis
+                    x = h2[motors[0]][()]
+                    # scan type
+                    if motors[0] == 'beamline_energy':
+                        scan_type = 'XAS'
+                    elif motors[0] == 'a_mp1_x':
+                        scan_type = 'sample scan x'
+                    elif motors[0] == 'a_mp1_y':
+                        scan_type = 'sample scan y'
+                    elif motors[0] == 'a_mp1_z':
+                        scan_type = 'sample scan z'
+                    else:
+                        scan_type = motors[0]
+                else:
+                    # x axis
+                    x = h2['Pt_No'][()]
+                    # scan type
+                    scan_type = 'None'
+                    warnings.warn(f'cannot recognize command for scan {scan}: {command}')
 
             #########################
             # create Spectra object #
@@ -389,7 +462,7 @@ def read(filepath, scan, verbose=True):
                 else:
                     motors = motors[1], motors[0]
                 a, b = h2[motors[0]], h2[motors[1]]
-                
+
                 # find `b` motor points
                 # `b` motor is frozen while `a` is moving. Therefore, the position of `b` will be like a 
                 # 'stair' (see drawing at the beginning of this file), since the position won't 
@@ -418,7 +491,10 @@ def read(filepath, scan, verbose=True):
                     bfinal.append(np.mean(temp))
                 
                 # find `a` motor points (method 2)
-                afinal = np.mean([_ if i%2 ==0 else _[::-1] for i, _ in enumerate(np.split(a, len(bfinal)))], axis=0)
+                try:
+                    afinal = np.mean([_ if i%2 ==0 else _[::-1] for i, _ in enumerate(np.split(a, len(bfinal)))], axis=0)
+                except ValueError:
+                    raise ValueError(f'reshape failed for mesh {scan} ({command}) [{motors[1]}={len(bfinal)}, len({motors[0]})={len(a)}, len({motors[0]})/len({motors[1]})={len(a)/len(bfinal)}]')
 
                 # reshape data
                 ss = Images(TEY, TFY, EXF, RMU)
@@ -432,44 +508,49 @@ def read(filepath, scan, verbose=True):
             #############   
             for s in [_ for _ in ss] + [ss]:
                 # bytes
-                s.definition       = h['definition'][()].decode("utf-8")
-                s.entry_identifier = h['entry_identifier'][()].decode("utf-8")
-                s.program_name     = h['program_name'][()].decode("utf-8")
-                s.command          = h['title'][()].decode("utf-8")
-                s.user             = h['user/name'][()].decode("utf-8")
+                if 'definition' in h:       s.definition       = h['definition'][()].decode("utf-8")
+                if 'entry_identifier' in h: s.entry_identifier = h['entry_identifier'][()].decode("utf-8")
+                if 'program_name' in h:     s.program_name     = h['program_name'][()].decode("utf-8")
+                if 'title' in h:            s.command          = h['title'][()].decode("utf-8")
+                if 'user' in h: 
+                    if 'name' in h['user']:   s.user             = h['user/name'][()].decode("utf-8")
 
                 # other measurement attrs
-                setattr(s, 'Pt_No', h['measurement/Pt_No'][()])
-                setattr(s, 'ux_ct', h['measurement/ux_ct'][()])
-                setattr(s, 'dt',    h['measurement/dt'][()])
+                if 'measurement' in h:
+                    for key in h['measurement']:
+                        if key != 'pre_scan_snapshot' and key.startswith('aemexp2_') == False:
+                            setattr(s, 'measurement_' + key, h['measurement'][key][()])
 
                 # measurement snapshot
                 h2 =  h['measurement/pre_scan_snapshot']
                 for key in h2:
-                    new_attr_name = key
+                    new_attr_name = 'pre_scan_' + key
                     setattr(s, new_attr_name, h2[key][()])
 
                 # plot 2 (whatever this is)
-                s.plot_2 = h['plot_2/ux_ct'][()]
+                if 'plot_2' in h:
+                    for key in h['plot_2']:
+                        new_attr_name = 'plot_2_' + key
+                        s.plot_2 = h['plot_2'][key][()]
                 
                 # plot 1 
-                h2 =  h['plot_1']
-                for key in h2:
-                    new_attr_name = 'plot_1_' + key
-                    setattr(s, new_attr_name, h2[key][()])
+                if 'plot_1' in h:
+                    for key in h['plot_1']:
+                        new_attr_name = 'plot_1_' + key
+                        setattr(s, new_attr_name, h['plot_1'][key][()])
 
                 # time
-                s.start_time       = _str2datetime(h['start_time'][()].decode("utf-8"))
-                s.end_time         = _str2datetime(h['end_time'][()].decode("utf-8"))
-                s.macro_start_time = _str2datetime(h['macro_start_time'][()].decode("utf-8"))
+                if 'start_time' in h:       s.start_time       = _str2datetime(h['start_time'][()].decode("utf-8"))
+                if 'end_time' in h:         s.end_time         = _str2datetime(h['end_time'][()].decode("utf-8"))
+                if 'macro_start_time' in h: s.macro_start_time = _str2datetime(h['macro_start_time'][()].decode("utf-8"))
 
             ################
             # pretty attrs #
             ################
             for s in [_ for _ in ss] + [ss]:
-                s.scan = scan
+                s.scan           = scan
                 s.scanned_motors = motors
-                s.scan_type = scan_type
+                s.scan_type      = scan_type
 
                 # Not in metadata
                 s.E   = None
@@ -477,10 +558,10 @@ def read(filepath, scan, verbose=True):
                 s.Pol = None
 
                 # motors
-                s.sample_x = s.a_mp1_x
-                s.sample_y = s.a_mp1_y
-                s.sample_z = s.a_mp1_z
-                s.th       = round(s.a_mp1_yaw, 2)
+                if hasattr(s, 'pre_scan_a_mp1_x'):   s.sample_x = s.pre_scan_a_mp1_x
+                if hasattr(s, 'pre_scan_a_mp1_y'):   s.sample_y = s.pre_scan_a_mp1_y
+                if hasattr(s, 'pre_scan_a_mp1_z'):   s.sample_z = s.pre_scan_a_mp1_z
+                if hasattr(s, 'pre_scan_a_mp1_yaw'): s.th       = round(s.pre_scan_a_mp1_yaw, 2)
             
             ss.header = ('TEY', 'TFY', 'EXF', 'RMU')
             RMU.label = 'RMU'

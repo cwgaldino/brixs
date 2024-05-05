@@ -130,7 +130,7 @@ def rename_files(filelist, pattern, new_pattern, ask=True):
             print('NEW NAME = ' + nameNew)
             print('--')
 
-        permission = query('Change names?', default="yes")
+        permission = _query('Change names?', default="yes")
 
 
     if permission:
@@ -289,7 +289,7 @@ def get_modified_date(filepath):
     return datetime.datetime.fromtimestamp((filepath).stat().st_mtime)
 
 # %% ============================= save/load ============================== %% #
-def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
+def save_text(string, filepath='./Untitled.txt', check_overwrite=False, **kwargs):
     """Save text to txt file.
 
     Args:
@@ -298,6 +298,7 @@ def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
             is given, current working directory is used.
         check_overwrite (bool, optional): if True, it will check if file exists
             and ask if user want to overwrite file.
+        **kwargs are passed to open(filepath, 'w', **kwargs) function.
 
     Returns:
         None:
@@ -310,7 +311,7 @@ def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
     if check_overwrite:
         if filepath.exists() == True:
             if filepath.is_file() == True:
-                if query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                if _query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                     pass
                 else:
                     warnings.warn('File not saved.')
@@ -319,7 +320,7 @@ def save_text(string, filepath='./Untitled.txt', check_overwrite=False):
                 warnings.warn('filepath is pointing to a folder. Saving file as Untitled.txt')
                 filepath = filepath/'Untitled.txt'
 
-    f = open(str(filepath), 'w')
+    f = open(str(filepath), 'w', **kwargs)
     f.write(string)
     f.close()
 
@@ -519,7 +520,7 @@ def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', hea
     if check_overwrite:
         if filepath.exists() == True:
             if filepath.is_file() == True:
-                if query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
+                if _query('File already exists!! Do you wish to ovewrite it?', 'yes') == True:
                     pass
                 else:
                     warnings.warn('File not saved.')
