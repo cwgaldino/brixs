@@ -11,27 +11,47 @@
     |               /      \  /
 ────┘              /        \/
 
+#########
+# Usage #
+#########
 
-RIXS metadata
-{'External': <Closed HDF5 group>,
- 'Instrument': <Closed HDF5 group>,
+>>> import brixs as br
+>>> import brixs.beamlines.VERITAS as VERITAS
+>>> 
+>>> # filepaths
+>>> RIXS = <filepath-rixs-hdf5>
+>>> XAS  = <filepath-xas-hdf5>
+>>> 
+>>> # scanlist
+>>> VERITAS.scanlist(RIXS)
+>>> VERITAS.scanlist(XAS)
+>>> 
+>>> # read rixs
+>>> pe = VERITAS.read(RIXS, 200)
+>>> 
+>>> # read xas
+>>> ss = VERITAS.read(XAS, 142)
+>>> TEY, TFY, EXF, RMU = VERITAS.read(XAS, 164)
+>>> 
+>>> # metadata tree
+>>> tree = VERITAS.tree(RIXS, 200)
+>>> print(tree)
+>>> br.save_text(tree, 'tree.txt', encoding='utf-8')
+>>>
+>>> # get metadata value
+>>> value = VERITAS.get_metadata(RIXS, 200, 'startmetadata/Sample')
+>>>
+>>> # Advanced: add metadata to read function
+>>> # read() function extracts metadata from h5 file based on two dictionaries
+>>> # VERITAS.rixs_attrs and VERITAS.xas_attrs
+>>> VERITAS.rixs_attrs['raw']['<new_name>'] = <hdf5-entry-address>
+>>> VERITAS.xas_attrs['raw']['<new_name>']  = <hdf5-entry-address>
+>>>
 
- 'data': <Closed HDF5 group>,
-
- 'endmetadata': <Closed HDF5 group>,
- 'startmetadata': <Closed HDF5 group>}
-
- 
- 'start_time': <Closed HDF5 dataset>,
- 'end_time': <Closed HDF5 dataset>,
-
-
-Last edited: Carlos Galdino 2024-04-27
+Last edited: Carlos Galdino 2024-05-05
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
-from collections.abc import MutableSequence
-from collections.abc import Iterable
 from pathlib import Path
 import numpy as np
 import datetime
@@ -40,17 +60,59 @@ import copy
 
 # %% ------------------------------ brixs --------------------------------- %% #
 import brixs as br
-# import matplotlib.pyplot as plt
+
 # %% ------------------------- Special Imports ---------------------------- %% #
 import h5py
 # %%
 
-# %% ============================ support ================================= %% #
-def tree(f, pre=''):
+# %% ========================= useful functions =========================== %% #
+def get_metadata(filepath, scan, entry):
+    """returns metadata from hdf5 file for inspection (VERITAS)
+
+    Args:
+        filepath (str, Path): hdf5 filepath
+        scan (number): scan number
+        entry (str): hdf5 entry address, e.g., 'External/a_mp1_x/position'
+
+    Returns:
+        metadata for inspection
+    """
+    with h5py.File(Path(filepath), 'r') as f:
+        prefix = ''.join([i for i in list(f.keys())[0] if not i.isdigit()])
+    
+        final = f[prefix + str(scan)][entry]
+        try:
+            final = final[()]
+        except TypeError:
+            raise TypeError(f"No data to return. Object is group with keys {final.keys()}")
+    return final
+
+def tree(filepath, scan):
+    """Returns a text with the structure of a hdf5 file
+
+    Args:
+        filepath (str or path): file to hdf5 file
+        scan (int): scan number
+
+    Returns:
+        str
+    """
+    with h5py.File(Path(filepath), 'r') as f:
+        prefix = ''.join([i for i in list(f.keys())[0] if not i.isdigit()])
+        text = _tree(f[prefix + str(scan)])
+    return text
+
+def scanlist(filepath):
+    """Return list of scans available in filepath"""
+    with h5py.File(Path(filepath), 'r') as f:
+        prefix = ''.join([i for i in list(f.keys())[0] if not i.isdigit()])
+        return [int(_) for _ in np.sort([int(scan.split(prefix)[1]) for scan in list(f.keys())])]
+
+# %% ======================== support functions =========================== %% #
+def _tree(f, pre=''):
     """Returns a text with the structure of a hdf5 file
 
     Usage:
-        >>> import brixs as br
         >>> import h5py
         >>> 
         >>> with h5py.File(<filepath>, 'r') as f:
@@ -58,10 +120,6 @@ def tree(f, pre=''):
         >>>
         >>> with h5py.File(<filepath>, 'r') as f:
         >>>     text = tree(f[entry])
-        >>> 
-        >>> print(text)
-        >>>
-        >>> br.save_text(text, 'text.txt')
     
     Args:
         f (h5 object): h5 file object
@@ -77,7 +135,7 @@ def tree(f, pre=''):
         if items == 0:
             if type(f) == h5py._hl.group.Group:
                 text += pre + '└── ' + key + '\n'
-                text += tree(f, pre + '    ')
+                text += _tree(f, pre + '    ')
             else:
                 try:
                     text += pre + '└── ' + key + ' (%d)' % len(f) + '\n'
@@ -86,7 +144,7 @@ def tree(f, pre=''):
         else:
             if type(f) == h5py._hl.group.Group:
                 text += pre + '├── ' + key + '\n'
-                text += tree(f, pre+'│   ')
+                text += _tree(f, pre+'│   ')
             else:
                 try:
                     text += pre + '├── ' + key + ' (%d)' % len(f) + '\n'
@@ -137,71 +195,147 @@ def _str2datetime(string):
     ############
     return datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=seconds)
 
-def scanlist(filepath):
-    """Return list of scans available in filepath"""
-    with h5py.File(Path(filepath), 'r') as f:
-        prefix = ''.join([i for i in list(f.keys())[0] if not i.isdigit()])
-        return [int(_) for _ in np.sort([int(scan.split(prefix)[1]) for scan in list(f.keys())])]
+def _sort_metadata(attrs, f, verbose=True):
+    """get metadata from hdf5 file and pre-process it
 
-def metadata(attrs, f, verbose=True):
+    Usage: 
+        >> attrs = {'raw':   {'A': 'External/b316a-o01/dia/tco-02/Temperature',
+        >>                    'B': 'External/beamline_energy/position'},
+        >>         'string': {'C': 'startmetadata/Sample',
+        >>                    'D': 'endmetadata/Sample}}
+        >> 
+        >> pe = br.PhotonEvents()
+        >> 
+        >> with h5py.File(Path(filepath), 'r') as f:
+        >>     metadata = _sort_metadata(attrs=attrs, f=f['entry1'], verbose=True)
+        >>     for attr in metadata:
+        >>         setattr(pe, attr, metadata[attr])
+
+    attrs (dict): dict with dicts with attr names and hdf5 addresses. First dict
+        entry will indicate the type o pre-processing (`raw`, `string`, `mean`, 
+            `mean1`, `mean_round2`, `round2`, `datetime`, `bool`). To learn about 
+            what they do, read the function declaration.  
+    f (hdf5 object): hdf5 object, e.g., use `with h5py.File(Path(filepath), 'r') as f:`
+    verbose (bool, optional): if True, if attr value cannot be extracted from 
+        hdf5 file it will print a warning. Default is True.
+
+    Returns:
+        dict[attr] : value
+    """
+    # check unique names
+    values = {}
+    for _type in attrs:
+        for name in attrs[_type]:
+            if name in values:
+                raise KeyError(f"name `{name}` is duplicated in VERITAS attrs list. Names must be unique")
+            values[name] = None
+
+    # get attr values
     for _type in attrs:
         for name in attrs[_type]:
             address = attrs[_type][name]
             try: 
-                if _type == 'string':   
-                    attrs[_type][name] = f[address][()].decode("utf-8")
-                elif _type == 'number':   
-                    attrs[_type][name] = f[address][()]
-                elif _type == 'round':    
-                    attrs[_type][name] = round(f[address][()], 2)
+                if _type == 'raw':   
+                    values[name] = f[address][()]
+
+                elif _type == 'string':   
+                    values[name] = f[address][()].decode("utf-8")
+
+                elif _type == 'mean':   
+                    values[name] = np.mean(f[address][()])
+
+                elif _type == 'mean1':   
+                    values[name] = np.mean(f[address][()][:, 1])
+
+                elif _type == 'mean1_round2':    
+                    values[name] = round(f[address][()][:, 1], 2)
+
+                elif _type == 'round2':    
+                    values[name] = round(f[address][()], 2)
+
                 elif _type == 'datetime': 
-                    attrs[_type][name] = _str2datetime(f[address][()].decode("utf-8"))
+                    values[name] = _str2datetime(f[address][()].decode("utf-8"))
+
                 elif _type == 'bool':     
-                    attrs[_type][name] = f[address][()][0] == 1
+                    values[name] = f[address][()][0] == 1
+
             except Exception as e:
-                if verbose: print(e)
-                attrs[_type][name] = None
+                if verbose: 
+                    print(f'get attr `{name}` error: {e}')
+                # attrs[_type][name] = None
 
-class Images():
-    
-    def __init__(self, *args, **kwargs):
-        self._data  = []
-        if len(args) > 0:
-            self._data = list(args)
+    return values
+            
+def _pol(gap, phase):
+    if copy.deepcopy(phase) > 23:
+        return 'LV'
+    else:
+        return 'LH'
+# %%
 
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
+# %% ========================== metadata list ============================= %% #
+rixs_attrs = {'raw':    {'temperature':      'External/b316a-o01/dia/tco-02/Temperature',
+                        'beamline_energy':  'External/beamline_energy/position',
+                        # 'startmetadata_mono_energy': 'startmetadata/cffreal/Sample',
+                        # 'endmetadata_mono_energy':   'endmetadata/cffreal/Sample',
+                        # 'startmetadata_temperature': 'startmetadata/b316a-o01/dia/tco-02/Temperature',
+                        # 'endmetadata_temperature':   'endmetadata/b316a-o01/dia/tco-02/Temperature'
+                        },
+             'string': {'startmetadata_sample': 'startmetadata/Sample',
+                        'endmetadata_sample':   'endmetadata/Sample'
+                        },
+             'mean':   {'exposure_time':    'Instrument/DLD8080/exposure_time'
+                        },
+             'mean1':  {'a_mp1_x':           'External/a_mp1_x/position',
+                        'a_mp1_y':           'External/a_mp1_y/position',
+                        'a_mp1_z':           'External/a_mp1_z/position',
+                        'a_mp1_yaw':         'External/a_mp1_yaw/position',
+                        'sample_x':          'External/a_mp1_x/position',
+                        'sample_y':          'External/a_mp1_y/position',
+                        'sample_z':          'External/a_mp1_z/position',
+                        'epu_r3_316_gap':    'External/epu_r3_316_gap/position',
+                        'epu_r3_316_phase':  'External/epu_r3_316_phase/position',
+                        'mono_energy_calib': 'External/mono_energy_calib/position',
+                        'veritasarm_energy': 'External/veritasarm_energy/position'
+                        }, 
+             'mean_round2':  {'E':  'External/beamline_energy/position',
+                              'T':  'External/b316a-o01/dia/tco-02/Temperature',
+                              'th': 'External/a_mp1_yaw/position',
+                              },                         
+             'datetime':     {'start_time':       'start_time',
+                              'end_time':         'end_time',
+                             }}
 
-    def __getattr__(self, name):
-        super().__getattr__(name)
-
-    def __getitem__(self, item):
-        return self._data[item]
-
-    def __setitem__(self, item, value):
-        self._data[item] = value
-
-    def __len__(self):
-        return len(self.data)
-
-    def __delitem__(self, item):
-        del self._data[item]
-
-
-    @property
-    def data(self):
-        return self._data
-    @data.setter
-    def data(self, value):
-        if value is None:
-            self._data = []
-        elif isinstance(value, Iterable):
-            self._data = value
-        else:
-            raise ValueError('value must be an iterable')
-    @data.deleter
-    def data(self):
-        raise AttributeError('Cannot delete object.')
+xas_attrs = {'string': {'definition':       'definition',
+                        'entry_identifier': 'entry_identifier',
+                        'program_name':     'program_name',
+                        'command':          'title',
+                        'user':             'user/name',
+                        },
+             'raw':  {'a_mp1_x':       'measurement/pre_scan_snapshot/a_mp1_x',
+                      'a_mp1_y':       'measurement/pre_scan_snapshot/a_mp1_y',
+                      'a_mp1_z':       'measurement/pre_scan_snapshot/a_mp1_z',
+                      'a_mp1_yaw':     'measurement/pre_scan_snapshot/a_mp1_yaw',
+                      'sample_x':      'measurement/pre_scan_snapshot/a_mp1_x',
+                      'sample_y':      'measurement/pre_scan_snapshot/a_mp1_y',
+                      'sample_z':      'measurement/pre_scan_snapshot/a_mp1_z',
+                      'a_slit1_hz':    'measurement/pre_scan_snapshot/a_slit1_hz',
+                      'exit_slit ':    'measurement/pre_scan_snapshot/a_slit1_hz',
+                      'a_m4_lateral':  'measurement/pre_scan_snapshot/a_m4_lateral',
+                      'a_m4_pitch':    'measurement/pre_scan_snapshot/a_m4_pitch',
+                      'a_m4_roll':     'measurement/pre_scan_snapshot/a_m4_roll',
+                      'a_m4_vertical': 'measurement/pre_scan_snapshot/a_m4_vertical',
+                      'a_m4_yaw':      'measurement/pre_scan_snapshot/a_m4_yaw',
+                      'm1_yaw':        'measurement/pre_scan_snapshot/m1_yaw',
+                      'm3_yaw':        'measurement/pre_scan_snapshot/m3_yaw',
+                      }, 
+             'round2':  {'th': 'measurement/pre_scan_snapshot/a_mp1_yaw',
+                        },                         
+             'datetime':     {'start_time':       'start_time',
+                              'end_time':         'end_time',
+                              'macro_start_time': 'macro_start_time',
+                             }}
+# %%
 
 # %% ============================= read =================================== %% #
 def read(filepath, scan, verbose=True):
@@ -215,7 +349,6 @@ def read(filepath, scan, verbose=True):
     No extra processing is done on RIXS spectra
     For XAS, sample scan, and mesh scan, datapoints are divided by the exposure
 
-
     Args:
         filepath (str or path): file to hdf5 file
         scan (int): scan number
@@ -225,6 +358,7 @@ def read(filepath, scan, verbose=True):
         Spectra (TEY, TFY, EXF, RMU) for XAS and sample scans
         Image list (TEY, TFY, EXF, RMU) for mesh scans
     """
+
     with h5py.File(Path(filepath), 'r') as f:
 
         # find prefix
@@ -234,38 +368,16 @@ def read(filepath, scan, verbose=True):
         sl = [int(scan.split(prefix)[1]) for scan in list(f.keys())]
         assert scan in sl, f'scan {scan} not found in file {filepath}\n\nScan available: {sl}'
 
+        ###########
+        # verbose #
+        ###########
+        if verbose: 
+            print(f'loading scan: {scan}')
+
         ########
         # RIXS #
         ########
         if prefix == 'acq':
-
-            #################
-            # metadata list #
-            #################
-            attrs = {'string':   {'script_name':      'entry/current_script_name',
-                                  'command':          'entry/diamond_scan/scan_command',
-                                  'facility_user_id': 'entry/user01/facility_user_id',
-                                  'username':         'entry/user01/name',
-                                  'beamline':         'entry/instrument/beamline',
-                                  'pol':              'entry/instrument/id/polarisation'},
-                    'number':   {'sample_x':         'entry/instrument/manipulator/x',
-                                'sample_y':         'entry/instrument/manipulator/y',
-                                'sample_z':         'entry/instrument/manipulator/z'},
-                    'mean':     {},
-                    'round':    {'E':                'entry/sample/beam/incident_energy',
-                                'exit_slit':        'entry/instrument/s5/v1_gap',
-                                'T':                'entry/instrument/lakeshore336/sample',                                                      
-                                'T_setpoint':       'entry/instrument/lakeshore336/demand',                                                    
-                                'tth':              'entry/instrument/spectrometer/armtth',
-                                'chi':              'entry/instrument/manipulator/chi',                                                                       
-                                'phi':              'entry/instrument/manipulator/phi',                                                                         
-                                'th':               'entry/instrument/manipulator/th',                             },
-                    'datetime': {'start_time':       'entry/start_time',
-                                'end_time':         'entry/end_time'}, 
-                    'bool':     {'finished':         'entry/diamond_scan/scan_finished'}}
-            attrs2 = {'round':   {'exposure_time':    'entry/instrument/andor/count_time'},
-                    'bool':    {'checkbeam' :       'entry/andor/checkbeam'}}
-
             ##################
             # get scan entry #
             ##################
@@ -284,89 +396,45 @@ def read(filepath, scan, verbose=True):
             # Create PhotonEvent object #
             #############################
             pe = br.PhotonEvents(x=x, y=y)
-        
-            #############
-            # raw attrs #
-            #############
-            # external
-            pe.a_mp1_x           = np.mean(h['External']['a_mp1_x']['position'][:][:, 1])
-            pe.a_mp1_y           = np.mean(h['External']['a_mp1_y']['position'][:][:, 1])
-            pe.a_mp1_z           = np.mean(h['External']['a_mp1_z']['position'][:][:, 1])
-            pe.a_mp1_yaw         = np.mean(h['External']['a_mp1_yaw']['position'][:][:, 1])
-            pe.temperature       = np.mean(h['External']['b316a-o01']['dia']['tco-02']['Temperature'][:][:, 1])
-            pe.beamline_energy   = h['External']['beamline_energy']['position'][:][:, 1]
-            pe.epu_r3_316_gap    = np.mean(h['External']['epu_r3_316_gap']['position'][:][:, 1])
-            pe.epu_r3_316_phase  = np.mean(h['External']['epu_r3_316_phase']['position'][:][:, 1])
-            pe.mono_energy_calib = np.mean(h['External']['mono_energy_calib']['position'][:][:, 1])
-            pe.veritasarm_energy = np.mean(h['External']['veritasarm_energy']['position'][:][:, 1])
-        
-            # time
-            pe.exposure_time    = np.mean(h['Instrument']['DLD8080']['exposure_time'][()])          
-            pe.start_time       = _str2datetime(h['start_time'][()].decode("utf-8"))
-            pe.end_time         = _str2datetime(h['end_time'][()].decode("utf-8"))
-
-            # start/end metadata
+            try:
+                pe.time_bunch    = t - min(t)  # make it start from zero
+                pe.time_absolute = t2
+                pe.exposure_time_calculated = max(t2)-min(t2)
+            except ValueError:
+                pe.time_bunch    = t
+                pe.time_absolute = t2
+                pe.exposure_time_calculated = 0
             
-            for name in ['startmetadata', 'endmetadata']:
-                # print(name)
-                h2 =  h[name]
-                for key in h2:
-                    # print(key)
-                    new_attr_name = name + '_' + key
-                    if key == 'Sample':
-                        setattr(pe, new_attr_name, h2[key][()].decode("utf-8"))
-                    elif key == 'mono_energy':
-                        setattr(pe, new_attr_name, h2[key]['cffreal'][()])
-                    elif key == 'b316a-o01':
-                        new_attr_name = name + '_' + 'temperature'
-                        setattr(pe, new_attr_name, h2['b316a-o01/dia/tco-02/Temperature'][()])
-                    elif key == 'veritasarm_energy':
-                        pass
-                    else:
-                        setattr(pe, new_attr_name, h2[key]['position'][()])
+            #########
+            # attrs #
+            #########
+            metadata = _sort_metadata(attrs=rixs_attrs, f=h, verbose=verbose)
+            for attr in metadata:
+                setattr(pe, attr, metadata[attr])
 
-            ################
-            # pretty attrs #
-            ################
             # scan
-            pe.scan     = scan
-
-            # motors
-            pe.sample_x = copy.deepcopy(pe.a_mp1_x)
-            pe.sample_y = copy.deepcopy(pe.a_mp1_y)
-            pe.sample_z = copy.deepcopy(pe.a_mp1_z)
-            pe.th       = round(pe.a_mp1_yaw - 261, 2)
-
-            # temperature
-            pe.T        = round(pe.temperature + 273.15, 2)
+            pe.scan = scan
 
             # undulator
-            pe.E        = round(np.mean(pe.beamline_energy), 2)
-            if copy.deepcopy(pe.epu_r3_316_phase) > 23:
-                pe.pol = 'LV'
-            else:
-                pe.pol = 'LH'
+            if 'epu_r3_316_phase' in pe and 'epu_r3_316_gap' in pe:
+                pe.pol = _pol(pe.epu_r3_316_phase, pe.epu_r3_316_gap)
 
-            # time
-            pe.time_bunch    = t - min(t)  # make it start from zero
-            pe.time_absolute = t2
-            pe.exposure_time_calc = max(t2)-min(t2)
 
             # post processing
-            pe.cutoff       = None
-            pe.time         = None
-            pe.tmask        = None
-            pe.folded_time  = None
-            pe.folded_tmask = None
-            pe.nbunchs      = None
-            pe.period       = None
-            pe.mask         = None
+            # pe.cutoff       = None
+            # pe.time         = None
+            # pe.tmask        = None
+            # pe.folded_time  = None
+            # pe.folded_tmask = None
+            # pe.nbunchs      = None
+            # pe.period       = None
+            # pe.mask         = None
 
             ###########
             # verbose #
             ###########
             if verbose:
-                print(f'loading scan: {scan} - RIXS')
+                print(f'scan type: {scan} - RIXS')
             
             return pe
     
@@ -497,7 +565,7 @@ def read(filepath, scan, verbose=True):
                     raise ValueError(f'reshape failed for mesh {scan} ({command}) [{motors[1]}={len(bfinal)}, len({motors[0]})={len(a)}, len({motors[0]})/len({motors[1]})={len(a)/len(bfinal)}]')
 
                 # reshape data
-                ss = Images(TEY, TFY, EXF, RMU)
+                ss = br.Dummy(TEY, TFY, EXF, RMU)
                 for j, s in enumerate(ss):
                     ss[j] = br.Image(data=[row if i%2 == 0 else row[::-1] for i, row in enumerate(s.y.reshape(len(bfinal), len(afinal)))])
                     ss[j].x_centers = afinal
@@ -506,43 +574,16 @@ def read(filepath, scan, verbose=True):
             #############
             # raw attrs #
             #############   
+            metadata = _sort_metadata(attrs=xas_attrs, f=h, verbose=verbose)
             for s in [_ for _ in ss] + [ss]:
-                # bytes
-                if 'definition' in h:       s.definition       = h['definition'][()].decode("utf-8")
-                if 'entry_identifier' in h: s.entry_identifier = h['entry_identifier'][()].decode("utf-8")
-                if 'program_name' in h:     s.program_name     = h['program_name'][()].decode("utf-8")
-                if 'title' in h:            s.command          = h['title'][()].decode("utf-8")
-                if 'user' in h: 
-                    if 'name' in h['user']:   s.user             = h['user/name'][()].decode("utf-8")
+                for attr in metadata:
+                    setattr(s, attr, metadata[attr])
 
-                # other measurement attrs
-                if 'measurement' in h:
-                    for key in h['measurement']:
-                        if key != 'pre_scan_snapshot' and key.startswith('aemexp2_') == False:
-                            setattr(s, 'measurement_' + key, h['measurement'][key][()])
-
-                # measurement snapshot
-                h2 =  h['measurement/pre_scan_snapshot']
-                for key in h2:
-                    new_attr_name = 'pre_scan_' + key
-                    setattr(s, new_attr_name, h2[key][()])
-
-                # plot 2 (whatever this is)
-                if 'plot_2' in h:
-                    for key in h['plot_2']:
-                        new_attr_name = 'plot_2_' + key
-                        s.plot_2 = h['plot_2'][key][()]
-                
-                # plot 1 
-                if 'plot_1' in h:
-                    for key in h['plot_1']:
-                        new_attr_name = 'plot_1_' + key
-                        setattr(s, new_attr_name, h['plot_1'][key][()])
-
-                # time
-                if 'start_time' in h:       s.start_time       = _str2datetime(h['start_time'][()].decode("utf-8"))
-                if 'end_time' in h:         s.end_time         = _str2datetime(h['end_time'][()].decode("utf-8"))
-                if 'macro_start_time' in h: s.macro_start_time = _str2datetime(h['macro_start_time'][()].decode("utf-8"))
+                # # other measurement attrs
+                # if 'measurement' in h:
+                #     for key in h['measurement']:
+                #         if key != 'pre_scan_snapshot' and key.startswith('aemexp2_') == False:
+                #             setattr(s, 'measurement_' + key, h['measurement'][key][()])
 
             ################
             # pretty attrs #
@@ -572,8 +613,8 @@ def read(filepath, scan, verbose=True):
             ###########
             # verbose #
             ###########
-            if verbose: 
-                print(f'loading scan: {scan} - {scan_type}')
+            if verbose:
+                print(f'scan type: {scan} - {scan_type}')
             
             return ss
 
@@ -581,7 +622,7 @@ def read(filepath, scan, verbose=True):
 
 # %%
 
-# script for mesh
+# %% script for mesh
 # find `a` motor points - method 1 - independent of `b` - WORKS
 # a1        = np.diff(a)
 # # find length

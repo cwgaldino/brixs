@@ -818,7 +818,7 @@ class Spectrum(metaclass=_Meta):
             raise TypeError(f'type {type(s)} not valid\nCan only copy modifier attrs from type br.Spectrum to br.Spectrum')
 
         # transfer attrs
-        for attr in s._get_modifier_attrs(self):
+        for attr in s._get_modifier_attrs():
             self.__setattr__(attr, copy.deepcopy(s.__dict__[attr]))
 
     def copy_checks_from(self, s):
@@ -1588,8 +1588,9 @@ class Spectrum(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # _copy_func_attrs(s, self)
-        _copy_user_attrs(s, self)
+        s.copy_modifiers_from(self)
+        # s.copy_checks_from(self)
+        s.copy_attrs_from(self)
 
         return s
 
@@ -9238,3 +9239,45 @@ class PhotonEvents(metaclass=_Meta):
             None
         """
         raise NotImplementedError('this is not implemented yet')
+
+# %% ============================= Dummy ================================== %% #
+class Dummy():
+    
+    def __init__(self, *args, **kwargs):
+        self._data  = []
+        if len(args) > 0:
+            self._data = list(args)
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+
+    def __getattr__(self, name):
+        super().__getattr__(name)
+
+    def __getitem__(self, item):
+        return self._data[item]
+
+    def __setitem__(self, item, value):
+        self._data[item] = value
+
+    def __len__(self):
+        return len(self.data)
+
+    def __delitem__(self, item):
+        del self._data[item]
+
+
+    @property
+    def data(self):
+        return self._data
+    @data.setter
+    def data(self, value):
+        if value is None:
+            self._data = []
+        elif isinstance(value, Iterable):
+            self._data = value
+        else:
+            raise ValueError('value must be an iterable')
+    @data.deleter
+    def data(self):
+        raise AttributeError('Cannot delete object.')

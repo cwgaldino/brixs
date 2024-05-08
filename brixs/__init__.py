@@ -9,6 +9,7 @@ from .brixs import Image
 from .brixs import PhotonEvents
 from .brixs import Spectrum
 from .brixs import Spectra
+from .brixs import Dummy
 from .brixs import figure
 from .brixs import subplots
 
