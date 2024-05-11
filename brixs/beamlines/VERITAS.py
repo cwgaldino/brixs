@@ -982,14 +982,15 @@ def verify(filepath, scan, mask, tcutoff=3e7, tnbins=10000, period=1458, twidth=
     axes[2].set_ylabel('y (mm)')
 
     # curvature
-    if curv is not None and curv != False:
+    if curv is not None:
         axes[3].set_title('5: curvature (pe3)')
-        if curv == 'self':
-            im = pe3.binning(nbins=curv_nbins)
-            ss = im.get_filtered_spectra(mask=pe3.mask, axis=0)
-            ss.calculate_shift()
-            s_ = br.Spectrum(x=ss._x_centers, y=ss.calculated_shift)
-            curv, _, _ = s_.polyfit(2)
+        if type(curv) == str:
+            if curv == 'self':
+                im = pe3.binning(nbins=curv_nbins)
+                ss = im.get_filtered_spectra(mask=pe3.mask, axis=0)
+                ss.calculate_shift()
+                s_ = br.Spectrum(x=ss._x_centers, y=ss.calculated_shift)
+                curv, _, _ = s_.polyfit(2)
         pe4 = copy.deepcopy(pe3)
         pe4.set_shift(p=curv, axis=1)
         pe4.plot(axes[3], color='red', **kwargs)
@@ -998,10 +999,10 @@ def verify(filepath, scan, mask, tcutoff=3e7, tnbins=10000, period=1458, twidth=
         
     # spectrum
     if curv is not None and isinstance(curv, br.Iterable):
-        print(pe.exposure_time)
+        print(pe.exposure_time_calculated)
         s = pe4.calculate_spectrum(axis=0, nbins=sbins)
         s.set_factor(1/sum([m[3]-m[2] for m in mask]))
-        s.set_factor(1/s.exposure_time)
+        s.set_factor(1/s.exposure_time_calculated)
         s.set_factor(sbins)
         # s.t = None
 
@@ -1048,13 +1049,14 @@ def process(filepath, scan, mask, tcutoff=3e7, tnbins=10000, period=1458, twidth
     pe3, bad = pe2.apply_tmask()
 
     # curvature
-    if curv is not None and curv != False:
-        if curv == 'self':
-            im = pe3.binning(nbins=curv_nbins)
-            ss = im.get_filtered_spectra(mask=pe3.mask, axis=0)
-            ss.calculate_shift()
-            s_ = br.Spectrum(x=ss._x_centers, y=ss.calculated_shift)
-            curv, _, _ = s_.polyfit(2)
+    if curv is not None:
+        if type(curv) == str:
+            if curv == 'self':
+                im = pe3.binning(nbins=curv_nbins)
+                ss = im.get_filtered_spectra(mask=pe3.mask, axis=0)
+                ss.calculate_shift()
+                s_ = br.Spectrum(x=ss._x_centers, y=ss.calculated_shift)
+                curv, _, _ = s_.polyfit(2)
         pe4 = copy.deepcopy(pe3)
         pe4.set_shift(p=curv, axis=1)
     else:
@@ -1062,10 +1064,10 @@ def process(filepath, scan, mask, tcutoff=3e7, tnbins=10000, period=1458, twidth
         
     # spectrum
     if curv is not None and isinstance(curv, br.Iterable):
-        print(pe.exposure_time)
+        print(pe.exposure_time_calculated)
         s = pe4.calculate_spectrum(axis=0, nbins=sbins)
         s.set_factor(1/sum([m[3]-m[2] for m in mask]))
-        s.set_factor(1/s.exposure_time)
+        s.set_factor(1/s.exposure_time_calculated)
         s.set_factor(sbins)
         # s.t = None
 
