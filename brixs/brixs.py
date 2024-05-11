@@ -8833,6 +8833,7 @@ class PhotonEvents(metaclass=_Meta):
         ############################
         # check if mask are passed #
         ############################
+        mask = None
         if 'mask' in kwargs:
             mask = kwargs['mask']
         elif len(args) == 4:
@@ -8844,9 +8845,9 @@ class PhotonEvents(metaclass=_Meta):
                 if x not in ['mask']:
                     raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
 
-        ##################################
-        # if Image is passed, copy Image #
-        ##################################
+        #########################################
+        # if mask is passed, clip photon events #
+        #########################################
         if mask is not None:
             pe = self.copy()
             pe.clip(mask=mask)
@@ -9028,6 +9029,7 @@ class PhotonEvents(metaclass=_Meta):
         """Clip photon events.
 
         Usage:
+            >>> pe.clip((xmin, xmax, ymin, ymax))
             >>> pe.clip((0, 12, 3, 12))
             >>> pe.clip([(0, 12, 3, 12), (1, 4, 15, 18)])
 
