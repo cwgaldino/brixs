@@ -3965,7 +3965,7 @@ class Spectra(metaclass=_Meta):
                     if num is None:
                         num = len(self.x)
                 else:
-                    return
+                    return self
 
         # new spectra object
         ss = Spectra()
