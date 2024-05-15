@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 import numpy as np
 # %%
 
-# %% -------------------------- birxs Imports ----------------------------- %% #
+# %% -------------------------- brixs Imports ----------------------------- %% #
 import brixs as br
 # %%
 

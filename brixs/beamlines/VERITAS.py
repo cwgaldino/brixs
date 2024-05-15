@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """Support functions for reading files from VERITAS beamline of MAX-IV.
 
+>>>>> br.finder.folderpath = <temp-file>
+
 ######################
 # Mesh scan profiles #
 ######################

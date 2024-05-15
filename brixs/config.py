@@ -24,17 +24,16 @@ FIGURE_GRID (tuple): if not False, FIGURE_GRID will spread new figures
 
 FIGURE_GRID_OFFSET (tuple): if FIGURE_GRID is not False, FIGURE_GRID_OFFSET 
     defines the spacing in px between new figures in the grid. Default is (40, 0).
-
-**check**
-MAX_ERROR_STEP_X (float): max allowed error between floats, when checking if
-    spectra have the same x axis or when checking if spectrum have uniform
-    x axis. MAX_ERROR_STEP_X is given in percentage of the average x step.
-    Default is 0.1%.
 """
 
 # %% -------------------------- obsolete text ----------------------------- %% #
 # FIGURE_FORCE_ON_TOP (bool): new figures are open on top of other windows.
 #     Default is False.
+# **check**
+# MAX_ERROR_STEP_X (float): max allowed error between floats, when checking if
+#     spectra have the same x axis or when checking if spectrum have uniform
+#     x axis. MAX_ERROR_STEP_X is given in percentage of the average x step.
+#     Default is 0.1%.
 # %%
 
 # %% =============================== settings ============================= %% #
@@ -53,11 +52,6 @@ class _settings():
 
         self.FIGURE_GRID              = False  # (rows, cols) -> (1, 1) same as False 
         self.FIGURE_GRID_OFFSET       = (40, 0)
-
-        #########
-        # check #
-        #########
-        self.MAX_ERROR_STEP_X = 0.1
 
         ############
         # internal #
@@ -81,9 +75,9 @@ class _settings():
                 f'FIGURE_DPI:              {self.FIGURE_DPI}\n' +\
                 f'FIGURE_FORCE_NEW_WINDOW: {self.FIGURE_FORCE_NEW_WINDOW}\n' +\
                 f'FIGURE_GRID:             {self.FIGURE_GRID}\n' +\
-                f'FIGURE_GRID_OFFSET:      {self.FIGURE_GRID_OFFSET}\n'
-        text += '\n======== spectra settings ===========\n'  
-        text += f'MAX_ERROR_STEP_X:        {self.MAX_ERROR_STEP_X}\n'
+                f'FIGURE_GRID_OFFSET:      {self.FIGURE_GRID_OFFSET}'
+        # text += '\n======== spectra settings ===========\n'  
+        # text += f'MAX_ERROR_STEP_X:        {self.MAX_ERROR_STEP_X}\n'
         return text
                 # f'FIGURE_FORCE_ON_TOP:     {self.FIGURE_FORCE_ON_TOP}\n' +\
 
