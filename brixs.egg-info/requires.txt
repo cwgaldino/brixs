@@ -1,0 +1,14 @@
+numpy>=1.15
+matplotlib>=3.4
+
+[crystal]
+pbcpy
+
+[full]
+lmfit
+scipy
+pbcpy
+
+[model]
+lmfit
+scipy
