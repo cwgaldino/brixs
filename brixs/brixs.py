@@ -1,27 +1,11 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Core brixs module
+"""Core brixs module. Defines the main objects: Spectrum, Spectra, PhotonEvents, Image"""
 
-Defines the main objects: Spectrum, Spectra, PhotonEvents, Image
-
-TODO:
-- Spectrum.__init__ without args and kwargs
-- Spectra.__init__ without args and kwargs
-- Image.__init__ without args and kwargs
-- PhotonEvents.__init__ without args and kwargs
-
-- maybe remove runtimeerror fom ss._gather_ys()
-- implement s.calculate_calib()
-- ss.plot(), should pvi scale for every spectrum? for now yes
-- how methods deal with empty objects
-
-- import all brixs addons at once
-"""
 # %% ------------------------- Standard Imports --------------------------- %% #
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
-import matplotlib
 import warnings
 import copy
 
@@ -369,77 +353,32 @@ class Spectrum(metaclass=_Meta):
     Args:
         x (list or array, optional): x values (1D list/array).
         y (list or array, optional): y values (1D list/array).
-        filepath (str or pathlib.Path, optional): filepath to read.
+        filepath (str or Path, optional): filepath.
+        **kwargs: kwargs are passed to :py:func:`Spectrum.load` function
 
-    How to initialize a Spectrum object:
-        **Empty**
-        
+    Usage:        
             >>> s = br.Spectrum()
-
-        **From array**
-
             >>> s = br.Spectrum(x, y)
             >>> s = br.Spectrum(x=x, y=y)
-            >>> s = br.Spectrum(y)
             >>> s = br.Spectrum(y=y)
-
-        where ``x`` and ``y`` are 1D arrays (or list). If only y data is passed, a dummy 
-        x-array will be set.
-
-        **From file**
-
             >>> s = br.Spectrum(filepath=<filepath>)
-            >>> s = br.Spectrum(<filepath>)
-
-        where ``filepath`` must point to a xy-type file, where comments 
-        must be marked with `#` and columns must be separated by `,` (comma).
-
-    Attributes:
-        x (array): vector with x-coordinate values
-        y (array): vector with y-coordinate values
-        filepath (str or pathlib.Path): filepath associated with data.
-
-    **Computed attributes (also read-only):**
-        data (array)
-            2 column data (x, y). Computed when calling s.data
-
-        step (number or None)
-            step size of the x-array. Computed via s.check_step()
-
-        monotonicity (str or None)
-            monotonicity of the x-array. Computed via s.check_monotonicity()
-
-    **Write-only attributes:**
-        calib
-            calls s.set_calib()
-
-        shift
-            calls s.set_shift()
-
-        roll
-            calls s.set_roll()
-
-        factor
-            calls s.set_factor()
-
-        offset
-            calls s.set_offset()
+            >>> s = br.Spectrum(filepath=<filepath>, delimiter=',')
+            >>>
+            >>> print(s.get_core_attrs()) # print list of core attrs
+            >>> print(s.get_attrs())      # print list of attrs
+            >>> print(s.get_methods())    # print list of methods available
     """
     _read_only     = ['step', 'monotonicity']
     _non_removable = []
 
     def __init__(self, x=None, y=None, filepath=None, **kwargs):
-        """Initialize the object instance.
-
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-        """
+        """Initialize the object instance"""
         ###########################
         # Initializing attributes #
         ###########################
         # core
-        self._x    = None
-        self._y    = None
+        self._x = None
+        self._y = None
 
         # check
         self._step         = None
@@ -451,65 +390,19 @@ class Spectrum(metaclass=_Meta):
         self._shift  = 0
         self._offset = 0
 
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        error_message = 'Wrong input for creating Spectrum object\n' +\
-                        'Examples:\n' +\
-                        '\n' +\
-                        's = br.Spectrum()\n' +\
-                        '\n' +\
-                        's = br.Spectrum(x, y)\n' +\
-                        's = br.Spectrum(x=x, y=y)\n' +\
-                        '\n' +\
-                        's = br.Spectrum(y)\n' +\
-                        's = br.Spectrum(y=y)\n' +\
-                        '\n' +\
-                        's = br.Spectrum(filepath=<filepath>, **kwargs)\n' +\
-                        's = br.Spectrum(<filepath>, **kwargs)\n' +\
-                        '\n' +\
-                        'where x and y must be a 1D array (or list), filepath ' +\
-                        'must be a string or pathlib.Path object, and kwargs are ' +\
-                        'passed to the load function (see br.Spectrum.load())'
-        if kwargs != {} and args != ():
-            raise AttributeError(error_message)
-        if any([item not in ['x', 'y', 'filepath'] for item in kwargs.keys()]):
-            raise AttributeError(error_message)
-        if len(args) > 2 or len(kwargs) > 2:
-            raise AttributeError(error_message)
-        if 'x' in kwargs and 'y' not in kwargs:
-            raise AttributeError(error_message)
-        if ('x' in kwargs or 'y' in kwargs) and 'filepath' in kwargs:
-            raise AttributeError(error_message)
+        # labels
+        pass
 
         ################
         # loading data #
         ################
-        # if x is available, x must be set first.
-        # Otherwise, when y is set, it will create a fake x axis using np.arrange()
-
-        # keyword arguments
-        if 'y' in kwargs:
-            if 'x' in kwargs:
-                self.x = kwargs['x']
-            self.y = kwargs['y']
-            return
-        if 'filepath' in kwargs:
-            self.load(kwargs['filepath'])
-            return
-
-        # positional arguments
-        if len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                self.load(args[0])
-                return
-            else:
-                self.y = args[0]
-                return
-        elif len(args) == 2:
-            self.x = args[0]
-            self.y = args[1]
-            return
+        if y is not None:
+            self.y = y
+        if x is not None:
+            self.x = x
+        elif filepath is not None and y is None:
+            self.load(filepath, **kwargs)
+        return
 
     ###################
     # core attributes #
@@ -546,11 +439,6 @@ class Spectrum(metaclass=_Meta):
         ##########################
         self._step         = None
         self._monotonicity = None
-
-        ############################
-        # reset special attributes #
-        ############################
-        # self.peaks.clear()
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
@@ -583,17 +471,6 @@ class Spectrum(metaclass=_Meta):
         # set attribute #
         #################
         self._y = np.array(value, dtype='float')
-
-        ##########################
-        # reset check attributes #
-        ##########################
-        # self._step         = None
-        # self._monotonicity = None
-
-        ############################
-        # reset special attributes #
-        ############################
-        # self.peaks.clear()
     @y.deleter
     def y(self):
         raise AttributeError('Cannot delete object.')
@@ -825,6 +702,11 @@ class Spectrum(metaclass=_Meta):
         for attr in s.get_attrs():
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
+
+    ###########
+    # attrs 2 #
+    ###########
+    pass
 
     ###########
     # support #
@@ -1287,30 +1169,34 @@ class Spectrum(metaclass=_Meta):
         if mode not in increasing and mode not in decreasing:
             raise ValueError('mode should be "decreasing" or "increasing".')
         
+        if mode in increasing: mode = 'increasing'
+        else: mode = 'decreasing'
+
+        # copy
+        s = self.copy()
+
         # turn array into monotonic
-        if self.monotonicity is None:
+        if s.monotonicity is None:
             try:
-                self.check_monotonicity()
+                s.check_monotonicity()
             except ValueError:
-                unqa, ID, counts = np.unique(self.x, return_inverse=True, return_counts=True)
-                data        = np.column_stack((unqa, np.bincount(ID,self.y)/counts))
+                s._step = None
+                unqa, ID, counts = np.unique(s.x, return_inverse=True, return_counts=True)
+                data        = np.column_stack((unqa, np.bincount(ID, s.y)/counts))
                 
-                self._x = data[:, 0]
-                self._y = data[:, 1]
+                s._x = data[:, 0]
+                s._y = data[:, 1]
                 # check
-                self.check_monotonicity()
+                s.check_monotonicity()
             
         # make it decreasing or increasing
-        if self.monotonicity != mode:
-            self._x = self.x[::-1]
-            self._y = self.y[::-1]
-        self.check_monotonicity()
+        if s.monotonicity != mode:
+            s._step = None
+            s._x = self.x[::-1]
+            s._y = self.y[::-1]
+        s.check_monotonicity()
 
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._step         = None
-        # self._monotonicity = None
+        return s
 
     #############
     # modifiers #
@@ -1438,7 +1324,7 @@ class Spectrum(metaclass=_Meta):
             try:
                 self.check_step()
             except ValueError:
-                raise ValueError(f'Cannot roll data, because x-coordinates are not uniform. Use s.interp() to make data uniform.\nOr shift data using s.set_shift()')
+                raise ValueError(f'Cannot roll data, because x-coordinates are not uniform. Use s.interp() to make data uniform, or shift data using s.set_shift()')
         # value must be an integer
         if numanip.is_integer(value) == False:
             raise ValueError('roll value must be an integer.')
@@ -1516,9 +1402,9 @@ class Spectrum(metaclass=_Meta):
         assert len(temp.y) > 0, 'no data points within limits = {limits}'
         return self.set_factor(value/np.mean(temp.y))
 
-    ###########
-    # methods #
-    ###########
+    ############
+    # advanced #
+    ############
     def interp(self, start=None, stop=None, num=None, step=None, x=None):
         """Interpolate data.
 
@@ -1908,7 +1794,7 @@ class Spectrum(metaclass=_Meta):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.
 
         Usage:
-            popt, model, R2 = polyfit(deg)
+            >>> fit, popt, R2, f = polyfit(deg)
 
         Args:
             deg (int): degree of the fitting polynomial.
@@ -1921,7 +1807,17 @@ class Spectrum(metaclass=_Meta):
                 an empty list, it assumes `limits = (None, None)`.
         
         Returns:
-            popt, f(x), R2
+            fit (spectrum), popt, R2, f(x)
+
+            fit (spectrum): polynomial fit spectrum with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
 
         .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
         """
@@ -1934,7 +1830,12 @@ class Spectrum(metaclass=_Meta):
         model = lambda x: np.polyval(popt, x)
         R2 =  1 - (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
     
-        return popt, model, R2
+        start = min(x)-abs(max(x)-min(x))*0.1
+        stop  = max(x)+abs(max(x)-min(x))*0.1
+        _x = np.arange(start, stop, len(x)*100)
+        arr100 = Spectrum(x, y=model(_x))
+
+        return arr100, popt, R2, model
    
     def index(self, x, closest=True):
         """Return the index value for a given x.
@@ -1961,6 +1862,11 @@ class Spectrum(metaclass=_Meta):
             y number
         """
         return self.y[self.index(x=x, closest=closest)]
+
+    ############
+    # composed #
+    ############
+    pass
 
     ##########################        
     # plot and visualization #
@@ -2058,102 +1964,30 @@ class Spectra(metaclass=_Meta):
     """Returns a ``spectra`` object.
 
     Args:
-        n (int, optional): array preallocation.
         data (list or array, optional): list of :py:class:`spectrum` objects.
-        folderpath (string, path object): folderpath.
-        filepath (str or pathlib.Path, optional): filepath to read.
+        folderpath (string or path, optional): folderpath with spectrum files.
+        filepath (str or Path, optional): filepath with multiple spectra to read.
+        **kwargs: kwargs are passed to :py:func:`Spectra.load` function or 
+            :py:func:`Spectra.load_from_single_file`
 
-    How to initialize a Spectra object:
-        **Empty**
-
+    Usage:        
             >>> ss = br.Spectra()
-
-        **Pre-allocation**
-
-            >>> ss = br.Spectra(n=10)
-            >>> ss = br.Spectra(10)
-
-        **From Spectrum**
-
-            >>> ss = br.Spectra(s1, s2, ...)
             >>> ss = br.Spectra([s1, s2, ...])
             >>> ss = br.Spectra(data=[s1, s2, ...])
-
-        where s1, s2, ... are :py:attr:`Spectrum` type.
-        
-        **From file**
-
-            >>> ss = br.Spectra(folderpath=<folderpath>)
-            >>> ss = br.Spectra(<folderpath>)
-            >>> ss = br.Spectra(filepath=<filepath>)
-            >>> ss = br.Spectra(<filepath>)
-
-        where filepath must point to 
-        a xy-type file, where comments must be marked with `#` and columns 
-        must be separated by `,` (comma). Folderpath must point to 
-        a folderpath populated only with files similar xy-type files.
-
-    Attributes:
-        data (list of :py:attr:`Spectrum`): list with :py:attr:`Spectrum` objects.
-        folderpath (str or pathlib.Path): folderpath associated with data.
-        filepath (str or pathlib.Path): filepath associated with data.        
-
-    **Computed (read-only) attributes:**
-        step (number)
-            step size for x-coordinates. Computed via ss.check_step()
-
-        length (number)
-            length of x-coordinates vector. Comuted via ss.check_length()
-
-        x (number) 
-            x-coordinates. Computed via ss.check_same_x()
-
-        monotonicity (str or None)
-            monotonicity of the x-array. Computed via ss.check_monotonicity()
-
-        calculated_shift (list)
-            calculated x additive factor. Computed via ss.calculate_shift()
-
-        calculated_offset (list)
-            calculated y additive factor. Computed via ss.calculate_offset()
-
-        calculated_roll (list)
-            calculated x roll. Computed via ss.calculate_roll()
-
-        calculated_calib (list)
-            calculated x multiplicative factor. Computed via ss.calculate_calib()
-
-        calculated_factor (list)
-            calculated y multiplicative factor. Computed via ss.calculate_factor()
-
-    **Write-only attributes:**
-        calib
-            calls s.set_calib()
-
-        shift
-            calls s.set_shift()
-
-        roll
-            calls s.set_roll()
-
-        factor
-            calls s.set_factor()
-
-        offset
-            calls s.set_offset()
+            >>> ss = br.Spectrum(folderpath=<folderpath>)
+            >>> ss = br.Spectrum(folderpath=<folderpath>, delimiter=',')
+            >>> ss = br.Spectrum(filepath=<filepath>)
+            >>> ss = br.Spectrum(filepath=<filepath>, delimiter=',')
+            >>>
+            >>> print(ss.get_core_attrs()) # print list of core attrs
+            >>> print(ss.get_attrs())      # print list of attrs
+            >>> print(ss.get_methods())    # print list of methods available
     """
-    _read_only     = ['step', 'length', 'x', 'monotonicity',
-                      'calculated_calib', 'calculated_factor',
-                      'calculated_offset', 'calculated_shift',
-                      'calculated_roll']
+    _read_only     = ['step', 'length', 'x', 'monotonicity']
     _non_removable = []
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the object instance.
-        
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-        """
+    def __init__(self, data=None, folderpath=None, filepath=None, **kwargs):
+        """Initialize the object instance"""
         ###########################
         # Initializing attributes #
         ###########################
@@ -2167,93 +2001,21 @@ class Spectra(metaclass=_Meta):
         self._monotonicity = None
 
         # modifiers
-        self._calib  = 1
-        self._factor = 1
-        self._shift  = 0
-        self._offset = 0
+        pass
 
-        # # calculated
-        # self._calculated_calib  = None
-        # self._calculated_factor = None
-        # self._calculated_offset = None
-        # self._calculated_shift  = None
-        # self._calculated_roll   = None
-
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        error_message = 'Wrong input. Spectra object cannot be created. Please, use one ' +\
-                        'of the examples below to create a spectra object:\n' +\
-                        '\n' +\
-                        'ss = br.Spectra()\n' +\
-                        'ss = br.Spectra(10)    \# pre-allocation\n' +\
-                        'ss = br.Spectra(n=10)  \# pre-allocation\n' +\
-                        '\n' +\
-                        'ss = br.Spectra(s1, s2, ...)\n' +\
-                        'ss = br.Spectra([s1, s2, ...])\n' +\
-                        'ss = br.Spectra(data=[s1, s2, ...])\n' +\
-                        '\n' +\
-                        'ss = br.Spectra(folderpath=<folderpath>)\n' +\
-                        'ss = br.Spectra(<folderpath>)\n' +\
-                        '\n' +\
-                        'ss = br.Spectra(filepath=<filepath>)\n' +\
-                        'ss = br.Spectra(<filepath>)\n' +\
-                        '\n' +\
-                        's1, s2, ... must be Spectrum, filepath ' +\
-                        'must be a string or pathlib.Path object that points'  +\
-                        'to a file and folderpath to a folder'
-        if kwargs != {} and args != ():
-            raise AttributeError(error_message)
-        if any([item not in ['folderpath', 'n', 'data', 'filepath'] for item in kwargs.keys()]):
-            raise AttributeError(error_message)
-        if len(kwargs) >= 2:
-            raise AttributeError(error_message)
-
+        # labels
+        pass
 
         ################
         # loading data #
         ################
-        # keyword arguments
-        if 'folderpath' in kwargs:
-            self.load(kwargs['folderpath'])
-            return
-        elif 'filepath' in kwargs:
-            self.load_from_single_file(kwargs['filepath'])
-            return
-        elif 'n' in kwargs:
-            n = int(kwargs['n'])
-            self._data = [Spectrum()]*n
-            return
-        elif 'data' in kwargs:
-            self.data = kwargs['data']
-            return
-
-        # positional arguments
-        if len(args) == 0:
-            return
-        elif len(args) == 1:
-            if isinstance(args[0], int):
-                n = int(args[0])
-                self._data = [-1]*n
-                return
-            elif isinstance(args[0], str) or isinstance(args[0], Path):
-                temp = Path(args[0])
-                assert temp.exists(), f'filepath (or folderpath) do not exist\n{temp}'
-                if temp.is_file():
-                    self.load_from_single_file(temp)
-                elif temp.is_dir():
-                    self.load(temp)
-                return
-            elif isinstance(args[0], Iterable):
-                self.data = args[0]
-                return
-            else:
-                raise AttributeError(error_message)
-        elif len(args) > 1:
-            self.data = args
-            return
-        else:
-            raise AttributeError(error_message)
+        if data is not None:
+            self.data = data
+        elif folderpath is not None:
+            self.load(folderpath=folderpath, **kwargs)
+        elif filepath is not None:
+            self.load_from_single_file(filepath=filepath, **kwargs)
+        return
 
     ###################
     # core attributes #
@@ -2543,10 +2305,10 @@ class Spectra(metaclass=_Meta):
         assert len(ref) == len(self), f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}'
         
         if attrs2reorder is not None:
-            for a in attrs2reorder:
+            for attr in attrs2reorder:
                 temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{a} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {a} must be the same as the number of spectra.\nlenght of attr: {len(a)}\nnumber of spectra: {len(self)}'
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
 
         # sort
         self.data = arraymanip.sort(ref, self.data)
@@ -3916,9 +3678,9 @@ class Spectra(metaclass=_Meta):
             ss[i] = s.normalize(value=value, limits=limits)
         return ss
 
-    ###########
-    # methods #
-    ###########
+    ############
+    # advanced #
+    ############
     def concatenate(self):
         """Return spectrum of concatenate spectra.
         
@@ -4150,6 +3912,333 @@ class Spectra(metaclass=_Meta):
 
         return ss
 
+
+    def merge(self, indexes, weights=None, limits=None, attrs2merge=None):
+        """Return averaged Spectrum 
+
+        Args:
+            indexes (list): spectra index numbers
+            weights (list or None, optional): if not None, applies a weighted 
+                average. Default is None.
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            attrs2merge (list, optional): if not None, only spectra named here,
+                will be copied to the final spectrum. The attr must be a list of
+                numbers with the same length as the number of spectra. The value
+                saved on the returned Spectrum is a weighted avereged sum of 
+                these attrs.
+        
+        Return:
+            :py:class:`Spectrum`
+        """
+        assert isinstance(indexes, Iterable), 'indexes must be a list'
+
+        if weights is None:
+            weights = [1]*len(indexes)
+        
+        assert isinstance(weights, Iterable), 'weights must be a list'
+        assert len(weights) == len(indexes), 'number of indexes must be the same as the number of weights'
+
+        ########################
+        # check attrs to merge #
+        ########################
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+
+
+        ss = Spectra()
+        for i in indexes:
+            ss.append(self[i].copy().set_factor(weights[i]))
+
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                temp = self.__getattribute__(attr)
+                new = []
+                for i in indexes:
+                    temp.append(temp[i]*weights[i])
+                ss.__setattr__(attr, np.mean(new))
+
+        return ss.calculate_average(limits=limits)
+    
+    def merge_and_replace(self, indexes, weights=None, limits=None, attrs2merge=None):
+        """return spectra with replaced spectra
+
+        Args:
+            indexes (list): spectra index numbers
+            weights (list or None, optional): if not None, applies a weighted 
+                average. Default is None.
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            attrs2merge (list, optional): if not None, only spectra named here,
+                will be copied to the final spectrum. The attr must be a list of
+                numbers with the same length as the number of spectra. The value
+                saved on the returned Spectrum for merged spectrum is a weighted avereged sum of 
+                these attrs.
+
+        Return:
+            :py:class:`Spectra`
+        """
+        ##############################
+        # check extra attrs to merge #
+        ##############################
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+
+        ss = Spectra()
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                ss.__setattr__(attr, [])
+
+        for i, s in enumerate(self):
+            if i in indexes:
+                if list(indexes).index(i) == 1:
+                    _s = self.merge(indexes=indexes, weights=weights, limits=limits, attrs2merge=attrs2merge)
+                    ss.append(_s)
+                    if attrs2merge is not None:
+                        for attr in attrs2merge:
+                            ss.__setattr__(attr, ss.__getattribute__(attr).append(_s.__getattribute__(attr)))
+            else:
+                ss.append(s.copy(limits=limits))
+                if attrs2merge is not None:
+                    for attr in attrs2merge:
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
+        return ss
+
+    def merge_duplicates(self, ref, limits=None, attrs2merge=None):
+        """return spectra where spectrum with same attr are merged
+
+        Args:
+            ref (str or list): reference value for interpolating. If `str`, it
+                will get values from attribute. If list, list must be the same 
+                length as the number of Spectra.
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            attrs2merge (list, optional): if not None, only spectra named here,
+                will be copied to the final spectrum. The attr must be a list of
+                numbers with the same length as the number of spectra. The value
+                saved on the returned Spectrum for merged spectrum is a weighted avereged sum of 
+                these attrs.
+
+        Return:
+            :py:class:`Spectra`
+        """
+        #####################
+        # check attr length #
+        #####################
+        if isinstance(ref, str):
+            values = self.__getattribute__(ref)
+        elif isinstance(ref, Iterable):
+            values = ref
+        else:
+            raise ValueError(f'`ref` must be type str or Iterable, not type `{type(ref)}`')
+
+        ##########################
+        # check length of values #
+        ##########################
+        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
+
+        ##############################
+        # check extra attrs to merge #
+        ##############################
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+
+        ##########################################
+        # check if spectra indeed has duplicates #
+        ##########################################
+        if arraymanip.has_duplicates(values) == False:
+            return self.copy(limits=limits)
+        
+        ###############
+        # new spectra #
+        ###############
+        ss = Spectra()
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                ss.__setattr__(attr, [])
+
+        ####################
+        # merge duplicates #
+        ####################
+        for i, _x in enumerate(values):
+            if list(values).count(_x) == 1:
+                _s = self[i].copy(limits=limits)
+                ss.append(_s)
+                if attrs2merge is not None:
+                    for attr in attrs2merge:
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
+            else:
+                indexes = [i for i, x in enumerate(values) if x == _x]
+                if i == indexes[0]:
+                    _s = self.merge(indexes=indexes, limits=limits, attrs2merge=attrs2merge)
+                    ss.append(_s)
+                    if attrs2merge is not None:
+                        for attr in attrs2merge:
+                            ss.__setattr__(attr, ss.__getattribute__(attr).append(_s.__getattribute__(attr)))
+        return ss
+
+    def interp_spectra(self, ref, start=None, stop=None, num=None, step=None, x=None, limits=None, attrs2interp=None):
+        """create new averaged spectra 
+
+        Args:
+            ref (str or list): reference value for interpolating. If `str`, it
+                will get values from attribute. If list, list must be the same 
+                length as the number of Spectra.
+            start (number, optional): The starting value of the sequence. If `None`,
+                the minium attr value will be used.
+            stop (number, optional): The end value of the sequence. If `None`,
+                the maximum attr value will be used.
+            num (int, optional): Number of samples to generate.
+            step (number, optional): Spacing between values. This overwrites ``num``.
+            x (list or array, optional): The values at which to
+                evaluate the interpolated values. This overwrites all other arguments.
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            attrs2interp (list, optional): if not None, only spectra named here,
+                will be copied to the final spectra. The attr must be a list of
+                numbers with the same length as the number of spectra. The value
+                saved on the returned Spectra is a interpolates value of 
+                these attrs.
+
+        Return:
+            :py:class:`Spectra`
+        """
+        #######################
+        # check x is the same #
+        #######################
+        if self.x is None:
+            try:
+                self.check_same_x()
+            except ValueError:
+                raise ValueError('Cannot create new spectra. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp())')
+        
+        #############################
+        # check attrs2interp format #
+        #############################
+        assert isinstance(attrs2interp, Iterable) or attrs2interp is None, f'attrs2interp must be a list of strings or None'
+
+        #####################
+        # check attr length #
+        #####################
+        if isinstance(ref, str):
+            values = self.__getattribute__(ref)
+            if attrs2interp is None:
+                attrs2interp = [ref, ]
+            else:
+                attrs2interp = list(attrs2interp) + [ref, ]
+        elif isinstance(ref, Iterable):
+            values = ref
+        else:
+            raise ValueError(f'`ref` must be type str or Iterable, not type `{type(ref)}`')
+
+        ##########################
+        # check length of values #
+        ##########################
+        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
+
+        #############################
+        # check values is monotonic #
+        #############################
+        assert arraymanip.check_monotonicity(values) == 1, f'values ({values}) must be increasingly monotonic. Use Spectra.merge_duplicates() and Spectra.reorder_by_attr()'
+
+        ##############################
+        # check extra attrs to merge #
+        ##############################
+        if attrs2interp is not None:
+            for attr in attrs2interp:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+
+        ##########
+        # sort x #
+        ##########
+        if x is None:
+            if start is None: start = min(values)
+            if stop is None:  stop  = max(values)
+            if step is None and num is None:
+                raise ValueError(f'step or num must be defined')
+            elif step is not None:
+                x = np.arange(start=start, stop=stop, step=step)
+            else:
+                x = np.linspace(start=start, stop=stop, num=num)
+                
+        ###############
+        # new spectra #
+        ###############
+        ss = Spectra()
+        if attrs2interp is not None:
+            for attr in attrs2interp:
+                ss.__setattr__(attr, [])
+
+        ##################
+        # interp spectra #
+        ##################
+        for j, _x in enumerate(x):
+            i = arraymanip.index(values, _x, closest=True)
+            if values[i] == _x:
+                _s = self[i].copy(limits=limits)
+                ss.append(_s)
+                if attrs2interp is not None:
+                    for attr in attrs2interp:
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
+            elif values[i] < _x:
+                _s1 = self[i].copy(limits=limits).set_factor(1 - (_x - values[i])/(values[i+1] - values[i]))
+                _s2 = self[i+1].copy(limits=limits).set_factor(1 - (values[i+1] - _x)/(values[i+1] - values[i]))
+                _s = Spectra(data=(_s1, _s2)).calculate_average()
+                ss.append(_s)
+                if attrs2interp is not None:
+                    for attr in attrs2interp:
+                        _v1 = self.__getattribute__(attr)[i]   * (1 - (_x - values[i])/(values[i+1] - values[i]))
+                        _v2 = self.__getattribute__(attr)[i+1] * (1 - (values[i+1] - _x)/(values[i+1] - values[i]))
+                        _v  = (_v1 + _v2)/2
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(_v))
+            elif values[i] > _x:
+                _s1 = self[i].copy(limits=limits).set_factor(1 - (values[i] - _x)/(values[i] - values[i-1]))
+                _s2 = self[i-1].copy(limits=limits).set_factor(1 - (_x - values[i-1])/(values[i] - values[i-1]))
+                _s = Spectra(data=(_s1, _s2)).calculate_average()
+                ss.append(_s)
+                if attrs2interp is not None:
+                    for attr in attrs2interp:
+                        _v1 = self.__getattribute__(attr)[i]   * (1 - (values[i] - _x)/(values[i] - values[i-1]))
+                        _v2 = self.__getattribute__(attr)[i-1] * (1 - (_x - values[i-1])/(values[i] - values[i-1]))
+                        _v  = (_v1 + _v2)/2
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(_v))
+        return ss
+
     ########################
     # calculation and info #
     ########################
@@ -4220,7 +4309,8 @@ class Spectra(metaclass=_Meta):
 
         return s
 
-    def calculate_map(self, axis=0, centers=None, limits=None):
+
+    def calculate_map(self, axis=0, limits=None):
         """Return image representation of spectra.
 
         Note:
@@ -4234,10 +4324,6 @@ class Spectra(metaclass=_Meta):
                 If `axis=0`, spectra will be placed horizontally (each spectrum 
                 will be a "row of pixels"). If `axis=1`, spectra will be placed
                 vertically (each spectrum will be a "column"). Default is 0.
-            centers (list, optional): numerical value for each spectrum. 
-                If `axis=0`, this is equivalent as using im.x_centers=centers. 
-                If `axis=1`, im.y_centers=centers. Default is None, i.e., each
-                spectrum will be numbered from 1 to len(ss).
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
@@ -4253,23 +4339,101 @@ class Spectra(metaclass=_Meta):
         if axis != 0 and axis != 1:
             raise ValueError('axis must be 0 or 1')
         
+        if axis == 0:
+            return self.stack_spectra_as_columns(limits=limits)
+        else:
+            return self.stack_spectra_as_columns(limits=limits)
+        
+        # # gather ys
+        # y, ys = self._gather_ys(limits=limits)
+
+
+        # if axis == 1:
+        #     ys = ys.transpose()
+        #     x = y
+        #     y = centers
+
+        # im = Image(data=ys)
+        # im.copy_attrs_from(self)
+        # im.x_centers = x
+        # im.y_centers = y
+
+        # return im
+    
+    def stack_spectra_as_columns(self, x_centers=None, limits=None):
+        """Return image representation of spectra, where spectra are layed out in the vertical direction.
+
+        Note:
+            All spectra must have the same x-coordinates. This is verified.
+
+        Warning:
+            attrs are copied to the final image, but attrs from each spectrum is lost.
+
+        Args:
+            x_centers (list, optional): numerical value for each spectrum. 
+                 indicating a numerical value for each spectrum. Default is None, i.e., each
+                spectrum will be numbered from 1 to len(ss).
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+
+        Returns:
+            :py:class:`Image`.
+        """
         # check centers
-        if centers is not None:
-            assert len(centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
+        if x_centers is not None:
+            assert len(x_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
 
         # gather ys
         y, ys = self._gather_ys(limits=limits)
-        x = centers
-
-        if axis == 1:
-            ys = ys.transpose()
-            x = y
-            y = centers
 
         im = Image(data=ys)
         im.copy_attrs_from(self)
-        im.x_centers = x
+        im.x_centers = x_centers
         im.y_centers = y
+
+        return im
+    
+    def stack_spectra_as_rows(self, y_centers=None, limits=None):
+        """Return image representation of spectra, where spectra are layed out in the horizontal direction.
+
+        Note:
+            All spectra must have the same x-coordinates. This is verified.
+
+        Warning:
+            attrs are copied to the final image, but attrs from each spectrum is lost.
+
+        Args:
+            y_centers (list, optional): numerical value for each spectrum. 
+                 indicating a numerical value for each spectrum. Default is None, i.e., each
+                spectrum will be numbered from 1 to len(ss).
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+
+        Returns:
+            :py:class:`Image`.
+        """
+        # check centers
+        if y_centers is not None:
+            assert len(y_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
+
+        # gather ys
+        y, ys = self._gather_ys(limits=limits)
+        ys = ys.transpose()
+
+        im = Image(data=ys)
+        im.copy_attrs_from(self)
+        im.x_centers = y
+        im.y_centers = y_centers
 
         return im
     
@@ -4874,126 +5038,80 @@ class Spectra(metaclass=_Meta):
 
 # %% ================================ Image =============================== %% #
 class Image(metaclass=_Meta):
-    """Returns a ``Image`` object.
+    """Returns a ``spectra`` object.
 
     Args:
-        data (2D array, optional): Image.
-        filepath (string or path object, optional): filepath.
+        data (list or array, optional): list of :py:class:`spectrum` objects.
+        filepath (str or Path, optional): filepath.
+        x_centers, y_centers: (list, optional): pixel center labels.
+        **kwargs: kwargs are passed to :py:func:`Image.load` function.
 
-    How to initialize a Image object:
-        **Empty**
-
+    Usage:        
             >>> im = br.Image()
-
-        **From 2D array**
-
             >>> im = br.Image(data)
             >>> im = br.Image(data=data)
-
-        **From file**
-            
-            >>> im = br.Image(<filepath>)
+            >>> im = br.Image(data=data, x_centers=x_centers, y_centers=y_centers)
             >>> im = br.Image(filepath=<filepath>)
-
-        where ``filepath`` must point to a 2D xy-type file, where comments 
-        must be marked with `#` and columns must be separated by `,` (comma).
-
-
-    Attributes:
-        data (2D np.array): This is where we store the Image.
-        x_centers, y_centers (np.array): pixel center labels.
-
-    Computed (read-only) attributes:
-        shape (tuple, read only): Shape of data (vertical size, horizontal size),
-            i.e., number of pixels rows and number of columns, respectively.
-        histogram (brixs.Spectrum)
-            Data intensity histogram.
-        calculated_roll (list)
-            Calculated rolls.
-        calculated_shift (list)
-            same as calculated_shift, but in terms of x or y centers.
-        columns, rows (brixs.Spectra)
-            Spectra obtained from each pixel columns or rows, respectively.
-
-    Write-only attributes:
-        None
+            >>> im = br.Image(filepath=<filepath>, delimiter=',')
+            >>>
+            >>> print(im.get_core_attrs()) # print list of core attrs
+            >>> print(im.get_attrs())      # print list of attrs
+            >>> print(im.get_methods())    # print list of methods available
     """
     # read only and non-removable arguments
-    _read_only     = ['calculated_roll', 'calculated_shift']
+    _read_only     = ['x_step', 'x_monotonicity', 'y_step', 'y_monotonicity']
     _non_removable = []
     
-    def __init__(self, *args, **kwargs):
-        """Initialize the object instance.
-        
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-        """
+    def __init__(self, data=None, filepath=None, x_centers=None, y_centers=None, **kwargs):
+        """Initialize the object instance"""
         ###########################
         # Initializing attributes #
         ###########################
-        # basic
-        self._data      = None
+        # core
+        self._data = None
+
+        # check
+        self._x_step = None
+        self._y_step = None
+        self._x_monotonicity = None
+        self._y_monotonicity = None
+
+        # modifiers
+        self._factor = 1
+        self._offset = 0 
+
+        # labels
         self._x_centers = None
         self._y_centers = None
         self._x_edges   = None
         self._y_edges   = None
-        self._filepath  = ''
-
-        self._calculated_roll  = None
-        self._calculated_shift = None
-
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        error_message = 'Wrong input. Image object cannot be created. Please, use one ' +\
-                        'of the examples below to create a Image object:\n' +\
-                        '\n' +\
-                        'im = br.Image()\n' +\
-                        '\n' +\
-                        'im = br.Image(data)\n' +\
-                        'im = br.Image(data=data)\n' +\
-                        '\n' +\
-                        'im = br.Image(filepath=<filepath>)\n' +\
-                        'im = br.Image(<filepath>)\n' +\
-                        '\n' +\
-                        'data must be a 2D array and filepath ' +\
-                        'must be a string or pathlib.Path object'
-        if kwargs != {} and args != ():
-            raise AttributeError(error_message)
-        if any([item not in ['data', 'filepath'] for item in kwargs.keys()]):
-            raise AttributeError(error_message)
-        if len(args) > 1 or len(kwargs) > 1:
-            raise AttributeError(error_message)
 
         ################
         # loading data #
         ################
-        # keyword arguments
-        if 'data' in kwargs:
-            self.data = kwargs['data']
-        elif 'filepath' in kwargs:
-            self.load(kwargs['filepath'])
-        # positional arguments
-        elif len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                self.load(args[0])
-            else:
-                self.data = args[0]
+        if data is not None:
+            self.data = data
+            if x_centers is not None:
+                self.x_centers = x_centers
+            if y_centers is not None:
+                self.y_centers = y_centers
+        elif filepath is not None:
+            self.load(filepath, **kwargs)
+        return
 
-    ##############
-    # attributes #
-    ##############
+    ###################
+    # core attributes #
+    ###################
     @property
     def data(self):
         return copy.deepcopy(self._data)
     @data.setter
     def data(self, value):
-        # basic attr
         self._data  = np.array(value, dtype='float')
         self.x_centers = None
-        self.y_centers = None        
-        self._calculated_roll  = None
-        self._calculated_shift = None
+        self.y_centers = None    
+        self._x_edges  = None
+        self._y_edges  = None    
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
@@ -5006,11 +5124,13 @@ class Image(metaclass=_Meta):
         if value is None:
             value = np.arange(0, self.data.shape[1])
         elif isinstance(value, Iterable):
-            if len(value) != self.shape[1]:
-                raise ValueError(f"Length of x must be the same as the number of pixels in the horizontal direction.\nNumber of pixels = {self.data.shape[1]}\nLength of the array = {len(value)}")
+            assert len(value) == self.shape[1], f"number of x centers ({len(value)}) must be the same as the number of pixel columns ({self.data.shape[1]})"
+            # assert arraymanip.check_monotonicity(value) == 1, f"x centers must be a monotonically increasing array"
         else:
-            raise ValueError(f"x must be None or an iterable (list, tuple, or 1D array)")
+            raise ValueError(f"x centers must be None or an iterable (list, tuple, or 1D array)")
         self._x_centers = np.array(value, dtype='float')
+        temp            = list(arraymanip.moving_average(value, 2))
+        self.x_edges    = [value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
     @x_centers.deleter
     def x_centers(self):
         self._x_centers = np.arange(0, self.data.shape[1])
@@ -5023,11 +5143,13 @@ class Image(metaclass=_Meta):
         if value is None:
             value = np.arange(0, self.data.shape[0])
         elif isinstance(value, Iterable):
-            if len(value) != self.shape[0]:
-                raise ValueError(f"Length of y must be the same as the number of pixels in the vertical direction.\nNumber of pixels = {self.data.shape[0]}\nLength of the array = {len(value)}")
+            assert len(value) == self.shape[0], f"number of y centers ({len(value)}) must be the same as the number of pixel columns ({self.data.shape[0]})"
+            # assert arraymanip.check_monotonicity(value) == 1, f"y centers must be a monotonically increasing array"
         else:
-            raise ValueError(f"y must be None or an iterable (list, tuple, or 1D array)")
+            raise ValueError(f"y centers must be None or an iterable (list, tuple, or 1D array)")
         self._y_centers = np.array(value, dtype='float')
+        temp            = list(arraymanip.moving_average(value, 2))
+        self.y_edges    = [value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
     @y_centers.deleter
     def y_centers(self):
         self._y_centers  = np.arange(0, self.data.shape[0])
@@ -5037,7 +5159,17 @@ class Image(metaclass=_Meta):
         return self._x_edges
     @x_edges.setter
     def x_edges(self, value):
-        raise NotImplementedError('this is not implemented yet')
+        if value is None:
+            centers = np.arange(0, self.data.shape[1])
+            temp    = list(arraymanip.moving_average(centers, 2))
+            value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
+        elif isinstance(value, Iterable):
+            assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns plus one ({self.data.shape[1] + 1})"
+            # assert arraymanip.check_monotonicity(value) == 1, f"x edges must be a monotonically increasing array"
+        else:
+            raise ValueError(f"x edges must be None or an iterable (list, tuple, or 1D array)")
+        self._x_edges   = np.array(value, dtype='float')
+        self._x_centers = np.array(arraymanip.moving_average(value, 2), dtype='float')
     @x_edges.deleter
     def x_edges(self):
         raise NotImplementedError('this is not implemented yet')
@@ -5047,33 +5179,28 @@ class Image(metaclass=_Meta):
         return self._y_edges
     @y_edges.setter
     def y_edges(self, value):
-        raise NotImplementedError('this is not implemented yet')
+        if value is None:
+            centers = np.arange(0, self.data.shape[0])
+            temp    = list(arraymanip.moving_average(centers, 2))
+            value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
+        elif isinstance(value, Iterable):
+            assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows plus one ({self.data.shape[0] + 1})"
+            assert arraymanip.check_monotonicity(value) == 1, f"y edges must be a monotonically increasing array"
+            self._y_centers = np.array(arraymanip.moving_average(value, 2), dtype='float')
+        else:
+            raise ValueError(f"y edges must be None or an iterable (list, tuple, or 1D array)")
+        self._y_edges = np.array(value, dtype='float')
     @y_edges.deleter
     def y_edges(self):
         raise NotImplementedError('this is not implemented yet')
 
-    @property
-    def filepath(self):
-        return self._filepath
-    @filepath.setter
-    def filepath(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str) or isinstance(value, Path):
-            self._filepath = value
-        else:
-            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nfilepath can only be str or pathlib.Path type.')
-    @filepath.deleter
-    def filepath(self):
-        raise AttributeError('Cannot delete object.')  
-    
     ###################################
     # computed (read-only) attributes #
     ###################################
     @property
     def shape(self):
         if self._data is None:
-            return None
+            return (0, 0)
         return (self.data.shape[0], self.data.shape[1])
     @shape.setter
     def shape(self, value):
@@ -5101,6 +5228,7 @@ class Image(metaclass=_Meta):
         ss = Spectra(n=self.shape[1])
         for i in range(self.shape[1]):
             ss[i] = Spectrum(x=self.y_centers, y=self.data[:, i])
+        ss.copy_attrs_from(self)
         return ss
     @columns.setter
     def columns(self, value):
@@ -5116,12 +5244,45 @@ class Image(metaclass=_Meta):
         ss = Spectra(n=self.shape[0])
         for i in range(self.shape[0]):
             ss[i] = Spectrum(x=self.x_centers, y=self.data[i, :])
+        ss.copy_attrs_from(self)
         return ss
     @rows.setter
     def rows(self, value):
         raise AttributeError('Attribute is "read only". Cannot set attribute.')
     @rows.deleter
     def rows(self):
+        raise AttributeError('Cannot delete object.')
+
+    #########################
+    # write-only attributes #
+    #########################
+    pass
+
+    #######################
+    # modifier attributes #
+    #######################
+    @property
+    def offset(self):
+        return self._offset
+    @offset.setter
+    def offset(self, value):
+        _im = self.set_offset(-self._offset).set_offset(value)
+        self._data   = _im.data
+        self._offset = value
+    @offset.deleter
+    def offset(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
+    def factor(self):
+        return self._factor
+    @factor.setter
+    def factor(self, value):
+        _im = self.set_factor(1/self._factor).set_factor(value)
+        self._data   = _im.data
+        self._factor = value
+    @factor.deleter
+    def factor(self):
         raise AttributeError('Cannot delete object.')
 
     #################
@@ -5157,13 +5318,11 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
 
-        # ##################
-        # # transfer attrs #
-        # ##################
-        # for attr in self.get_attrs():
-        #     value = copy.deepcopy(self.__dict__[attr])
-        #     final.__setattr__(attr, value)
-
+        final.copy_attrs_from(self)
+        final._x_centers = self.x_centers
+        final._y_centers = self.y_centers
+        final._x_edges   = self.x_edges
+        final._y_edges   = self.y_edges
         return final
         
     def __sub__(self, object):
@@ -5185,13 +5344,11 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
 
-        # ##################
-        # # transfer attrs #
-        # ##################
-        # for attr in self.get_attrs():
-        #     value = copy.deepcopy(self.__dict__[attr])
-        #     final.__setattr__(attr, value)
-
+        final.copy_attrs_from(self)
+        final._x_centers = self.x_centers
+        final._y_centers = self.y_centers
+        final._x_edges   = self.x_edges
+        final._y_edges   = self.y_edges
         return final
     
     def __mul__(self, object):
@@ -5213,13 +5370,11 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
         
-        # ##################
-        # # transfer attrs #
-        # ##################
-        # for attr in self.get_attrs():
-        #     value = copy.deepcopy(self.__dict__[attr])
-        #     final.__setattr__(attr, value)
-
+        final.copy_attrs_from(self)
+        final._x_centers = self.x_centers
+        final._y_centers = self.y_centers
+        final._x_edges   = self.x_edges
+        final._y_edges   = self.y_edges
         return final
     
     def __div__(self, object):
@@ -5242,29 +5397,35 @@ class Image(metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Image')
         
-        # ##################
-        # # transfer attrs #
-        # ##################
-        # for attr in self.get_attrs():
-        #     value = copy.deepcopy(self.__dict__[attr])
-        #     final.__setattr__(attr, value)
-
+        final.copy_attrs_from(self)
+        final._x_centers = self.x_centers
+        final._y_centers = self.y_centers
+        final._x_edges   = self.x_edges
+        final._y_edges   = self.y_edges
         return final
     
     def __truediv__(self, object):
         return self.__div__(object)
 
-    
     #########
     # attrs #
     #########
+    def get_core_attrs(self): 
+        """return a list of core attrs"""
+        return settings._reserved_words['Image']['pseudovars']
+    
     def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
-    def _get_center_attrs(self):
-        """return center attrs"""
-        return ['_x_centers', '_y_centers', '_x_edges', '_y_edges']
+    def get_methods(self):
+        """return a list of methods available"""
+        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
+    
+    def remove_attrs(self):
+        """Delete all user defined attrs."""
+        for attr in self.get_attrs():
+            self.__delattr__(attr)
 
     def copy_attrs_from(self, s):
         """Copy user defined attributes from another brixs object.
@@ -5287,25 +5448,10 @@ class Image(metaclass=_Meta):
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
 
-    def copy_centers_from(self, s):
-        """Copy center attributes from another brixs.Image object.
-
-        Args:
-            s (brixs object): Image to copy center attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Image):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Image to type br.Image')
-
-        # transfer attrs
-        for attr in s._get_center_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
+    ###########
+    # attrs 2 #
+    ###########
+    pass
 
     ###########
     # support #
@@ -5335,48 +5481,113 @@ class Image(metaclass=_Meta):
             vmax = max([max(x) for x in self.data])
         return vmin, vmax
     
+    ################
+    # core methods #
+    ################
+    pass
+
+    ########
+    # copy #
+    ########
+    def _copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Same as self.copy(), but attrs are NOT copied."""
+        #############
+        # copy data #
+        #############
+        data = copy.deepcopy(self.data)
+
+        #####################
+        # if limits is None #
+        #####################
+        if x_start is None and x_stop is None and y_start is None and y_stop is None:
+            im = Image(data=data)
+            im.x_centers = copy.deepcopy(self.x_centers)
+            im.y_centers = copy.deepcopy(self.y_centers)
+            return im
+        
+        ########################################
+        # check if extract is really necessary #
+        ########################################
+        if x_start <= min(self.x_centers) and x_stop >= max(self.x_centers):
+            if y_start <= min(self.y_centers) and y_stop >= max(self.y_centers):
+                im = Image(data=data)
+                im.x_centers = copy.deepcopy(self.x_centers)
+                im.y_centers = copy.deepcopy(self.y_centers)
+                return im
+            
+        #################
+        # check if None #
+        #################
+        if x_start is None: x_start = min(self.x_centers)
+        if x_stop  is None: x_stop  = max(self.x_centers)
+        if y_start is None: y_start = min(self.y_centers)
+        if y_stop  is None: y_stop  = max(self.y_centers)
+
+        ##################
+        # validate input #
+        ##################
+        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        assert y_stop > y_start, f'y_start must be smaller than y_stop.'        
+        
+        ########################
+        # check if empty image #
+        ########################
+        if self.data is None:
+            print(f'Warning: copying empty Image')
+            return Image()
+        if len(self.data) == 0:
+            print(f'Warning: copying empty Image')
+            return Image()
+        
+        ########
+        # crop #
+        ########
+        y_start = int(arraymanip.index(self.y_centers, y_start))
+        y_stop  = int(arraymanip.index(self.y_centers, y_stop))
+        x_start = int(arraymanip.index(self.x_centers, x_start))
+        x_stop  = int(arraymanip.index(self.x_centers, x_stop))
+        im      = Image(data=self.data[y_start:y_stop+1, x_start:x_stop+1])
+        im.x_centers = self.x_centers[x_start:x_stop+1]
+        im.y_centers = self.y_centers[y_start:y_stop+1]
+        return im
+
+    def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Return a copy of the object.
+
+        Usage:
+            >>> # full copy
+            >>> im2 = im1.copy()  # im2 is now a copy of im1
+            >>>
+            >>> # im3 will be a croped image of im1
+            >>> im3 = im1.copy(x_start, x_stop, y_start, y_stop) 
+
+        Args:
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+
+        Returns:
+            :py:attr:`Image`
+        """
+        im = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+
+        ##################
+        # transfer attrs #
+        ##################
+        im.copy_attrs_from(self)
+        return im
+    
     #################
     # save and load #
     #################
-    def _create_header(self, verbose=False):
-        """Gather attrs to be saved to a file."""
-        header = ''
-        attrs  = self.get_attrs()
-        attrs += self._get_center_attrs()
-        for name in attrs:
-            try:
-                if self.__dict__[name] is None:
-                    header += f'{name}: None'  + '\n'
-                elif isinstance(self.__dict__[name], str):
-                    temp2 = str(self.__dict__[name]).replace('\n','\\n')
-                    header += f'{name}: \"{temp2}\"'  + '\n'
-                elif isinstance(self.__dict__[name], dict) or isinstance(self.__dict__[name], MutableMapping):
-                    if verbose:
-                        type_ = str(type(self.__dict__[name]))
-                        print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
-                elif isinstance(self.__dict__[name], Iterable):
-                    header += f'{name}: {list(self.__dict__[name])}'  + '\n'
-                elif numanip.is_number(self.__dict__[name]):
-                    tosave = str(self.__dict__[name])
-                    if tosave[-1] == '\n':
-                        tosave = tosave[:-1]
-                    header += f'{name}: {tosave}'  + '\n'
-                else:
-                    temp2 = str(self.__dict__[name]).replace('\n','\\n')
-                    header += f'{name}: \"{temp2}\"'  + '\n'
-            except:
-                if verbose:
-                    type_ = str(type(self.__dict__[name]))
-                    print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
-        return header[:-1]
-    
     def save(self, filepath=None, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
-        Attrs are saved as comments if only_data is False. Saving attrs to file
-        is tricky because requires converting variables to string. Only attrs 
-        that are of type: string, number, and list of number and strings are 
-        saved somewhat correctly. Dictionaries are not saved. 
+        Warning:
+            Attrs are saved as comments if only_data is False. Saving attrs to file
+            is not always reliable because requires converting variables to string. 
+            Only attrs that are of type: string, number, and list of number and strings are 
+            saved somewhat correctly. Dictionaries are not saved. 
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -5413,22 +5624,27 @@ class Image(metaclass=_Meta):
         Returns:
             None
 
+        See Also:
+            :py:func:`Image.load`
+
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
-        # filepath
-        if filepath is None:
-            if filepath == '':
-                raise TypeError("Missing 1 required argument: 'filepath'")
-            else:
-                filepath = self.filepath               
-        filepath = Path(filepath)
-
-        # check if filepath points to a file
+        ##############################
+        # check for wrong parameters #
+        ##############################
+        if 'folderpath' in kwargs:
+            raise ValueError('folderpath is not a valid parameter.\nPlease, use filepath')
+        
+        ######################################
+        # check if filepath points to a file #
+        ######################################
         assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
         if filepath.exists():
             assert filepath.is_file(), 'filepath must point to a file'
-        
-        # check overwrite
+
+        ###################
+        # check overwrite #
+        ###################
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
@@ -5439,7 +5655,9 @@ class Image(metaclass=_Meta):
                 else:
                     raise AttributeError('filepath not pointing to a file.')
 
-        # kwargs
+        ##########
+        # kwargs #
+        ##########
         if 'fmt' not in kwargs: # pick best format
             decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self._data)])
             kwargs['fmt'] = f'%.{decimal}f'
@@ -5450,28 +5668,46 @@ class Image(metaclass=_Meta):
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
 
-        # save
+        #####################
+        # header and footer #
+        #####################
         if only_data:
             if 'header' in kwargs:
                 del kwargs['header']
             if 'footer' in kwargs:
                 del kwargs['footer']
         else:
+            attrs  = ['_x_step', '_y_step', '_x_monotonicity', '_y_monotonicity']
+            attrs += ['_factor', '_offset']
+            attrs += ['_x_centers', '_y_centers', '_x_edges', '_y_edges']
+            attrs += self.get_attrs()
+            header = '\n'.join(_attr2str(self, attrs, verbose)) + '\n'
+
             if 'header' not in kwargs:
-                kwargs['header'] = self._create_header(verbose=verbose)
+                kwargs['header'] = header
             else:
                 if kwargs['header'] == '':
-                    kwargs['header'] = self._create_header(verbose=verbose)
+                    kwargs['header'] = header
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
+        
+        ########
+        # save #
+        ########
         np.savetxt(Path(filepath), self._data, **kwargs)
-
-        # save filepath
-        self.filepath = filepath
 
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
+        Warning:
+            This a very simple loading function that works well with matrix text
+            file.
+
+        Note:
+            If file was saved by br.Image.save(), then the metadata (comments) can be 
+            recovered. If not, one might get better results by setting `only_data = True`.
+
+            
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename extension is .gz or .bz2, the file is first 
@@ -5494,25 +5730,34 @@ class Image(metaclass=_Meta):
         Returns:
             None
 
+        See Also:
+            :py:func:`Image.save`
+
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
-        ###########
-        # default #
-        ###########
+        ############
+        # filepath #
+        ############
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
+        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+
+        ##########
+        # kwargs #
+        ##########
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
 
-        # check if filepath points to a file
-        filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
-        assert filepath.exists(), f'filepath does not exist\n{filepath}'
-
-        #############
-        # read data #
-        #############
+        ########
+        # read #
+        ########
         data = np.genfromtxt(Path(filepath), **kwargs)
+
+        ##########
+        # assign #
+        ##########
         self.data = data
 
         ###############
@@ -5535,81 +5780,544 @@ class Image(metaclass=_Meta):
                             setattr(self, name, value)
                         except Exception as e:
                             if verbose:
-                                print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+                                print(f'cannot read attr ({name}: {value})\nAttribute not set\n{e}\n')
+
+    #########
+    # check #
+    #########
+    def check_x_step(self, max_error=0.1):
+        """Checks vector uniformity of the x centers.
+
+            If the step between two data points is the same through out the
+            x vector, it sets :py:attr:`Image.x_step` with the value of the step size.
+
+            Args:
+                max_error (number, optional): percentage (of the x step) value 
+                of the max error. Default is 0.1 %
+                
+            Note:
+                Step uniformity is verified by the following equation:
+
+                    (max(steps) - min(steps))/np.mean(steps) * 100 < max_error
+
+            Returns:
+                None
+
+            Raises:
+                ValueError: If x centers are not uniform.
         
-        # save filepath
-        self.filepath = str(filepath)
+            See Also:
+                :py:func:`Image.check_y_step`, :py:func:`Image.check_x_monotonicity`
+        """
+        s = Spectrum(x=self.x_centers, y=self.x_centers)
+        try:
+            s.check_step()
+        except ValueError:
+            raise ValueError(f"Step in the x centers seems not to be uniform. Set im.x_centers = None or change im.x_centers")
+        self._x_step = s.step
+        return
 
-    ##################
-    # base modifiers #
-    ##################
-    def set_roll(self, value=None, p=None, f=None, axis=0):
-        """Roll array of pixels along a given axis.
+    def check_y_step(self, max_error=0.1):
+        """Checks vector uniformity of the y centers.
 
-        Elements that roll beyond the edge are re-introduced at the first position.
+            If the step between two data points is the same through out the
+            x vector, it sets :py:attr:`Image.y_step` with the value of the step size.
 
-        If value, p, and f are None, values are read from im.calculated_roll.
+            Args:
+                max_error (number, optional): percentage (of the x step) value 
+                of the max error. Default is 0.1 %
+                
+            Note:
+                Step uniformity is verified by the following equation:
 
-        Roll values must be an integer. Float values will be rounded to int.
+                    (max(steps) - min(steps))/np.mean(steps) * 100 < max_error
 
-        Args:
-            value (int or tuple): The number of pixels by which the data are shifted.
-                If a tuple, then it must be of the same size as the number of
-                columns (``for axis=0``) or rows (``for axis=1``). If elements are
-                not int, it will rounded to an integer value. Default is None.
-            p (np.array, read only): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x_centers for 
-                axis=0 or y_centers for axis=1. Default is None.
-            f (function, read only): funcion f(x_centers) for axis=0 or 
-                f(y_centers) for axis=1. Default is None.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
+            Returns:
+                None
+
+            Raises:
+                ValueError: If y centers are not uniform.
+        
+            See Also:
+                :py:func:`Image.check_x_step`, :py:func:`Image.check_y_monotonicity`
+        """
+        s = Spectrum(x=self.y_centers, y=self.y_centers)
+        try:
+            s.check_step()
+        except ValueError:
+            raise ValueError(f"Step in the y centers seems not to be uniform. Set im.y_centers = None or change im.y_centers")
+        self._y_step = s.step
+        return
+    
+    def check_x_monotonicity(self):
+        """Sets x monotonicity attribute to 'increasing' or 'decreasing'.
+
+        Raises:
+            ValueError if data is not monotonic.
 
         Returns:
             None
+
+        See Also:
+            :py:func:`Image.check_x_step`, :py:func:`Image.fix_x_monotonicity`
         """
-        # check axis and define centers
-        if axis == 0:
-            centers = self.x_centers
-        elif axis == 1:
-            centers = self.y_centers
-        else:
-            raise ValueError('axis must be 0 or 1')
+        s = Spectrum(x=self.x_centers, y=self.x_centers)
+        try:
+            s.check_monotonicity()
+        except ValueError:
+            raise ValueError('x centers is not monotonic. Use Image.fix_x_monotonicity()')
+        self._x_monotonicity = s.monotonicity
+        return
+    
+    def check_y_monotonicity(self):
+        """Sets y monotonicity attribute to 'increasing' or 'decreasing'.
 
-        # calculate value
-        if value is not None:
-            if isinstance(value, Iterable):
-                assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of columns ({self.shape[1]}) (for axis=1) or rows ({self.shape[0]}) (for axis=0)'
-            else:
-                value = [value]*len(centers)
-        elif p is not None:
-            value = np.polyval(p, centers)
-        elif f is not None:
-            value = f(centers)
-        else:
-            value = self.calculated_roll
-        value = [int(round(k)) for k in value]
+        Raises:
+            ValueError if data is not monotonic.
 
-        # roll
-        if axis == 0:
-            for i, v in enumerate(value):
-                if v != 0:
-                    s = Spectrum(self._data[:, i])
-                    s.roll = v
-                    self._data[:, i] = s.y
-        elif axis == 1:
-            for i, h in enumerate(value):
-                if h != 0:
-                    s = Spectrum(self._data[i, :])
-                    s.roll = h
-                    self._data[i, :] = s.y
+        Returns:
+            None
+
+        See Also:
+            :py:func:`Image.check_y_step`, :py:func:`Image.fix_y_monotonicity`
+        """
+        s = Spectrum(x=self.y_centers, y=self.y_centers)
+        try:
+            s.check_monotonicity()
+        except ValueError:
+            raise ValueError('y centers is not monotonic. Use Image.fix_y_monotonicity()')
+        self._y_monotonicity = s.monotonicity
+        return
+
+    def fix_x_monotonicity(self, mode='increasing', attrs2reorder=None):
+        """Rearrange image columns such as x centers is monotonically increasing or decreasing.
+
+            Args:
+                mode (str, optional): increasing or decreasing.
+                attrs2reorder (list of str, optional): list of aditional Image attrs that 
+                must also be sorted based on the x centers.
+            
+
+            Returns:
+                :py:clas:`Image`
+            
+            See Also:
+                :py:func:`Image.check_x_monotonicity`
+        """
+        # check mode
+        increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
+        decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
+        if mode not in increasing and mode not in decreasing:
+            raise ValueError('mode should be "decreasing" or "increasing".')
+        
+        if mode in increasing: mode = 'increasing'
+        else: mode = 'decreasing'
+
+        # turn array into monotonic
+        if self.x_monotonicity is None:
+            try:
+                self.check_x_monotonicity()
+                if self.x_monotonicity == mode:
+                    return self.copy()
+            except ValueError:
+                pass
+        elif self.x_monotonicity == mode:
+            return self.copy()
+        
+        _decreasing = False
+        if mode in decreasing: 
+            _decreasing = True
+        _im = self.copy()
+        _ss = _im.columns
+        _ss.__temporary__attr__123__ = self.x_centers
+        ss = _ss.reorder_by_attr(attr='__temporary__attr__123__', attrs2reorder=attrs2reorder, decreasing=_decreasing)
+        im = ss.stack_spectra_as_columns(x_centers=ss.__temporary__attr__123__)
+        im.check_x_monotonicity()
+
+        return im
+    
+    def fix_y_monotonicity(self, mode='increasing', attrs2reorder=None):
+        """Rearrange image columns such as x centers is monotonically increasing or decreasing.
+
+            Args:
+                mode (str, optional): increasing or decreasing.
+                attrs2reorder (list of str, optional): list of aditional Image attrs that 
+                must also be sorted based on the y centers.
+            
+
+            Returns:
+                :py:clas:`Image`
+            
+            See Also:
+                :py:func:`Image.check_x_monotonicity`
+        """
+        # check mode
+        increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
+        decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
+        if mode not in increasing and mode not in decreasing:
+            raise ValueError('mode should be "decreasing" or "increasing".')
+        
+        if mode in increasing: mode = 'increasing'
+        else: mode = 'decreasing'
+
+        # turn array into monotonic
+        if self.monotonicity is None:
+            try:
+                self.check_y_monotonicity()
+                if self.y_monotonicity == mode:
+                    return self.copy()
+            except ValueError:
+                pass
+        elif self.y_monotonicity == mode:
+            return self.copy()
+        
+        _decreasing = False
+        if mode in decreasing: 
+            _decreasing = True
+        _im = self.copy()
+        _ss = _im.rows
+        _ss.__temporary__attr__123__ = self.y_centers
+        ss = _ss.reorder_by_attr(attr='__temporary__attr__123__', attrs2reorder=attrs2reorder, decreasing=_decreasing)
+        im = ss.stack_spectra_as_rows(y_centers=ss.__temporary__attr__123__)
+        im.check_y_monotonicity()
+
+        return im
 
     #############
     # modifiers #
     #############
-    def floor(self, x=0, y=0, n=30, nx=None, ny=None):
-        """Set background intensity to zero.
+    def set_offset(self, value):
+        """Add value to intensity (matrix elements).
+
+        Args:
+            value (value): offset value.
+
+        Returns:
+            :py:class:`Image`
+        """
+        im = self.copy()
+        im._data   += float(value).astype(self.data.dtype)
+        im._offset += float(value).astype(self.data.dtype)
+        return im
+
+    def set_factor(self, value):
+        """Multiply intensity (matrix elements) by value.
+
+        Args:
+            value (number): multiplicative factor
+
+        Raises:
+            AttributeError: if value is 0.
+
+        Returns:
+            :py:class:`Spectrum`
+        """
+        if value == 0:
+            raise AttributeError('cannot set factor = 0.')
+        im          = self.copy()
+        im._data   *= float(value).astype(self.data.dtype)
+        im._factor *= float(value).astype(self.data.dtype)
+        return im
+
+    def set_horizontal_shift(self, value):
+        """Roll pixels rows left and right in terms of x centers.
+
+        Note:
+            The shift value in terms of x center scale is converted to number of
+             pixels to be rolled left or right. Elements that roll beyond the 
+             last position are re-introduced at the other side.
+
+        Args:
+            value (number or list): shift value in terms of x center by which the data are 
+                shifted. If list, then it must be of the same size as the number of
+                 rows. First element will be assigned to the first row (top to 
+                 bottom) and so on. 
+
+        Returns:
+            :py:class:`Image`
+        
+        See Also:
+            :py:func:`Image.set_horizontal_roll`, :py:func:`Image.set_vertical_roll`, :py:func:`Image.set_vertical_shift`
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        # x axis must be uniform if mode is roll
+        if self.x_step is None:
+            try:
+                self.check_x_step()
+            except ValueError:
+                raise ValueError(f'Cannot shift data, because x centers are not uniform. Use im.x_interp() to make data uniform, or shift data using im.set_roll()')
+        
+        #####################################
+        # asserting validity of the input 2 #
+        #####################################
+        centers = self.y_centers
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(centers)
+        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
+        
+        #################
+        # shift to roll #
+        #################
+        value = [int(round(k/self.x_step)) for k in value]
+        
+        ########
+        # roll #
+        ########
+        return self.set_horizontal_roll(value=value)
+    
+    def set_vertical_shift(self, value):
+        """Roll pixels rows left and right in terms of x centers.
+
+        Note:
+            The shift value in terms of y center scale is converted to number of
+             pixels to be rolled left or right. Elements that roll beyond the 
+             last position are re-introduced at the other side.
+
+        Args:
+            value (number or list): shift value in terms of y center by which the data are 
+                shifted. If list, then it must be of the same size as the number of
+                 rows. First element will be assigned to the first row (top to 
+                 bottom) and so on. 
+
+        Returns:
+            :py:class:`Image`
+
+        See Also:
+            :py:func:`Image.set_horizontal_roll`, :py:func:`Image.set_vertical_roll`, :py:func:`Image.set_horizontal_shift`
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        # x axis must be uniform if mode is roll
+        if self.y_step is None:
+            try:
+                self.check_y_step()
+            except ValueError:
+                raise ValueError(f'Cannot shift data, because x centers are not uniform. Use im.x_interp() to make data uniform, or shift data using im.set_roll()')
+        
+        #####################################
+        # asserting validity of the input 2 #
+        #####################################
+        centers = self.x_centers
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(centers)
+        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of columns ({len(centers)})'
+        
+        #################
+        # shift to roll #
+        #################
+        value = [int(round(k/self.y_step)) for k in value]
+        
+        ########
+        # roll #
+        ########
+        return self.set_vertical_roll(value=value)
+
+    def set_horizontal_roll(self, value):
+        """Roll pixels rows left and right.
+
+        Note:
+            Elements that roll beyond the last position are re-introduced at the
+             other side. 
+
+        Warning:
+            Roll values must be an integer. Float values will be rounded to int.
+
+        Args:
+            value (int or list): The number of pixels by which the data are 
+                shifted. If list, then it must be of the same size as the number of
+                 rows. First element will be assigned to the first row (top to 
+                 bottom) and so on. If elements are not int, it will rounded to 
+                 an integer value. 
+
+        Returns:
+            :py:class:`Image`
+        
+        See Also:
+            :py:func:`Image.set_vertical_shift`, :py:func:`Image.set_vertical_roll`, :py:func:`Image.set_horizontal_shift`
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        centers = self.y_centers
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(centers)
+        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
+        
+        #####################
+        # everything to int #
+        #####################
+        value = [int(round(k)) for k in value]
+        
+        ########
+        # roll #
+        ########
+        im = self.copy()
+        for i, v in enumerate(value):
+            if v != 0:
+                s = Spectrum(im._data[:, i]).set_roll(v)
+                im._data[:, i] = s.y
+        return im
+    
+    def set_vertical_roll(self, value):
+        """Roll pixels columns up and down.
+
+        Note:
+            Elements that roll beyond the last position are re-introduced at the
+             other side. 
+
+        Warning:
+            Roll values must be an integer. Float values will be rounded to int.
+
+        Args:
+            value (int or list): The number of pixels by which the data are 
+                shifted. If list, then it must be of the same size as the number of
+                 columns. First element will be assigned to the first column (left to 
+                 right) and so on. If elements are not int, it will rounded to 
+                 an integer value. 
+
+        Returns:
+            :py:class:`Image`
+        
+        See Also:
+            :py:func:`Image.set_horizontal_roll`, :py:func:`Image.set_vertical_shift`, :py:func:`Image.set_horizontal_shift`
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        centers = self.x_centers
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(centers)
+        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
+        
+        #####################
+        # everything to int #
+        #####################
+        value = [int(round(k)) for k in value]
+        
+        ########
+        # roll #
+        ########
+        im = self.copy()
+        for i, v in enumerate(value):
+            if v != 0:
+                s = Spectrum(im._data[i, :]).set_roll(v)
+                im._data[i, :] = s.y
+        return im
+
+    ###############
+    # modifiers 2 #
+    ###############
+    def set_horizontal_shift_via_polyval(self, p):
+        """Set horizontal shift values to np.polyval(p, y_centers).
+
+        Args:
+            p (array): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term.
+
+        Returns:
+            :py:class:`Image`
+        """
+        f = lambda y: np.polyval(p, y)
+        return self.set_horizontal_shift_via_function(f)
+    
+    def set_vertical_shift_via_polyval(self, p):
+        """Set vertical shift values to np.polyval(p, x_centers).
+
+        Args:
+            p (array): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term.
+
+        Returns:
+            :py:class:`Image`
+        """
+        f = lambda x: np.polyval(p, x)
+        return self.set_vertical_shift_via_function(f)
+
+    def set_vertical_shift_via_function(self, f):
+        """Set vertical shift values to f(x_center).
+
+        Args:
+            f (function): function where argument is x centers elements
+
+        Returns:
+            :py:class:`Image`
+        """
+        value = np.array([f(x) for x in self.x_centers])
+        return self.set_vertical_shift(value=value)
+
+    def set_horizontal_shift_via_function(self, f):
+        """Set horizontal shift values to f(y_center).
+
+        Args:
+            f (function): function where argument is y centers elements
+
+        Returns:
+            :py:class:`Image`
+        """
+        value = np.array([f(x) for x in self.y_centers])
+        return self.set_horizontal_shift(value=value)
+
+
+    def set_horizontal_roll_via_polyval(self, p):
+        """Set horizontal roll to np.polyval(p, y pixel).
+
+        Args:
+            p (array): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term.
+
+        Returns:
+            :py:class:`Image`
+        """
+        f = lambda y: np.polyval(p, y)
+        return self.set_horizontal_roll_via_function(f)
+    
+    def set_vertical_roll_via_polyval(self, p):
+        """Set vertical roll to np.polyval(p, x pixel).
+
+        Args:
+            p (array): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term.
+
+        Returns:
+            :py:class:`Image`
+        """
+        f = lambda x: np.polyval(p, x)
+        return self.set_vertical_roll_via_function(f)
+
+    def set_vertical_roll_via_function(self, f):
+        """Set vertical roll to f(x pixel).
+
+        Args:
+            f (function): function where argument is x centers elements
+
+        Returns:
+            :py:class:`Image`
+        """
+        value = np.array([f(x) for x in range(len(self.x_centers))])
+        return self.set_vertical_roll(value=value)
+
+    def set_horizontal_roll_via_function(self, f):
+        """Set horizontal roll to f(y pixel).
+
+        Args:
+            f (function): function where argument is y centers elements
+
+        Returns:
+            :py:class:`Image`
+        """
+        value = np.array([f(x) for x in range(len(self.y_centers))])
+        return self.set_horizontal_roll(value=value)
+
+
+    def floor(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Set intensity to zero inside limits to zero.
 
         Args:
             x, y (int, optional): x and y position to sample background intensity.
@@ -5618,94 +6326,16 @@ class Image(metaclass=_Meta):
         Returns:
             None
         """
-        assert x >= 0 and numanip.is_integer(x) and x<self.shape[1], f'x must be a positive integer smaller than {self.shape[1]}.'
-        assert y >= 0 and numanip.is_integer(y) and y<self.shape[0], f'y must be a positive integer smaller than {self.shape[0]}.'
-
-        # sorting n
-        if nx is None: nx = n
-        if ny is None: ny = n
-
-        # check if x falls inside the image
-        if x-nx/2 >= 0 and x+nx/2 < self.shape[1]:
-            x_start = x-nx/2
-            x_stop  = x+nx/2
-        elif x-nx/2 < 0:
-            x_start = 0
-            x_stop = x+nx/2-(x-nx/2)
-        elif x+n/2 >= self.shape[1]:
-            x_start = x-nx/2-(x+nx/2-self.shape[1])
-            x_stop  = self.shape[1]-1
-        else:
-            raise ValueError('Averaging range falls outside of the image. Please, change x or n.')
-
-        # check if y falls inside the image
-        if y-ny/2 >= 0 and y+ny/2 < self.shape[0]:
-            y_start = y-ny/2
-            y_stop  = y+ny/2
-        elif y-nx/2 < 0:
-            y_start = 0
-            y_stop = y+ny/2-(y-ny/2)
-        elif y+n/2 >= self.shape[0]:
-            y_start = y-ny/2-(y+ny/2-self.shape[0])
-            y_stop  = self.shape[0]-1
-        else:
-            raise ValueError('Averaging range falls outside of the image. Please, change y or n.')
-
-        self._data -= np.mean(self._data[int(y_start):int(y_stop), int(x_start):int(x_stop)]).astype(self.data.dtype)
-
-    def fix_curvature(self, deg=2, axis=0):
-        """Roll array of pixels along a given axis to fix curvature via cc.
-
-        Elements that roll beyond the edge are re-introduced at the first position.
-
-        Args:
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
-
-        Returns:
-            p (np.array, read only): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x_centers for 
-                axis=0 or y_centers for axis=1. Default is None.
-            f (function, read only): funcion f(x_centers) for axis=0 or 
-                f(y_centers) for axis=1.
-        """
-        # check axis and define centers
-        if axis == 0:
-            centers = self.x_centers
-        elif axis == 1:
-            centers = self.y_centers
-        else:
-            raise ValueError('axis must be 0 or 1')
-
-        # calculate shifts
+        temp = self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        value = temp.calculate_average()
         im = self.copy()
-        im.floor()
-        im.calculate_roll(axis=axis)
+        return im.set_factor(value)
 
-        # calculate poly
-        popt = np.polyfit(x=centers, y=im.calculated_roll, deg=deg)
-        model = lambda x: np.polyval(popt, x)
-
-        # set roll
-        self.set_roll(p=popt, axis=axis)
-
-        return popt, model
-    
-    ##############
-    # extractors #
-    ##############
-    def copy(self, *args, **kwargs):
-        """Return a copy of the object.
-
-        Usage:
-            >>> # full copy
-            >>> im2 = im1.copy()  # im2 is now a copy of im1
-            >>>
-            >>> # im3 will be a croped image of im1
-            >>> im3 = im1.copy(x_start, x_stop, y_start, y_stop) 
+    ############
+    # advanced #
+    ############
+    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Crop Image.
 
         Args:
             x_start, x_stop, y_start, y_stop (int): pixel range in terms of
@@ -5713,143 +6343,112 @@ class Image(metaclass=_Meta):
                 indicate the edge of the image.
 
         Returns:
-            :py:attr:`Image`
+            :py:class:`Image`
         """
-        error_message = 'Wrong input. Please check input.\n' +\
-                        f'args passed: {args}\n'  +\
-                        f'kwargs passed: {kwargs}\n\n'  +\
-                        ' === Usage ===\n'  +\
-                        'im2 = im1.copy()  # im2 is now a copy of im1\n'  +\
-                        'im3 = im1.copy(x_start, x_stop, y_start, y_stop)\n'
-        ###################################
-        # check if crop limits are passed #
-        ###################################
-        x_start = False
-        if 'x_start' in kwargs or 'x_stop' in kwargs or 'y_start' in kwargs or 'y_stop' in kwargs:
-            assert 'x_start' in kwargs and 'x_stop' in kwargs and 'y_start' in kwargs and 'y_stop' in kwargs, error_message
-            x_start = kwargs['x_start']
-            x_stop  = kwargs['x_stop']
-            y_start = kwargs['y_start']
-            y_stop  = kwargs['y_stop']
-        elif len(args) == 4:
-            x_start = args[0]
-            x_stop  = args[1]
-            y_start = args[2]
-            y_stop  = args[3]
-        elif len(args) != 4 and len(args) != 0:
-            raise ValueError(error_message)
-        elif len(kwargs) != 0:
-            for x in list(kwargs.keys()):
-                if x not in ['x_start', 'x_stop', 'y_start', 'y_stop']:
-                    raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
-        
-        ##################
-        # identical copy #
-        ##################
-        if x_start == False:
-            im = Image(data=self.data)
-            im.copy_centers_from(self)
-        #############################
-        # if crop limits are passed #
-        #############################
-        else:
-            im = self.copy()
-            im.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        return self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+
+    def transpose(self):
+        """Transpose image
+
+        Returns:
+            :py:class:`Image`
+        """
+        im = Image(data=self.data.transpose())
 
         ##################
         # transfer attrs #
         ##################
-        # im.copy_centers_from(self)
         im.copy_attrs_from(self)
+        im.x_centers = copy.deepcopy(self.y_centers)
+        im.y_centers = copy.deepcopy(self.x_centers)       
 
         return im
-    
-    def binning(self, *args, **kwargs):
-        """Compute the 2D histogram of the data (binning of the data).
 
-        Usage:
 
-            >>> # 10 rows, 10 columns
-            >>> im.binning(nbins=10)       
-            >>> im.binning(nbins=(10))
-            >>> im.binning(10)           
-            >>> im.binning((10))  
-            >>>
-            >>> # 10 rows, 5 columns
-            >>> im.binning(nbins=(10, 5)) 
-            >>> im.binning((10, 5))       
-            >>> im.binning(10, 5)   
-            >>>
-            >>> # No binning, 5 columns
-            >>> im.binning(None, 5)    
+    def x_interp(self, start=None, stop=None, num=None, step=None, x=None):
+        """return image with interpolated x centers
 
         Args:
-            nbins (int or tuple): number of bins. Must be non-zero positive number.
-                If one value is given,
-                this is used for both x and y directions. If two values are given,
-                they are used separetely for the number of rows and number of
-                columns, respectively. If the number of pixels in the image
+            start (number, optional): The starting value for x centers. If `None`,
+                the minium attr value will be used.
+            stop (number, optional): The end value for x centers. If `None`,
+                the maximum attr value will be used.
+            num (int, optional): Number of x centers values.
+            step (number, optional): Spacing between x centers. This overwrites ``num``.
+            x (list or array, optional): The values at which to
+                evaluate the interpolated values for x centers. This overwrites all other arguments.
+
+        Return:
+            :py:class:`Image`
+        """
+        cols = self.columns
+
+        cols.ref = self.x_centers
+        ss = cols.interp_spectra(ref='ref', start=start, stop=stop, num=num, step=step, x=x)
+        
+        im = ss.stack_spectra_as_columns()
+        im.copy_attrs_from(self)
+        im.x_centers = ss.ref
+        im.y_centers = self.y_centers
+        return im
+
+    def y_interp(self, start=None, stop=None, num=None, step=None, y=None):
+        """return image with interpolated y centers
+
+        Args:
+            start (number, optional): The starting value for y centers. If `None`,
+                the minium attr value will be used.
+            stop (number, optional): The end value for y centers. If `None`,
+                the maximum attr value will be used.
+            num (int, optional): Number of x centers values.
+            step (number, optional): Spacing between y centers. This overwrites ``num``.
+            y (list or array, optional): The values at which to
+                evaluate the interpolated values for y centers. This overwrites all other arguments.
+
+        Return:
+            :py:class:`Image`
+        """
+        rows = self.rows
+        rows.ref = self.y_centers
+        ss = rows.interp_spectra(ref='ref', start=start, stop=stop, num=num, step=step, x=y)
+        
+        im = ss.stack_spectra_as_rows()
+        im.copy_attrs_from(self)
+        im.x_centers = self.x_centers
+        im.y_centers = ss.ref
+        return im
+
+
+    def binning(self, ncols=None, nrows=None):
+        """Compute the 2D histogram of the data (binning of the data).
+
+        Args:
+            ncols, nrows (int or None, optional): number of columns and rows of the returned Image.
+                If None, no binning is applied. Default is None. If the number of pixels in the image
                 cannot be divided by the selected number of bins, it will raise 
-                an error. Use None to idicate no binning. 
+                an error. 
 
         Returns:
-            binned image
+            :py:class:`Image` binned image
         """
         ###################################
         # asserting validity of the input #
         ###################################
-        error_message = 'Wrong input. Please, see examples below:\n' +\
-                        '\n' +\
-                        'im.binning(nbins=10)\n' +\
-                        'im.binning(nbins=(10))\n' +\
-                        'im.binning(10)\n' +\
-                        'im.binning((10))\n' +\
-                        '\n' +\
-                        'im.binning(nbins=(10, 5))\n' +\
-                        'im.binning((10, 5))\n' +\
-                        'im.binning(10, 5)\n' +\
-                        'im.binning(None, 5)\n'
-        if kwargs != {} and args != ():
-            raise AttributeError(error_message)
-        if any([item not in ['nbins', ] for item in kwargs.keys()]):
-            raise AttributeError(error_message)
-        if len(args) > 2 or len(kwargs) > 1:
-            raise AttributeError(error_message)
-       
-        #################
-        # sorting input #
-        #################
-        # keyword arguments
-        if 'nbins' in kwargs:
-            args = kwargs['nbins']
-        # positional arguments
-        if isinstance(args, Iterable):
-            if len(args) == 1:
-                if isinstance(args[0], Iterable):
-                    nbins = list(args[0])
-                else:
-                    nbins = [args[0], args[0]]
-            else:
-                nbins = list(args)
-        else:
-            nbins = [args, args]
-
-        # fix format
-        if nbins[0] is None:
-            nbins[0] = self.shape[0]
-        if nbins[1] is None:
-            nbins[1] = self.shape[1]
-        if numanip.is_integer(nbins[0]) == False or numanip.is_integer(nbins[1])  == False or nbins[0] < 0 or nbins[1] < 0:
+        if ncols is None:
+            ncols = self.shape[0]
+        if nrows is None:
+            nrows = self.shape[1]
+        if numanip.is_integer(ncols) == False or numanip.is_integer(nrows)  == False or ncols < 0 or nrows < 0:
             raise ValueError("Number of bins must be a positive integer.")
 
         # is divisible
-        assert self.shape[1] % nbins[1] == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {nbins[1]}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[1])))}"
-        assert self.shape[0] % nbins[0] == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {nbins[0]}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[0])))}"
+        assert self.shape[1] % nrows == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {nrows}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[1])))}"
+        assert self.shape[0] % ncols == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {ncols}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[0])))}"
 
         ###############
         # Calculation #
         ###############
-        _bins_size = np.array((self.shape[0]/nbins[0], self.shape[1]/nbins[1]))
+        _bins_size = np.array((self.shape[0]/ncols, self.shape[1]/nrows))
         reduced    = Image(np.add.reduceat(np.add.reduceat(self._data, list(map(float, np.arange(0, self.shape[0], _bins_size[0]))), axis=0), list(map(float, np.arange(0, self.shape[1], _bins_size[1]))), axis=1))
         
         # x and y centers
@@ -5864,79 +6463,23 @@ class Image(metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        # reduced.copy_centers_from(self)
         reduced.copy_attrs_from(self)
 
         return reduced
     
-    def transpose(self):
-        """Transpose image
+    ########################
+    # calculation and info #
+    ########################
+    def calculate_average(self):
+        """returns the average intensity (matrix element) value
 
         Returns:
-            None
+            number
         """
-        im = Image(data=self.data.transpose())
-
-        ##################
-        # transfer attrs #
-        ##################
-        # im.copy_centers_from(self)
-        im.copy_attrs_from(self)
-        im.x_centers = copy.deepcopy(self.y_centers)
-        im.y_centers = copy.deepcopy(self.x_centers)       
-
-        return im
-
-    def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
-        """Crop Image.
-
-        Args:
-            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
-                x_centers and y_centers. Interval is inclusive. Use None to 
-                indicate the edge of the image.
-
-        Returns:
-            None
-        """
-        #################
-        # check if None #
-        #################
-        if x_start is None: x_start = self.x_centers[0]
-        if x_stop  is None: x_stop  = self.x_centers[-1]
-        if y_start is None: y_start = self.y_centers[0]
-        if y_stop  is None: y_stop  = self.y_centers[-1]
-
-        ####################
-        # centers to index #
-        ####################
-        x_start = arraymanip.index(self.x_centers, x_start)
-        x_stop  = arraymanip.index(self.x_centers, x_stop) + 1
-        y_start = arraymanip.index(self.y_centers, y_start)
-        y_stop  = arraymanip.index(self.y_centers, y_stop) + 1
-
-        ##################
-        # validate input #
-        ##################
-        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
-
-        ########
-        # crop #
-        ########
-        im = Image(data=self.data[int(y_start):int(y_stop), int(x_start):int(x_stop)])
-
-        ##################
-        # transfer attrs #
-        ##################
-        # im.copy_centers_from(self)
-        im.copy_attrs_from(self)
-        im._x_centers = self.x_centers[x_start:x_stop]
-        im._y_centers = self.y_centers[y_start:y_stop]
-
-        return im
+        return np.mean([s.calculate_average() for s in self.columns])
 
     def calculate_histogram(self, nbins=None):
-        """Compute the histogram of data. Wrapper for `numpy.histogram()`_.
+        """Compute the intensity histogram of the data. Wrapper for `numpy.histogram()`_.
 
         Args:
             nbins (int, optional): number of bins. If not specified, it will
@@ -5973,6 +6516,27 @@ class Image(metaclass=_Meta):
  
         return s
 
+
+    def integrated_rows_vs_y_centers(self):
+        """return spectra with integrated row values vs y centers
+
+        Returns:
+            :py:class:`Spectrum`
+        """
+        s = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
+        s.copy_attrs_from(self)
+        return s
+    
+    def integrated_columns_vs_x_centers(self):
+        """return spectra with integrated column values vs x centers
+
+        Returns:
+            :py:class:`Spectrum`
+        """
+        s = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
+        s.copy_attrs_from(self)
+        return s
+    
     def calculate_spectrum(self, axis=1):
         """Integrate data in one direction (sum columns or rows).
 
@@ -5993,99 +6557,640 @@ class Image(metaclass=_Meta):
 
         # calculation
         if axis == 0:
-            s = Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
+            return self.integrated_columns_vs_x_centers()
         elif axis == 1:
-            s = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
-        
-        ##################
-        # transfer attrs #
-        ##################
-        s.copy_attrs_from(self)
+            return self.integrated_rows_vs_y_centers()
 
-        return s
 
-    ########################
-    # calculation and info #
-    ########################
     def possible_nbins(self):
         """return possible values for nbins in the y (nrows) and x (ncols) directions."""
         return np.sort(list(numanip.factors(self.shape[0]))), np.sort(list(numanip.factors(self.shape[1])))
 
-    def calculate_roll(self, axis=0, limit_size=1000):
-        """Calculate intensity misalignments via cross-correlation.
+
+    def calculate_horizontal_shift(self, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate intensity misalignments in terms of x centers.
 
         Args:
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
                 ensures that the number of columns (rows) is not bigger than 
                 limit_size. Default is 1000. Set to False to bypass this limit.
-
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
+            
         Returns:
-            None. Values are save at: im.calculated_roll
+            list
         """
-        # check axis
-        if axis != 0 and axis != 1:
-            raise ValueError('axis must be 0 or 1')
-
-        # select axis
-        if axis == 0:
-            ss = self.columns
-            if limit_size:
-                if len(ss) > limit_size:
-                    raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-        elif axis == 1:
-            ss = self.rows
-            if limit_size:
-                if len(ss) > limit_size:
-                    raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
+        ss = self.rows
+        if limit_size:
+            if len(ss) > limit_size:
+                raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
 
         # calculate
-        ss.calculate_roll(mode='cc')
-        self._calculated_roll  = ss.calculated_roll
-        self._calculated_shift = ss.calculated_roll*ss.step
+        values = ss.calculate_shift(mode=mode, limits=limits, **kwargs)
+        return values
+    
+    def calculate_vertical_shift(self, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate intensity misalignments in terms of y centers.
 
-    def calculate_curvature(self, deg=2, axis=0):
-        """Calculate roll values along a given axis to fix curvature via cc.
+        Args:
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
+            
+        Returns:
+            list
+        """
+        ss = self.columns
+        if limit_size:
+            if len(ss) > limit_size:
+                raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
+
+        # calculate
+        values = ss.calculate_shift(mode=mode, limits=limits, **kwargs)
+        return values
+    
+    def calculate_horizontal_roll(self, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate intensity misalignments in terms of pixel roll.
+
+        Args:
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
+            
+        Returns:
+            list
+        """
+        ss = self.rows
+        if limit_size:
+            if len(ss) > limit_size:
+                raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
+
+        # change from x centers to x pixels
+        for s in ss:
+            s._x = np.arange(len(self.x_centers))
+
+        # calculate
+        values = ss.calculate_roll(mode=mode, limits=limits, **kwargs)
+        return values
+    
+    def calculate_vertical_roll(self, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate intensity misalignments in terms of pixel roll.
+
+        Args:
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
+            
+        Returns:
+            list
+        """
+        ss = self.columns
+        if limit_size:
+            if len(ss) > limit_size:
+                raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
+
+        # change from y centers to y pixels
+        for s in ss:
+            s._x = np.arange(len(self.y_centers))
+
+        # calculate
+        values = ss.calculate_roll(mode=mode, limits=limits, **kwargs)
+        return values
+    
+    ############
+    # composed #
+    ############
+    def calculate_vertical_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate vertical shift values to fix curvature.
 
         Args:
             deg (int, optional): Degree of the curvature fitting polynomial. 
                 Default is 2.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `y_start = None` or `y_stop = None` to indicate the minimum or 
+                maximum y value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            p (np.array, read only): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x_centers for 
-                axis=0 or y_centers for axis=1. Default is None.
-            f (function, read only): funcion f(x_centers) for axis=0 or 
-                f(y_centers) for axis=1.
-        """
-        # check axis and define centers
-        if axis == 0:
-            centers = self.x_centers
-        elif axis == 1:
-            centers = self.y_centers
-        else:
-            raise ValueError('axis must be 0 or 1')
+            s, fit, popt, R2, model
 
-        # calculate shifts
+            s (spectrum): spectrum with shift values vs x centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
+        """
         im = self.copy()
         im.floor()
-        im.calculate_roll(axis=axis)
+        values = im.calculate_vertical_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
 
         # calculate poly
-        popt = np.polyfit(x=centers, y=im.calculated_roll, deg=deg)
-        model = lambda x: np.polyval(popt, x)
+        s = Spectrum(x=self.x_centers, y=values)
+        fit, popt, R2, model = s.polyfit(deg=deg)
+        return s, fit, popt, R2, model
+    
+    def calculate_horizontal_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate horizontal shift values to fix curvature.
 
-        return popt, model
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs y centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(y_centers)
+        """
+        im = self.copy()
+        im.floor()
+        values = im.calculate_horizontal_roll(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        # calculate poly
+        s = Spectrum(x=self.y_centers, y=values)
+        fit, popt, R2, model = s.polyfit(deg=deg)
+        return s, fit, popt, R2, model
+    
+    def calculate_vertical_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate vertical roll values to fix curvature.
+
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `y_start = None` or `y_stop = None` to indicate the minimum or 
+                maximum y value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs x centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
+        """
+        im = self.copy()
+        im.floor()
+        values = im.calculate_vertical_roll(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        # calculate poly
+        s = Spectrum(x=np.arange(len(values)), y=values)
+        fit, popt, R2, model = s.polyfit(deg=deg)
+        return s, fit, popt, R2, model
+    
+    def calculate_horizontal_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate horizontal roll values to fix curvature.
+
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs y centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(y_centers)
+        """
+        im = self.copy()
+        im.floor()
+        values = im.calculate_horizontal_roll(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        # calculate poly
+        s = Spectrum(x=np.arange(len(values)), y=values)
+        fit, popt, R2, model = s.polyfit(deg=deg)
+        return s, fit, popt, R2, model
+    
+    
+    def fix_vertical_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Roll column of pixels to fix curvature.
+
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `y_start = None` or `y_stop = None` to indicate the minimum or 
+                maximum y value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs x centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
+        """
+        s, fit, popt, R2, model = self.calculate_vertical_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        return self.set_vertical_shift_via_polyval(popt) 
+    
+    def fix_horizontal_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Roll row of pixels to fix curvature.
+
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs y centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(y_centers)
+        """
+        s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        return self.set_horizontal_shift_via_polyval(popt) 
+    
+    def fix_vertical_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Roll column of pixels to fix curvature.
+
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `y_start = None` or `y_stop = None` to indicate the minimum or 
+                maximum y value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs x centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
+        """
+        s, fit, popt, R2, model = self.calculate_vertical_roll_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        return self.set_vertical_roll_via_polyval(popt) 
+    
+    def fix_horizontal_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Roll row of pixels to fix curvature.
+
+        Args:
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs y centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(y_centers)
+        """
+        s, fit, popt, R2, model = self.calculate_horizontal_roll_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+        return self.set_horizontal_roll_via_polyval(popt) 
     
     ##########################        
     # plot and visualization #
     ########################## 
-    def pcolormesh(self, ax=None, colorbar=False, **kwargs):
+    def pcolormesh(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
         If x_centers and y_centers have irregular pixel separation, pcolormesh
@@ -6113,20 +7218,14 @@ class Image(metaclass=_Meta):
         .. _matplotlib.pyplot.pcolormesh(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html
         .. _matplotlib.collections.QuadMesh: https://matplotlib.org/3.5.0/api/collections_api.html#matplotlib.collections.QuadMesh
         """
-        # colorbar divider
-        divider = False
-        if ax is not None and colorbar is True:
-            divider = True 
-        
-        ###################
-        # figure and axes #
-        ###################
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
-                figure()
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
 
-        # kwargs
+        ##########
+        # kwargs #
+        ##########
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
         if 'vmin' not in kwargs or 'vmax' not in kwargs:
@@ -6136,35 +7235,32 @@ class Image(metaclass=_Meta):
             if 'vmax' not in kwargs:
                 kwargs['vmax'] = vmax
 
-        # fix monotonicity of labels x
-        if arraymanip.check_monotonicity(self.x_centers) != 1:
-            x, ordering = arraymanip.fix_monotonicity(self.x_centers, np.arange(len(self.x_centers)), mode='increasing')
-            assert len(x)==len(self.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x_centers or set it to None.\nx: {self.x_centers}'
-            ordering = [int(i) for i in ordering]
-            data = copy.deepcopy(self.data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data[:, i] = self.data[:, ordering[i]]
-        else:
-            x    = self.x_centers
-            data = self.data
+        ######################
+        # check monotonicity #
+        ######################
+        if self.x_monotonicity is None:
+            self.check_x_monotonicity()
+        if self.y_monotonicity is None:
+            self.check_y_monotonicity()
 
-        # fix monotonicity of labels y
-        if arraymanip.check_monotonicity(self.y_centers) != 1:
-            y, ordering = arraymanip.fix_monotonicity(self.y_centers, np.arange(len(self.y_centers)), mode='increasing')
-            assert len(y)==len(self.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.y_centers or set it to None.\ny: {self.y_centers}'
-            ordering = [int(i) for i in ordering]
-            data2 = copy.deepcopy(data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data2[i, :] = data[ordering[i], :]
-        else:
-            y     = self.y_centers
-            data2 = data
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True
+        
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
         # plot
-        X, Y = np.meshgrid(x, y)
-        pos  = ax.pcolormesh(X, Y, data2, **kwargs)
+        X, Y = np.meshgrid(im.x_centers, im.y_centers)
+        pos  = ax.pcolormesh(X, Y, im.data, **kwargs)
 
         # colorbar
         if colorbar:
@@ -6176,24 +7272,132 @@ class Image(metaclass=_Meta):
                 plt.colorbar(pos, aspect=50)
 
         # add edges and centers to quadmesh
-        pos.x_edges = pos.get_coordinates()[0][:, 0]
-        pos.y_edges = pos.get_coordinates()[:, 1][:, 1]
-        pos.x_centers = self.x_centers
-        pos.y_centers = self.y_centers
+        pos.x_edges   = pos.get_coordinates()[0][:, 0]
+        pos.y_edges   = pos.get_coordinates()[:, 1][:, 1]
+        pos.x_centers = im.x_centers
+        pos.y_centers = im.y_centers
 
         return pos
-
-    def imshow(self, ax=None, xlim=None, ylim=None, colorbar=False, origin='lower', verbose=True, **kwargs):
+    
+    def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='lower', verbose=True, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
+
+        Warning:
+            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh().
+            For image with axis in terms of x and y centers, use Image.plot().        
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+                 (str, optional): Location of the [0, 0] index. Options are
+                `upper` and `lower`. Default is 'lower'.
+            origin (str, optional): Place the [0, 0] index of the array in the 
+                upper left (`origin='upper'`) or lower left corner (`origin='lower'`) of the Axes. 
+                Default is 'lower'.
+            verbose (bool, optional): if True, a warning will show up if data
+                has iregular pixel sizes. Default is true.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
+
+        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
+
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
+                an aspect ratio of 1 will be used (pixels will be square).
+            interpolation: The interpolation method used. Default is 'none'.
+                Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
+                'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
+                'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
+                'sinc', 'lanczos', 'blackman'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
+
+        Returns:
+            `matplotlib.image.AxesImage`_
+
+        .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
+        """
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+
+        ##########
+        # kwargs #
+        ##########
+        kwargs['origin'] = origin
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'aspect' not in kwargs:
+            kwargs['aspect'] = 'auto'
+        if 'interpolation' not in kwargs:
+            kwargs['interpolation'] = 'none'
+        if 'vmin' not in kwargs or 'vmax' not in kwargs:
+            vmin, vmax = self._calculated_vmin_vmax()
+            if 'vmin' not in kwargs:
+                kwargs['vmin'] = vmin
+            if 'vmax' not in kwargs:
+                kwargs['vmax'] = vmax
+
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True 
+
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
+
+        # plot
+        pos = ax.imshow(im.data, **kwargs)
+
+        # colorbar
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
+
+        # add edges and centers to axesimage object
+        pos.x_edges = np.linspace(-0.5, len(im.x_centers)+0.5, len(im.x_centers)+1)
+        pos.y_edges = np.linspace(-0.5, len(im.y_centers)+0.5, len(im.y_centers)+1)
+        pos.x_centers = arraymanip.moving_average(pos.x_edges, 2)
+        pos.y_centers = arraymanip.moving_average(pos.y_edges, 2)
+        
+        return pos
+    
+    def plot(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='lower', verbose=True, **kwargs):
+        """Display data as an image with axis based on x and y centers. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
             Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
             colorbar (bool, optional): if True, colorbar is shown on the right side.
                  (str, optional): Location of the [0, 0] index. Options are
                 `upper` and `lower`. Default is 'lower'.
+            origin (str, optional): Place the [0, 0] index of the array in the 
+                upper left (`origin='upper'`) or lower left corner (`origin='lower'`) of the Axes. 
+                Default is 'lower'.
             verbose (bool, optional): if True, a warning will show up if data
                 has iregular pixel sizes. Default is true.
             **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
@@ -6223,30 +7427,14 @@ class Image(metaclass=_Meta):
         .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
         .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
         """
-        # colorbar divider
-        divider = False
-        if ax is not None and colorbar is True:
-            divider = True 
-        
-        ###################
-        # figure and axes #
-        ###################
-        if ax is None:
-            ax = plt
-            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
-                figure()
-        
-        # ylim, xlim
-        if xlim is not None and ylim is None:
-            im = self.crop(x_start=xlim[0], x_stop=xlim[1])
-        elif ylim is not None and xlim is None:
-            im = self.crop(y_start=ylim[0], y_stop=ylim[1])
-        elif xlim is not None and ylim is not None:
-            im = self.crop(x_start=xlim[0], x_stop=xlim[1], y_start=ylim[0], y_stop=ylim[1])
-        else:
-            im = self.copy()
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
 
-        # default arguments
+        ##########
+        # kwargs #
+        ##########
         kwargs['origin'] = origin
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
@@ -6261,55 +7449,54 @@ class Image(metaclass=_Meta):
             if 'vmax' not in kwargs:
                 kwargs['vmax'] = vmax
 
-        # check monotonicity x
-        if arraymanip.check_monotonicity(im.x_centers) != 1:
-            x, ordering = arraymanip.fix_monotonicity(im.x_centers, np.arange(len(im.x_centers)), mode='increasing')
-            assert len(x)==len(im.x_centers), f'Cannot plot when Image.x have repeated elements.\nEither fix Image.x or set it to None.\nx: {self.x_centers}'
-            ordering = [int(i) for i in ordering]
-            data     = copy.deepcopy(im.data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data[:, i] = im.data[:, ordering[i]]
-                extent_x = [min(x), max(x)]
-        else:
-            x = im.x_centers
-            x = np.linspace(x[0], x[-1], len(x))
-            dx  = np.mean(np.diff(x))
-            extent_x = [x[0]-dx/2, x[-1]+dx/2]
-            data = im.data
+        ######################
+        # check monotonicity #
+        ######################
+        if self.x_monotonicity is None:
+            self.check_x_monotonicity()
+        if self.y_monotonicity is None:
+            self.check_y_monotonicity()
 
-        # check monotonicity y
-        if arraymanip.check_monotonicity(im.y_centers) != 1:
-            y, ordering = arraymanip.fix_monotonicity(im.y_centers, np.arange(len(im.y_centers)), mode='increasing')
-            assert len(y)==len(im.y_centers), f'Cannot plot when Image.y have repeated elements.\nEither fix Image.x or set it to None.\ny: {self.y_centers}'
-            ordering = [int(i) for i in ordering]
-            data2 = copy.deepcopy(data)
-            for i in ordering:
-                if i != ordering[i]:
-                    data2[i, :] = data[ordering[i], :]
-            extent_y = [min(y), max(y)]
-        else:
-            y = im.y_centers
-            y = np.linspace(y[0], y[-1], len(y))
-            dy  = np.mean(np.diff(y))
-            extent_y = [y[0]-dy/2, y[-1]+dy/2]
-            data2 = data
+        ##############
+        # check step #
+        ##############
+        if self.x_step is None or self.y_monotonicity is None:
+            try:
+                self.check_x_step()
+                self.check_y_step()
+            except ValueError:
+                if verbose:
+                    print('Warning: Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
 
+        # extent
         if 'extent' not in kwargs:
+            x  = np.linspace(im.x_centers[0], im.x_centers[-1], len(im.x_centers))
+            dx = np.mean(np.diff(x))
+            extent_x = [x[0]-dx/2, x[-1]+dx/2]
+
+            y  = np.linspace(im.y_centers[0], im.y_centers[-1], len(im.y_centers))
+            dy = np.mean(np.diff(y))
+            extent_y = [y[0]-dy/2, y[-1]+dy/2]
+
             kwargs['extent'] = np.append(extent_x, extent_y)
 
-        # check irregular spacing (issues a warning)
-        if verbose:
-            sx = Spectrum(x=im.x_centers, y=im.x_centers)
-            sy = Spectrum(x=im.y_centers, y=im.y_centers)
-            try:
-                sx.check_step()
-                sy.check_step()
-            except ValueError:
-                print('Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True 
+
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
         # plot
-        pos = ax.imshow(data2, **kwargs)
+        pos = ax.imshow(im.data, **kwargs)
 
         # colorbar
         if colorbar:
@@ -6328,593 +7515,67 @@ class Image(metaclass=_Meta):
         
         return pos
 
-    def plot(self, *args, **kwargs):
-        """Same as Image.imshow.
-
-        See also:
-            :py:func:`Image.imshow`
-        """
-        return self.imshow(*args, **kwargs)
-
-    # experimental 
-    def linecuts(self, axis=0, xlim=None, ylim=None, ilim=None, keep=None, **kwargs):
-        """[EXPERIMENTAL] Plot image and flip trhough linecuts with keyboard arrows.
-
-        Args:
-            axis (int or string, optional): Axis along linecuts.
-                By default, linecuts are in the vertical (0) direction.
-            xlim, ylim, ilim (tuple, optional): Image ploting limits.
-            keep (int or str, optional): index of the spectrum to keep on screen. 
-                Use 'previous' or 'next' to show previous or next spectrum.
-            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
-
-        Returns:
-            None
-        """
-        # axis
-        if axis == 0:
-            ss = self.columns
-        elif axis == 1:
-            raise NotImplementedError('Not implemented yet for axis = 1')
-            # ss = self.rows
-        else:
-            raise ValueError('axis must be 0 or 1')
-    
-        # change keybindings
-        try:
-            matplotlib.rcParams['keymap.back'].remove('left')
-            matplotlib.rcParams['keymap.forward'].remove('right')
-        except ValueError:
-            pass
-        
-        # vars
-        self.__i    = 0
-        self.__axes = None
-        self.__xlim = xlim
-        self.__ylim = ylim
-        self.__ilim = ilim
-
-        # lims
-        if self.__xlim is None:
-            self.__xlim = [min(self._x_centers), max(self._x_centers)]
-        if self.__ylim is None:
-            self.__ylim = [min(self._y_centers), max(self._y_centers)]
-        if self.__ilim is None:
-            self.__ilim     = [min([min(l) for l in self.data]), max([max(l) for l in self.data])]
-
-        # keep
-        if keep is not None:
-            if isinstance(keep, str):
-                assert keep == 'previous' or keep == 'next', 'keep must be a valid spectrum index, or "previous/next"'
-            else:
-                assert abs(keep) < len(ss), 'keep must be a valid spectrum index, or "previous/next"'
-
-        # kwargs
-        if 'color' not in kwargs:
-            kwargs['color'] = 'black'
-        if 'marker' not in kwargs:
-            kwargs['marker'] = 'o'
-
-        # update function
-        def update(ss):
-            # plot spectrum
-            ax = self.__axes[0]
-            if axis == 0:
-                ax.set_title(f'{self.__i}: {self.x_centers[self.__i]} eV')
-            if keep is not None:
-                if keep == 'next':
-                    if self.__i+1 < len(self):
-                        ss[self.__i+1].plot(color='red', alpha=0.5)
-                elif keep == 'previous':
-                    if self.__i-1 >= 0:
-                        ss[self.__i-1].plot(color='red', alpha=0.5)
-                else:
-                    ss[keep].plot(color='red', alpha=0.5)
-            ss[self.__i].plot(ax=ax, **kwargs)
-
-            # lim
-            if self.__ylim is not None:
-                ax.set_xlim(self.__ylim)
-            if self.__ilim is not None:
-                ax.set_ylim(self.__ilim)
-
-
-
-            # plot map (shouldn't we put this outside of the update function?)
-            ax = self.__axes[1]
-            
-            # lim
-            if self.__ilim is not None:
-                self.pcolormesh(ax=ax, vmin=self.__ilim[0], vmax=self.__ilim[1])
-            else:
-                self.pcolormesh(ax=ax)
-            if self.__xlim is not None:
-                if axis == 0:
-                    ax.set_xlim(self.__xlim)
-                else:
-                    pass
-                    # ax.set_xlim(self.__ylim)
-            if self.__ylim is not None:
-                if axis == 0:
-                    ax.set_ylim(self.__ylim)
-                else:
-                    pass
-                    # ax.set_ylim(self.__ylim)
-
-            # vline
-            if axis == 0:
-                if keep is not None:
-                    if keep == 'next':
-                        if self.__i+1 < len(self):
-                            ax.plot([self.x_centers[self.__i+1], self.x_centers[self.__i+1]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
-                    elif keep == 'previous':
-                        if self.__i-1 >= 0:
-                            ax.plot([self.x_centers[self.__i-1], self.x_centers[self.__i-1]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
-                    else:
-                        ax.plot([self.x_centers[keep], self.x_centers[keep]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
-                ax.plot([self.x_centers[self.__i], self.x_centers[self.__i]], [self.__ylim[0], self.__ylim[1]], color='white')
-                # E = self.x_centers[self.__i]
-                # figmanip.vlines(E, ax=ax, color='red', lw=1)
-            else:
-                E = self.y_centers[self.__i]
-                figmanip.hlines(E, ax=ax, color='red', lw=1)
-
-            
-
-        def _update(ss):
-            if self.__i >= len(ss):
-                self.__i = len(ss) - 1
-            elif self.__i < 0:
-                self.__i = 0
-
-            update(ss)
-
-        # keyboard events
-        def keyboard(event, ss):
-            # print(event.key)
-            # print('keyboard')
-            # print(event.key)
-            if event.key == 'right' or event.key == 'up':
-                self.__i = self.__i + 1
-
-                for ax in self.__axes:
-                    # ax.cla()
-                    ax.lines.clear()
-                _update(ss)
-                plt.draw()
-            elif event.key == 'left' or event.key == 'down':
-                self.__i = self.__i - 1
-                
-                for ax in self.__axes:
-                    # ax.cla()
-                    ax.lines.clear()
-                _update(ss)
-                plt.draw()
-
-        # axis zoom changes
-        def on_1_xlims_change(event_ax):
-            # print("updated xlims: ", event_ax.get_xlim())
-            self.__xlim = event_ax.get_xlim()
-
-        def on_1_ylims_change(event_ax):
-            # print("updated ylims: ", event_ax.get_ylim())
-            self.__ylim = event_ax.get_ylim()
-
-        def on_0_xlims_change(event_ax):
-            # print("updated xlims: ", event_ax.get_xlim())
-            self.__ylim = event_ax.get_xlim()
-
-        def on_0_ylims_change(event_ax):
-            # print("updated ylims: ", event_ax.get_ylim())
-            self.__ilim = event_ax.get_ylim()
-
-        # figure
-        fig, self.__axes = figmanip.subplots(nrows=2, ncols=1)
-        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
-        _update(ss)
-
-        self.__axes[0].callbacks.connect('xlim_changed', on_0_xlims_change)
-        self.__axes[0].callbacks.connect('ylim_changed', on_0_ylims_change)
-        self.__axes[1].callbacks.connect('xlim_changed', on_1_xlims_change)
-        self.__axes[1].callbacks.connect('ylim_changed', on_1_ylims_change)
-
-    # experimental 
-    def linecuts2(self, axis=0, xlim=None, ylim=None):
-        """[EXPERIMENTAL] Plot image and flip trhough linecuts with keyboard arrows.
-
-        Warning: old version, with auto rescaling.
-
-        Args:
-            axis (int or string, optional): Axis along linecuts.
-                By default, linecuts are in the vertical (0) direction.
-            xlim, ylim (tuple, optional): spectra ploting limits (not image 
-                ploting limits).
-
-        Returns:
-            None
-        """
-        # axis
-        if axis == 0:
-            ss = self.columns
-        elif axis == 1:
-            ss = self.rows
-        else:
-            raise ValueError('axis must be 0 or 1')
-        
-        # update function
-        def update(ss):
-            # plot
-            ax = axes[0]
-            ss[ss.__i].plot(ax=ax, color='black', marker='o')
-
-            # lim
-            if xlim is not None:
-                ax.set_xlim(xlim)
-            if ylim is not None:
-                ax.set_ylim(ylim)
-            # br.label_rixs(ax=ax)
-
-            # plot map (shouldn't we put this outside of the update function?)
-            ax = axes[1]
-            
-            if ylim is not None:
-                self.pcolormesh(ax=ax, vmin=ylim[0], vmax=ylim[1])
-            else:
-                self.pcolormesh(ax=ax)
-            if xlim is not None:
-                if axis == 0:
-                    ax.set_ylim(xlim)
-                else:
-                    ax.set_xlim(xlim)
-
-            # vline
-            if axis == 0:
-                E = self.x_centers[ss.__i]
-                figmanip.vlines(E, ax=ax, color='red', lw=1)
-            else:
-                E = self.y_centers[ss.__i]
-                figmanip.hlines(E, ax=ax, color='red', lw=1)
-
-            # title
-            axes[0].set_title(f'{ss.__i}: {E} eV')
-
-        def _update(ss):
-            if ss.__i >= len(ss):
-                ss.__i = len(ss) - 1
-            elif ss.__i < 0:
-                ss.__i = 0
-
-            update(ss)
-
-        # keyboard events
-        def keyboard(event, ss):
-            # print(event.key)
-            # print('keyboard')
-            # print(event.key)
-            if event.key == 'right' or event.key == 'up':
-                ss.__i = ss.__i + 1
-
-                for ax in axes:
-                    ax.cla()
-                _update(ss)
-                # for ax in axes:
-                plt.draw()
-            elif event.key == 'left' or event.key == 'down':
-                ss.__i = ss.__i - 1
-                
-                for ax in axes:
-                    ax.cla()
-                _update(ss)
-                # for ax in axes:
-                plt.draw()
-
-        # figure
-        fig, axes = figmanip.subplots(nrows=2, ncols=1)
-        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
-        _update(ss)
-
-    # experimental 
-    def roll_plot(self, axis=0, vlines=None, hlines=None, **kwargs):
-        """[EXPERIMENTAL] Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
-
-        Warning:
-            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
-
-        Args:
-            axis (int or string, optional): Axis along roll.
-                By default, columns are rolled down or up (0).
-            vlines, hlines (list or number, optional): vertical or horizontal
-                dashed lines for reference, default is None.
-            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
-
-        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
-
-        Args:
-            cmap: The Colormap instance. Default is 'jet'.
-            aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
-                an aspect ratio of 1 will be used (pixels will be square).
-            origin: Location of the [0, 0] index. default is 'lower'.
-            interpolation: The interpolation method used. Default is 'none'.
-                Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
-                'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
-                'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
-                'sinc', 'lanczos', 'blackman'.
-            extent: minimun and maximum x and y values. Default will be given by
-                the Image.x and Image.y attributes.
-            vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                calculated and vmin is set on the position of the maximum.
-            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
-                calculated and vmax is set to the value where the 
-                intensity drops below 0.01 % of the maximum.
-        """
-        # axis
-        assert axis == 0 or axis == 1, 'axis must be 0 or 1'
-
-        # default arguments
-        if 'cmap' not in kwargs:
-            kwargs['cmap'] = 'jet'
-        if 'aspect' not in kwargs:
-            kwargs['aspect'] = 'auto'
-        if 'origin' not in kwargs:
-            kwargs['origin'] = 'lower'
-        if 'interpolation' not in kwargs:
-            kwargs['interpolation'] = 'none'
-        if 'vmin' not in kwargs or 'vmax' not in kwargs:
-            vmin, vmax = self._calculated_vmin_vmax()
-            if 'vmin' not in kwargs:
-                kwargs['vmin'] = vmin
-            if 'vmax' not in kwargs:
-                kwargs['vmax'] = vmax
-
-        # vars
-        self.__i = 0
-        self.__xlim = None
-        self.__ylim = None
-        self.__ax   = None
-        self.__temp = self.copy()
-        if axis == 0:
-            self._calculated_roll = np.array([0]*self.shape[1])
-        else:
-            raise NotImplementedError('axis = 1 nor implemented yet')
-
-        # change keybindings
-        try:
-            matplotlib.rcParams['keymap.back'].remove('left')
-            matplotlib.rcParams['keymap.forward'].remove('right')
-        except ValueError:
-            pass
-
-        # lims
-        if self.__xlim is None:
-            self.__xlim = [min(self._x_centers), max(self._x_centers)]
-        if self.__ylim is None:
-            self.__ylim = [min(self._y_centers), max(self._y_centers)]
-
-        # vlines hlines warning
-        if vlines is not None or hlines is not None:
-            raise NotImplementedError('vlines is not implemented yet')
-        
-        # core update function
-        update_function = None
-        if update_function is None:
-            def _update(ss):
-                if self.__i >= len(self):
-                    self.__i = len(self) - 1
-                elif self.__i < 0:
-                    self.__i = 0
-
-                plt.title(f'{self.__i}: {self._calculated_roll[self.__i]}')
-                im = self.__temp.imshow(ax=self.__ax, verbose=False)
-
-                if axis == 0:
-                    self.__ax.plot([self.x_centers[self.__i], self.x_centers[self.__i]], [self.__ylim[0], self.__ylim[1]], color='white')
-                else:
-                    raise NotImplementedError('not implemented yet')
-                
-                # if vlines is not None:
-                #     if isinstance(vlines, Iterable) == False:
-                #         vlines = [vlines, ]
-                #     for vline in vlines:
-                #         self.__ax.plot([vline, vline], [self.__ylim[0], self.__ylim[1]], color='red', ls='--', lw=1)
-                # if hlines is not None:
-                #     if isinstance(hlines, Iterable) == False:
-                #         hlines = [hlines, ]
-                #     for hline in hlines:
-                #         self.__ax.plot([self.__xlim[0], self.__xlim[1]], [hline, hline], color='red', ls='--', lw=1)
-
-                if self.__xlim is not None:
-                    plt.xlim(self.__xlim)
-                if self.__ylim is not None:
-                    plt.ylim(self.__ylim)
-
-        # keyboard events
-        def keyboard(event, ss):
-            # print(event.key)
-            # print('keyboard')
-            # print(event.key)
-            if axis == 0:
-                if event.key == 'up':
-                    self._calculated_roll[self.__i] += 1
-
-                    if axis == 0:
-                        rolls = np.zeros(self.shape[1])
-                        rolls[self.__i] = 1
-                        self.__temp.set_roll(rolls)
-                    _update(ss)
-                    plt.draw()
-                elif event.key == 'down':
-                    self._calculated_roll[self.__i] -= 1
-
-                    if axis == 0:
-                        rolls = np.zeros(self.shape[1])
-                        rolls[self.__i] = -1
-                        self.__temp.set_roll(rolls)
-                    _update(ss)
-                    plt.draw()
-                elif event.key == 'right':
-                    self.__i = self.__i + 1
-
-                    # self.__ax.cla()
-                    self.__ax.lines.clear()
-                    _update(ss)
-                    plt.draw()
-                elif event.key == 'left':
-                    self.__i = self.__i - 1
-
-                    # self.__ax.cla()
-                    self.__ax.lines.clear()
-                    _update(ss)
-                    plt.draw()
-
-        # axis zoom changes
-        def on_xlims_change(event_ax):
-            # print("updated xlims: ", event_ax.get_xlim())
-            self.__xlim = event_ax.get_xlim()
-
-        def on_ylims_change(event_ax):
-            # print("updated ylims: ", event_ax.get_ylim())
-            self.__ylim = event_ax.get_ylim()
-
-        # plotting
-        fig, self.__ax = plt.subplots(1, 1)
-        _update(self)
-
-        # register callbacks
-        fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
-        # fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
-        self.__ax.callbacks.connect('xlim_changed', on_xlims_change)
-        self.__ax.callbacks.connect('ylim_changed', on_ylims_change)
-
-        # _update(self)
-        return
-
 # %% ============================= PhotonEvents =========================== %% #
 class PhotonEvents(metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
     Args:
-        x (array): vector with x-coordinate of photon events.
-        y (array): vector with y-coordinate of photon events.
-        filepath (string or path object, optional): filepath.
+        x, y (list or array, optional): array with x, y photon events coordinates
+        xlim, ylim (list, optional): two element tuple with min and max possible 
+            x and y coordinates.
+        filepath (str or Path, optional): filepath.
+        **kwargs: kwargs are passed to :py:func:`PhotonEvents.load` function.
 
-    How to initialize a Photon events object:
-        **Empty**
-            
+    Usage:        
             >>> pe = br.PhotonEvents()
-
-        **From array**
             >>> pe = br.PhotonEvents(x, y)
             >>> pe = br.PhotonEvents(x=x, y=y)
-        
-        where ``x`` and ``y`` are 1D array or list.
-
-        **From file**
-            >>> pe = br.PhotonEvents(<filepath>)
+            >>> pe = br.PhotonEvents(x, y, xlim=(0, 10), ylim=(0, 10))
             >>> pe = br.PhotonEvents(filepath=<filepath>)
-        
-        where ``filepath`` must point to a xy-type file, where comments 
-        must be marked with `#` and columns must be separated by `,` (comma).
-
-    Attributes:
-        x (array): vector with x-coordinate of photon events.
-        y (array): vector with y-coordinate of photon events.
-        filepath (str or pathlib.Path): filepath associated with data.
-        xlim, ylim (tuple): two element tuple with min and max possible 
-            x and y coordinates. This is only used for plotting. Usually, its
-            okay if this is not set. 
-
-    Computed (read-only) attributes:
-        data (array)
-            2 column data (x, y)
-        calculated_shift (list)
-            Calculated shifts.
-
-    Write-only attributes:
-        None
+            >>> pe = br.PhotonEvents(filepath=<filepath>, delimiter=',')
+            >>>
+            >>> print(pe.get_core_attrs()) # print list of core attrs
+            >>> print(pe.get_attrs())      # print list of attrs
+            >>> print(pe.get_methods())    # print list of methods available
     """
-
-    _read_only = ['calculated_shift', 'x_edges', 'y_edges', 'x_centers', 'y_centers']
+    _read_only = []
     _non_removable = []
     
-    def __init__(self, *args, **kwargs): 
-        """Initialize the object instance.
-         
-        Raises:
-            AttributeError: if kwargs and args cannot be read.
-        """
+    def __init__(self, x=None, y=None, xlim=None, ylim=None, filepath=None, **kwargs): 
+        """Initialize the object instance"""
         ###########################
         # Initializing attributes #
         ###########################
-        # basic
-        self._x        = None
-        self._y        = None
-        self._filepath = ''
+        # core
+        self._x    = None
+        self._y    = None
 
+        # modifiers
+        pass
+
+        # labels
         self._xlim = None
         self._ylim = None
-
-        self._x_centers = None
-        self._y_centers = None
-        self._x_edges   = None
-        self._y_edges   = None
-
-        self._calculated_shift = None
-
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        error_message = 'Wrong input. Photon events object cannot be created.' +\
-                        'Please, use one ' +\
-                        'of the examples below to create an object:\n' +\
-                        '\n' +\
-                        'pe = br.PhotonEvents()\n' +\
-                        '\n' +\
-                        'pe = br.PhotonEvents(x, y)\n' +\
-                        'pe = br.PhotonEvents(x=x, y=y)\n' +\
-                        '\n' +\
-                        'pe = br.PhotonEvents(filepath=<filepath>)\n' +\
-                        'pe = br.PhotonEvents(<filepath>)\n' +\
-                        '\n' +\
-                        'x and y must be a 1D array (or list) and filepath ' +\
-                        'must be a string or pathlib.Path object'
-        if kwargs != {} and args != ():
-            raise AttributeError(error_message)
-        if any([item not in ['x', 'y', 'filepath'] for item in kwargs.keys()]):
-            raise AttributeError(error_message)
-        if len(args) > 2 or len(kwargs) > 2:
-            raise AttributeError(error_message)
-        if 'x' in kwargs and 'y' not in kwargs:
-            raise AttributeError(error_message)
-        if ('x' in kwargs or 'y' in kwargs) and 'filepath' in kwargs:
-            raise AttributeError(error_message)
 
         ################
         # loading data #
         ################
         # keyword arguments
-        if 'y' in kwargs:
-            self.x = kwargs['x']
-            self.y = kwargs['y']
-            return
-        if 'filepath' in kwargs:
-            self.load(kwargs['filepath'])
-            return
+        if y is not None:
+            if x is None:
+                raise ValueError('missing x coordinates')
+            self.x = x
+            self.y = y
 
-        # positional arguments
-        if len(args) == 1:
-            if isinstance(args[0], str) or isinstance(args[0], Path):
-                self.load(args[0])
-                return
-            else:
-                raise AttributeError(error_message)
-        elif len(args) == 2:
-            self.x = args[0]
-            self.y = args[1]
-            return
+            self.xlim = xlim
+            self.ylim = ylim       
+        elif filepath is not None:
+            self.load(filepath=filepath, **kwargs)
+        return
 
-    ##############
-    # attributes #
-    ##############
+    ###################
+    # core attributes #
+    ###################
     @property
     def x(self):
         return self._x
@@ -6983,26 +7644,32 @@ class PhotonEvents(metaclass=_Meta):
         ###################################
         # asserting validity of the input #
         ###################################
-        # check type
-        if not isinstance(value, Iterable):
-            raise TypeError(f'xlim must be an Iterable (list or array) of numbers.\nYou are trying to set up a xlim which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
-    
-        # check if iterable is made of numbers
-        try:
-            _ = sum(value)
-        except:
-            raise TypeError(f'xlim must be an Iterable (list or array) of numbers.\nYou are trying to set up a xlim which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+        if value is None:
+            self._xlim = np.array((min(self.x), max(self.x)), dtype='float')
+        else:
+            # check type
+            if isinstance(value, Iterable) == False:
+                raise TypeError(f'xlim must be an Iterable (list or array) of numbers.\nYou are trying to set up a xlim which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
         
-        # check length
-        assert len(value) == 2, f'Length of xlim must be 2 and not: {len(value)}'
+            # check if iterable is made of numbers
+            try:
+                _ = sum(value)
+            except:
+                raise TypeError(f'xlim must be an Iterable (list or array) of numbers.\nYou are trying to set up a xlim which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+            
+            # check length
+            assert len(value) == 2, f'Length of xlim must be 2 and not: {len(value)}'
 
-        # check min and max
-        assert value[1] > value[0], f'max value must be bigger than min value'
+            # check min and max
+            assert value[1] > value[0], f'max value must be bigger than min value'
 
-        #################
-        # set attribute #
-        #################
-        self._xlim = np.array(value, dtype='float')
+            # check if data is within limits
+            assert max(self.x) <= value[-1] or min(self.x) >= value[0], f'x coordinates (from {min(self.x)} to {max(self.x)}) are outside xlim ({value})'
+
+            #################
+            # set attribute #
+            #################
+            self._xlim = np.array(value, dtype='float')
     @xlim.deleter
     def xlim(self):
         raise AttributeError('Cannot delete object.')
@@ -7015,44 +7682,36 @@ class PhotonEvents(metaclass=_Meta):
         ###################################
         # asserting validity of the input #
         ###################################
-        # check type
-        if not isinstance(value, Iterable):
-            raise TypeError(f'ylim must be an Iterable (list or array) of numbers.\nYou are trying to set up a ylim which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
-    
-        # check if iterable is made of numbers
-        try:
-            _ = sum(value)
-        except:
-            raise TypeError(f'ylim must be an Iterable (list or array) of numbers.\nYou are trying to set up a ylim which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+        if value is None:
+            self._tylim = np.array((min(self.y), max(self.y)), dtype='float')
+        else:
+            # check type
+            if not isinstance(value, Iterable):
+                raise TypeError(f'ylim must be an Iterable (list or array) of numbers.\nYou are trying to set up a ylim which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
         
-        # check length
-        assert len(value) == 2, f'Length of ylim must be 2 and not: {len(value)}'
+            # check if iterable is made of numbers
+            try:
+                _ = sum(value)
+            except:
+                raise TypeError(f'ylim must be an Iterable (list or array) of numbers.\nYou are trying to set up a ylim which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+            
+            # check length
+            assert len(value) == 2, f'Length of ylim must be 2 and not: {len(value)}'
 
-        # check min and max
-        assert value[1] > value[0], f'max value must be bigger than min value'
+            # check min and max
+            assert value[1] > value[0], f'max value must be bigger than min value'
 
-        #################
-        # set attribute #
-        #################
-        self._ylim = np.array(value, dtype='float')
+            # check if data is within limits
+            assert max(self.y) <= value[-1] or min(self.y) >= value[0], f'y coordinates (from {min(self.y)} to {max(self.y)}) are outside ylim ({value})'
+
+
+            #################
+            # set attribute #
+            #################
+            self._ylim = np.array(value, dtype='float')
     @ylim.deleter
     def ylim(self):
         raise AttributeError('Cannot delete object.')
-
-    @property
-    def filepath(self):
-        return self._filepath
-    @filepath.setter
-    def filepath(self, value):
-        if value is None:
-            value = ''
-        elif isinstance(value, str) or isinstance(value, Path):
-            self._filepath = value
-        else:
-            raise TypeError(r'Invalid type ' + str(type(value)) + 'for filepath\nFilepath can only be str or pathlib.Path type.')
-    @filepath.deleter
-    def filepath(self):
-        raise AttributeError('Cannot delete object.')   
 
     ###################################
     # computed (read-only) attributes #
@@ -7067,19 +7726,52 @@ class PhotonEvents(metaclass=_Meta):
     def data(self):
         raise AttributeError('Cannot delete object.')
 
+    #########################
+    # write-only attributes #
+    #########################
+    pass
+
+    #######################
+    # modifier attributes #
+    #######################
+    pass
+
     #################
     # magic methods #
     #################
+    def __setattr__(self, name, value):
+        if name in settings._forbidden_words['PhotonEvents']:
+            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+        super().__setattr__(name, value)
+
     def __len__(self):
         if self.x is None:
             return 0
         else:
             return len(self.x)
 
-    def __setattr__(self, name, value):
-        if name in settings._forbidden_words['PhotonEvents']:
-            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
-        super().__setattr__(name, value)
+    def __add__(self, object):
+        if isinstance(object, PhotonEvents):
+            final = PhotonEvents(x=list(self.x) + list(object.x), y=list(self.y) + list(object.y))
+            final.copy_attrs_from(self)
+            final.xlim = (min([self.xlim[0], object.xlim[0]]), max([self.xlim[1], object.xlim[1]]))
+            final.ylim = (min([self.ylim[0], object.ylim[0]]), max([self.ylim[1], object.ylim[1]]))
+        else:
+            raise ValueError(f'Cannot operate type {type(object)} with Photon Events')
+
+        return final
+        
+    def __sub__(self, object):
+        raise ValueError('Photon Events cannot be subtracted')
+    
+    def __mul__(self, object):
+        raise ValueError('Photon Events cannot be multiplied')
+    
+    def __div__(self, object):
+        raise ValueError('Photon Events cannot be divided')
+    
+    def __truediv__(self, object):
+        return self.__div__(object)
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -7108,19 +7800,18 @@ class PhotonEvents(metaclass=_Meta):
             
     #########
     # attrs #
-    #########    
+    def get_core_attrs(self): 
+        """return a list of core attrs"""
+        return settings._reserved_words['PhotonEvents']['pseudovars']
+       
     def get_attrs(self):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
-    def _get_center_attrs(self):
-        """return center attrs"""
-        return ['_x_centers', '_y_centers', '_x_edges', '_y_edges']
-
-    def _get_lim_attrs(self):
-        """return lim attrs"""
-        return ['_xlim', '_ylim']
-
+    def get_methods(self):
+        """return a list of methods available"""
+        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
+    
     def remove_attrs(self):
         """Delete all user defined attrs."""
         for attr in self.get_attrs():
@@ -7147,89 +7838,131 @@ class PhotonEvents(metaclass=_Meta):
             value = copy.deepcopy(s.__dict__[attr])
             self.__setattr__(attr, value)
 
-    def copy_lims_from(self, s):
-        """Copy lim attributes from another brixs.PhotonEvents object.
-
-        Args:
-            s (brixs object): PhotonEvents to copy lims attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, PhotonEvents):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.PhotonEvents to br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s._get_lim_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
-    def copy_center_from(self, s):
-        """Copy center attributes from another brixs.PhotonEvents object.
-
-        Args:
-            s (brixs object): PhotonEvents to copy lims attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, PhotonEvents):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.PhotonEvents to br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s._get_center_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
+    ###########
+    # attrs 2 #
+    ###########
+    pass
 
     ###########
     # support #
     ###########
     pass
 
+    ################
+    # core methods #
+    ################
+    pass
+
+    ########
+    # copy #
+    ########
+    def _copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Same as copy(), but attributes are not copied to the new object."""
+        #############
+        # copy data #
+        #############
+        x = copy.deepcopy(self.x)
+        y = copy.deepcopy(self.y)
+
+        #####################
+        # if limits is None #
+        #####################
+        if x_start is None and x_stop is None and y_start is None and y_stop is None:
+            return PhotonEvents(x=x, y=y, xlim=self.xlim, ylim=self.ylim)
+
+        ########################################
+        # check if extract is really necessary #
+        ########################################
+        if x_start <= min(self.x) and x_stop >= max(self.x):
+            if y_start <= min(self.y) and y_stop >= max(self.y):
+                return PhotonEvents(x=x, y=y, xlim=self.xlim, ylim=self.ylim)
+            
+        #################
+        # check if None #
+        #################
+        if x_start is None: x_start = min(self.x)
+        if x_stop  is None: x_stop  = max(self.x)
+        if y_start is None: y_start = min(self.y)
+        if y_stop  is None: y_stop  = max(self.y)
+
+        ##################
+        # validate input #
+        ##################
+        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        assert y_stop > y_start, f'y_start must be smaller than y_stop.' 
+
+        ########################
+        # check if empty image #
+        ########################
+        if self.x is None:
+            print(f'Warning: copying empty PhotonEvents')
+            return PhotonEvents()
+        if len(self.x) == 0:
+            print(f'Warning: copying empty PhotonEvents')
+            return PhotonEvents()       
+        
+        ########
+        # crop #
+        ########
+        temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
+        return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=(x_start, x_stop), ylim=(y_start, y_stop))
+    
+    def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        """Return a copy of the object.
+
+        Args:
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+
+        Returns:
+            :py:attr:`PhotonEvents`
+        """
+        pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        pe.copy_attrs_from(self)
+        return pe
+
+    def clip(self, mask):
+        """Return a masked copy of the object.
+
+        Args:
+            mask (list): list with rectangular coordinates `(x_start, x_stop, y_start, y_stop)`
+                or a list with multiple rectangular coordinates, i.e., `[(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])`
+
+        Returns:
+            :py:attr:`PhotonEvents`
+        """
+        ######################
+        # assert mask format #
+        ######################
+        assert isinstance(mask, Iterable), 'mask must be iterable'
+        if len(mask) == 4:
+            if isinstance(mask[0], Iterable) == False:
+                mask = [mask, ] 
+        for m in mask:
+            assert len(m) == 4, 'mask must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
+        
+        ########
+        # clip #
+        ########
+        pe = PhotonEvents(x=[], y=[])
+        for x_start, x_stop, y_start, y_stop in mask: 
+            pe += self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        pe.copy_attrs_from(self)
+
+        return pe
+
     #################
     # save and load #
     #################
-    def _create_header(self, verbose=False):
-        """Gather attrs to be saved to a file."""
-        header = ''
-        attrs  = self.get_attrs()
-        attrs += self._get_lim_attrs()
-        attrs += self._get_center_attrs()
-        for name in attrs:
-            if self.__dict__[name] is None:
-                header += f'{name}: None'  + '\n'
-            elif isinstance(self.__dict__[name], str):
-                temp2 = str(self.__dict__[name]).replace('\n','\\n')
-                header += f'{name}: \"{temp2}\"'  + '\n'
-            elif isinstance(self.__dict__[name], dict) or isinstance(self.__dict__[name], MutableMapping):
-                if verbose:
-                    type_ = str(type(self.__dict__[name]))
-                    print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
-            elif isinstance(self.__dict__[name], Iterable):
-                header += f'{name}: {list(self.__dict__[name])}'  + '\n'
-            elif numanip.is_number(self.__dict__[name]):
-                tosave = str(self.__dict__[name])
-                if tosave[-1] == '\n':
-                    tosave = tosave[:-1]
-                header += f'{name}: {tosave}'  + '\n'
-            else:
-                temp2 = str(self.__dict__[name]).replace('\n','\\n')
-                header += f'{name}: \"{temp2}\"'  + '\n'
-        return header[:-1]
-    
-    def save(self, filepath=None, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
+    def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
-        Attrs are saved as comments if only_data is False. Saving attrs to file
-        is tricky because requires converting variables to string. Only attrs 
-        that are of type: string, number, and list of number and strings are 
-        saved somewhat correctly. Dictionaries are not saved. 
+        Warning:
+            Attrs are saved as comments if only_data is False. Saving attrs to file
+            is not always reliable because requires converting variables to string. 
+            Only attrs that are of type: string, number, and list of number and strings are 
+            saved somewhat correctly. Dictionaries are not saved. 
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -7267,21 +8000,22 @@ class PhotonEvents(metaclass=_Meta):
 
         .. _numpy.savetxt(): https://numpy.org/doc/stable/reference/generated/numpy.savetxt.html
         """
-        # filepath
-        if filepath is None:
-            try: 
-                filepath = Path(self.filepath)
-            except AttributeError:
-                raise TypeError("Missing 1 required argument: 'filepath'")
-        else:
-            filepath = Path(filepath)
-
-        # check if filepath points to a file
+        ##############################
+        # check for wrong parameters #
+        ##############################
+        if 'folderpath' in kwargs:
+            raise ValueError('folderpath is not a valid parameter.\nPlease, use filepath')
+        
+        ######################################
+        # check if filepath points to a file #
+        ######################################
         assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
         if filepath.exists():
             assert filepath.is_file(), 'filepath must point to a file'
 
-        # check overwrite
+        ###################
+        # check overwrite #
+        ###################
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
@@ -7291,8 +8025,10 @@ class PhotonEvents(metaclass=_Meta):
                         return
                 else:
                     raise AttributeError('filepath not pointing to a file.')
-                
-        # kwargs
+
+        ##########
+        # kwargs #
+        ##########
         if 'fmt' not in kwargs: # pick best format
             decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
             kwargs['fmt'] = f'%.{decimal}f'
@@ -7303,24 +8039,30 @@ class PhotonEvents(metaclass=_Meta):
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
 
-        # save
+        #####################
+        # header and footer #
+        #####################
         if only_data:
             if 'header' in kwargs:
                 del kwargs['header']
             if 'footer' in kwargs:
                 del kwargs['footer']
         else:
+            attrs = ['_xlim', '_ylim']
+            attrs += self.get_attrs()
+            header = '\n'.join(_attr2str(self, attrs, verbose)) + '\n'
             if 'header' not in kwargs:
-                kwargs['header'] = self._create_header(verbose=verbose)
+                kwargs['header'] = header
             else:
                 if kwargs['header'] == '':
-                    kwargs['header'] = self._create_header(verbose=verbose)
+                    kwargs['header'] = header
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
+        
+        ########
+        # save #
+        ########
         np.savetxt(Path(filepath), self.data, **kwargs)
-
-        # save filepath
-        self.filepath = filepath
 
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
@@ -7349,23 +8091,29 @@ class PhotonEvents(metaclass=_Meta):
 
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
-        ###########
-        # default #
-        ###########
+        ############
+        # filepath #
+        ############
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
+        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+
+        ##########
+        # kwargs #
+        ##########
         if 'delimiter' not in kwargs:
             kwargs['delimiter'] = ', '
         if 'comments' not in kwargs:
             kwargs['comments'] = '# '
 
-        # check if filepath points to a file
-        filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
-        assert filepath.exists(), f'filepath does not exist\n{filepath}'
-
-        #############
-        # read data #
-        #############
+        ########
+        # read #
+        ########
         data = np.genfromtxt(Path(filepath), **kwargs)
+
+        ##########
+        # assign #
+        ##########
         self._x = data[:, 0]
         self._y = data[:, 1]
 
@@ -7390,322 +8138,129 @@ class PhotonEvents(metaclass=_Meta):
                         except Exception as e:
                             if verbose:
                                 print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
-        
-        # save filepath
-        self.filepath = str(filepath)
 
-    ##################
-    # base modifiers #
-    ##################
-    def set_shift(self, value=None, p=None, f=None, axis=0):
-        """Shift photon events along a given axis.
-
-        If value, p, and f are None, values are read from pe.calculated_shift.
-
-        Args:
-            value (int or tuple): The number by which the data are shifted.
-                If a tuple, then it must be of the same size as the number of
-                columns (``for axis=0``) or rows (``for axis=1``). Default is None.
-            p (np.array, read only): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x for 
-                axis=0 or y for axis=1. Default is None.
-            f (function, read only): funcion f(x) for axis=0 or 
-                f(y) for axis=1. Default is None.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
-
-        Returns:
-            None
-        """
-        # check axis
-        if axis == 0:
-            arr = self.x
-        elif axis == 1:
-            arr = self.y
-        else:
-            raise ValueError('axis must be 0 or 1')
-
-        # calculate value
-        if value is not None:
-            if isinstance(value, Iterable):
-                assert len(value) == len(self), f'value must have the same length as the data\nLength of the data = {len(self)}.'
-            else:
-                value = [value]*len(self)
-        elif p is not None:
-            value = np.polyval(p, arr)
-        elif f is not None:
-            value = f(arr)
-        else:
-            value = self.calculated_shift
-
-        # shift
-        if axis == 0:
-            for i, v in enumerate(value):
-                if v != 0:
-                    self.y[i] += v
-        elif axis == 1:
-            for i, v in enumerate(value):
-                if v != 0:
-                    self.x[i] += v
+    #########
+    # check #
+    #########
+    pass
 
     #############
     # modifiers #
     #############
-    def fix_curvature(self, nbins, deg=2, axis=0, limit_size=1000):
-        """Shift datapoints along a given axis to fix curvature via cc.
-
-        Elements that roll beyond the edge are re-introduced at the first position.
+    def set_horizontal_shift(self, value):
+        """Shift photon events horizontally (x).
 
         Args:
-            nbins (int or tuple): number of bins. Must be non-zero positive number.
-                If one value is given,
-                this is used for both x and y directions. If two values are given,
-                they are used separetely for the number of rows and number of
-                columns, respectively.
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of bin columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            value (number or list): shift value by which the data are 
+                shifted. If list, then it must be of the same size as the number of
+                 photon events. First element will be assigned to the first photon event and so on.
 
         Returns:
-            p (np.array, read only): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x_centers for 
-                axis=0 or y_centers for axis=1. Default is None.
-            f (function, read only): funcion f(x_centers) for axis=0 or 
-                f(y_centers) for axis=1.
-        """       
-        popt, model = self.calculate_shift(nbins=nbins, deg=deg, axis=axis, limit_size=limit_size)
-        self.set_shift(value=self.calculated_shift)
-
-        return popt, model
-
-    ##############
-    # extractors #
-    ##############
-    def _copy(self, *args, **kwargs):
-        """Same as copy(), but attributes are not copied to the new object."""
-        
-        # check if extract is really necessary
-        if kwargs == {} and args == ():
-            return copy.deepcopy(self)
-        else:
-            limits = self._check_limits(*args, **kwargs)
-        if (limits[0][0] <= min([min(s.x) for s in self]) and limits[0][1] >= max([max(s.x) for s in self]) ) and len(limits) == 1:
-                return copy.deepcopy(self)
-
-        # if x is the same for all spectra, this operation is much faster
-        if self.x is None:
-            try:
-                self.check_same_x()
-                if self.x is not None:
-                    ss = Spectra(n=len(self))
-                    x, ys = self._gather_ys(*args, **kwargs)
-                    for i in range(len(self)):
-                        ss[i].copy(self[i])
-                        ss[i]._x = x
-                        ss[i]._x = ys[i]
-                    return ss
-            except:
-                pass
-        
-        # if x is not the same, extract data recursively
-        limits = self._check_limits(*args, **kwargs)
-        ss = Spectra(n=len(self))
-        for i, s in enumerate(self.data):
-            try:
-                ss[i] = s.copy(limits=limits)
-            except RuntimeError:
-                raise RuntimeError(f'It seems like spectrum number {i} has no data points within range: {limits}.\nPlease, fix limits (or delete spectrum) so all spectra have at least one data point within range.')
-        return ss
-    
-    def copy(self, *args, **kwargs):
-        """Return a copy of the object.
-
-        Usage:
-            >>> # full copy
-            >>> pe2 = pe1.copy()  # pe2 is now a copy of ss1
-            >>>
-            >>> # partial copy
-            >>> pe3 = pe1.copy(x_start, x_stop, y_start, y_stop)
-            >>> pe3 = pe1.copy((x1_start, x1_stop, y1_start, y1_stop))
-            >>> pe3 = pe1.copy([(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])
-
-        Args:
-            pe (Image, optional): PhotonEvents to be is copied. See usage.
-            mask (list): list with rectangles coordinates (x_start, x_stop, y_start, y_stop).
-
-        Returns:
-            :py:attr:`PhotonEvents`
-        """
-        error_message = 'Wrong input. Please check input.\n' +\
-                        f'args passed: {args}\n'  +\
-                        f'kwargs passed: {kwargs}\n\n'  +\
-                        ' === Usage ===\n'  +\
-                        'pe2 = pe1.copy()  # pe2 is now a copy of pe1\n'  +\
-                        'pe3 = pe1.copy(x_start, x_stop, y_start, y_stop)\n' +\
-                        'pe3 = pe1.copy([(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
-        ############################
-        # check if mask are passed #
-        ############################
-        mask = None
-        if 'mask' in kwargs:
-            mask = kwargs['mask']
-        elif len(args) == 4:
-            mask = [[args[0], args[1], args[2], args[3]], ]
-        elif len(args) != 4 and len(args) != 0:
-            raise ValueError(error_message)
-        elif len(kwargs) != 0:
-            for x in list(kwargs.keys()):
-                if x not in ['mask']:
-                    raise ValueError(f'{x} is not a recognized input for copy function\n'+error_message)
-
-        #########################################
-        # if mask is passed, clip photon events #
-        #########################################
-        if mask is not None:
-            pe = self.copy()
-            pe.clip(mask=mask)
-
-        ####################################
-        # Otherwise, return a copy of self #
-        ####################################
-        else:
-            pe = PhotonEvents(x=self.x, y=self.y)
-            pe.copy_lims_from(self)
-
-        ##################
-        # transfer attrs #
-        ##################
-        # pe.copy_lims_from(self)
-        pe.copy_attrs_from(self)
-
-        return pe
-
-    def binning(self, *args, **kwargs):
-        """Compute the 2D histogram of the data (binning of the data).
-
-        Usage:
-            >>> # 10 rows, 10 columns
-            >>> pe.binning(nbins=10)       
-            >>> pe.binning(nbins=(10))   
-            >>> pe.binning(10)            
-            >>> pe.binning((10))          
-            >>> 
-            >>> # 10 rows, 5 columns
-            >>> pe.binning(nbins=(10, 5)) 
-            >>> pe.binning((10, 5))      
-            >>> pe.binning(10, 5)      
-
-        Args:
-            nbins (int or tuple): number of bins. Must be non-zero positive number.
-                If one value is given,
-                this is used for both x and y directions. If two values are given,
-                they are used separetely for the number of rows and number of
-                columns, respectively.
-
-        Returns:
-            Image
+            :py:class:`PhotonEvents`
         """
         ###################################
         # asserting validity of the input #
         ###################################
-        error_message = 'Wrong input. Please, see examples below:\n' +\
-                        '\n' +\
-                        'im.binning(nbins=10)\n' +\
-                        'im.binning(nbins=(10))\n' +\
-                        'im.binning(10)\n' +\
-                        'im.binning((10))\n' +\
-                        '\n' +\
-                        'im.binning(nbins=(10, 5))\n' +\
-                        'im.binning((10, 5))\n' +\
-                        'im.binning(10, 5)\n' +\
-                        '\n' +\
-                        'numbers have to be positive interger'
-        if kwargs != {} and args != ():
-            raise AttributeError(error_message)
-        if any([item not in ['nbins', ] for item in kwargs.keys()]):
-            raise AttributeError(error_message)
-        if len(args) > 2 or len(kwargs) > 1:
-            raise AttributeError(error_message)
-        
-        #################
-        # sorting input #
-        #################
-        # keyword arguments
-        if 'nbins' in kwargs:
-            args = kwargs['nbins']
-        # positional arguments
-        if isinstance(args, Iterable):
-            if len(args) == 1:
-                if isinstance(args[0], Iterable):
-                    nbins = list(args[0])
-                else:
-                    nbins = [args[0], args[0]]
-            else:
-                nbins = list(args)
+        if isinstance(value, Iterable):
+            assert len(value) == len(self), f'value length ({len(value)}) must have the same length as the data\nLength of the data = {len(self)}.'
         else:
-            nbins = [args, args]
+            value = [value]*len(self)
 
-        # assert format
-        if nbins[0] is None or nbins[1] is None:
-            raise AttributeError(error_message)
-        if numanip.is_integer(nbins[0]) == False or numanip.is_integer(nbins[1])  == False or nbins[0] < 0 or nbins[1] < 0:
-            raise ValueError("Number of bins must be a positive integer.")
+        #########
+        # shift #
+        #########
+        pe = self.copy()
+        for i, v in enumerate(value):
+            if v != 0:
+                pe.x[i] += v
+        return pe
+    
+    def set_vertical_shift(self, value):
+        """Shift photon events vertically (y).
 
-        ###############
-        # Calculation #
-        ###############
-        if self.xlim is None:
-            xlim = (min(self.x), max(self.x))
-        else:
-            xlim = self.xlim
-        if self.ylim is None:
-            ylim = (min(self.y), max(self.y))
-        else:
-            ylim = self.ylim
-        temp, _x_edges, _y_edges = np.histogram2d(self.x, self.y, bins=nbins[::-1], range=(xlim, ylim))
-
-        # Image
-        im = Image(temp.transpose())
-        _x_centers = arraymanip.moving_average(_x_edges, n=2)
-        _y_centers = arraymanip.moving_average(_y_edges, n=2)
-        
-        for obj in (self, im):
-            obj._x_centers = _x_centers
-            obj._y_centers = _y_centers
-            obj._x_edges   = _x_edges
-            obj._y_edges   = _y_edges
-
-        ##################
-        # transfer attrs #
-        ##################
-        im.copy_attrs_from(self)
-
-        return im
-
-    def transpose(self):
-        """Switch x and y positions.
+        Args:
+            value (number or list): shift value by which the data are 
+                shifted. If list, then it must be of the same size as the number of
+                 photon events. First element will be assigned to the first photon event and so on.
 
         Returns:
-            PhotonEvents
+            :py:class:`PhotonEvents`
         """
-        # create new PhotonEvents with switched x and y
-        pe = PhotonEvents(x=self.y, y=self.x)
-  
-        ##################
-        # transfer attrs #
-        ##################
-        # pe.copy_lims_from(self)
-        pe.copy_attrs_from(self)
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if isinstance(value, Iterable):
+            assert len(value) == len(self), f'value length ({len(value)}) must have the same length as the data\nLength of the data = {len(self)}.'
+        else:
+            value = [value]*len(self)
 
+        #########
+        # shift #
+        #########
+        pe = self.copy()
+        for i, v in enumerate(value):
+            if v != 0:
+                pe.y[i] += v
         return pe
 
+    ###############
+    # modifiers 2 #
+    ###############
+    def set_horizontal_shift_via_polyval(self, p):
+        """Set horizontal shift values to np.polyval(p, y).
+
+        Args:
+            p (array): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term.
+
+        Returns:
+            :py:class:`Image`
+        """
+        f = lambda y: np.polyval(p, y)
+        return self.set_horizontal_shift_via_function(f)
+    
+    def set_vertical_shift_via_polyval(self, p):
+        """Set vertical shift values to np.polyval(p, x).
+
+        Args:
+            p (array): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term.
+
+        Returns:
+            :py:class:`Image`
+        """
+        f = lambda x: np.polyval(p, x)
+        return self.set_vertical_shift_via_function(f)
+
+    def set_vertical_shift_via_function(self, f):
+        """Set vertical shift values to f(x).
+
+        Args:
+            f (function): function where argument is x coordinates
+
+        Returns:
+            :py:class:`Image`
+        """
+        value = np.array([f(x) for x in self.x])
+        return self.set_vertical_shift(value=value)
+
+    def set_horizontal_shift_via_function(self, f):
+        """Set horizontal shift values to f(y).
+
+        Args:
+            f (function): function where argument is y coordinates
+
+        Returns:
+            :py:class:`Image`
+        """
+        value = np.array([f(y) for y in self.y])
+        return self.set_horizontal_shift(value=value)
+
+    ############
+    # advanced #
+    ############
     def crop(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
         """Crop photon events out.
 
@@ -7717,76 +8272,79 @@ class PhotonEvents(metaclass=_Meta):
         Returns:
             PhotonEvents
         """
-        #################
-        # check if None #
-        #################
-        if x_start is None: x_start = min(self.x)
-        if x_stop  is None: x_stop  = max(self.x)
-        if y_start is None: y_start = min(self.y)
-        if y_stop  is None: y_stop  = max(self.y)
+        return self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
 
-        ##################
-        # validate input #
-        ##################
-        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_stop > y_start, f'y_start must be smaller than y_stop.'
-
-        ########
-        # crop #
-        ########
-        temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
-        pe = PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]))
-
-        ##################
-        # transfer attrs #
-        ##################
-        pe.copy_lims_from(self)
-        pe.copy_attrs_from(self)
-
-        return pe
-
-    def clip(self, mask):
-        """Clip photon events.
-
-        Usage:
-            >>> pe.clip((xmin, xmax, ymin, ymax))
-            >>> pe.clip((0, 12, 3, 12))
-            >>> pe.clip([(0, 12, 3, 12), (1, 4, 15, 18)])
-
-        Args:
-            mask (list): list with rectangles coordinates (x_start, x_stop, y_start, y_stop).
+    def transpose(self):
+        """Switch x and y positions.
 
         Returns:
             PhotonEvents
         """
-        # assert mask is the right format
-        assert isinstance(mask, Iterable), 'mask must be iterable'
-        if len(mask) == 4:
-            if isinstance(mask[0], Iterable) == False:
-                mask = [mask, ]
-
-        ########
-        # clip #
-        ########
-        x = []
-        y = []
-        for r in mask:
-            temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > r[0] and x < r[1]) and (y > r[2] and y < r[3]))])
-            x += list(temp[:, 0])
-            y += list(temp[:, 1])
-
-        #########
-        # final #
-        #########
-        pe = PhotonEvents(x=x, y=y)
-
-        ##################
-        # transfer attrs #
-        ##################
-        pe.copy_lims_from(self)
+        # create new PhotonEvents with switched x and y
+        pe = PhotonEvents(x=self.y, y=self.x)
         pe.copy_attrs_from(self)
-
         return pe
+
+    def binning(self, ncols, nrows):
+        """Compute the 2D histogram of the data (binning of the data).
+
+        Args:
+            ncols, nrows (int or None): number of columns and rows of the returned Image.
+
+        Returns:
+            :py:class:`Image` binned image
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        if numanip.is_integer(ncols) == False or numanip.is_integer(nrows) == False or ncols < 0 or nrows < 0:
+            raise ValueError("Number of bins must be a positive integer.")
+
+        ###########
+        # binning #
+        ###########
+        temp, _x_edges, _y_edges = np.histogram2d(self.x, self.y, bins=(nrows, ncols), range=(self.xlim, self.ylim))
+
+        #########
+        # Image #
+        #########
+        im = Image(temp.transpose())
+        im.x_edges = _x_edges
+        im.y_edges = _y_edges
+        im.copy_attrs_from(self)
+
+        return im
+
+    ########################
+    # calculation and info #
+    ########################
+    def integrated_rows_vs_y_centers(self, nrows):
+        """Integrate data in the horizontal direction.
+
+        Args:
+            nrows (int, optional): number of y bins.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        im = self.binning(ncols=1, nrows=nrows)
+        s  = im.integrated_rows_vs_y_centers()
+        s.copy_attrs_from(self)
+        return s
+    
+    def integrated_columns_vs_x_centers(self, ncols):
+        """Integrate data in the vertical direction.
+
+        Args:
+            ncols (int, optional): number of x bins.
+
+        Returns:
+            :py:class:`Spectrum`.
+        """
+        im = self.binning(ncols=ncols, nrows=1)
+        s  = im.integrated_columns_vs_x_centers()
+        s.copy_attrs_from(self)
+        return s
 
     def calculate_spectrum(self, nbins, axis=1):
         """Integrate data in one direction (sum columns or rows).
@@ -7807,112 +8365,314 @@ class PhotonEvents(metaclass=_Meta):
         if axis != 0 and axis != 1:
             raise ValueError('axis must be 0 or 1')
         
-        pe = self.copy()
-        im = pe.binning(nbins=nbins)
-        s  = im.calculate_spectrum(axis=axis)
+        if axis == 0:
+            return self.integrated_columns_vs_x_centers(ncols=nbins)
+        else: 
+            return self.integrated_rows_vs_y_centers(nrows=nbins)
 
-        ##################
-        # transfer attrs #
-        ##################
-        s.copy_attrs_from(self)
-
-        return s
-
-    ########################
-    # calculation and info #
-    ########################
-    def calculate_shift(self, nbins, deg=2, axis=0, limit_size=1000):
-        """Calculate intensity misalignments via cross-correlation.
+    ############
+    # composed #
+    ############
+    def calculate_vertical_shift(self, ncols, nrows, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate intensity misalignments in terms of y centers.
 
         Args:
-            nbins (int, optional): number of bins.
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
+            ncols, nrows (int or None): number of columns and rows for binning.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of bin columns (rows) is not bigger than 
+                ensures that the number of columns (rows) is not bigger than 
                 limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
 
         Returns:
-            p (np.array, read only): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x_centers for 
-                axis=0 or y_centers for axis=1. Default is None.
-            f (function, read only): funcion f(x_centers) for axis=0 or 
-                f(y_centers) for axis=1.
+            list
         """
-        # check axis
-        if axis != 0 and axis != 1:
-            raise ValueError('axis must be 0 or 1')
-        
-        # calculate shifts
-        pe = self.copy()
-        im = pe.binning(nbins=nbins)
-        im.calculate_roll(axis=axis, limit_size=limit_size)
-        if axis == 0:
-            centers = im.x_centers
-            y = im.calculated_roll*np.mean(np.diff(im.y_centers))
-        elif axis == 1:
-            centers = im.y_centers
-            y = im.calculated_roll*np.mean(np.diff(im.x_centers))
+        im = self.binning(ncols=ncols, nrows=nrows)
+        return im.calculate_vertical_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
 
-        # calculate poly
-        popt  = np.polyfit(x=centers, y=y, deg=deg)
-        model = lambda x: np.polyval(popt, x)
-
-        # store
-        if axis == 0:
-            centers = self.x
-        elif axis == 1:
-            centers = self.y
-        self._calculated_shift = model(centers)
-
-        return popt, model
-
-    def calculate_curvature(self, nbins, deg=2, axis=0, limit_size=1000):
-        """Same as br.pe.calculate_shift()
-        
-        Calculate intensity misalignments via cross-correlation.
+    def calculate_horizontal_shift(self, ncols, nrows, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate intensity misalignments in terms of x centers.
 
         Args:
-            nbins (int, optional): number of bins.
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            axis (int or string, optional): Axis along which elements are shifted.
-                By default, data is shifted in the vertical (0) direction.
+            ncols, nrows (int or None): number of columns and rows for binning.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of bin columns (rows) is not bigger than 
+                ensures that the number of columns (rows) is not bigger than 
                 limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
+            
+        Returns:
+            list
+        """
+        im = self.binning(ncols=ncols, nrows=nrows)
+        return im.calculate_horizontal_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+
+    def calculate_vertical_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate vertical shift values to fix curvature.
+        
+        Args:
+            ncols, nrows (int or None): number of columns and rows for binning.
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `y_start = None` or `y_stop = None` to indicate the minimum or 
+                maximum y value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            p (np.array, read only): 1D array of polynomial coefficients 
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs x centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
                 (including coefficients equal to zero) from highest degree to 
-                the constant term. Polynomial as a function of x_centers for 
-                axis=0 or y_centers for axis=1. Default is None.
-            f (function, read only): funcion f(x_centers) for axis=0 or 
-                f(y_centers) for axis=1.
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
         """
-        return self.calculate_shift(nbins=nbins, deg=deg, axis=axis, limit_size=limit_size)
+        im = self.binning(ncols=ncols, nrows=nrows)
+        return im.calculate_vertical_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
      
+    def calculate_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """Calculate horizontal shift values to fix curvature.
+        
+        Args:
+            ncols, nrows (int or None): number of columns and rows for binning.
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs y centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(y_centers)
+        """
+        im = self.binning(ncols=ncols, nrows=nrows)
+        return im.calculate_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+     
+
+    def fix_vertical_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """shift photon events vertically to fix curvature.
+
+        Args:
+            ncols, nrows (int or None): number of columns and rows for binning.
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align columns via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous column.
+
+                 3) 'max': Align the max point of every column. 
+                 
+                 4) 'peak': Fit one peak in each column and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `y_start = None` or `y_stop = None` to indicate the minimum or 
+                maximum y value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs x centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(x_centers)
+        """   
+        im = self.binning(ncols=ncols, nrows=nrows)
+        return im.fix_vertical_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+    def fix_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+        """shift photon events horizontally to fix curvature.
+
+        Args:
+            ncols, nrows (int or None): number of columns and rows for binning.
+            deg (int, optional): Degree of the curvature fitting polynomial. 
+                Default is 2.
+            mode (string, optional): method used. Options are: 
+                 
+                 1) 'cc': align rows via cross-correlation (cc), where cc for
+                 all spectra is calculated against the frist spectrum. 
+                 
+                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
+                 calculated against previous row.
+
+                 3) 'max': Align the max point of every row. 
+                 
+                 4) 'peak': Fit one peak in each row and align them 
+                 (requires that `brixs.addons.fitting` is imported)
+
+            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If limits = [], i.e.,
+                an empty list, it assumes `limits = (None, None)`.
+            limit_size (int or False, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. If axis = 0 (1), it 
+                ensures that the number of columns (rows) is not bigger than 
+                limit_size. Default is 1000. Set to False to bypass this limit.
+            **kwargs (dict)
+                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
+
+        Returns:
+            s, fit, popt, R2, model
+
+            s (spectrum): spectrum with shift values vs y centers
+            
+            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+
+            popt (np.array): 1D array of polynomial coefficients 
+                (including coefficients equal to zero) from highest degree to 
+                the constant term.
+
+            R2 (number): R2 error
+
+            model (function): funcion f(y_centers)
+        """   
+        im = self.binning(ncols=ncols, nrows=nrows)
+        return im.fix_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+
+
     ##########################        
     # plot and visualization #
     ########################## 
-    def plot(self, ax=None, set_limits=True, **kwargs):
+    def plot(self, ax=None, s=0.1, x_start=None, x_stop=None, y_start=None, y_stop=None, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
-            set_limits (bool, optional): If True, plt.xlim and plt.ylim are
-                called and the limits are set to pe.xlim and pe.ylim.
-            **kwargs: kwargs are passed to ``plt.scatter()`` that plots the data.
-
-        If not specified, the following parameters are passed to `matplotlib.pyplot.scatter()`_:
-
-        Args:
-            s: The marker size in points**2. Default is 0.1.
+            s (number, optional): The marker size in points**2. Default is 0.1.
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+            **kwargs: kwargs are passed to ``plt.scatter()`` that plots the data.            
 
         Returns:
             `matplotlib.image.AxesImage`_
@@ -7928,39 +8688,13 @@ class PhotonEvents(metaclass=_Meta):
             if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
                 figure()
 
-        # kwargs
-        if 's' not in kwargs:
-            kwargs['s'] = 0.1
-
-        # plot
-        pos = ax.scatter(self.x, self.y, **kwargs)
-
-        # set limits
-        if set_limits:
-            try:
-                if self.xlim is not None:
-                    ax.xlim(self.xlim)
-                if self.ylim is not None:
-                    ax.ylim(self.ylim)
-            except AttributeError:
-                if self.xlim is not None:
-                    ax.set_xlim(self.xlim)
-                if self.ylim is not None:
-                    ax.set_ylim(self.ylim)
+        ########
+        # plot #
+        ########
+        pe  = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        pos = ax.scatter(pe.x, pe.y, s=s, **kwargs)
 
         return pos
-
-    def plot_edges(self, ax=None, **kwargs):
-        """[Not implemented]Plot edges after binning
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            **kwargs: kwargs are passed to ``plt.scatter()`` that plots the data.
-
-        Returns:
-            None
-        """
-        raise NotImplementedError('this is not implemented yet')
 
 # %% ============================= Dummy ================================== %% #
 class Dummy():

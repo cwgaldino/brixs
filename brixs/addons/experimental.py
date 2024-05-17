@@ -1155,3 +1155,458 @@ def roll_plot3(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
     _update(self)
     return
 # br.Spectra.roll_plot3 = roll_plot3
+
+# %% IMAGE
+def linecuts(self, axis=0, xlim=None, ylim=None, ilim=None, keep=None, **kwargs):
+    """[EXPERIMENTAL] Plot image and flip trhough linecuts with keyboard arrows.
+
+    Args:
+        axis (int or string, optional): Axis along linecuts.
+            By default, linecuts are in the vertical (0) direction.
+        xlim, ylim, ilim (tuple, optional): Image ploting limits.
+        keep (int or str, optional): index of the spectrum to keep on screen. 
+            Use 'previous' or 'next' to show previous or next spectrum.
+        **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
+
+    Returns:
+        None
+    """
+    # axis
+    if axis == 0:
+        ss = self.columns
+    elif axis == 1:
+        raise NotImplementedError('Not implemented yet for axis = 1')
+        # ss = self.rows
+    else:
+        raise ValueError('axis must be 0 or 1')
+
+    # change keybindings
+    try:
+        matplotlib.rcParams['keymap.back'].remove('left')
+        matplotlib.rcParams['keymap.forward'].remove('right')
+    except ValueError:
+        pass
+    
+    # vars
+    self.__i    = 0
+    self.__axes = None
+    self.__xlim = xlim
+    self.__ylim = ylim
+    self.__ilim = ilim
+
+    # lims
+    if self.__xlim is None:
+        self.__xlim = [min(self._x_centers), max(self._x_centers)]
+    if self.__ylim is None:
+        self.__ylim = [min(self._y_centers), max(self._y_centers)]
+    if self.__ilim is None:
+        self.__ilim     = [min([min(l) for l in self.data]), max([max(l) for l in self.data])]
+
+    # keep
+    if keep is not None:
+        if isinstance(keep, str):
+            assert keep == 'previous' or keep == 'next', 'keep must be a valid spectrum index, or "previous/next"'
+        else:
+            assert abs(keep) < len(ss), 'keep must be a valid spectrum index, or "previous/next"'
+
+    # kwargs
+    if 'color' not in kwargs:
+        kwargs['color'] = 'black'
+    if 'marker' not in kwargs:
+        kwargs['marker'] = 'o'
+
+    # update function
+    def update(ss):
+        # plot spectrum
+        ax = self.__axes[0]
+        if axis == 0:
+            ax.set_title(f'{self.__i}: {self.x_centers[self.__i]} eV')
+        if keep is not None:
+            if keep == 'next':
+                if self.__i+1 < len(self):
+                    ss[self.__i+1].plot(color='red', alpha=0.5)
+            elif keep == 'previous':
+                if self.__i-1 >= 0:
+                    ss[self.__i-1].plot(color='red', alpha=0.5)
+            else:
+                ss[keep].plot(color='red', alpha=0.5)
+        ss[self.__i].plot(ax=ax, **kwargs)
+
+        # lim
+        if self.__ylim is not None:
+            ax.set_xlim(self.__ylim)
+        if self.__ilim is not None:
+            ax.set_ylim(self.__ilim)
+
+
+
+        # plot map (shouldn't we put this outside of the update function?)
+        ax = self.__axes[1]
+        
+        # lim
+        if self.__ilim is not None:
+            self.pcolormesh(ax=ax, vmin=self.__ilim[0], vmax=self.__ilim[1])
+        else:
+            self.pcolormesh(ax=ax)
+        if self.__xlim is not None:
+            if axis == 0:
+                ax.set_xlim(self.__xlim)
+            else:
+                pass
+                # ax.set_xlim(self.__ylim)
+        if self.__ylim is not None:
+            if axis == 0:
+                ax.set_ylim(self.__ylim)
+            else:
+                pass
+                # ax.set_ylim(self.__ylim)
+
+        # vline
+        if axis == 0:
+            if keep is not None:
+                if keep == 'next':
+                    if self.__i+1 < len(self):
+                        ax.plot([self.x_centers[self.__i+1], self.x_centers[self.__i+1]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
+                elif keep == 'previous':
+                    if self.__i-1 >= 0:
+                        ax.plot([self.x_centers[self.__i-1], self.x_centers[self.__i-1]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
+                else:
+                    ax.plot([self.x_centers[keep], self.x_centers[keep]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
+            ax.plot([self.x_centers[self.__i], self.x_centers[self.__i]], [self.__ylim[0], self.__ylim[1]], color='white')
+            # E = self.x_centers[self.__i]
+            # figmanip.vlines(E, ax=ax, color='red', lw=1)
+        else:
+            E = self.y_centers[self.__i]
+            figmanip.hlines(E, ax=ax, color='red', lw=1)
+
+        
+
+    def _update(ss):
+        if self.__i >= len(ss):
+            self.__i = len(ss) - 1
+        elif self.__i < 0:
+            self.__i = 0
+
+        update(ss)
+
+    # keyboard events
+    def keyboard(event, ss):
+        # print(event.key)
+        # print('keyboard')
+        # print(event.key)
+        if event.key == 'right' or event.key == 'up':
+            self.__i = self.__i + 1
+
+            for ax in self.__axes:
+                # ax.cla()
+                ax.lines.clear()
+            _update(ss)
+            plt.draw()
+        elif event.key == 'left' or event.key == 'down':
+            self.__i = self.__i - 1
+            
+            for ax in self.__axes:
+                # ax.cla()
+                ax.lines.clear()
+            _update(ss)
+            plt.draw()
+
+    # axis zoom changes
+    def on_1_xlims_change(event_ax):
+        # print("updated xlims: ", event_ax.get_xlim())
+        self.__xlim = event_ax.get_xlim()
+
+    def on_1_ylims_change(event_ax):
+        # print("updated ylims: ", event_ax.get_ylim())
+        self.__ylim = event_ax.get_ylim()
+
+    def on_0_xlims_change(event_ax):
+        # print("updated xlims: ", event_ax.get_xlim())
+        self.__ylim = event_ax.get_xlim()
+
+    def on_0_ylims_change(event_ax):
+        # print("updated ylims: ", event_ax.get_ylim())
+        self.__ilim = event_ax.get_ylim()
+
+    # figure
+    fig, self.__axes = figmanip.subplots(nrows=2, ncols=1)
+    fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
+    _update(ss)
+
+    self.__axes[0].callbacks.connect('xlim_changed', on_0_xlims_change)
+    self.__axes[0].callbacks.connect('ylim_changed', on_0_ylims_change)
+    self.__axes[1].callbacks.connect('xlim_changed', on_1_xlims_change)
+    self.__axes[1].callbacks.connect('ylim_changed', on_1_ylims_change)
+# br.Image.linecuts = linecuts
+
+def linecuts2(self, axis=0, xlim=None, ylim=None):
+    """[EXPERIMENTAL] Plot image and flip trhough linecuts with keyboard arrows.
+
+    Warning: old version, with auto rescaling.
+
+    Args:
+        axis (int or string, optional): Axis along linecuts.
+            By default, linecuts are in the vertical (0) direction.
+        xlim, ylim (tuple, optional): spectra ploting limits (not image 
+            ploting limits).
+
+    Returns:
+        None
+    """
+    # axis
+    if axis == 0:
+        ss = self.columns
+    elif axis == 1:
+        ss = self.rows
+    else:
+        raise ValueError('axis must be 0 or 1')
+    
+    # update function
+    def update(ss):
+        # plot
+        ax = axes[0]
+        ss[ss.__i].plot(ax=ax, color='black', marker='o')
+
+        # lim
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        # br.label_rixs(ax=ax)
+
+        # plot map (shouldn't we put this outside of the update function?)
+        ax = axes[1]
+        
+        if ylim is not None:
+            self.pcolormesh(ax=ax, vmin=ylim[0], vmax=ylim[1])
+        else:
+            self.pcolormesh(ax=ax)
+        if xlim is not None:
+            if axis == 0:
+                ax.set_ylim(xlim)
+            else:
+                ax.set_xlim(xlim)
+
+        # vline
+        if axis == 0:
+            E = self.x_centers[ss.__i]
+            figmanip.vlines(E, ax=ax, color='red', lw=1)
+        else:
+            E = self.y_centers[ss.__i]
+            figmanip.hlines(E, ax=ax, color='red', lw=1)
+
+        # title
+        axes[0].set_title(f'{ss.__i}: {E} eV')
+
+    def _update(ss):
+        if ss.__i >= len(ss):
+            ss.__i = len(ss) - 1
+        elif ss.__i < 0:
+            ss.__i = 0
+
+        update(ss)
+
+    # keyboard events
+    def keyboard(event, ss):
+        # print(event.key)
+        # print('keyboard')
+        # print(event.key)
+        if event.key == 'right' or event.key == 'up':
+            ss.__i = ss.__i + 1
+
+            for ax in axes:
+                ax.cla()
+            _update(ss)
+            # for ax in axes:
+            plt.draw()
+        elif event.key == 'left' or event.key == 'down':
+            ss.__i = ss.__i - 1
+            
+            for ax in axes:
+                ax.cla()
+            _update(ss)
+            # for ax in axes:
+            plt.draw()
+
+    # figure
+    fig, axes = figmanip.subplots(nrows=2, ncols=1)
+    fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
+    _update(ss)
+# br.Image.linecuts2 = linecuts2
+
+def roll_plot(self, axis=0, vlines=None, hlines=None, **kwargs):
+    """[EXPERIMENTAL] Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
+
+    Warning:
+        Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
+
+    Args:
+        axis (int or string, optional): Axis along roll.
+            By default, columns are rolled down or up (0).
+        vlines, hlines (list or number, optional): vertical or horizontal
+            dashed lines for reference, default is None.
+        **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
+
+    If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
+
+    Args:
+        cmap: The Colormap instance. Default is 'jet'.
+        aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
+            an aspect ratio of 1 will be used (pixels will be square).
+        origin: Location of the [0, 0] index. default is 'lower'.
+        interpolation: The interpolation method used. Default is 'none'.
+            Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
+            'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
+            'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
+            'sinc', 'lanczos', 'blackman'.
+        extent: minimun and maximum x and y values. Default will be given by
+            the Image.x and Image.y attributes.
+        vmin: Minimum intensity that the colormap covers. The intensity histogram is
+            calculated and vmin is set on the position of the maximum.
+        vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+            calculated and vmax is set to the value where the 
+            intensity drops below 0.01 % of the maximum.
+    """
+    # axis
+    assert axis == 0 or axis == 1, 'axis must be 0 or 1'
+
+    # default arguments
+    if 'cmap' not in kwargs:
+        kwargs['cmap'] = 'jet'
+    if 'aspect' not in kwargs:
+        kwargs['aspect'] = 'auto'
+    if 'origin' not in kwargs:
+        kwargs['origin'] = 'lower'
+    if 'interpolation' not in kwargs:
+        kwargs['interpolation'] = 'none'
+    if 'vmin' not in kwargs or 'vmax' not in kwargs:
+        vmin, vmax = self._calculated_vmin_vmax()
+        if 'vmin' not in kwargs:
+            kwargs['vmin'] = vmin
+        if 'vmax' not in kwargs:
+            kwargs['vmax'] = vmax
+
+    # vars
+    self.__i = 0
+    self.__xlim = None
+    self.__ylim = None
+    self.__ax   = None
+    self.__temp = self.copy()
+    if axis == 0:
+        self._calculated_roll = np.array([0]*self.shape[1])
+    else:
+        raise NotImplementedError('axis = 1 nor implemented yet')
+
+    # change keybindings
+    try:
+        matplotlib.rcParams['keymap.back'].remove('left')
+        matplotlib.rcParams['keymap.forward'].remove('right')
+    except ValueError:
+        pass
+
+    # lims
+    if self.__xlim is None:
+        self.__xlim = [min(self._x_centers), max(self._x_centers)]
+    if self.__ylim is None:
+        self.__ylim = [min(self._y_centers), max(self._y_centers)]
+
+    # vlines hlines warning
+    if vlines is not None or hlines is not None:
+        raise NotImplementedError('vlines is not implemented yet')
+    
+    # core update function
+    update_function = None
+    if update_function is None:
+        def _update(ss):
+            if self.__i >= len(self):
+                self.__i = len(self) - 1
+            elif self.__i < 0:
+                self.__i = 0
+
+            plt.title(f'{self.__i}: {self._calculated_roll[self.__i]}')
+            im = self.__temp.imshow(ax=self.__ax, verbose=False)
+
+            if axis == 0:
+                self.__ax.plot([self.x_centers[self.__i], self.x_centers[self.__i]], [self.__ylim[0], self.__ylim[1]], color='white')
+            else:
+                raise NotImplementedError('not implemented yet')
+            
+            # if vlines is not None:
+            #     if isinstance(vlines, Iterable) == False:
+            #         vlines = [vlines, ]
+            #     for vline in vlines:
+            #         self.__ax.plot([vline, vline], [self.__ylim[0], self.__ylim[1]], color='red', ls='--', lw=1)
+            # if hlines is not None:
+            #     if isinstance(hlines, Iterable) == False:
+            #         hlines = [hlines, ]
+            #     for hline in hlines:
+            #         self.__ax.plot([self.__xlim[0], self.__xlim[1]], [hline, hline], color='red', ls='--', lw=1)
+
+            if self.__xlim is not None:
+                plt.xlim(self.__xlim)
+            if self.__ylim is not None:
+                plt.ylim(self.__ylim)
+
+    # keyboard events
+    def keyboard(event, ss):
+        # print(event.key)
+        # print('keyboard')
+        # print(event.key)
+        if axis == 0:
+            if event.key == 'up':
+                self._calculated_roll[self.__i] += 1
+
+                if axis == 0:
+                    rolls = np.zeros(self.shape[1])
+                    rolls[self.__i] = 1
+                    self.__temp.set_roll(rolls)
+                _update(ss)
+                plt.draw()
+            elif event.key == 'down':
+                self._calculated_roll[self.__i] -= 1
+
+                if axis == 0:
+                    rolls = np.zeros(self.shape[1])
+                    rolls[self.__i] = -1
+                    self.__temp.set_roll(rolls)
+                _update(ss)
+                plt.draw()
+            elif event.key == 'right':
+                self.__i = self.__i + 1
+
+                # self.__ax.cla()
+                self.__ax.lines.clear()
+                _update(ss)
+                plt.draw()
+            elif event.key == 'left':
+                self.__i = self.__i - 1
+
+                # self.__ax.cla()
+                self.__ax.lines.clear()
+                _update(ss)
+                plt.draw()
+
+    # axis zoom changes
+    def on_xlims_change(event_ax):
+        # print("updated xlims: ", event_ax.get_xlim())
+        self.__xlim = event_ax.get_xlim()
+
+    def on_ylims_change(event_ax):
+        # print("updated ylims: ", event_ax.get_ylim())
+        self.__ylim = event_ax.get_ylim()
+
+    # plotting
+    fig, self.__ax = plt.subplots(1, 1)
+    _update(self)
+
+    # register callbacks
+    fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
+    # fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
+    self.__ax.callbacks.connect('xlim_changed', on_xlims_change)
+    self.__ax.callbacks.connect('ylim_changed', on_ylims_change)
+
+    # _update(self)
+    return
+# br.Image.roll_plot = roll_plot
+
+# %%
