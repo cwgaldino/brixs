@@ -1,10 +1,6 @@
 
-brixs.figmanip
+backpack.figmanip
 =================================
-
-.. .. autosummary:: brixs.backpack.filepath
-..     :toctree:
-
 
 .. automodule:: brixs.backpack.figmanip
     :members:

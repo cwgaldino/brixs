@@ -3,31 +3,23 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-brixs's documentation
-=================================
+
+##########################################################
+BRIXS' documentation
+##########################################################
+
+BRIXS is an object-oriented (OO) python package for processing/analysis of XAS and RIXS spectra.
+
+See on GitHub `https://github.com/cwgaldino/brixs <https://github.com/cwgaldino/brixs/>`_.
+
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Contents:
+   :hidden:
 
-   brixs/Spectrum
-   brixs/Spectra
-   brixs/Image
-   brixs/PhotonEvents
-
-   backpack/filemanip
-   backpack/figmanip
-   backpack/arraymanip
-   backpack/numanip
-   backpack/interact
-
-   addons/finder
-   addons/labels
-   addons/crystal
-   addons/model
-
-
-
+   /brixs/index
+   /backpack/index
+   .. /addons/index
+   .. /beamlines/index
 
 
 Indices and tables

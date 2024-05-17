@@ -43,3 +43,4 @@ for name in settings._forbidden_words:
 # addons
 from .addons import labels
 from .addons import finder
+# import .addons

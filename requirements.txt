@@ -1,4 +1,0 @@
-matplotlib>=3.4
-numpy>=1.15
-scipy>=1.7
-lmfit>=1.2.2

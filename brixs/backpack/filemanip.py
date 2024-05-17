@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Useful functions for everyday use ---> files and foldersS"""
+"""Useful functions for everyday use ---> files and folders"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 from pathlib import Path

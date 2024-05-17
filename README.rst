@@ -180,7 +180,7 @@ independent from brixs. As for the time of writing, these are the submodules:
    brixs.numanip           # float/int manipulation QOL functions
    brixs.interact          # user interaction QOL functions
 
-See the documentation (PUT LINK HERE) for a description of the functions available. 
+See the documentation for a description of the functions available. 
 All functions within *backpack* are readily available when brixs is imported. For
 instance, the function *brixs.arraymanip.check_monotonicity* which checks the 
 monotonicity of an array can be called directly from brixs:

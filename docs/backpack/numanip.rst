@@ -1,10 +1,6 @@
 
-brixs.numanip
+backpack.numanip
 =================================
-
-.. .. autosummary:: brixs.backpack.filepath
-..     :toctree:
-
 
 .. automodule:: brixs.backpack.numanip
     :members:

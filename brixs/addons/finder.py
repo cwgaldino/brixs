@@ -18,65 +18,89 @@ USAGE:
 
 There are two ways to user the finder functionality
 
+
+
 1) via decorators (recommended)
 
+**1a) function that saves one Spectrum**
+
 # define path where files will be saved
-br.finder_folderpath = '<some-path>'
+
+>>> br.finder.folderpath = '<some-path>'
 
 # verbose for finder can be set (default is True)
-br.finder_verbose = True
+
+>>> br.finder.verbose = True
 
 # apply the decorator to you function
-@br.finder
-def processing_function(a, b, c):
-    s = <does something with a, b and c and returns s>
-    return s
 
-# the parameters a, b, and c are set as attributes of s
+>>> @br.finder.track
+>>> def processing_function(a, b, c):
+>>>    s = <does something with a, b and c and returns s>
+>>>    return s
 
-    >>> print(s.a)
-    >>> print(s.b)
-    >>> print(s.c)
 
-That's it. 
+**1b) function that saves one multiple Spectrum**
+
+# define path where files will be saved
+
+>>> br.finder.folderpath = '<some-path>'
+
+# verbose for finder can be set (default is True)
+
+>>> br.finder.verbose = True
+
+# apply the decorator to you function
+
+>>> @br.finder.track2
+>>> def processing_function(a, b, c):
+>>>    s1 = <does something with a, b and c and returns s1>
+>>>    s2 = <does something with a, b and c and returns s2>
+>>>    s3 = <does something with a, b and c and returns s3>
+>>>    return s1, s2, s3
+
+
+**1c) function that saves one Spectra**
+
+# define path where files will be saved
+
+>>> br.finder.folderpath = '<some-path>'
+
+# verbose for finder can be set (default is True)
+
+>>> br.finder.verbose = True
+
+# apply the decorator to you function
+
+>>> @br.finder.trackss
+>>> def processing_function(a, b, c):
+>>>    ss = <does something with a, b and c and returns ss>
+>>>    return ss
+
 
     
 2) manually setting up the finder function, where files will be save in `folderpath`
 
 # verbose for finder can be set (default is True)
-br.finder_verbose = True
+br.finder.verbose = True
 
 # your processing function must be defined like this, where parameters is a dictionary
 # with the calculation parameters
-def processing_function(parameters, folderpath):
 
-    # try and find if spectrum has already been calculated
-    s = search(parameters, folderpath=folderpath)
-    if s is not None:
-        return s
-    
-    #### process something
-    <include-code-here>
-
-    # save spectra so it is not needed to run it again
-    save(s=s, parameters=parameters, folderpath=folderpath)
-
-    return s
-
-
-If you have a function processing_function(a, b, c) that returns a 
-br.Spectrum type based on parameters `a`, `b`, and `c`. One can set parameters 
-a, b, and c as attributes of the returned Spectrum s by using the @args2attrs 
-decorator
-
-    @br.args2attrs
-    def processing_function(a, b, c):
-        s = <does something with a, b and c and returns s>
-        return s
-    print(s.a)
-    print(s.b)
-    print(s.c)
-
+>>> def processing_function(parameters, folderpath):
+>>> 
+>>>     # try and find if spectrum has already been calculated
+>>>     s = search(parameters, folderpath=folderpath)
+>>>     if s is not None:
+>>>         return s
+>>>     
+>>>     #### process something
+>>>     <include-code-here>
+>>> 
+>>>     # save spectra so it is not needed to run it again
+>>>     save(s=s, parameters=parameters, folderpath=folderpath)
+>>> 
+>>>     return s
 
 Developers note: in the future, maybe we can make a better way to get the 
 last file number in function _save()
@@ -327,7 +351,7 @@ def searchss(parameters, folderpath):
         keyerror: if finder_values have keys that do not match with finder_tags.
 
     Returns 
-        spectrum if data is found, or None.   
+        spectra if data is found, or None.   
     """
     # get names in alphabetical order
     names = np.sort(list(parameters.keys()))
