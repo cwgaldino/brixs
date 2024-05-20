@@ -20,7 +20,7 @@ from .brixs import subplots
 # reserved words:  methods, vars, and pseudovars for each object
 # forbidden words: all methods from all objects + pseudovar from all other objects
 import types
-for object in (Spectrum, Spectra, Image, PhotonEvents):
+for object in (Spectrum, Spectra, Image, PhotonEvents, Dummy):
     name  = object.__name__
     _s    = object()
     attrs = _s.__dir__()

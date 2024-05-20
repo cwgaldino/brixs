@@ -51,6 +51,7 @@ def moving_average(x, n):
     if isinstance(n, int) == False:
         if n.is_integer() == False:
             raise ValueError('n must be a positive integer (> 1).')
+    assert n <= len(x), f'number of points to average (n={n}) must be equal or less than the length of the array ({len(x)})'
 
     x = np.array(x)
     window = np.ones(int(n))/float(n)
@@ -267,13 +268,16 @@ def fix_monotonicity(x, y, mode='increasing'):
         self.check_monotonicity()
 
 # %% ============================== extract =============================== %% #
-def choose(x, ranges):
+def choose(x, limits):
     """Return a mask of x values inside range pairs.
 
     Args:
         x (list or array): 1d array.
-        ranges (list): a pair of values or a list of pairs. Each pair represents
+        limits (list): a pair of values or a list of pairs. Each pair represents
             the start and stop of a data range from x. [[xi, xf], [xi_2, xf_2], ...]
+
+    Raises:
+        RuntimeError: if limits have overlapping intervals
 
     Returns:
         1d list.
@@ -282,22 +286,49 @@ def choose(x, ranges):
     x = np.array(x)
 
     try:  # ((start, end), )
-        choose_range = [None]*len(ranges)
-        for i, (x_init, x_final) in enumerate(ranges):
+
+        # check overlapping limits
+        for i, lim in enumerate(limits):
+            # put start as the lower number
+            if lim[0] > lim[1]:
+                xf1, xi1 = lim
+            else:
+                xi1, xf1 = lim
+            for j, lim2 in enumerate(limits): 
+                # put start as the lower number
+                if lim2[0] > lim2[1]:
+                    xf2, xi2 = lim2
+                else:
+                    xi2, xf2 = lim2
+                if i != j:
+                    if (xf1 >= xi2 and xf1 <= xf2):
+                        raise RuntimeError(f'overlapping intervals [{(xi1, xf1)}] and [{(xi2, xf2)}]')
+
+        choose_range = [None]*len(limits)
+        for i, lim in enumerate(limits):
+            # put start as the lower number
+            if lim[0] > lim[1]:
+                x_final, x_init = lim
+            else:
+                x_init, x_final = lim
             choose_range[i] = np.logical_and(x>=x_init, x<=x_final)
         choose_range = [True if x == 1 else False for x in np.sum(choose_range, axis=0)]
-    except TypeError:  # (start, end)
-        x_init, x_final = ranges
+    except TypeError:  # (start, end) 
+        # put start as the lower number
+        if limits[0] > limits[1]:
+            x_final, x_init = limits
+        else:
+            x_init, x_final = limits
         choose_range = np.logical_and(x>=x_init, x<=x_final)
     return choose_range
 
-def extract(x, y, ranges, invert=False):
-    """Returns specific data ranges from x and y.
+def extract(x, y, limits, invert=False):
+    """Returns specific data limits from x and y.
 
     Args:
         x (list or array): 1D reference vector.
         y (list or array): 1D y-coordinates or list of several data sets.
-        ranges (list): a pair of values or a list of pairs. Each pair represents
+        limits (list): a pair of values or a list of pairs. Each pair represents
             the start and stop of a data range from x.
         invert (bool, optional): if inverted is True, data outside of the data 
             will be returned. Default is False.
@@ -343,15 +374,15 @@ def extract(x, y, ranges, invert=False):
     x = np.array(x)
     y = np.array(y)
 
-    # if data is all inside ranges, then nothing is done
-    if len(ranges) == 1:
-        if ranges[0][0] <= min(x) and ranges[0][1] >= max(x):
+    # if data is all inside limits, then nothing is done
+    if len(limits) == 1:
+        if limits[0][0] <= min(x) and limits[0][1] >= max(x):
             if invert:
                 return np.array([]), np.array([])
             else:
                 return x, y
 
-    choose_range = choose(x, ranges)
+    choose_range = choose(x, limits)
     # print(choose_range[0:10])
     if invert:
         choose_range = np.invert(choose_range)
@@ -366,7 +397,8 @@ def extract(x, y, ranges, invert=False):
             # print('here')
             return temp[:, -1], temp[:, 0]
     else:
-        raise RuntimeError('No data points within the selected range.')
+        return [], []
+        # raise RuntimeError('No data points within the selected range.')
 
 # %% ========================== Experimental ============================== %% #
 def flatten(x):

@@ -412,6 +412,16 @@ class Spectrum(metaclass=_Meta):
         return self._x
     @x.setter
     def x(self, value):
+        # check None
+        if value is None:
+            if self.y is not None:
+                self._x = np.arange(0, len(self.y))
+            else:
+                self._x = None
+            self._step         = None
+            self._monotonicity = None
+            return
+        
         ###################################
         # asserting validity of the input #
         ###################################
@@ -428,7 +438,15 @@ class Spectrum(metaclass=_Meta):
         # check length
         if self.y is not None:
             assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
-       
+        else:
+            if len(value) == 0:
+                self._x = None
+                self._step         = None
+                self._monotonicity = None
+                return
+            else:
+                self._y = np.arange(0, len(value))
+              
         #################
         # set attribute #
         #################
@@ -451,6 +469,14 @@ class Spectrum(metaclass=_Meta):
         ###################################
         # asserting validity of the input #
         ###################################
+        # check None
+        if value is None:
+            if self.x is not None:
+                self._y = np.arange(0, len(self.x))
+            else:
+                self._y = None
+            return
+            
         # check type
         if not isinstance(value, Iterable):
             raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
@@ -465,7 +491,13 @@ class Spectrum(metaclass=_Meta):
         if self.x is not None:
             assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
         else:
-            self._x = np.arange(0, len(value))
+            if len(value) == 0:
+                self._y = None
+                return
+            else:
+                self._x = np.arange(0, len(value))
+                self._step         = 1
+                self._monotonicity = 'increasing'
 
         #################
         # set attribute #
@@ -480,7 +512,10 @@ class Spectrum(metaclass=_Meta):
     ###################################
     @property
     def data(self):
-        return np.vstack((self.x, self.y)).transpose()
+        if self.x is not None:
+            return np.vstack((self.x, self.y)).transpose()
+        else:
+            return
     @data.setter
     def data(self, value):
         raise AttributeError('Attribute is "read only".')
@@ -673,6 +708,10 @@ class Spectrum(metaclass=_Meta):
         """return a list of user defined attrs"""
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
 
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words}
+
     def get_methods(self):
         """return a list of methods available"""
         return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
@@ -693,7 +732,7 @@ class Spectrum(metaclass=_Meta):
             None
         """
         # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
             pass
         else:
             raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
@@ -718,10 +757,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             None or limits in the following format:
@@ -733,17 +772,17 @@ class Spectrum(metaclass=_Meta):
         if limits is None:
             return None
         
-        ######################
-        # if object is empty #
-        ######################
-        if len(self) == 0:
-            return None
-        
         ##################################
         # assert that limits is Iterable #
         ##################################
         assert isinstance(limits, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
         
+        ################
+        # empty object #
+        ################
+        if self.x is None:
+            raise ValueError('cannot operate on empty spectrum')
+
         ################################
         # get min and max range values #
         ################################
@@ -759,7 +798,6 @@ class Spectrum(metaclass=_Meta):
         ##############
         # fix format #
         ##############
-        final = ()
         # one pair
         if len(limits) == 1: # ((xi, xf), )
             assert isinstance(limits[0], Iterable), f'wrong format for limits={limits}'
@@ -767,9 +805,10 @@ class Spectrum(metaclass=_Meta):
         elif len(limits) == 2: # (xi, xf), or ((xi1, xf1), (xi2, xf2))
             if isinstance(limits[0], Iterable) == False:
                 if isinstance(limits[1], Iterable) == False:
-                    final.append(limits)
+                    limits = [limits, ]
                 else:
                     raise ValueError(f'wrong format for limits={limits}')
+        final = []
         # three or more pairs 
         for lim in limits:
             assert isinstance(lim, Iterable), f'wrong format for limits={limits}'
@@ -801,31 +840,57 @@ class Spectrum(metaclass=_Meta):
         #####################
         limits = self._check_limits(limits=limits)
         if limits is None:
-            return Spectrum(x=x, y=y)
+            s = Spectrum(x=x, y=y)
+            s._step         = self.step
+            s._monotonicity = self.monotonicity
+            s._shift        = self.shift
+            s._calib        = self.calib
+            s._offset       = self.offset
+            s._factor       = self.factor
+            return s
+        
+        #####################
+        # if empty spectrum #
+        #####################
+        if self.x is None:
+            # print(f'Warning: No datapoints within limits={limits}')
+            s = Spectrum(x=x, y=y)
+            s._step         = self.step
+            s._monotonicity = self.monotonicity
+            s._shift        = self.shift
+            s._calib        = self.calib
+            s._offset       = self.offset
+            s._factor       = self.factor
+            return s
         
         ########################################
         # check if extract is really necessary #
         ########################################
         if len(limits) == 1:
-            if limits[0][0] <= min(self.x) and limits[0][1] >= max(self.x):
-                return Spectrum(x=x, y=y)
-        
-        ###########################
-        # check if empty spectrum #
-        ###########################
-        if len(self) == 0:
-            print(f'Warning: No datapoints within limits={limits}')
-            return Spectrum()
+            if min(limits[0]) <= min(self.x) and max(limits[0]) >= max(self.x):
+                s = Spectrum(x=x, y=y)
+                s._step         = self.step
+                s._monotonicity = self.monotonicity
+                s._shift        = self.shift
+                s._calib        = self.calib
+                s._offset       = self.offset
+                s._factor       = self.factor
+                return s
         
         ###########
         # extract #
         ###########
-        try:
-            x, y = arraymanip.extract(x, y, limits)
-            return Spectrum(x=x, y=y)
-        except RuntimeError:
-            print(f'Warning: No datapoints within limits={limits}')
-            return Spectrum()
+        # try:
+        x, y = arraymanip.extract(x, y, limits)
+        s = Spectrum(x=x, y=y)
+        s._shift  = self.shift
+        s._calib  = self.calib
+        s._offset = self.offset
+        s._factor = self.factor
+        return s
+        # except RuntimeError:
+        #     print(f'Warning: No datapoints within limits={limits}')
+        #     return Spectrum()
 
     def copy(self, limits=None):
         """Return a copy of the data within a range limits.
@@ -841,28 +906,16 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectrum`
         """
         s = self._copy(limits=limits)
-
-        ##################
-        # transfer attrs #
-        ##################
         s.copy_attrs_from(self)
-        if limits == None: 
-            s._step         = self.step
-            s._monotonicity = self.monotonicity
-        s._shift        = self.shift
-        s._calib        = self.calib
-        s._offset       = self.offset
-        s._factor       = self.factor
-
         return s
 
     #################
@@ -874,8 +927,8 @@ class Spectrum(metaclass=_Meta):
         Warning:
             Attrs are saved as comments if only_data is False. Saving attrs to file
             is not always reliable because requires converting variables to string. 
-            Only attrs that are of type: string, number, and list of number and strings are 
-            saved somewhat correctly. Dictionaries are not saved. 
+            Only attrs that are of type: string, number, and list of number,
+             list of list of number and strings have been tested. Dictionaries are not saved. 
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -1115,6 +1168,12 @@ class Spectrum(metaclass=_Meta):
             See Also:
                 :py:func:`Spectrum.check_monotonicity`
         """
+        ########################
+        # check empty spectrum #
+        ########################
+        if self.x is None:
+            raise ValueError('cannot check step for empty spectrum')
+        
         # if data is not monotonic, than it is not uniform
         if self.monotonicity is None:
             try:
@@ -1143,6 +1202,12 @@ class Spectrum(metaclass=_Meta):
         See Also:
                 :py:func:`Spectrum.check_step`, :py:func:`Spectrum.fix_monotonicity`
         """
+        ########################
+        # check empty spectrum #
+        ########################
+        if self.x is None:
+            raise ValueError('cannot check monotonicity for empty spectrum')
+        
         if np.all(np.diff(self.x) > 0) == True:
             self._monotonicity = 'increasing'
         elif np.all(np.diff(self.x) < 0) == True:
@@ -1157,12 +1222,21 @@ class Spectrum(metaclass=_Meta):
             Args:
                 mode (str, optional): increasing or decreasing.
 
+            Note:
+                duplicated datapoints are averaged.
+
             Returns:
                 None
             
             See Also:
                 :py:func:`Spectrum.check_monotonicity`
         """
+        ########################
+        # check empty spectrum #
+        ########################
+        if self.x is None:
+            raise ValueError('cannot operate on empty spectrum')
+        
         # check mode
         increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
         decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
@@ -1367,10 +1441,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectrum`
@@ -1389,10 +1463,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectrum`
@@ -1604,10 +1678,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectrum`
@@ -1649,10 +1723,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             number
@@ -1673,10 +1747,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             number
@@ -1695,10 +1769,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             number
@@ -1717,10 +1791,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             number
@@ -1739,10 +1813,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             number
@@ -1772,10 +1846,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
@@ -1801,10 +1875,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
         
         Returns:
             fit (spectrum), popt, R2, f(x)
@@ -1832,8 +1906,8 @@ class Spectrum(metaclass=_Meta):
     
         start = min(x)-abs(max(x)-min(x))*0.1
         stop  = max(x)+abs(max(x)-min(x))*0.1
-        _x = np.arange(start, stop, len(x)*100)
-        arr100 = Spectrum(x, y=model(_x))
+        _x    = np.linspace(start, stop, len(x)*100)
+        arr100 = Spectrum(x=_x, y=model(_x))
 
         return arr100, popt, R2, model
    
@@ -1885,10 +1959,10 @@ class Spectrum(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             switch_xy (bool, optional): Switch x and y axis.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
 
@@ -1992,7 +2066,7 @@ class Spectra(metaclass=_Meta):
         # Initializing attributes #
         ###########################
         # core
-        self._data  = []
+        self._data = []
 
         # check
         self._length       = None
@@ -2047,15 +2121,6 @@ class Spectra(metaclass=_Meta):
         self._step         = None
         self._x            = None
         self._monotonicity = None
-
-        ###########################
-        # reset calculated values #
-        ###########################
-        self._calculated_calib   = None
-        self._calculated_factor = None
-        self._calculated_offset = None
-        self._calculated_shift  = None
-        self._calculated_roll   = None
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
@@ -2187,15 +2252,6 @@ class Spectra(metaclass=_Meta):
         self._x            = None
         self._monotonicity = None
 
-        ###########################
-        # reset calculated values #
-        ###########################
-        self._calculated_calib   = None
-        self._calculated_factor = None
-        self._calculated_offset = None
-        self._calculated_shift  = None
-        self._calculated_roll   = None
-
     def __len__(self):
         return len(self.data)
 
@@ -2233,7 +2289,7 @@ class Spectra(metaclass=_Meta):
             None
         """
         # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
             pass
         else:
             raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
@@ -2295,8 +2351,14 @@ class Spectra(metaclass=_Meta):
             decreasing (bool, optional): if True, small attr value comes last.
         
         Returns:
-            None
+            :py:class:`Spectra`
         """
+        ################
+        # empty object #
+        ################
+        if len(self) == 0:
+            raise ValueError('cannot operate on empty spectra')
+        
         # get ref attr
         ref = self.__getattribute__(attr)
 
@@ -2311,22 +2373,25 @@ class Spectra(metaclass=_Meta):
                 assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
 
         # sort
-        self.data = arraymanip.sort(ref, self.data)
-        self.__setattr__(attr, arraymanip.sort(ref, ref))
+        ss = self._copy()
+        ss.data = arraymanip.sort(ref, ss.data)
+        ss.__setattr__(attr, arraymanip.sort(ref, ref))
         if attrs2reorder is not None:
             for a in attrs2reorder:
                 temp = self.__getattribute__(a)
-                self.__setattr__(a, arraymanip.sort(ref, temp))
+                ss.__setattr__(a, arraymanip.sort(ref, temp))
 
         # flip order if decreasing is True
         if decreasing:
-            self.data = self.data[::-1]
-            self.__setattr__(attr, self.__getattribute__(attr)[::-1])
+            ss.data = ss.data[::-1]
+            ss.__setattr__(attr, self.__getattribute__(attr)[::-1])
             if attrs2reorder is not None:
                 for a in attrs2reorder:
                     temp = self.__getattribute__(a)
-                    self.__setattr__(a, self.__getattribute__(a)[::-1])
+                    ss.__setattr__(a, temp[::-1])
 
+        return ss
+    
     def get_by_attr(self, attr, value, closest=True, verbose=True):
         """Return spectrum with attr closest to value.
 
@@ -2361,6 +2426,236 @@ class Spectra(metaclass=_Meta):
                 
         return self[i]
 
+    def merge_duplicates(self, ref, limits=None, attrs2merge=None):
+        """return spectra where spectrum with same attr are merged
+
+        Args:
+            ref (str or list): reference value for interpolating. If `str`, it
+                will get values from attribute. If list, list must be the same 
+                length as the number of Spectra.
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
+            attrs2merge (list, optional): if not None, only spectra named here,
+                will be copied to the final spectrum. The attr must be a list of
+                numbers with the same length as the number of spectra. The value
+                saved on the returned Spectrum for merged spectrum is a weighted avereged sum of 
+                these attrs.
+
+        Return:
+            :py:class:`Spectra`
+        """
+        ################
+        # empty object #
+        ################
+        if len(self) == 0:
+            raise ValueError('cannot operate on empty spectra')
+        
+        #####################
+        # check attr length #
+        #####################
+        if isinstance(ref, str):
+            values = self.__getattribute__(ref)      
+        elif isinstance(ref, Iterable):
+            values = ref
+        else:
+            raise ValueError(f'`ref` must be type str or Iterable, not type `{type(ref)}`')
+
+        ##########################
+        # check length of values #
+        ##########################
+        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
+
+        ##############################
+        # check extra attrs to merge #
+        ##############################
+        if attrs2merge is not None:
+            assert isinstance(attrs2merge, Iterable), 'attrs2merge must be a list'
+            if isinstance(ref, str): attrs2merge += ref
+            for attr in attrs2merge:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+        else:
+            if isinstance(ref, str): 
+                attrs2merge = [ref, ]
+         
+        ##########################################
+        # check if spectra indeed has duplicates #
+        ##########################################
+        if arraymanip.has_duplicates(values) == False:
+            return self.copy(limits=limits)
+        
+        ###############
+        # new spectra #
+        ###############
+        ss = Spectra()
+        ss.copy_attrs_from(self)
+        if attrs2merge is not None:
+            for attr in attrs2merge:
+                ss.__setattr__(attr, [])
+
+        ####################
+        # merge duplicates #
+        ####################
+        for i, _x in enumerate(values):
+            if list(values).count(_x) == 1:
+                _s = self[i].copy(limits=limits)
+                ss.append(_s)
+                if attrs2merge is not None:
+                    for attr in attrs2merge:
+                        ss.__getattribute__(attr).append(self.__getattribute__(attr)[i])
+            else:
+                indexes = [i for i, x in enumerate(values) if x == _x]
+                if i == indexes[0]:
+                    _s = self.merge(indexes=indexes, limits=limits, attrs2merge=attrs2merge)
+                    ss.append(_s)
+                    if attrs2merge is not None:
+                        for attr in attrs2merge:
+                            ss.__getattribute__(attr).append(_s.__getattribute__(attr))
+
+        return ss
+
+    def interp_spectra(self, ref, start=None, stop=None, num=None, step=None, x=None, limits=None, attrs2interp=None):
+        """create new averaged spectra 
+
+        Args:
+            ref (str or list): reference value for interpolating. If `str`, it
+                will get values from attribute. If list, list must be the same 
+                length as the number of Spectra.
+            start (number, optional): The starting value of the sequence. If `None`,
+                the minium attr value will be used.
+            stop (number, optional): The end value of the sequence. If `None`,
+                the maximum attr value will be used.
+            num (int, optional): Number of samples to generate.
+            step (number, optional): Spacing between values. This overwrites ``num``.
+            x (list or array, optional): The values at which to
+                evaluate the interpolated values. This overwrites all other arguments.
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
+            attrs2interp (list, optional): if not None, only spectra named here,
+                will be copied to the final spectra. The attr must be a list of
+                numbers with the same length as the number of spectra. The value
+                saved on the returned Spectra is a interpolates value of 
+                these attrs.
+
+        Return:
+            :py:class:`Spectra`
+        """
+        #######################
+        # check x is the same #
+        #######################
+        if self.x is None:
+            try:
+                self.check_same_x()
+            except ValueError:
+                raise ValueError('Cannot create new spectra. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp())')
+        
+        #############################
+        # check attrs2interp format #
+        #############################
+        assert isinstance(attrs2interp, Iterable) or attrs2interp is None, f'attrs2interp must be a list of strings or None'
+
+        #####################
+        # check attr length #
+        #####################
+        if isinstance(ref, str):
+            values = self.__getattribute__(ref)
+            if attrs2interp is None:
+                attrs2interp = [ref, ]
+            else:
+                attrs2interp = list(attrs2interp) + [ref, ]
+        elif isinstance(ref, Iterable):
+            values = ref
+        else:
+            raise ValueError(f'`ref` must be type str or Iterable, not type `{type(ref)}`')
+
+        ##########################
+        # check length of values #
+        ##########################
+        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
+
+        #############################
+        # check values is monotonic #
+        #############################
+        assert arraymanip.check_monotonicity(values) == 1, f'values ({values}) must be increasingly monotonic. Use Spectra.merge_duplicates() and Spectra.reorder_by_attr()'
+
+        ##############################
+        # check extra attrs to merge #
+        ##############################
+        if attrs2interp is not None:
+            for attr in attrs2interp:
+                temp = self.__getattribute__(attr)
+                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
+                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+
+        ##########
+        # sort x #
+        ##########
+        if x is None:
+            if start is None: start = min(values)
+            if stop is None:  stop  = max(values)
+            if step is None and num is None:
+                raise ValueError(f'step or num must be defined')
+            elif step is not None:
+                x = np.arange(start=start, stop=stop, step=step)
+            else:
+                x = np.linspace(start=start, stop=stop, num=num)
+                
+        ###############
+        # new spectra #
+        ###############
+        ss = Spectra()
+        if attrs2interp is not None:
+            for attr in attrs2interp:
+                ss.__setattr__(attr, [])
+
+        ##################
+        # interp spectra #
+        ##################
+        for j, _x in enumerate(x):
+            i = arraymanip.index(values, _x, closest=True)
+            if values[i] == _x:
+                _s = self[i].copy(limits=limits)
+                ss.append(_s)
+                if attrs2interp is not None:
+                    for attr in attrs2interp:
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
+            elif values[i] < _x:
+                _s1 = self[i].copy(limits=limits).set_factor(1 - (_x - values[i])/(values[i+1] - values[i]))
+                _s2 = self[i+1].copy(limits=limits).set_factor(1 - (values[i+1] - _x)/(values[i+1] - values[i]))
+                _s = Spectra(data=(_s1, _s2)).calculate_average()
+                ss.append(_s)
+                if attrs2interp is not None:
+                    for attr in attrs2interp:
+                        _v1 = self.__getattribute__(attr)[i]   * (1 - (_x - values[i])/(values[i+1] - values[i]))
+                        _v2 = self.__getattribute__(attr)[i+1] * (1 - (values[i+1] - _x)/(values[i+1] - values[i]))
+                        _v  = (_v1 + _v2)/2
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(_v))
+            elif values[i] > _x:
+                _s1 = self[i].copy(limits=limits).set_factor(1 - (values[i] - _x)/(values[i] - values[i-1]))
+                _s2 = self[i-1].copy(limits=limits).set_factor(1 - (_x - values[i-1])/(values[i] - values[i-1]))
+                _s = Spectra(data=(_s1, _s2)).calculate_average()
+                ss.append(_s)
+                if attrs2interp is not None:
+                    for attr in attrs2interp:
+                        _v1 = self.__getattribute__(attr)[i]   * (1 - (values[i] - _x)/(values[i] - values[i-1]))
+                        _v2 = self.__getattribute__(attr)[i-1] * (1 - (_x - values[i-1])/(values[i] - values[i-1]))
+                        _v  = (_v1 + _v2)/2
+                        ss.__setattr__(attr, ss.__getattribute__(attr).append(_v))
+        return ss
+
     ###########
     # support #
     ###########
@@ -2371,10 +2666,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             None or limits in the following format:
@@ -2385,18 +2680,18 @@ class Spectra(metaclass=_Meta):
         #####################
         if limits is None:
             return None
-        
-        ######################
-        # if object is empty #
-        ######################
-        if len(self) == 0:
-            return None
 
         ##################################
         # assert that limits is Iterable #
         ##################################
         assert isinstance(limits, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
         
+        ################
+        # empty object #
+        ################
+        if len(self) == 0:
+            raise ValueError('cannot operate on empty spectra')
+
         ################################
         # get min and max range values #
         ################################
@@ -2416,7 +2711,6 @@ class Spectra(metaclass=_Meta):
         ##############
         # fix format #
         ##############
-        final = ()
         # one pair
         if len(limits) == 1: # ((xi, xf), )
             assert isinstance(limits[0], Iterable), f'wrong format for limits={limits}'
@@ -2424,9 +2718,10 @@ class Spectra(metaclass=_Meta):
         elif len(limits) == 2: # (xi, xf), or ((xi1, xf1), (xi2, xf2))
             if isinstance(limits[0], Iterable) == False:
                 if isinstance(limits[1], Iterable) == False:
-                    final.append(limits)
+                    limits = [limits, ]
                 else:
                     raise ValueError(f'wrong format for limits={limits}')
+        final = []
         # three or more pairs 
         for lim in limits:
             assert isinstance(lim, Iterable), f'wrong format for limits={limits}'
@@ -2446,10 +2741,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Raises:
             ValueError: if Spectra is empty
@@ -2462,6 +2757,7 @@ class Spectra(metaclass=_Meta):
         ###########
         if self.x is None:
             self.check_same_x()
+        x = self.x
 
         ######################
         # if object is empty #
@@ -2469,22 +2765,41 @@ class Spectra(metaclass=_Meta):
         if len(self) == 0:
             raise ValueError('cannot operate on empty spectra')
         
-        ###################
-        # validate limits #
-        ###################
-        limits = self._check_limits(limits=limits)
-
+        #############
+        # gather ys #
+        #############
         ys = np.zeros((self.length, len(self)))
         for i in range(len(self)):
             ys[:, i] = self[i].y
 
-        try:
-            x, ys = arraymanip.extract(self.x, ys, limits=limits)
-        except RuntimeError:
-            x  = []
-            ys = []
-            warnings.warn(f'It seems like all spectra has no data points within range: {limits}.\nPlease, fix limits so all spectra have at least one data point within range.')
+        ##################
+        # limits is None #
+        ##################
+        limits = self._check_limits(limits=limits)
+        if limits is None:
+            return x, ys
         
+        ################################
+        # get min and max range values #
+        ################################
+        if self.x is not None:
+            vmin = min(self.x)
+            vmax = max(self.x)
+        else:
+            vmin = min(min(s.x) for s in self)
+            vmax = max(max(s.x) for s in self)
+        
+        ########################################
+        # check if extract is really necessary #
+        ########################################
+        if len(limits) == 1:
+            if limits[0][0] <= vmin and limits[0][1] >= vmax:
+                return x, ys 
+
+        ###########
+        # extract #
+        ###########
+        x, ys = arraymanip.extract(x, ys, limits=limits)
         return x, ys
     
     ################
@@ -2604,7 +2919,23 @@ class Spectra(metaclass=_Meta):
         #####################
         limits = self._check_limits(limits=limits)
         if limits is None:
-            return Spectra(data=data)
+            ss = Spectra(data=data)
+            ss._length       = self.length
+            ss._step         = self.step
+            ss._monotonicity = self.monotonicity
+            ss._x            = self.x
+            return ss
+        
+        ##########################
+        # check if empty spectra #
+        ##########################
+        if len(self) == 0:
+            ss = Spectra(data=data)
+            ss._length       = self.length
+            ss._step         = self.step
+            ss._monotonicity = self.monotonicity
+            ss._x            = self.x
+            return ss
         
         ################################
         # get min and max range values #
@@ -2621,14 +2952,12 @@ class Spectra(metaclass=_Meta):
         ########################################
         if len(limits) == 1:
             if limits[0][0] <= vmin and limits[0][1] >= vmax:
-                return Spectra(data=data)
-            
-        ##########################
-        # check if empty spectra #
-        ##########################
-        if len(self) == 0:
-            print(f'Warning: No spectra to copy')
-            return Spectra()
+                ss = Spectra(data=data)
+                ss._length       = self.length
+                ss._step         = self.step
+                ss._monotonicity = self.monotonicity
+                ss._x            = self.x
+                return ss
 
         ###########
         # extract #
@@ -2637,21 +2966,24 @@ class Spectra(metaclass=_Meta):
         if self.x is None:
             try:
                 self.check_same_x()
-                if self.x is not None:
-                    ss = Spectra()
-                    x, ys = self._gather_ys(limits=limits)
-                    for i in range(len(self)):
-                        ss.append(Spectrum(x=x, y=ys[i]))
-                    return ss
-            except:
-                pass
-        # if x is not the same, extract data recursively
+            except ValueError:
+                ss = Spectra()
+                for i, s in enumerate(self):
+                    ss.append(s._copy(limits=limits))
+                # ss._length       = self.length
+                # ss._step         = self.step
+                # ss._monotonicity = self.monotonicity
+                # ss._x            = self.x
+                return ss
+            
         ss = Spectra()
-        for i, s in enumerate(self):
-            # try:
-            ss.append(s._copy(limits=limits))
-            # except RuntimeError:
-            #     raise RuntimeError(f'It seems like spectrum number {i} has no data points within range: {limits}.\nPlease, fix limits (or delete spectrum) so all spectra have at least one data point within range.')
+        x, ys = self._gather_ys(limits=limits)
+        for i in range(len(self)):
+            ss.append(Spectrum(x=x, y=ys[:, i]))
+        # ss._length       = self.length
+        # ss._step         = self.step
+        # ss._monotonicity = self.monotonicity
+        # ss._x            = self.x
         return ss
 
     def copy(self, limits=None):
@@ -2668,26 +3000,16 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:attr:`Spectra`
         """
         ss = self._copy(limits=limits)
-
-        ##################
-        # transfer attrs #
-        ##################
         ss.copy_attrs_from(self)
-        if limits == None: 
-            ss._x            = self.x
-            ss._step         = self.step
-            ss._monotonicity = self.monotonicity
-            ss._length       = self.length
-
         return ss
     
     #################
@@ -2699,8 +3021,8 @@ class Spectra(metaclass=_Meta):
         Warning:
             Attrs are saved as comments if only_data is False. Saving attrs to file
             is not always reliable because requires converting variables to string. 
-            Only attrs that are of type: string, number, and list of number and strings are 
-            saved somewhat correctly. Dictionaries are not saved. 
+            Only attrs that are of type: string, number, and list of number,
+             list of list of number and strings have been tested. Dictionaries are not saved.
 
         Args:
             folderpath (string or pathlib.Path): folderpath, folder handle. 
@@ -3095,6 +3417,12 @@ class Spectra(metaclass=_Meta):
         Returns:
             None
         """
+        ########################
+        # check empty spectrum #
+        ########################
+        if len(self) == 0:
+            raise ValueError('cannot check monotonicity for empty spectra')
+        
         monotonicity = [None]*len(self)
         for i in range(len(self)):
             try:
@@ -3121,6 +3449,13 @@ class Spectra(metaclass=_Meta):
         Returns:
             None
         """
+        ########################
+        # check empty spectrum #
+        ########################
+        if len(self) == 0:
+            raise ValueError('cannot operate on empty spectra')
+        
+
         for s in self.data:
             s.fix_monotonicity(mode=mode)
         self.check_monotonicity()
@@ -3141,12 +3476,11 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_step`, :py:func:`Spectra.check_same_x`.
         """
-        # if zero spectra exists, then length is immediately defined
-        # and a warn is raised
+        ########################
+        # check empty spectrum #
+        ########################
         if len(self) == 0:
-            self._length = 0
-            warnings.warn('no spectra found')
-            return
+            raise ValueError('cannot check length for empty spectra')
         
         # if only one spectra exists, then length is immediately defined
         if len(self) == 1:
@@ -3203,59 +3537,61 @@ class Spectra(metaclass=_Meta):
             See Also:
                 :py:func:`Spectra.check_length`, :py:func:`Spectra.check_same_x`
         """
-        # check spectra exists
+        ########################
+        # check empty spectrum #
+        ########################
         if len(self) == 0:
-            raise ValueError('no spectra found')
+            raise ValueError('cannot check step for empty spectra')
 
         if self.x is None:
-            # try and see if spectra have the same x
-            try:
-                self.check_same_x(max_error=max_error)
+            # # try and see if spectra have the same x
+            # try:
+            #     self.check_same_x(max_error=max_error)
 
-                # check step uniformity
-                temp = Spectrum(x=self.x, y=self.x)
-                try:
-                    temp.check_step(max_error=max_error)
-                except ValueError:
-                    raise ValueError(f"Spectra have the same x-coordinates, but it is not uniform.")
-                self._step = temp.step
-                return
+            #     # check step uniformity
+            #     temp = Spectrum(x=self.x, y=self.x)
+            #     try:
+            #         temp.check_step(max_error=max_error)
+            #     except ValueError:
+            #         raise ValueError(f"Spectra have the same x-coordinates, but it is not uniform.")
+            #     self._step = temp.step
+            #     return
 
-            # if spectra have different x-coordinates
-            except ValueError:
+            # # if spectra have different x-coordinates
+            # except ValueError:
 
-                # 1) check step uniformity
-                steps = ['not uniform']*len(self)
-                for idx, s in enumerate(self.data):
-                    if s.step is None:
-                        try:
-                            s.check_step(max_error=max_error)
-                            steps[idx] = s.step
-                        except ValueError:
-                            pass
-                    else:
+            # 1) check step uniformity
+            steps = ['not uniform']*len(self)
+            for idx, s in enumerate(self.data):
+                if s.step is None:
+                    try:
+                        s.check_step(max_error=max_error)
                         steps[idx] = s.step
-                # raise error
-                if all(x == steps[0] for x in steps):
-                    pass
+                    except ValueError:
+                        pass
                 else:
-                    text = ''
-                    for i in range(len(self)):
-                        text += f'spectrum: {i}, step: {steps[i]}\n'
-                    raise ValueError(f'some spectra have different step: \n{text}')
+                    steps[idx] = s.step
+            # raise error
+            if all(x == steps[0] for x in steps):
+                pass
+            else:
+                text = ''
+                for i in range(len(self)):
+                    text += f'spectrum: {i}, step: {steps[i]}\n'
+                raise ValueError(f'some spectra have different step: \n{text}')
 
-                # 2) check step between spectra
-                avg_step = np.mean(steps)
-                if sum([abs(steps[i]-steps[i+1]) > abs(avg_step*max_error/100) for i in range(len(self)-1)]) > 0:
-                    self._step = None
-                    raise ValueError(f"Spectra seems to have different step size. Calculated step sizes = {steps}")
-                self._step = avg_step
-                return
+            # 2) check step between spectra
+            avg_step = np.mean(steps)
+            if sum([abs(steps[i]-steps[i+1]) > abs(avg_step*max_error/100) for i in range(len(self)-1)]) > 0:
+                self._step = None
+                raise ValueError(f"Spectra seems to have different step size. Calculated step sizes: \n{text}")
+            self._step = avg_step
+            return
         
         # if all spectra have the same x, check step becames easier
         else:
             # check step uniformity
-            temp = Spectrum(x=self.x, y=self.x)
+            temp = Spectrum(x=self.x)
             try:
                 temp.check_step(max_error=max_error)
             except ValueError:
@@ -3285,36 +3621,57 @@ class Spectra(metaclass=_Meta):
         See Also:
             :py:func:`Spectra.check_length`, :py:func:`Spectra.check_step`.
         """
-        # if zero spectra exists, then x is immediately defined
-        # and a warn is raised
+        ########################
+        # check empty spectrum #
+        ########################
         if len(self) == 0:
-            warnings.warn('no spectra found')
-            self._x      = []
-            self._length = 0
-            return
-        
+            raise ValueError('cannot check same x for empty spectra')
+
         # if only one spectra exists, then x is immediately defined
         if len(self) == 1:
             self._x      = self[0].x
             self._length = len(self.x)
             return
+
+        # if empty spectrum exist
+        text  = ''
+        empty = False
+        for i, s in enumerate(self):
+            if len(s) == 0:
+                text += f'spectrum: {i}: empty\n'
+                empty = True
+            else:
+                text += f'spectrum: {i}: ok\n'
+        if empty:
+            raise ValueError(f'some spectra are empty\n{text}')
         
         # check length
         self.check_length()
 
         # average step
-        if self.step is None:
-            step = 0
-            for s in self:
-                step += np.mean(np.diff(s.x))
-            step = step/len(self)
-        else:
-            step = self.step
+        step = []
+        for s in self:
+            step.append(np.mean(np.diff(s.x)))
+        # step = step/len(self)
+        # if step == 0:
+
+        # if self.step is None:
+        #     try:
+        #         self.check_step()
+        #         step = self.step
+        #     except ValueError:
+        #         raise ValueError(f'some spectra have different x: \n{text}\n\nUse brixs.Spectra.interp() to interpolate the data and make the x axis for different spectra match.') 
+        #         step = 0
+        #         for s in self:
+        #             step += np.mean(np.diff(s.x))
+        #         step = step/len(self)
+        # else:
+        #     step = self.step
 
         # check x between spectra
-        x = ['same as the previous']*len(self)
+        x = ['same as the next']*len(self)
         for idx in range(len(self)-1):
-            if max(abs(self[idx].x - self[idx+1].x))*100/abs(step) > max_error:
+            if max(abs(self[idx].x - self[idx+1].x))*100/abs(step[idx]) > max_error:
                 x[idx] = 'different'
 
         # apply or raise error
@@ -3641,10 +3998,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectra`
@@ -3662,10 +4019,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectra`
@@ -3923,10 +4280,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             attrs2merge (list, optional): if not None, only spectra named here,
                 will be copied to the final spectrum. The attr must be a list of
                 numbers with the same length as the number of spectra. The value
@@ -3936,8 +4293,15 @@ class Spectra(metaclass=_Meta):
         Return:
             :py:class:`Spectrum`
         """
+        ################
+        # empty object #
+        ################
+        if len(self) == 0:
+            raise ValueError('cannot operate on empty spectra')
+        
         assert isinstance(indexes, Iterable), 'indexes must be a list'
 
+        # check weights
         if weights is None:
             weights = [1]*len(indexes)
         
@@ -3954,7 +4318,6 @@ class Spectra(metaclass=_Meta):
                 assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
                 assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
 
-
         ss = Spectra()
         for i in indexes:
             ss.append(self[i].copy().set_factor(weights[i]))
@@ -3964,10 +4327,15 @@ class Spectra(metaclass=_Meta):
                 temp = self.__getattribute__(attr)
                 new = []
                 for i in indexes:
-                    temp.append(temp[i]*weights[i])
+                    new.append(temp[i]*weights[i])
                 ss.__setattr__(attr, np.mean(new))
 
-        return ss.calculate_average(limits=limits)
+        s = ss.calculate_average(limits=limits)
+        # double check if attrs were copied (necessary for `_` attrs)
+        for attr in attrs2merge:
+            if hasattr(s, attr) == False:
+                s.__setattr__(attr, ss.__getattribute__(attr))
+        return s
     
     def merge_and_replace(self, indexes, weights=None, limits=None, attrs2merge=None):
         """return spectra with replaced spectra
@@ -3979,10 +4347,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             attrs2merge (list, optional): if not None, only spectra named here,
                 will be copied to the final spectrum. The attr must be a list of
                 numbers with the same length as the number of spectra. The value
@@ -4022,223 +4390,6 @@ class Spectra(metaclass=_Meta):
                         ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
         return ss
 
-    def merge_duplicates(self, ref, limits=None, attrs2merge=None):
-        """return spectra where spectrum with same attr are merged
-
-        Args:
-            ref (str or list): reference value for interpolating. If `str`, it
-                will get values from attribute. If list, list must be the same 
-                length as the number of Spectra.
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            attrs2merge (list, optional): if not None, only spectra named here,
-                will be copied to the final spectrum. The attr must be a list of
-                numbers with the same length as the number of spectra. The value
-                saved on the returned Spectrum for merged spectrum is a weighted avereged sum of 
-                these attrs.
-
-        Return:
-            :py:class:`Spectra`
-        """
-        #####################
-        # check attr length #
-        #####################
-        if isinstance(ref, str):
-            values = self.__getattribute__(ref)
-        elif isinstance(ref, Iterable):
-            values = ref
-        else:
-            raise ValueError(f'`ref` must be type str or Iterable, not type `{type(ref)}`')
-
-        ##########################
-        # check length of values #
-        ##########################
-        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
-
-        ##############################
-        # check extra attrs to merge #
-        ##############################
-        if attrs2merge is not None:
-            for attr in attrs2merge:
-                temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
-                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
-
-        ##########################################
-        # check if spectra indeed has duplicates #
-        ##########################################
-        if arraymanip.has_duplicates(values) == False:
-            return self.copy(limits=limits)
-        
-        ###############
-        # new spectra #
-        ###############
-        ss = Spectra()
-        if attrs2merge is not None:
-            for attr in attrs2merge:
-                ss.__setattr__(attr, [])
-
-        ####################
-        # merge duplicates #
-        ####################
-        for i, _x in enumerate(values):
-            if list(values).count(_x) == 1:
-                _s = self[i].copy(limits=limits)
-                ss.append(_s)
-                if attrs2merge is not None:
-                    for attr in attrs2merge:
-                        ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
-            else:
-                indexes = [i for i, x in enumerate(values) if x == _x]
-                if i == indexes[0]:
-                    _s = self.merge(indexes=indexes, limits=limits, attrs2merge=attrs2merge)
-                    ss.append(_s)
-                    if attrs2merge is not None:
-                        for attr in attrs2merge:
-                            ss.__setattr__(attr, ss.__getattribute__(attr).append(_s.__getattribute__(attr)))
-        return ss
-
-    def interp_spectra(self, ref, start=None, stop=None, num=None, step=None, x=None, limits=None, attrs2interp=None):
-        """create new averaged spectra 
-
-        Args:
-            ref (str or list): reference value for interpolating. If `str`, it
-                will get values from attribute. If list, list must be the same 
-                length as the number of Spectra.
-            start (number, optional): The starting value of the sequence. If `None`,
-                the minium attr value will be used.
-            stop (number, optional): The end value of the sequence. If `None`,
-                the maximum attr value will be used.
-            num (int, optional): Number of samples to generate.
-            step (number, optional): Spacing between values. This overwrites ``num``.
-            x (list or array, optional): The values at which to
-                evaluate the interpolated values. This overwrites all other arguments.
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            attrs2interp (list, optional): if not None, only spectra named here,
-                will be copied to the final spectra. The attr must be a list of
-                numbers with the same length as the number of spectra. The value
-                saved on the returned Spectra is a interpolates value of 
-                these attrs.
-
-        Return:
-            :py:class:`Spectra`
-        """
-        #######################
-        # check x is the same #
-        #######################
-        if self.x is None:
-            try:
-                self.check_same_x()
-            except ValueError:
-                raise ValueError('Cannot create new spectra. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp())')
-        
-        #############################
-        # check attrs2interp format #
-        #############################
-        assert isinstance(attrs2interp, Iterable) or attrs2interp is None, f'attrs2interp must be a list of strings or None'
-
-        #####################
-        # check attr length #
-        #####################
-        if isinstance(ref, str):
-            values = self.__getattribute__(ref)
-            if attrs2interp is None:
-                attrs2interp = [ref, ]
-            else:
-                attrs2interp = list(attrs2interp) + [ref, ]
-        elif isinstance(ref, Iterable):
-            values = ref
-        else:
-            raise ValueError(f'`ref` must be type str or Iterable, not type `{type(ref)}`')
-
-        ##########################
-        # check length of values #
-        ##########################
-        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
-
-        #############################
-        # check values is monotonic #
-        #############################
-        assert arraymanip.check_monotonicity(values) == 1, f'values ({values}) must be increasingly monotonic. Use Spectra.merge_duplicates() and Spectra.reorder_by_attr()'
-
-        ##############################
-        # check extra attrs to merge #
-        ##############################
-        if attrs2interp is not None:
-            for attr in attrs2interp:
-                temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
-                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
-
-        ##########
-        # sort x #
-        ##########
-        if x is None:
-            if start is None: start = min(values)
-            if stop is None:  stop  = max(values)
-            if step is None and num is None:
-                raise ValueError(f'step or num must be defined')
-            elif step is not None:
-                x = np.arange(start=start, stop=stop, step=step)
-            else:
-                x = np.linspace(start=start, stop=stop, num=num)
-                
-        ###############
-        # new spectra #
-        ###############
-        ss = Spectra()
-        if attrs2interp is not None:
-            for attr in attrs2interp:
-                ss.__setattr__(attr, [])
-
-        ##################
-        # interp spectra #
-        ##################
-        for j, _x in enumerate(x):
-            i = arraymanip.index(values, _x, closest=True)
-            if values[i] == _x:
-                _s = self[i].copy(limits=limits)
-                ss.append(_s)
-                if attrs2interp is not None:
-                    for attr in attrs2interp:
-                        ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
-            elif values[i] < _x:
-                _s1 = self[i].copy(limits=limits).set_factor(1 - (_x - values[i])/(values[i+1] - values[i]))
-                _s2 = self[i+1].copy(limits=limits).set_factor(1 - (values[i+1] - _x)/(values[i+1] - values[i]))
-                _s = Spectra(data=(_s1, _s2)).calculate_average()
-                ss.append(_s)
-                if attrs2interp is not None:
-                    for attr in attrs2interp:
-                        _v1 = self.__getattribute__(attr)[i]   * (1 - (_x - values[i])/(values[i+1] - values[i]))
-                        _v2 = self.__getattribute__(attr)[i+1] * (1 - (values[i+1] - _x)/(values[i+1] - values[i]))
-                        _v  = (_v1 + _v2)/2
-                        ss.__setattr__(attr, ss.__getattribute__(attr).append(_v))
-            elif values[i] > _x:
-                _s1 = self[i].copy(limits=limits).set_factor(1 - (values[i] - _x)/(values[i] - values[i-1]))
-                _s2 = self[i-1].copy(limits=limits).set_factor(1 - (_x - values[i-1])/(values[i] - values[i-1]))
-                _s = Spectra(data=(_s1, _s2)).calculate_average()
-                ss.append(_s)
-                if attrs2interp is not None:
-                    for attr in attrs2interp:
-                        _v1 = self.__getattribute__(attr)[i]   * (1 - (values[i] - _x)/(values[i] - values[i-1]))
-                        _v2 = self.__getattribute__(attr)[i-1] * (1 - (_x - values[i-1])/(values[i] - values[i-1]))
-                        _v  = (_v1 + _v2)/2
-                        ss.__setattr__(attr, ss.__getattribute__(attr).append(_v))
-        return ss
-
     ########################
     # calculation and info #
     ########################
@@ -4255,10 +4406,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectrum` object.
@@ -4288,10 +4439,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Spectrum`
@@ -4327,10 +4478,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Image`.
@@ -4376,10 +4527,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Image`.
@@ -4390,11 +4541,12 @@ class Spectra(metaclass=_Meta):
 
         # gather ys
         y, ys = self._gather_ys(limits=limits)
-
         im = Image(data=ys)
         im.copy_attrs_from(self)
-        im.x_centers = x_centers
-        im.y_centers = y
+
+        if im.data is not None:
+            im.x_centers = x_centers
+            im.y_centers = y
 
         return im
     
@@ -4414,10 +4566,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             :py:class:`Image`.
@@ -4428,8 +4580,12 @@ class Spectra(metaclass=_Meta):
 
         # gather ys
         y, ys = self._gather_ys(limits=limits)
-        ys = ys.transpose()
+        if len(y) == 0:
+            im = Image()
+            im.copy_attrs_from(self)
+            return im
 
+        ys = ys.transpose()
         im = Image(data=ys)
         im.copy_attrs_from(self)
         im.x_centers = y
@@ -4458,10 +4614,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
             
@@ -4479,12 +4635,12 @@ class Spectra(metaclass=_Meta):
         ####################
         # cross-corelation #
         ####################
-        if mode in 'cc':
+        if mode == 'cc':
             values = list(np.array(self.calculate_roll(mode='cc', limits=limits))*self.step)
         ###############################
         # sequential cross-corelation #
         ###############################
-        if mode in 'seq':
+        elif mode == 'seq':
             values = list(np.array(self.calculate_roll(mode='seq', limits=limits))*self.step)
         #######
         # max #
@@ -4505,7 +4661,7 @@ class Spectra(metaclass=_Meta):
             values = np.array([_[1] for _ in popt])
             values = -values + values[0]
         else:
-            raise ValueError(f'mode={mode} not valid. Valid modes: `cc`, `max`, `peak`')
+            raise ValueError(f'mode=`{mode}` not valid. Valid modes: `cc`, `max`, `peak`')
         return values
 
     def calculate_roll(self, mode='cc', limits=None, **kwargs):
@@ -4528,10 +4684,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
             
@@ -4609,10 +4765,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
             
@@ -4676,10 +4832,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
         Returns:
             list
@@ -4734,10 +4890,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
@@ -4789,10 +4945,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
         
         Returns:
             list
@@ -4812,10 +4968,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
         
         Returns:
             list
@@ -4833,10 +4989,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
         
         Returns:
             list
@@ -4850,10 +5006,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
          
         Returns:
             list
@@ -4867,10 +5023,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
          
         Returns:
             list
@@ -4885,10 +5041,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
          
         Returns:
             popt, f(x), R2
@@ -4948,10 +5104,10 @@ class Spectra(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             switch_xy (bool, optional): Switch x and y axis.
             hi, vi (number, optional): horizontal and vertical increments for 
                 cascading plots.
@@ -5043,7 +5199,8 @@ class Image(metaclass=_Meta):
     Args:
         data (list or array, optional): list of :py:class:`spectrum` objects.
         filepath (str or Path, optional): filepath.
-        x_centers, y_centers: (list, optional): pixel center labels.
+        x_centers, y_centers: (list, optional): pixel center labels. `x_centers` 
+            from left to right and `y_centers` from top to bottom.
         **kwargs: kwargs are passed to :py:func:`Image.load` function.
 
     Usage:        
@@ -5107,11 +5264,61 @@ class Image(metaclass=_Meta):
         return copy.deepcopy(self._data)
     @data.setter
     def data(self, value):
-        self._data  = np.array(value, dtype='float')
-        self.x_centers = None
-        self.y_centers = None    
-        self._x_edges  = None
-        self._y_edges  = None    
+        ###########
+        # if None #
+        ###########
+        if value is None:
+            self._data = None           
+        ############
+        # if array #
+        ############
+        elif hasattr(value, 'shape'):
+            if len(value.shape) != 2:
+                raise ValueError(f'data must be a 2d matrix. data={value}')
+            if value.shape == (0, 0):
+                self._data = None
+            else:
+                self._data = np.array(value, dtype='float')    
+        ###########
+        # if list #
+        ###########
+        elif isinstance(value, Iterable):
+            ##############
+            # empty list #
+            ##############
+            if len(value) == 0:
+                self._data = None
+            else:
+                ####################
+                # check list is 2d #
+                ####################
+                for row in value:
+                    if isinstance(row, Iterable) == False:
+                        raise ValueError(f'data must be a 2d matrix. data={value}')
+                ####################################################
+                # check if all lists inside list are the same size #
+                ####################################################
+                for i, row in enumerate(value):
+                    if len(value[0]) != len(row):
+                        raise ValueError(f'data must be a rectangular or square matrix. row={i} seems to have a different number of elemets. data={value}')
+                ###########################
+                # check if list are empty #
+                ###########################
+                if len(value[0]) == 0:
+                    self._data = None
+                else:
+                    self._data = np.array(value, dtype='float')    
+        else:
+            raise ValueError(f'data must be a 2d matrix. data={value}')
+        self._x_step         = None
+        self._y_step         = None
+        self._x_monotonicity = None
+        self._y_monotonicity = None
+        self._factor         = 1
+        self._offset         = 0
+        self.x_centers       = None
+        self.y_centers       = None  
+        return
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
@@ -5122,15 +5329,26 @@ class Image(metaclass=_Meta):
     @x_centers.setter
     def x_centers(self, value):
         if value is None:
-            value = np.arange(0, self.data.shape[1])
+            if self.data is None:
+                self._x_centers = None 
+                self._x_edges   = None 
+                return
+            else:
+                value = np.arange(0, self.data.shape[1])
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[1], f"number of x centers ({len(value)}) must be the same as the number of pixel columns ({self.data.shape[1]})"
+            assert len(value) == self.shape[1], f"number of x centers ({len(value)}) must be the same as the number of pixel columns ({self.shape[1]})"
             # assert arraymanip.check_monotonicity(value) == 1, f"x centers must be a monotonically increasing array"
         else:
             raise ValueError(f"x centers must be None or an iterable (list, tuple, or 1D array)")
+        
+        # setting centers
         self._x_centers = np.array(value, dtype='float')
-        temp            = list(arraymanip.moving_average(value, 2))
-        self.x_edges    = [value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
+        # setting edges
+        if len(value) == 1:
+            self._x_edges = [value[0] - 0.5] + [value[0] + 0.5]
+        else:
+            temp         = list(arraymanip.moving_average(value, 2))
+            self._x_edges = [2*value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
     @x_centers.deleter
     def x_centers(self):
         self._x_centers = np.arange(0, self.data.shape[1])
@@ -5141,15 +5359,26 @@ class Image(metaclass=_Meta):
     @y_centers.setter
     def y_centers(self, value):
         if value is None:
-            value = np.arange(0, self.data.shape[0])
+            if self.data is None:
+                self._y_centers = None 
+                self._y_edges   = None 
+                return
+            else:
+                value = np.arange(0, self.data.shape[0])
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[0], f"number of y centers ({len(value)}) must be the same as the number of pixel columns ({self.data.shape[0]})"
+            assert len(value) == self.shape[0], f"number of y centers ({len(value)}) must be the same as the number of pixel columns ({self.shape[0]})"
             # assert arraymanip.check_monotonicity(value) == 1, f"y centers must be a monotonically increasing array"
         else:
             raise ValueError(f"y centers must be None or an iterable (list, tuple, or 1D array)")
+        
+        # setting centers
         self._y_centers = np.array(value, dtype='float')
-        temp            = list(arraymanip.moving_average(value, 2))
-        self.y_edges    = [value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
+        # setting edges
+        if len(value) == 1:
+            self._y_edges = [value[0] - 0.5] + [value[0] + 0.5]
+        else:
+            temp = list(arraymanip.moving_average(value, 2))
+            self._y_edges = [2*value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
     @y_centers.deleter
     def y_centers(self):
         self._y_centers  = np.arange(0, self.data.shape[0])
@@ -5160,11 +5389,16 @@ class Image(metaclass=_Meta):
     @x_edges.setter
     def x_edges(self, value):
         if value is None:
-            centers = np.arange(0, self.data.shape[1])
-            temp    = list(arraymanip.moving_average(centers, 2))
-            value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
+            if self.data is None:
+                self._x_centers = None 
+                self._x_edges   = None 
+                return
+            else:
+                centers = np.arange(0, self.data.shape[1])
+                temp    = list(arraymanip.moving_average(centers, 2))
+                value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns plus one ({self.data.shape[1] + 1})"
+            assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns plus one ({self.shape[1] + 1})"
             # assert arraymanip.check_monotonicity(value) == 1, f"x edges must be a monotonically increasing array"
         else:
             raise ValueError(f"x edges must be None or an iterable (list, tuple, or 1D array)")
@@ -5180,12 +5414,17 @@ class Image(metaclass=_Meta):
     @y_edges.setter
     def y_edges(self, value):
         if value is None:
-            centers = np.arange(0, self.data.shape[0])
-            temp    = list(arraymanip.moving_average(centers, 2))
-            value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
+            if self.data is None:
+                self._y_centers = None 
+                self._y_edges   = None 
+                return
+            else: 
+                centers = np.arange(0, self.data.shape[0])
+                temp    = list(arraymanip.moving_average(centers, 2))
+                value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows plus one ({self.data.shape[0] + 1})"
-            assert arraymanip.check_monotonicity(value) == 1, f"y edges must be a monotonically increasing array"
+            assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows plus one ({self.shape[0] + 1})"
+            # assert arraymanip.check_monotonicity(value) == 1, f"y edges must be a monotonically increasing array"
             self._y_centers = np.array(arraymanip.moving_average(value, 2), dtype='float')
         else:
             raise ValueError(f"y edges must be None or an iterable (list, tuple, or 1D array)")
@@ -5199,7 +5438,7 @@ class Image(metaclass=_Meta):
     ###################################
     @property
     def shape(self):
-        if self._data is None:
+        if self.data is None:
             return (0, 0)
         return (self.data.shape[0], self.data.shape[1])
     @shape.setter
@@ -5211,7 +5450,7 @@ class Image(metaclass=_Meta):
 
     @property
     def histogram(self):
-        if self._data is None:
+        if self.data is None:
             return None
         return self.calculate_histogram()
     @histogram.setter
@@ -5223,11 +5462,11 @@ class Image(metaclass=_Meta):
 
     @property
     def columns(self):
-        if self._data is None:
+        if self.data is None:
             return None
-        ss = Spectra(n=self.shape[1])
+        ss = Spectra()
         for i in range(self.shape[1]):
-            ss[i] = Spectrum(x=self.y_centers, y=self.data[:, i])
+            ss.append(Spectrum(x=self.y_centers, y=self.data[:, i]))
         ss.copy_attrs_from(self)
         return ss
     @columns.setter
@@ -5239,11 +5478,11 @@ class Image(metaclass=_Meta):
 
     @property
     def rows(self):
-        if self._data is None:
+        if self.data is None:
             return None
-        ss = Spectra(n=self.shape[0])
+        ss = Spectra()
         for i in range(self.shape[0]):
-            ss[i] = Spectrum(x=self.x_centers, y=self.data[i, :])
+            ss.append(Spectrum(x=self.x_centers, y=self.data[i, :]))
         ss.copy_attrs_from(self)
         return ss
     @rows.setter
@@ -5438,7 +5677,7 @@ class Image(metaclass=_Meta):
             None
         """
         # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
             pass
         else:
             raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
@@ -5456,6 +5695,78 @@ class Image(metaclass=_Meta):
     ###########
     # support #
     ###########
+    def _check_mask(self, mask):
+        """returns mask in the right format.
+
+        Note:
+            mask must be in terms of x_center and y_center.
+
+        Args:
+            mask (None or list): list with 4 elements `(x_start, x_sto, y_start, y_stop)`, a list 
+                like `((xi_1, xf_1, yi_1, yf_1), (xi_2, xf_2, yi_2, yf_2), ...)` 
+                in terms of x_centers and y_centers, or None. If None, 
+                this function simply returns None. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If mask = [], i.e.,
+                an empty list, it assumes `limits = (None, None, None, None)`.
+
+        Returns:
+            None or limits in the following format:
+                ((xi_1, xf_1, yi_1, yf_1), (xi_2, xf_2, yi_2, yf_2), ...)              
+        """
+        #####################
+        # if limits is None #
+        #####################
+        if mask is None:
+            return None
+        
+        ##################################
+        # assert that limits is Iterable #
+        ##################################
+        assert isinstance(mask, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
+        
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
+        ################################
+        # get min and max range values #
+        ################################
+        xmin = min(self.x_centers)
+        xmax = max(self.x_centers)
+        ymin = min(self.y_centers)
+        ymax = max(self.y_centers)
+
+        ################
+        # empty limits #
+        ################
+        if len(mask) == 0:
+            return ((xmin, xmax, ymin, ymax),)
+
+        ##############
+        # fix format #
+        ##############
+        # 4 elements 
+        if len(mask) == 4: # (xi, xf, yi, yf), or ((xi1, xf1, yi1, yf1), ..., (xi2, xf2, yi2, yf2))
+            if isinstance(mask[0], Iterable) == False:
+                if isinstance(mask[1], Iterable) == False and isinstance(mask[2], Iterable) == False and isinstance(mask[3], Iterable) == False:
+                    mask = [mask, ]
+                else:
+                    raise ValueError(f'wrong format for mask={mask}')
+        # 1, 2, 3 or more than 4 elements 
+        final = []
+        for m in mask:
+            assert isinstance(m, Iterable), f'wrong format for mask={mask}'
+            temp = [m[0], m[1], m[2], m[3]]
+            if temp[0] == None: temp[0] = xmin
+            if temp[1] == None: temp[1] = xmax
+            if temp[2] == None: temp[2] = ymin
+            if temp[3] == None: temp[3] = ymax
+            final.append((temp[0], temp[1], temp[2], temp[3]))   
+        return final
+
     def _calculated_vmin_vmax(self):
         """returns optimal vmin and vmax for visualization
         
@@ -5466,6 +5777,12 @@ class Image(metaclass=_Meta):
         Returns:
             vmin, vmax
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
         ##############
         # vmin, vmax #
         ##############
@@ -5501,20 +5818,31 @@ class Image(metaclass=_Meta):
         #####################
         if x_start is None and x_stop is None and y_start is None and y_stop is None:
             im = Image(data=data)
-            im.x_centers = copy.deepcopy(self.x_centers)
-            im.y_centers = copy.deepcopy(self.y_centers)
+            im._x_step         = self.x_step
+            im._y_step         = self.y_step
+            im._x_monotonicity = self.x_monotonicity
+            im._y_monotonicity = self.y_monotonicity
+            im._factor         = self.factor
+            im._offset         = self.offset
+            im.x_centers       = copy.deepcopy(self.x_centers)
+            im.y_centers       = copy.deepcopy(self.y_centers)
             return im
         
-        ########################################
-        # check if extract is really necessary #
-        ########################################
-        if x_start <= min(self.x_centers) and x_stop >= max(self.x_centers):
-            if y_start <= min(self.y_centers) and y_stop >= max(self.y_centers):
-                im = Image(data=data)
-                im.x_centers = copy.deepcopy(self.x_centers)
-                im.y_centers = copy.deepcopy(self.y_centers)
-                return im
-            
+        ########################
+        # check if empty image #
+        ########################
+        if data is None:
+            im = Image(data=data)
+            im._x_step         = self.x_step
+            im._y_step         = self.y_step
+            im._x_monotonicity = self.x_monotonicity
+            im._y_monotonicity = self.y_monotonicity
+            im._factor         = self.factor
+            im._offset         = self.offset
+            im.x_centers       = copy.deepcopy(self.x_centers)
+            im.y_centers       = copy.deepcopy(self.y_centers)
+            return im
+        
         #################
         # check if None #
         #################
@@ -5523,32 +5851,41 @@ class Image(metaclass=_Meta):
         if y_start is None: y_start = min(self.y_centers)
         if y_stop  is None: y_stop  = max(self.y_centers)
 
+        ########################################
+        # check if extract is really necessary #
+        ########################################
+        if x_start <= min(self.x_centers) and x_stop >= max(self.x_centers):
+            if y_start <= min(self.y_centers) and y_stop >= max(self.y_centers):
+                im = Image(data=data)
+                im._x_step         = self.x_step
+                im._y_step         = self.y_step
+                im._x_monotonicity = self.x_monotonicity
+                im._y_monotonicity = self.y_monotonicity
+                im._factor         = self.factor
+                im._offset         = self.offset
+                im.x_centers       = copy.deepcopy(self.x_centers)
+                im.y_centers       = copy.deepcopy(self.y_centers)
+                return im
+            
         ##################
         # validate input #
         ##################
-        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_stop > y_start, f'y_start must be smaller than y_stop.'        
-        
-        ########################
-        # check if empty image #
-        ########################
-        if self.data is None:
-            print(f'Warning: copying empty Image')
-            return Image()
-        if len(self.data) == 0:
-            print(f'Warning: copying empty Image')
-            return Image()
+        # assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        # assert y_stop > y_start, f'y_start must be smaller than y_stop.'        
         
         ########
         # crop #
         ########
-        y_start = int(arraymanip.index(self.y_centers, y_start))
-        y_stop  = int(arraymanip.index(self.y_centers, y_stop))
-        x_start = int(arraymanip.index(self.x_centers, x_start))
-        x_stop  = int(arraymanip.index(self.x_centers, x_stop))
-        im      = Image(data=self.data[y_start:y_stop+1, x_start:x_stop+1])
-        im.x_centers = self.x_centers[x_start:x_stop+1]
-        im.y_centers = self.y_centers[y_start:y_stop+1]
+        _im = self.columns.stack_spectra_as_columns(x_centers=self.x_centers, limits=[y_start, y_stop])
+        if _im.data is None: return Image()
+        im = _im.rows.stack_spectra_as_rows(y_centers=_im.y_centers, limits=[x_start, x_stop])
+        if im.data is None: return Image()
+        im._x_step         = self.x_step
+        im._y_step         = self.y_step
+        im._x_monotonicity = self.x_monotonicity
+        im._y_monotonicity = self.y_monotonicity
+        im._factor         = self.factor
+        im._offset         = self.offset
         return im
 
     def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
@@ -5570,10 +5907,6 @@ class Image(metaclass=_Meta):
             :py:attr:`Image`
         """
         im = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
-
-        ##################
-        # transfer attrs #
-        ##################
         im.copy_attrs_from(self)
         return im
     
@@ -5586,8 +5919,8 @@ class Image(metaclass=_Meta):
         Warning:
             Attrs are saved as comments if only_data is False. Saving attrs to file
             is not always reliable because requires converting variables to string. 
-            Only attrs that are of type: string, number, and list of number and strings are 
-            saved somewhat correctly. Dictionaries are not saved. 
+            Only attrs that are of type: string, number, and list of number,
+             list of list of number and strings have been tested. Dictionaries are not saved.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -5809,7 +6142,13 @@ class Image(metaclass=_Meta):
             See Also:
                 :py:func:`Image.check_y_step`, :py:func:`Image.check_x_monotonicity`
         """
-        s = Spectrum(x=self.x_centers, y=self.x_centers)
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
+        s = Spectrum(x=self.x_centers)
         try:
             s.check_step()
         except ValueError:
@@ -5841,7 +6180,13 @@ class Image(metaclass=_Meta):
             See Also:
                 :py:func:`Image.check_x_step`, :py:func:`Image.check_y_monotonicity`
         """
-        s = Spectrum(x=self.y_centers, y=self.y_centers)
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
+        s = Spectrum(x=self.y_centers)
         try:
             s.check_step()
         except ValueError:
@@ -5861,7 +6206,13 @@ class Image(metaclass=_Meta):
         See Also:
             :py:func:`Image.check_x_step`, :py:func:`Image.fix_x_monotonicity`
         """
-        s = Spectrum(x=self.x_centers, y=self.x_centers)
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
+        s = Spectrum(x=self.x_centers)
         try:
             s.check_monotonicity()
         except ValueError:
@@ -5881,7 +6232,13 @@ class Image(metaclass=_Meta):
         See Also:
             :py:func:`Image.check_y_step`, :py:func:`Image.fix_y_monotonicity`
         """
-        s = Spectrum(x=self.y_centers, y=self.y_centers)
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
+        s = Spectrum(x=self.y_centers)
         try:
             s.check_monotonicity()
         except ValueError:
@@ -5895,15 +6252,20 @@ class Image(metaclass=_Meta):
             Args:
                 mode (str, optional): increasing or decreasing.
                 attrs2reorder (list of str, optional): list of aditional Image attrs that 
-                must also be sorted based on the x centers.
+                    must also be sorted based on the x centers.
             
-
             Returns:
                 :py:clas:`Image`
             
             See Also:
                 :py:func:`Image.check_x_monotonicity`
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
         # check mode
         increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
         decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
@@ -5930,6 +6292,8 @@ class Image(metaclass=_Meta):
         _im = self.copy()
         _ss = _im.columns
         _ss.__temporary__attr__123__ = self.x_centers
+        if arraymanip.has_duplicates(_ss.__temporary__attr__123__):
+            _ss = _ss.merge_duplicates(ref='__temporary__attr__123__', attrs2merge=attrs2reorder)
         ss = _ss.reorder_by_attr(attr='__temporary__attr__123__', attrs2reorder=attrs2reorder, decreasing=_decreasing)
         im = ss.stack_spectra_as_columns(x_centers=ss.__temporary__attr__123__)
         im.check_x_monotonicity()
@@ -5951,6 +6315,12 @@ class Image(metaclass=_Meta):
             See Also:
                 :py:func:`Image.check_x_monotonicity`
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+
         # check mode
         increasing = ['inc', 'i', 'up', 'increasing', 'increasingly']
         decreasing = ['dec', 'd', 'down', 'decreasing', 'decreasingly']
@@ -5961,7 +6331,7 @@ class Image(metaclass=_Meta):
         else: mode = 'decreasing'
 
         # turn array into monotonic
-        if self.monotonicity is None:
+        if self.y_monotonicity is None:
             try:
                 self.check_y_monotonicity()
                 if self.y_monotonicity == mode:
@@ -5977,6 +6347,8 @@ class Image(metaclass=_Meta):
         _im = self.copy()
         _ss = _im.rows
         _ss.__temporary__attr__123__ = self.y_centers
+        if arraymanip.has_duplicates(_ss.__temporary__attr__123__):
+            _ss = _ss.merge_duplicates(ref='__temporary__attr__123__', attrs2merge=attrs2reorder)
         ss = _ss.reorder_by_attr(attr='__temporary__attr__123__', attrs2reorder=attrs2reorder, decreasing=_decreasing)
         im = ss.stack_spectra_as_rows(y_centers=ss.__temporary__attr__123__)
         im.check_y_monotonicity()
@@ -5996,8 +6368,8 @@ class Image(metaclass=_Meta):
             :py:class:`Image`
         """
         im = self.copy()
-        im._data   += float(value).astype(self.data.dtype)
-        im._offset += float(value).astype(self.data.dtype)
+        im._data   += float(value)
+        im._offset += float(value)
         return im
 
     def set_factor(self, value):
@@ -6015,8 +6387,8 @@ class Image(metaclass=_Meta):
         if value == 0:
             raise AttributeError('cannot set factor = 0.')
         im          = self.copy()
-        im._data   *= float(value).astype(self.data.dtype)
-        im._factor *= float(value).astype(self.data.dtype)
+        im._data   *= float(value)
+        im._factor *= float(value)
         return im
 
     def set_horizontal_shift(self, value):
@@ -6065,7 +6437,7 @@ class Image(metaclass=_Meta):
         ########
         # roll #
         ########
-        return self.set_horizontal_roll(value=value)
+        return self._set_horizontal_roll(value=value)
     
     def set_vertical_shift(self, value):
         """Roll pixels rows left and right in terms of x centers.
@@ -6113,9 +6485,9 @@ class Image(metaclass=_Meta):
         ########
         # roll #
         ########
-        return self.set_vertical_roll(value=value)
+        return self._set_vertical_roll(value=value)
 
-    def set_horizontal_roll(self, value):
+    def _set_horizontal_roll(self, value):
         """Roll pixels rows left and right.
 
         Note:
@@ -6161,7 +6533,7 @@ class Image(metaclass=_Meta):
                 im._data[:, i] = s.y
         return im
     
-    def set_vertical_roll(self, value):
+    def _set_vertical_roll(self, value):
         """Roll pixels columns up and down.
 
         Note:
@@ -6263,59 +6635,6 @@ class Image(metaclass=_Meta):
         return self.set_horizontal_shift(value=value)
 
 
-    def set_horizontal_roll_via_polyval(self, p):
-        """Set horizontal roll to np.polyval(p, y pixel).
-
-        Args:
-            p (array): 1D array of polynomial coefficients (including 
-                coefficients equal to zero) from highest degree to the constant 
-                term.
-
-        Returns:
-            :py:class:`Image`
-        """
-        f = lambda y: np.polyval(p, y)
-        return self.set_horizontal_roll_via_function(f)
-    
-    def set_vertical_roll_via_polyval(self, p):
-        """Set vertical roll to np.polyval(p, x pixel).
-
-        Args:
-            p (array): 1D array of polynomial coefficients (including 
-                coefficients equal to zero) from highest degree to the constant 
-                term.
-
-        Returns:
-            :py:class:`Image`
-        """
-        f = lambda x: np.polyval(p, x)
-        return self.set_vertical_roll_via_function(f)
-
-    def set_vertical_roll_via_function(self, f):
-        """Set vertical roll to f(x pixel).
-
-        Args:
-            f (function): function where argument is x centers elements
-
-        Returns:
-            :py:class:`Image`
-        """
-        value = np.array([f(x) for x in range(len(self.x_centers))])
-        return self.set_vertical_roll(value=value)
-
-    def set_horizontal_roll_via_function(self, f):
-        """Set horizontal roll to f(y pixel).
-
-        Args:
-            f (function): function where argument is y centers elements
-
-        Returns:
-            :py:class:`Image`
-        """
-        value = np.array([f(x) for x in range(len(self.y_centers))])
-        return self.set_horizontal_roll(value=value)
-
-
     def floor(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
         """Set intensity to zero inside limits to zero.
 
@@ -6326,10 +6645,9 @@ class Image(metaclass=_Meta):
         Returns:
             None
         """
-        temp = self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        temp  = self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
         value = temp.calculate_average()
-        im = self.copy()
-        return im.set_factor(value)
+        return self.copy().set_factor(value)
 
     ############
     # advanced #
@@ -6476,7 +6794,7 @@ class Image(metaclass=_Meta):
         Returns:
             number
         """
-        return np.mean([s.calculate_average() for s in self.columns])
+        return np.mean([s.calculate_y_average() for s in self.columns])
 
     def calculate_histogram(self, nbins=None):
         """Compute the intensity histogram of the data. Wrapper for `numpy.histogram()`_.
@@ -6533,7 +6851,7 @@ class Image(metaclass=_Meta):
         Returns:
             :py:class:`Spectrum`
         """
-        s = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
+        s = Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
         s.copy_attrs_from(self)
         return s
     
@@ -6587,10 +6905,10 @@ class Image(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
                 ensures that the number of columns (rows) is not bigger than 
@@ -6630,10 +6948,10 @@ class Image(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
                 ensures that the number of columns (rows) is not bigger than 
@@ -6651,100 +6969,6 @@ class Image(metaclass=_Meta):
 
         # calculate
         values = ss.calculate_shift(mode=mode, limits=limits, **kwargs)
-        return values
-    
-    def calculate_horizontal_roll(self, mode='cc', limits=None, limit_size=1000, **kwargs):
-        """Calculate intensity misalignments in terms of pixel roll.
-
-        Args:
-            mode (string, optional): method used. Options are: 
-                 
-                 1) 'cc': align rows via cross-correlation (cc), where cc for
-                 all spectra is calculated against the frist spectrum. 
-                 
-                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
-                 calculated against previous row.
-
-                 3) 'max': Align the max point of every row. 
-                 
-                 4) 'peak': Fit one peak in each row and align them 
-                 (requires that `brixs.addons.fitting` is imported)
-
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
-            **kwargs (dict)
-                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
-            
-        Returns:
-            list
-        """
-        ss = self.rows
-        if limit_size:
-            if len(ss) > limit_size:
-                raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
-
-        # change from x centers to x pixels
-        for s in ss:
-            s._x = np.arange(len(self.x_centers))
-
-        # calculate
-        values = ss.calculate_roll(mode=mode, limits=limits, **kwargs)
-        return values
-    
-    def calculate_vertical_roll(self, mode='cc', limits=None, limit_size=1000, **kwargs):
-        """Calculate intensity misalignments in terms of pixel roll.
-
-        Args:
-            mode (string, optional): method used. Options are: 
-                 
-                 1) 'cc': align columns via cross-correlation (cc), where cc for
-                 all spectra is calculated against the frist spectrum. 
-                 
-                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
-                 calculated against previous column.
-
-                 3) 'max': Align the max point of every column. 
-                 
-                 4) 'peak': Fit one peak in each column and align them 
-                 (requires that `brixs.addons.fitting` is imported)
-
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
-            **kwargs (dict)
-                kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
-            
-        Returns:
-            list
-        """
-        ss = self.columns
-        if limit_size:
-            if len(ss) > limit_size:
-                raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-
-        # change from y centers to y pixels
-        for s in ss:
-            s._x = np.arange(len(self.y_centers))
-
-        # calculate
-        values = ss.calculate_roll(mode=mode, limits=limits, **kwargs)
         return values
     
     ############
@@ -6798,8 +7022,7 @@ class Image(metaclass=_Meta):
 
             model (function): funcion f(x_centers)
         """
-        im = self.copy()
-        im.floor()
+        im = self.copy().floor()
         values = im.calculate_vertical_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
 
         # calculate poly
@@ -6855,130 +7078,15 @@ class Image(metaclass=_Meta):
 
             model (function): funcion f(y_centers)
         """
-        im = self.copy()
-        im.floor()
-        values = im.calculate_horizontal_roll(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        im = self.copy().floor()
+        values = im.calculate_horizontal_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
 
         # calculate poly
         s = Spectrum(x=self.y_centers, y=values)
         fit, popt, R2, model = s.polyfit(deg=deg)
         return s, fit, popt, R2, model
     
-    def calculate_vertical_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
-        """Calculate vertical roll values to fix curvature.
 
-        Args:
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            mode (string, optional): method used. Options are: 
-                 
-                 1) 'cc': align columns via cross-correlation (cc), where cc for
-                 all spectra is calculated against the frist spectrum. 
-                 
-                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
-                 calculated against previous column.
-
-                 3) 'max': Align the max point of every column. 
-                 
-                 4) 'peak': Fit one peak in each column and align them 
-                 (requires that `brixs.addons.fitting` is imported)
-
-            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
-                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `y_start = None` or `y_stop = None` to indicate the minimum or 
-                maximum y value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
-            **kwargs (dict)
-                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
-
-        Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs x centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(x_centers)
-        """
-        im = self.copy()
-        im.floor()
-        values = im.calculate_vertical_roll(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
-
-        # calculate poly
-        s = Spectrum(x=np.arange(len(values)), y=values)
-        fit, popt, R2, model = s.polyfit(deg=deg)
-        return s, fit, popt, R2, model
-    
-    def calculate_horizontal_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
-        """Calculate horizontal roll values to fix curvature.
-
-        Args:
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            mode (string, optional): method used. Options are: 
-                 
-                 1) 'cc': align rows via cross-correlation (cc), where cc for
-                 all spectra is calculated against the frist spectrum. 
-                 
-                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
-                 calculated against previous row.
-
-                 3) 'max': Align the max point of every row. 
-                 
-                 4) 'peak': Fit one peak in each row and align them 
-                 (requires that `brixs.addons.fitting` is imported)
-
-            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
-            **kwargs (dict)
-                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
-
-        Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs y centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(y_centers)
-        """
-        im = self.copy()
-        im.floor()
-        values = im.calculate_horizontal_roll(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
-
-        # calculate poly
-        s = Spectrum(x=np.arange(len(values)), y=values)
-        fit, popt, R2, model = s.polyfit(deg=deg)
-        return s, fit, popt, R2, model
-    
-    
     def fix_vertical_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
         """Roll column of pixels to fix curvature.
 
@@ -7082,110 +7190,7 @@ class Image(metaclass=_Meta):
         s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
 
         return self.set_horizontal_shift_via_polyval(popt) 
-    
-    def fix_vertical_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
-        """Roll column of pixels to fix curvature.
 
-        Args:
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            mode (string, optional): method used. Options are: 
-                 
-                 1) 'cc': align columns via cross-correlation (cc), where cc for
-                 all spectra is calculated against the frist spectrum. 
-                 
-                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
-                 calculated against previous column.
-
-                 3) 'max': Align the max point of every column. 
-                 
-                 4) 'peak': Fit one peak in each column and align them 
-                 (requires that `brixs.addons.fitting` is imported)
-
-            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
-                of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `y_start = None` or `y_stop = None` to indicate the minimum or 
-                maximum y value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
-            **kwargs (dict)
-                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
-
-        Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs x centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(x_centers)
-        """
-        s, fit, popt, R2, model = self.calculate_vertical_roll_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
-
-        return self.set_vertical_roll_via_polyval(popt) 
-    
-    def fix_horizontal_roll_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
-        """Roll row of pixels to fix curvature.
-
-        Args:
-            deg (int, optional): Degree of the curvature fitting polynomial. 
-                Default is 2.
-            mode (string, optional): method used. Options are: 
-                 
-                 1) 'cc': align rows via cross-correlation (cc), where cc for
-                 all spectra is calculated against the frist spectrum. 
-                 
-                 2) 'seq': align via 'cros-correlation' (cc), where cc is 
-                 calculated against previous row.
-
-                 3) 'max': Align the max point of every row. 
-                 
-                 4) 'peak': Fit one peak in each row and align them 
-                 (requires that `brixs.addons.fitting` is imported)
-
-            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
-            **kwargs (dict)
-                kwargs to be passed to ss.fit_peak() function when `mode='peak'`
-
-        Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs y centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(y_centers)
-        """
-        s, fit, popt, R2, model = self.calculate_horizontal_roll_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
-
-        return self.set_horizontal_roll_via_polyval(popt) 
     
     ##########################        
     # plot and visualization #
@@ -7279,7 +7284,7 @@ class Image(metaclass=_Meta):
 
         return pos
     
-    def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='lower', verbose=True, **kwargs):
+    def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
@@ -7381,7 +7386,7 @@ class Image(metaclass=_Meta):
         
         return pos
     
-    def plot(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='lower', verbose=True, **kwargs):
+    def plot(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
         """Display data as an image with axis based on x and y centers. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
@@ -7435,6 +7440,7 @@ class Image(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
+        assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{orgin}`'
         kwargs['origin'] = origin
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
@@ -7453,10 +7459,16 @@ class Image(metaclass=_Meta):
         # check monotonicity #
         ######################
         if self.x_monotonicity is None:
-            self.check_x_monotonicity()
+            try:
+                self.check_x_monotonicity()
+            except ValueError:
+                raise ValueError(f'x centers is not monotonic. Plot image using im.imshow() or maybe use im.fix_x_monotonicity()')
         if self.y_monotonicity is None:
-            self.check_y_monotonicity()
-
+            try:
+                self.check_y_monotonicity()
+            except ValueError:
+                raise ValueError(f'y centers is not monotonic. Plot image using im.imshow() or maybe use im.fix_y_monotonicity()')
+        
         ##############
         # check step #
         ##############
@@ -7470,13 +7482,22 @@ class Image(metaclass=_Meta):
 
         # extent
         if 'extent' not in kwargs:
-            x  = np.linspace(im.x_centers[0], im.x_centers[-1], len(im.x_centers))
-            dx = np.mean(np.diff(x))
-            extent_x = [x[0]-dx/2, x[-1]+dx/2]
+            # x  = np.linspace(im.x_centers[0], im.x_centers[-1], len(im.x_centers))
+            # dx = np.mean(np.diff(x))
+            # extent_x = [x[0]-dx/2, x[-1]+dx/2]
 
-            y  = np.linspace(im.y_centers[0], im.y_centers[-1], len(im.y_centers))
-            dy = np.mean(np.diff(y))
-            extent_y = [y[0]-dy/2, y[-1]+dy/2]
+            extent_x = [min(im.x_edges), max(im.x_edges)]
+            if origin == 'upper':
+                extent_y = [max(im.y_edges), min(im.y_edges)]
+            else:
+                extent_y = [min(im.y_edges), max(im.y_edges)]
+            
+            # y  = np.linspace(im.y_centers[0], im.y_centers[-1], len(im.y_centers))
+            # dy = np.mean(np.diff(y))
+            # if origin == 'upper':
+            #     extent_y = [y[-1]+dy/2, y[0]-dy/2]
+            # else:
+            #     extent_y = [y[0]-dy/2, y[-1]+dy/2]
 
             kwargs['extent'] = np.append(extent_x, extent_y)
 
@@ -7581,6 +7602,13 @@ class PhotonEvents(metaclass=_Meta):
         return self._x
     @x.setter
     def x(self, value):
+        # check None
+        if value is None:
+            self._x = None
+            self._y = None
+            # self._xlim = None
+            # self._ylim = None
+            return
         ###################################
         # asserting validity of the input #
         ###################################
@@ -7597,7 +7625,12 @@ class PhotonEvents(metaclass=_Meta):
         # check length
         if self.y is not None:
             assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
-       
+
+        # empty array
+        if len(value) == 0:
+            self._x = None
+            return
+        
         #################
         # set attribute #
         #################
@@ -7611,6 +7644,13 @@ class PhotonEvents(metaclass=_Meta):
         return self._y
     @y.setter
     def y(self, value):
+        # check None
+        if value is None:
+            self._x = None
+            self._y = None
+            # self._xlim = None
+            # self._ylim = None
+            return
         ###################################
         # asserting validity of the input #
         ###################################
@@ -7628,6 +7668,11 @@ class PhotonEvents(metaclass=_Meta):
         if self.x is not None:
             assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
 
+        # empty array
+        if len(value) == 0:
+            self._y = None
+            return
+        
         #################
         # set attribute #
         #################
@@ -7645,7 +7690,7 @@ class PhotonEvents(metaclass=_Meta):
         # asserting validity of the input #
         ###################################
         if value is None:
-            self._xlim = np.array((min(self.x), max(self.x)), dtype='float')
+            self._xlim = None#np.array((min(self.x), max(self.x)), dtype='float')
         else:
             # check type
             if isinstance(value, Iterable) == False:
@@ -7664,7 +7709,8 @@ class PhotonEvents(metaclass=_Meta):
             assert value[1] > value[0], f'max value must be bigger than min value'
 
             # check if data is within limits
-            assert max(self.x) <= value[-1] or min(self.x) >= value[0], f'x coordinates (from {min(self.x)} to {max(self.x)}) are outside xlim ({value})'
+            if self.x is not None:
+                assert max(self.x) <= value[-1] or min(self.x) >= value[0], f'xlim={value} not allowed because x coordinates (from {min(self.x)} to {max(self.x)}) are outside xlim. xlim set to None'
 
             #################
             # set attribute #
@@ -7683,7 +7729,7 @@ class PhotonEvents(metaclass=_Meta):
         # asserting validity of the input #
         ###################################
         if value is None:
-            self._tylim = np.array((min(self.y), max(self.y)), dtype='float')
+            self._ylim = None#np.array((min(self.y), max(self.y)), dtype='float')
         else:
             # check type
             if not isinstance(value, Iterable):
@@ -7702,7 +7748,8 @@ class PhotonEvents(metaclass=_Meta):
             assert value[1] > value[0], f'max value must be bigger than min value'
 
             # check if data is within limits
-            assert max(self.y) <= value[-1] or min(self.y) >= value[0], f'y coordinates (from {min(self.y)} to {max(self.y)}) are outside ylim ({value})'
+            if self.y is not None:
+                assert max(self.y) <= value[-1] or min(self.y) >= value[0], f'ylim={value} not allowed bacause y coordinates (from {min(self.y)} to {max(self.y)}) are outside ylim. ylim set to None'
 
 
             #################
@@ -7718,7 +7765,8 @@ class PhotonEvents(metaclass=_Meta):
     ###################################
     @property
     def data(self):
-        return np.vstack((self.x, self.y)).transpose()
+        if self.x is not None:
+            return np.vstack((self.x, self.y)).transpose()
     @data.setter
     def data(self, value):
         raise AttributeError('Attribute is "read only".')
@@ -7808,6 +7856,10 @@ class PhotonEvents(metaclass=_Meta):
         """return attrs that are user defined.""" 
         return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
     
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words}
+
     def get_methods(self):
         """return a list of methods available"""
         return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
@@ -7828,7 +7880,7 @@ class PhotonEvents(metaclass=_Meta):
             None
         """
         # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents):
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
             pass
         else:
             raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
@@ -7846,7 +7898,83 @@ class PhotonEvents(metaclass=_Meta):
     ###########
     # support #
     ###########
-    pass
+    def _check_mask(self, mask):
+        """returns mask in the right format.
+
+        Args:
+            mask (None or list): list with 4 elements `(x_start, x_sto, y_start, y_stop)`, a list 
+                like `((xi_1, xf_1, yi_1, yf_1), (xi_2, xf_2, yi_2, yf_2), ...)` 
+                in terms of x_centers and y_centers, or None. If None, 
+                this function simply returns None. Use 
+                `x_start = None` or `x_stop = None` to indicate the minimum or 
+                maximum x value of the data, respectively. If mask = [], i.e.,
+                an empty list, it assumes `limits = (None, None, None, None)`.
+
+        Returns:
+            None or limits in the following format:
+                ((xi_1, xf_1, yi_1, yf_1), (xi_2, xf_2, yi_2, yf_2), ...)              
+        """
+        #####################
+        # if limits is None #
+        #####################
+        if mask is None:
+            return None
+        
+        ################################
+        # assert that mask is Iterable #
+        ################################
+        assert isinstance(mask, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
+        
+        ################
+        # empty object #
+        ################
+        if self.x is None:
+            raise ValueError('cannot operate on empty photon events')
+
+        ################################
+        # get min and max range values #
+        ################################
+        if self.xlim is None:
+            xmin = min(self.x)
+            xmax = max(self.x)
+        else:
+            xmin = self.xlim[0]
+            xmax = self.xlim[1]
+        if self.ylim is None:
+            ymin = min(self.y)
+            ymax = max(self.y)
+        else:
+            ymin = self.ylim[0]
+            ymax = self.ylim[1]
+
+        ################
+        # empty limits #
+        ################
+        if len(mask) == 0:
+            return ((xmin, xmax, ymin, ymax),)
+
+        ##############
+        # fix format #
+        ##############
+        # 4 elements 
+        if len(mask) == 4: # (xi, xf, yi, yf), or ((xi1, xf1, yi1, yf1), ..., (xi2, xf2, yi2, yf2))
+            if isinstance(mask[0], Iterable) == False:
+                if isinstance(mask[1], Iterable) == False and isinstance(mask[2], Iterable) == False and isinstance(mask[3], Iterable) == False:
+                    mask = [mask, ]
+                else:
+                    raise ValueError(f'wrong format for mask={mask}')
+        # 1, 2, 3 or more than 4 elements 
+        final = []
+        for m in mask:
+            assert isinstance(m, Iterable), f'wrong format for mask={mask}'
+            temp = [m[0], m[1], m[2], m[3]]
+            if temp[0] == None: temp[0] = xmin
+            if temp[1] == None: temp[1] = xmax
+            if temp[2] == None: temp[2] = ymin
+            if temp[3] == None: temp[3] = ymax
+            final.append((temp[0], temp[1], temp[2], temp[3]))   
+        return final
+
 
     ################
     # core methods #
@@ -7868,38 +7996,50 @@ class PhotonEvents(metaclass=_Meta):
         # if limits is None #
         #####################
         if x_start is None and x_stop is None and y_start is None and y_stop is None:
-            return PhotonEvents(x=x, y=y, xlim=self.xlim, ylim=self.ylim)
+            return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
 
         ########################################
         # check if extract is really necessary #
         ########################################
         if x_start <= min(self.x) and x_stop >= max(self.x):
             if y_start <= min(self.y) and y_stop >= max(self.y):
-                return PhotonEvents(x=x, y=y, xlim=self.xlim, ylim=self.ylim)
+                return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
             
+        ###############################
+        # check if empty PhotonEvents #
+        ###############################
+        if self.x is None:
+            return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+
         #################
         # check if None #
         #################
-        if x_start is None: x_start = min(self.x)
-        if x_stop  is None: x_stop  = max(self.x)
-        if y_start is None: y_start = min(self.y)
-        if y_stop  is None: y_stop  = max(self.y)
+        if x_start is None: 
+            if self.xlim is None:
+                x_start = min(self.x)
+            else:
+                x_start = self.xlim[0]
+        if x_stop  is None: 
+            if self.xlim is None:
+                x_stop  = max(self.x)
+            else:
+                x_stop = self.xlim[1]
+        if y_start is None: 
+            if self.ylim is None:
+                y_start = min(self.y)
+            else:
+                y_start = self.ylim[0]
+        if y_stop  is None: 
+            if self.ylim is None:
+                y_stop  = max(self.y)
+            else:
+                y_stop = self.ylim[1]
 
-        ##################
-        # validate input #
-        ##################
-        assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        assert y_stop > y_start, f'y_start must be smaller than y_stop.' 
-
-        ########################
-        # check if empty image #
-        ########################
-        if self.x is None:
-            print(f'Warning: copying empty PhotonEvents')
-            return PhotonEvents()
-        if len(self.x) == 0:
-            print(f'Warning: copying empty PhotonEvents')
-            return PhotonEvents()       
+        # ##################
+        # # validate input #
+        # ##################
+        # assert x_stop > x_start, f'x_start must be smaller than x_stop.'
+        # assert y_stop > y_start, f'y_start must be smaller than y_stop.'     
         
         ########
         # crop #
@@ -7932,6 +8072,12 @@ class PhotonEvents(metaclass=_Meta):
         Returns:
             :py:attr:`PhotonEvents`
         """
+        ###############################
+        # check if empty PhotonEvents #
+        ###############################
+        if self.x is None:
+            return PhotonEvents(x=None, y=None, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+
         ######################
         # assert mask format #
         ######################
@@ -7945,9 +8091,13 @@ class PhotonEvents(metaclass=_Meta):
         ########
         # clip #
         ########
-        pe = PhotonEvents(x=[], y=[])
+        x = []
+        y = []
         for x_start, x_stop, y_start, y_stop in mask: 
-            pe += self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+            pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+            x.append(pe.x)
+            y.append(pe.y)
+        pe = PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
         pe.copy_attrs_from(self)
 
         return pe
@@ -7961,8 +8111,8 @@ class PhotonEvents(metaclass=_Meta):
         Warning:
             Attrs are saved as comments if only_data is False. Saving attrs to file
             is not always reliable because requires converting variables to string. 
-            Only attrs that are of type: string, number, and list of number and strings are 
-            saved somewhat correctly. Dictionaries are not saved. 
+            Only attrs that are of type: string, number, and list of number,
+             list of list of number and strings have been tested. Dictionaries are not saved.
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -8155,6 +8305,9 @@ class PhotonEvents(metaclass=_Meta):
                 shifted. If list, then it must be of the same size as the number of
                  photon events. First element will be assigned to the first photon event and so on.
 
+        Warning:
+            pe.xlim is set to None.
+
         Returns:
             :py:class:`PhotonEvents`
         """
@@ -8170,9 +8323,10 @@ class PhotonEvents(metaclass=_Meta):
         # shift #
         #########
         pe = self.copy()
+        pe.xlim = None
         for i, v in enumerate(value):
             if v != 0:
-                pe.x[i] += v
+                pe.x[i] += v                   
         return pe
     
     def set_vertical_shift(self, value):
@@ -8183,6 +8337,9 @@ class PhotonEvents(metaclass=_Meta):
                 shifted. If list, then it must be of the same size as the number of
                  photon events. First element will be assigned to the first photon event and so on.
 
+        Warning:
+            pe.ylim is set to None.
+
         Returns:
             :py:class:`PhotonEvents`
         """
@@ -8198,6 +8355,7 @@ class PhotonEvents(metaclass=_Meta):
         # shift #
         #########
         pe = self.copy()
+        pe.ylim = None
         for i, v in enumerate(value):
             if v != 0:
                 pe.y[i] += v
@@ -8214,6 +8372,9 @@ class PhotonEvents(metaclass=_Meta):
                 coefficients equal to zero) from highest degree to the constant 
                 term.
 
+        Warning:
+            pe.xlim is set to None.
+
         Returns:
             :py:class:`Image`
         """
@@ -8227,6 +8388,9 @@ class PhotonEvents(metaclass=_Meta):
             p (array): 1D array of polynomial coefficients (including 
                 coefficients equal to zero) from highest degree to the constant 
                 term.
+            
+        Warning:
+            pe.ylim is set to None.
 
         Returns:
             :py:class:`Image`
@@ -8240,6 +8404,9 @@ class PhotonEvents(metaclass=_Meta):
         Args:
             f (function): function where argument is x coordinates
 
+        Warning:
+            pe.ylim is set to None.
+
         Returns:
             :py:class:`Image`
         """
@@ -8251,6 +8418,9 @@ class PhotonEvents(metaclass=_Meta):
 
         Args:
             f (function): function where argument is y coordinates
+
+        Warning:
+            pe.xlim is set to None.
 
         Returns:
             :py:class:`Image`
@@ -8299,11 +8469,13 @@ class PhotonEvents(metaclass=_Meta):
         ###################################
         if numanip.is_integer(ncols) == False or numanip.is_integer(nrows) == False or ncols < 0 or nrows < 0:
             raise ValueError("Number of bins must be a positive integer.")
+        ncols = int(ncols)
+        nrows = int(nrows)
 
         ###########
         # binning #
         ###########
-        temp, _x_edges, _y_edges = np.histogram2d(self.x, self.y, bins=(nrows, ncols), range=(self.xlim, self.ylim))
+        temp, _x_edges, _y_edges = np.histogram2d(self.x, self.y, bins=(ncols, nrows), range=(self.xlim, self.ylim))
 
         #########
         # Image #
@@ -8394,10 +8566,10 @@ class PhotonEvents(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
                 ensures that the number of columns (rows) is not bigger than 
@@ -8432,10 +8604,10 @@ class PhotonEvents(metaclass=_Meta):
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Use 
-                `x_start = None` or `x_stop = None` to indicate the minimum or 
-                maximum x value of the data, respectively. If limits = [], i.e.,
-                an empty list, it assumes `limits = (None, None)`.
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             limit_size (int or False, optional): prevents from mistakenly calculating
                 cross-corelation for unusualy big images. If axis = 0 (1), it 
                 ensures that the number of columns (rows) is not bigger than 
@@ -8662,13 +8834,15 @@ class PhotonEvents(metaclass=_Meta):
 
     ##########################        
     # plot and visualization #
-    ########################## 
-    def plot(self, ax=None, s=0.1, x_start=None, x_stop=None, y_start=None, y_stop=None, **kwargs):
+    ##########################     
+    def plot(self, ax=None, s=0.1, show_limits=False, x_start=None, x_stop=None, y_start=None, y_stop=None, **kwargs):
         """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
             s (number, optional): The marker size in points**2. Default is 0.1.
+            show_limits (bool, optional): if True and pe.xlim and pe.ylim are
+                defined, it will draw a grey rectangle around xlim and ylim.
             x_start, x_stop, y_start, y_stop (int): pixel range in terms of
                 x_centers and y_centers. Interval is inclusive. Use None to 
                 indicate the edge of the image.
@@ -8694,34 +8868,30 @@ class PhotonEvents(metaclass=_Meta):
         pe  = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
         pos = ax.scatter(pe.x, pe.y, s=s, **kwargs)
 
+        #############
+        # check lim #
+        #############
+        if show_limits:
+            if self.xlim is not None and self.ylim is not None:
+                if hasattr(ax, 'gca'):
+                    figmanip.rectangle(xlim=self.xlim, ylim=self.ylim, color='grey', lw=1)
+                    ax.gca().autoscale_view()
+                else:
+                    figmanip.rectangle(ax=ax, xlim=self.xlim, ylim=self.ylim, color='grey', lw=1)
+                    ax.autoscale_view()
         return pos
 
 # %% ============================= Dummy ================================== %% #
 class Dummy():
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data=None):
         self._data  = []
-        if len(args) > 0:
-            self._data = list(args)
+        if data is not None:
+            self.data = data
 
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-
-    def __getattr__(self, name):
-        super().__getattr__(name)
-
-    def __getitem__(self, item):
-        return self._data[item]
-
-    def __setitem__(self, item, value):
-        self._data[item] = value
-
-    def __len__(self):
-        return len(self.data)
-
-    def __delitem__(self, item):
-        del self._data[item]
-
+    ###################
+    # core attributes #
+    ###################
     @property
     def data(self):
         return self._data
@@ -8736,3 +8906,152 @@ class Dummy():
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
+
+    ###################################
+    # computed (read-only) attributes #
+    ###################################
+    pass
+
+    #########################
+    # write-only attributes #
+    #########################
+    pass
+
+    #######################
+    # modifier attributes #
+    #######################
+    pass
+
+    #################
+    # magic methods #
+    #################
+    # def __setattr__(self, name, value):
+    #     super().__setattr__(name, value)
+
+    # def __getattr__(self, name):
+    #     super().__getattr__(name)
+
+    def __getitem__(self, item):
+        return self._data[item]
+
+    def __setitem__(self, item, value):
+        self._data[item] = value
+
+    def __len__(self):
+        return len(self.data)
+
+    def __delitem__(self, item):
+        del self._data[item]
+
+    #########
+    # attrs #
+    #########
+    def get_core_attrs(self): 
+        """return a list of core attrs"""
+        return settings._reserved_words['Dummy']['pseudovars']
+    
+    def get_attrs(self):
+        """return attrs that are user defined.""" 
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+
+    def get_methods(self):
+        """return a list of methods available"""
+        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
+    
+    def remove_attrs(self):
+        """Delete all user defined attrs."""
+        for attr in self.get_attrs():
+            self.__delattr__(attr)
+
+    def copy_attrs_from(self, s):
+        """Copy user defined attributes from another brixs object.
+
+        Args:
+            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
+                to copy user defined attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
+
+        # transfer attrs
+        for attr in s.get_attrs():
+            value = copy.deepcopy(s.__dict__[attr])
+            self.__setattr__(attr, value)
+
+    ###########
+    # attrs 2 #
+    ###########
+    pass
+
+    ###########
+    # support #
+    ###########
+    pass
+
+    ################
+    # core methods #
+    ################
+    def append(self, value):
+        """Append something to dummy.
+
+        Args:
+            value: something to append to Dummy
+
+        Returns:
+            None
+
+        See Also:
+            :py:func:`Dummy.remove`
+        """        
+        self.data.append(value)
+
+    ########
+    # copy #
+    ########
+    pass
+
+    #################
+    # save and load #
+    ################# 
+    pass
+
+    #########
+    # check #
+    #########
+    pass
+
+    #############
+    # modifiers #
+    #############
+    pass
+
+    ###############
+    # modifiers 2 #
+    ###############
+    pass
+
+    ############
+    # advanced #
+    ############
+    pass
+
+    ########################
+    # calculation and info #
+    ########################
+    pass
+
+    ############
+    # composed #
+    ############
+    pass
+
+    ##########################        
+    # plot and visualization #
+    ##########################
+    pass

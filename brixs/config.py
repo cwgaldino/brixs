@@ -57,11 +57,12 @@ class _settings():
         # internal #
         ############
         self._figure_count   = 1
-        self._forbidden_words = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[]}
+        self._forbidden_words = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
         self._reserved_words  = {'Spectrum':    {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'Spectra':     {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'Image':       {'methods':[], 'vars':[], 'pseudovars': []}, 
-                                 'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []}}
+                                 'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []},
+                                 'Dummy':       {'methods':[], 'vars':[], 'pseudovars': []}}
 
         #############
         # help text #

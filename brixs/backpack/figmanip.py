@@ -8,6 +8,7 @@ from types import MethodType
 from pathlib import Path
 import numpy as np
 import warnings
+import decimal
 import copy
 
 # %% ------------------------- Matplotlib Imports ------------------------- %% #
@@ -62,6 +63,26 @@ def _is_number(n):
 def _round_to_1(x):
     """return the most significant digit"""
     return round(x, -int(np.floor(np.log10(abs(x)))))
+
+def _n_decimal_places(number, count_zero=False):
+    """Return the number of decimal places of a number.
+
+    Args:
+        number (float or int): number.
+        count_zero (bool, optional): if an integer is type float, it will came
+            out with a zero after the decimal point, eg, `145.0` instead of `145`.
+            count_zero == False will not count zeros after the decimal point.
+            Default is False.
+
+    Returns:
+        number of decimal places in number.
+    """
+
+    n = abs(decimal.Decimal(str(number)).as_tuple().exponent)
+    if count_zero == False and n == 1:
+        if str(number)[-1] == '0':
+            return 0
+    return n
 
 def _index(x, value, closest=True):
     """Returns the first index of the element in array.
@@ -464,7 +485,7 @@ def get_window_dpi():
 
 def maximize():
     """Maximize current fig."""
-    figManager = plt._get_current_fig_manager()
+    figManager = _get_current_fig_manager()
 
     try:  # tested on tKinter backend
         figManager.frame.Maximize(True)
@@ -640,18 +661,22 @@ def _onclick(event):
                 lim = ax.get_ylim()
                 delta = lim[1] - lim[0]
                 r21 = _round_to_1(delta)
-                if r21 < 1:
-                    i = 0
-                    while r21 < 1:
-                        r21 = r21*10
-                        i += 1
-                        if i == 11: break
-                    if i < 11:
-                        n = i + 2
-                    else:
-                        n = False
+
+                n = False
+                if r21 < 1: 
+                    n = _n_decimal_places(r21) + 2
+                # if r21 < 1:
+                #     i = 0
+                #     while r21 < 1:
+                #         r21 = r21*10
+                #         i += 1
+                #         if i == 11: break
+                #     if i < 11:
+                #         n = i + 2
+                #     else:
+                #         n = False
                 elif r21 >= 1 and r21 < 2:
-                    n = 3
+                    n = 4
                 elif r21 >= 2 and r21 < 100:
                     n = 2
                 elif r21 >= 100 and r21 < 800:
@@ -659,12 +684,9 @@ def _onclick(event):
                 elif r21 >= 800:
                     n = 0
                 
-                if n:
-                    final = round(event.ydata, n)
-                    if n == 0:
-                        final = int(final)
-                else:
-                    final = event.ydata
+                final = round(event.ydata, n)
+                if n == 0:
+                    final = int(final)
                 _copy2clipboard(str(final))
                 # print('y coordinate copied to clipboard')
             except TypeError:
@@ -679,18 +701,21 @@ def _onclick(event):
                 lim = ax.get_xlim()
                 delta = lim[1] - lim[0]
                 r21 = _round_to_1(delta)
-                if r21 < 1:
-                    i = 0
-                    while r21 < 1:
-                        r21 = r21*10
-                        i += 1
-                        if i == 11: break
-                    if i < 11:
-                        n = i + 2
-                    else:
-                        n = False
+
+                if r21 < 1: 
+                    n = _n_decimal_places(r21) + 2
+                # if r21 < 1:
+                #     i = 0
+                #     while r21 < 1:
+                #         r21 = r21*10
+                #         i += 1
+                #         if i == 11: break
+                #     if i < 11:
+                #         n = i + 2
+                #     else:
+                #         n = False
                 elif r21 >= 1 and r21 < 2:
-                    n = 3
+                    n = 4
                 elif r21 >= 2 and r21 < 100:
                     n = 2
                 elif r21 >= 100 and r21 < 800:
@@ -698,12 +723,9 @@ def _onclick(event):
                 elif r21 >= 800:
                     n = 0
 
-                if n:
-                    final = round(event.xdata, n)
-                    if n == 0:
-                        final = int(final)
-                else:
-                    final = event.ydata
+                final = round(event.xdata, n)
+                if n == 0:
+                    final = int(final)
                 _copy2clipboard(str(final))
                 # print('x coordinate copied to clipboard')
             except TypeError:

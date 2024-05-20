@@ -1,0 +1,290 @@
+############
+# Spectrum #
+############
+Can only be empty (s.x = None and s.y = None) or it must be an array with len(s.x) > 0 where len(s.x) = len(s.y).
+
+Uppon setting s.x = None, it will "reset" s.x to a default array from 0 to len(s.y) as long as len(s.y) > 0. If s.y = None, then s.x = None.
+
+Did I check what happens when s.x = None:
+
+=== core attrs ===
+x yes
+y yes
+
+=== computed attrs ===
+data yes
+
+=== write attrs ===
+
+=== modifier attrs ===
+
+=== magic ===
+__setattr__ yes
+__len__ yes
+
+=== attrs ===
+
+=== attrs 2 ===
+
+=== support ===
+_check_limits yes
+
+=== core methods ===
+
+=== copy ===
+_copy yes
+copy yes
+
+=== save and load ===
+save
+load
+
+=== check ===
+check_step yes
+check_monotonicity yes
+fix_monotonicity yes
+
+=== modifiers ===
+set_shift
+
+
+
+
+
+
+###########
+# Spectra #
+###########
+Can only be a list ss.data = [] with len >= 0.
+
+setting s.data = None, it will "reset" s.data to an empty list [].
+
+Did I check what happens when ss.data = None:
+
+=== core attrs ===
+data yes
+
+=== computed attrs ===
+
+=== write attrs ===
+
+=== modifier attrs ===
+
+=== magic ===
+
+=== magic ===
+
+=== attrs ===
+
+=== attrs 2 ===
+create_attr_from_spectra
+reorder_by_attr yes
+get_by_attr
+merge_duplicates yes
+interp_spectra
+
+=== support ===
+_check_limits yes
+_gather_ys yes
+
+=== core methods ===
+
+=== copy ===
+_copy yes
+copy yes
+
+=== save and load ===
+
+=== check ===
+check_monotonicity yes
+fix_monotonicity yes
+check_length yes
+check_step yes
+check_same_x yes
+
+=== modifiers ===
+set_shift
+
+=== modifiers 2 ===
+
+=== advanced ===
+merge yes
+
+
+
+
+
+
+
+
+#########
+# Image #
+#########
+Can only be None or a numpy.array with im.shape[0] > 0 and im.shape[0] > 0.
+
+Setting im.data to an empty matrix of any kind: im.data = [], im.data = [[], ], im.data = np.array([[], ]) will will "reset" im.data to None.
+
+When setting x_centers and y_centers, the attrs x_edges and y_edges are changed accordingly and vice-versa.
+
+Setting x_centers to None will "reset" x_centers to a default array from 0 to im.shape[1] as long as im.data != None. Same for y_centers, x_edges and y_edges.
+
+Did I check what happens when im.data = None:
+
+=== core attrs ===
+data yes
+x_centers yes
+y_centers yes
+x_edges yes
+y_edges yes
+
+=== computed attrs ===
+shape yes
+histogram yes
+columns yes
+rows yes
+
+=== write attrs ===
+
+=== modifier attrs ===
+
+=== magic ===
+
+=== magic ===
+
+=== attrs ===
+
+=== attrs 2 ===
+
+
+=== support ===
+_check_mask yes
+_gather_ys  yes
+
+=== core methods ===
+
+=== copy ===
+_copy yes
+copy  yes
+
+=== save and load ===
+
+=== check ===
+check_x_monotonicity yes 
+check_y_monotonicity yes
+fix_x_monotonicity yes
+fix_y_monotonicity yes
+fix_x_monotonicity yes
+fix_y_monotonicity yes
+
+
+=== modifiers ===
+set_shift
+
+
+
+
+
+
+
+
+################
+# PhotonEvents #
+################
+Can only be empty (s.x = None and s.y = None) or it must be an array with len(s.x) > 0 where len(s.x) = len(s.y).
+
+Uppon setting s.x = None, it will "reset" s.x and s.y to None, as well as xlim and ylim. 
+
+xlim and ylim can be None or a tuple with two elements (min, max).
+
+Did I check what happens when s.x = None:
+
+=== core attrs ===
+x yes
+y yes
+xlim yes
+ylim yes
+
+=== computed attrs ===
+data yes
+
+=== write attrs ===
+
+=== modifier attrs ===
+
+=== magic ===
+
+=== magic ===
+
+=== attrs ===
+
+=== attrs 2 ===
+
+
+=== support ===
+_check_mask yes
+
+=== core methods ===
+
+=== copy ===
+_copy yes
+copy yes
+clip yes
+
+=== save and load ===
+
+=== check ===
+
+=== modifiers ===
+
+
+=== modifiers 2 ===
+
+=== advanced ===
+
+
+=== plot ===
+plot yes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
