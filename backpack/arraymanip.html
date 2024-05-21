@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>backpack.arraymanip &mdash; brixs 0.9.6 documentation</title>
+  <title>backpack.arraymanip &mdash; brixs 0.9.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -16,7 +16,7 @@
   
         <script src="../_static/jquery.js?v=5d32c60e"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=564a08b9"></script>
+        <script src="../_static/documentation_options.js?v=f2328ca0"></script>
         <script src="../_static/doctools.js?v=9a2dae69"></script>
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -293,32 +293,35 @@ array which is closest to value.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="brixs.backpack.arraymanip.choose">
-<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">choose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.choose" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">choose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.choose" title="Link to this definition"></a></dt>
 <dd><p>Return a mask of x values inside range pairs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1d array.</p></li>
-<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+<li><p><strong>limits</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
 the start and stop of a data range from x. [[xi, xf], [xi_2, xf_2], …]</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>1d list.</p>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – if limits have overlapping intervals</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>1d list.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="brixs.backpack.arraymanip.extract">
-<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">extract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.extract" title="Link to this definition"></a></dt>
-<dd><p>Returns specific data ranges from x and y.</p>
+<span class="sig-prename descclassname"><span class="pre">brixs.backpack.arraymanip.</span></span><span class="sig-name descname"><span class="pre">extract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.backpack.arraymanip.extract" title="Link to this definition"></a></dt>
+<dd><p>Returns specific data limits from x and y.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>x</strong> (<em>list</em><em> or </em><em>array</em>) – 1D reference vector.</p></li>
 <li><p><strong>y</strong> (<em>list</em><em> or </em><em>array</em>) – 1D y-coordinates or list of several data sets.</p></li>
-<li><p><strong>ranges</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
+<li><p><strong>limits</strong> (<em>list</em>) – a pair of values or a list of pairs. Each pair represents
 the start and stop of a data range from x.</p></li>
 <li><p><strong>invert</strong> (<em>bool</em><em>, </em><em>optional</em>) – if inverted is True, data outside of the data
 will be returned. Default is False.</p></li>

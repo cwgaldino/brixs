@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>brixs.Image &mdash; brixs 0.9.6 documentation</title>
+  <title>brixs.Image &mdash; brixs 0.9.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -16,7 +16,7 @@
   
         <script src="../_static/jquery.js?v=5d32c60e"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=564a08b9"></script>
+        <script src="../_static/documentation_options.js?v=f2328ca0"></script>
         <script src="../_static/doctools.js?v=9a2dae69"></script>
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -71,16 +71,10 @@
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_factor"><code class="docutils literal notranslate"><span class="pre">Image.set_factor()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_horizontal_shift"><code class="docutils literal notranslate"><span class="pre">Image.set_horizontal_shift()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_vertical_shift"><code class="docutils literal notranslate"><span class="pre">Image.set_vertical_shift()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_horizontal_roll"><code class="docutils literal notranslate"><span class="pre">Image.set_horizontal_roll()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_vertical_roll"><code class="docutils literal notranslate"><span class="pre">Image.set_vertical_roll()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_horizontal_shift_via_polyval"><code class="docutils literal notranslate"><span class="pre">Image.set_horizontal_shift_via_polyval()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_vertical_shift_via_polyval"><code class="docutils literal notranslate"><span class="pre">Image.set_vertical_shift_via_polyval()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_vertical_shift_via_function"><code class="docutils literal notranslate"><span class="pre">Image.set_vertical_shift_via_function()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_horizontal_shift_via_function"><code class="docutils literal notranslate"><span class="pre">Image.set_horizontal_shift_via_function()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_horizontal_roll_via_polyval"><code class="docutils literal notranslate"><span class="pre">Image.set_horizontal_roll_via_polyval()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_vertical_roll_via_polyval"><code class="docutils literal notranslate"><span class="pre">Image.set_vertical_roll_via_polyval()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_vertical_roll_via_function"><code class="docutils literal notranslate"><span class="pre">Image.set_vertical_roll_via_function()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.set_horizontal_roll_via_function"><code class="docutils literal notranslate"><span class="pre">Image.set_horizontal_roll_via_function()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.floor"><code class="docutils literal notranslate"><span class="pre">Image.floor()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.crop"><code class="docutils literal notranslate"><span class="pre">Image.crop()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.transpose"><code class="docutils literal notranslate"><span class="pre">Image.transpose()</span></code></a></li>
@@ -95,16 +89,10 @@
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.possible_nbins"><code class="docutils literal notranslate"><span class="pre">Image.possible_nbins()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_horizontal_shift"><code class="docutils literal notranslate"><span class="pre">Image.calculate_horizontal_shift()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_vertical_shift"><code class="docutils literal notranslate"><span class="pre">Image.calculate_vertical_shift()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_horizontal_roll"><code class="docutils literal notranslate"><span class="pre">Image.calculate_horizontal_roll()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_vertical_roll"><code class="docutils literal notranslate"><span class="pre">Image.calculate_vertical_roll()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_vertical_shift_curvature"><code class="docutils literal notranslate"><span class="pre">Image.calculate_vertical_shift_curvature()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_horizontal_shift_curvature"><code class="docutils literal notranslate"><span class="pre">Image.calculate_horizontal_shift_curvature()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_vertical_roll_curvature"><code class="docutils literal notranslate"><span class="pre">Image.calculate_vertical_roll_curvature()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.calculate_horizontal_roll_curvature"><code class="docutils literal notranslate"><span class="pre">Image.calculate_horizontal_roll_curvature()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.fix_vertical_shift_curvature"><code class="docutils literal notranslate"><span class="pre">Image.fix_vertical_shift_curvature()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.fix_horizontal_shift_curvature"><code class="docutils literal notranslate"><span class="pre">Image.fix_horizontal_shift_curvature()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.fix_vertical_roll_curvature"><code class="docutils literal notranslate"><span class="pre">Image.fix_vertical_roll_curvature()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#brixs.Image.fix_horizontal_roll_curvature"><code class="docutils literal notranslate"><span class="pre">Image.fix_horizontal_roll_curvature()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.pcolormesh"><code class="docutils literal notranslate"><span class="pre">Image.pcolormesh()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.imshow"><code class="docutils literal notranslate"><span class="pre">Image.imshow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#brixs.Image.plot"><code class="docutils literal notranslate"><span class="pre">Image.plot()</span></code></a></li>
@@ -154,8 +142,10 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – list of <code class="xref py py-class docutils literal notranslate"><span class="pre">spectrum</span></code> objects.</p></li>
 <li><p><strong>filepath</strong> (<em>str</em><em> or </em><em>Path</em><em>, </em><em>optional</em>) – filepath.</p></li>
-<li><p><strong>x_centers</strong> – (list, optional): pixel center labels.</p></li>
-<li><p><strong>y_centers</strong> – (list, optional): pixel center labels.</p></li>
+<li><p><strong>x_centers</strong> – (list, optional): pixel center labels. <cite>x_centers</cite>
+from left to right and <cite>y_centers</cite> from top to bottom.</p></li>
+<li><p><strong>y_centers</strong> – (list, optional): pixel center labels. <cite>x_centers</cite>
+from left to right and <cite>y_centers</cite> from top to bottom.</p></li>
 <li><p><strong>**kwargs</strong> – kwargs are passed to <a class="reference internal" href="#brixs.Image.load" title="brixs.Image.load"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.load()</span></code></a> function.</p></li>
 </ul>
 </dd>
@@ -259,8 +249,10 @@ indicate the edge of the image.</p></li>
 <p class="admonition-title">Warning</p>
 <p>Attrs are saved as comments if only_data is False. Saving attrs to file
 is not always reliable because requires converting variables to string.
-Only attrs that are of type: string, number, and list of number and strings are
-saved somewhat correctly. Dictionaries are not saved.</p>
+Only attrs that are of type: string, number, and list of number,</p>
+<blockquote>
+<div><p>list of list of number and strings have been tested. Dictionaries are not saved.</p>
+</div></blockquote>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -473,8 +465,8 @@ x vector, it sets <code class="xref py py-attr docutils literal notranslate"><sp
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mode</strong> (<em>str</em><em>, </em><em>optional</em>) – increasing or decreasing.</p></li>
-<li><p><strong>attrs2reorder</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – list of aditional Image attrs that</p></li>
-<li><p><strong>centers.</strong> (<em>must also be sorted based on the x</em>)</p></li>
+<li><p><strong>attrs2reorder</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – list of aditional Image attrs that
+must also be sorted based on the x centers.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -568,7 +560,7 @@ bottom) and so on.</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#brixs.Image.set_horizontal_roll" title="brixs.Image.set_horizontal_roll"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_roll()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_vertical_roll" title="brixs.Image.set_vertical_roll"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_roll()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_vertical_shift" title="brixs.Image.set_vertical_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_shift()</span></code></a></p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_roll()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_roll()</span></code>, <a class="reference internal" href="#brixs.Image.set_vertical_shift" title="brixs.Image.set_vertical_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_shift()</span></code></a></p>
 </div>
 </dd></dl>
 
@@ -600,79 +592,7 @@ bottom) and so on.</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#brixs.Image.set_horizontal_roll" title="brixs.Image.set_horizontal_roll"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_roll()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_vertical_roll" title="brixs.Image.set_vertical_roll"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_roll()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_horizontal_shift" title="brixs.Image.set_horizontal_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_shift()</span></code></a></p>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.set_horizontal_roll">
-<span class="sig-name descname"><span class="pre">set_horizontal_roll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_horizontal_roll" title="Link to this definition"></a></dt>
-<dd><p>Roll pixels rows left and right.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<dl class="simple">
-<dt>Elements that roll beyond the last position are re-introduced at the</dt><dd><p>other side.</p>
-</dd>
-</dl>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Roll values must be an integer. Float values will be rounded to int.</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>value</strong> (<em>int</em><em> or </em><em>list</em>) – <p>The number of pixels by which the data are
-shifted. If list, then it must be of the same size as the number of</p>
-<blockquote>
-<div><p>rows. First element will be assigned to the first row (top to
-bottom) and so on. If elements are not int, it will rounded to
-an integer value.</p>
-</div></blockquote>
-</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
-</dd>
-</dl>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#brixs.Image.set_vertical_shift" title="brixs.Image.set_vertical_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_shift()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_vertical_roll" title="brixs.Image.set_vertical_roll"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_roll()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_horizontal_shift" title="brixs.Image.set_horizontal_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_shift()</span></code></a></p>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.set_vertical_roll">
-<span class="sig-name descname"><span class="pre">set_vertical_roll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_vertical_roll" title="Link to this definition"></a></dt>
-<dd><p>Roll pixels columns up and down.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<dl class="simple">
-<dt>Elements that roll beyond the last position are re-introduced at the</dt><dd><p>other side.</p>
-</dd>
-</dl>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Roll values must be an integer. Float values will be rounded to int.</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>value</strong> (<em>int</em><em> or </em><em>list</em>) – <p>The number of pixels by which the data are
-shifted. If list, then it must be of the same size as the number of</p>
-<blockquote>
-<div><p>columns. First element will be assigned to the first column (left to
-right) and so on. If elements are not int, it will rounded to
-an integer value.</p>
-</div></blockquote>
-</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
-</dd>
-</dl>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#brixs.Image.set_horizontal_roll" title="brixs.Image.set_horizontal_roll"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_roll()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_vertical_shift" title="brixs.Image.set_vertical_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_shift()</span></code></a>, <a class="reference internal" href="#brixs.Image.set_horizontal_shift" title="brixs.Image.set_horizontal_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_shift()</span></code></a></p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_roll()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_vertical_roll()</span></code>, <a class="reference internal" href="#brixs.Image.set_horizontal_shift" title="brixs.Image.set_horizontal_shift"><code class="xref py py-func docutils literal notranslate"><span class="pre">Image.set_horizontal_shift()</span></code></a></p>
 </div>
 </dd></dl>
 
@@ -726,66 +646,6 @@ term.</p>
 <dt class="sig sig-object py" id="brixs.Image.set_horizontal_shift_via_function">
 <span class="sig-name descname"><span class="pre">set_horizontal_shift_via_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_horizontal_shift_via_function" title="Link to this definition"></a></dt>
 <dd><p>Set horizontal shift values to f(y_center).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>f</strong> (<em>function</em>) – function where argument is y centers elements</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.set_horizontal_roll_via_polyval">
-<span class="sig-name descname"><span class="pre">set_horizontal_roll_via_polyval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_horizontal_roll_via_polyval" title="Link to this definition"></a></dt>
-<dd><p>Set horizontal roll to np.polyval(p, y pixel).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>p</strong> (<em>array</em>) – 1D array of polynomial coefficients (including
-coefficients equal to zero) from highest degree to the constant
-term.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.set_vertical_roll_via_polyval">
-<span class="sig-name descname"><span class="pre">set_vertical_roll_via_polyval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_vertical_roll_via_polyval" title="Link to this definition"></a></dt>
-<dd><p>Set vertical roll to np.polyval(p, x pixel).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>p</strong> (<em>array</em>) – 1D array of polynomial coefficients (including
-coefficients equal to zero) from highest degree to the constant
-term.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.set_vertical_roll_via_function">
-<span class="sig-name descname"><span class="pre">set_vertical_roll_via_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_vertical_roll_via_function" title="Link to this definition"></a></dt>
-<dd><p>Set vertical roll to f(x pixel).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>f</strong> (<em>function</em>) – function where argument is x centers elements</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.set_horizontal_roll_via_function">
-<span class="sig-name descname"><span class="pre">set_horizontal_roll_via_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.set_horizontal_roll_via_function" title="Link to this definition"></a></dt>
-<dd><p>Set horizontal roll to f(y pixel).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>f</strong> (<em>function</em>) – function where argument is y centers elements</p>
@@ -1021,10 +881,10 @@ calculated against previous row.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 <li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
 cross-corelation for unusualy big images. If axis = 0 (1), it
 ensures that the number of columns (rows) is not bigger than
@@ -1059,86 +919,10 @@ calculated against previous column.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
-<li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
-cross-corelation for unusualy big images. If axis = 0 (1), it
-ensures that the number of columns (rows) is not bigger than
-limit_size. Default is 1000. Set to False to bypass this limit.</p></li>
-<li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>list</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.calculate_horizontal_roll">
-<span class="sig-name descname"><span class="pre">calculate_horizontal_roll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.calculate_horizontal_roll" title="Link to this definition"></a></dt>
-<dd><p>Calculate intensity misalignments in terms of pixel roll.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <p>method used. Options are:</p>
-<p>1) ‘cc’: align rows via cross-correlation (cc), where cc for
-all spectra is calculated against the frist spectrum.</p>
-<p>2) ‘seq’: align via ‘cros-correlation’ (cc), where cc is
-calculated against previous row.</p>
-<ol class="arabic simple" start="3">
-<li><p>’max’: Align the max point of every row.</p></li>
-</ol>
-<p>4) ‘peak’: Fit one peak in each row and align them
-(requires that <cite>brixs.addons.fitting</cite> is imported)</p>
-</p></li>
-<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
-of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
-this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
-<li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
-cross-corelation for unusualy big images. If axis = 0 (1), it
-ensures that the number of columns (rows) is not bigger than
-limit_size. Default is 1000. Set to False to bypass this limit.</p></li>
-<li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>list</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.calculate_vertical_roll">
-<span class="sig-name descname"><span class="pre">calculate_vertical_roll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.calculate_vertical_roll" title="Link to this definition"></a></dt>
-<dd><p>Calculate intensity misalignments in terms of pixel roll.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <p>method used. Options are:</p>
-<p>1) ‘cc’: align columns via cross-correlation (cc), where cc for
-all spectra is calculated against the frist spectrum.</p>
-<p>2) ‘seq’: align via ‘cros-correlation’ (cc), where cc is
-calculated against previous column.</p>
-<ol class="arabic simple" start="3">
-<li><p>’max’: Align the max point of every column.</p></li>
-</ol>
-<p>4) ‘peak’: Fit one peak in each column and align them
-(requires that <cite>brixs.addons.fitting</cite> is imported)</p>
-</p></li>
-<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
-of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
-this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 <li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
 cross-corelation for unusualy big images. If axis = 0 (1), it
 ensures that the number of columns (rows) is not bigger than
@@ -1206,106 +990,6 @@ the constant term.</p>
 <dt class="sig sig-object py" id="brixs.Image.calculate_horizontal_shift_curvature">
 <span class="sig-name descname"><span class="pre">calculate_horizontal_shift_curvature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.calculate_horizontal_shift_curvature" title="Link to this definition"></a></dt>
 <dd><p>Calculate horizontal shift values to fix curvature.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>deg</strong> (<em>int</em><em>, </em><em>optional</em>) – Degree of the curvature fitting polynomial.
-Default is 2.</p></li>
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <p>method used. Options are:</p>
-<p>1) ‘cc’: align rows via cross-correlation (cc), where cc for
-all spectra is calculated against the frist spectrum.</p>
-<p>2) ‘seq’: align via ‘cros-correlation’ (cc), where cc is
-calculated against previous row.</p>
-<ol class="arabic simple" start="3">
-<li><p>’max’: Align the max point of every row.</p></li>
-</ol>
-<p>4) ‘peak’: Fit one peak in each row and align them
-(requires that <cite>brixs.addons.fitting</cite> is imported)</p>
-</p></li>
-<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – x center pair of values <cite>(x_start, x_stop)</cite>, a list
-of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
-this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
-<li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
-cross-corelation for unusualy big images. If axis = 0 (1), it
-ensures that the number of columns (rows) is not bigger than
-limit_size. Default is 1000. Set to False to bypass this limit.</p></li>
-<li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>s, fit, popt, R2, model</p>
-<p>s (spectrum): spectrum with shift values vs y centers</p>
-<p>fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points</p>
-<dl class="simple">
-<dt>popt (np.array): 1D array of polynomial coefficients</dt><dd><p>(including coefficients equal to zero) from highest degree to
-the constant term.</p>
-</dd>
-</dl>
-<p>R2 (number): R2 error</p>
-<p>model (function): funcion f(y_centers)</p>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.calculate_vertical_roll_curvature">
-<span class="sig-name descname"><span class="pre">calculate_vertical_roll_curvature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.calculate_vertical_roll_curvature" title="Link to this definition"></a></dt>
-<dd><p>Calculate vertical roll values to fix curvature.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>deg</strong> (<em>int</em><em>, </em><em>optional</em>) – Degree of the curvature fitting polynomial.
-Default is 2.</p></li>
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <p>method used. Options are:</p>
-<p>1) ‘cc’: align columns via cross-correlation (cc), where cc for
-all spectra is calculated against the frist spectrum.</p>
-<p>2) ‘seq’: align via ‘cros-correlation’ (cc), where cc is
-calculated against previous column.</p>
-<ol class="arabic simple" start="3">
-<li><p>’max’: Align the max point of every column.</p></li>
-</ol>
-<p>4) ‘peak’: Fit one peak in each column and align them
-(requires that <cite>brixs.addons.fitting</cite> is imported)</p>
-</p></li>
-<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – y center pair of values <cite>(y_start, y_stop)</cite>, a list
-of pairs <cite>((yi_1, yf_1), (yi_2, yf_2), …)</cite>, or None. If None,
-this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>y_start = None</cite> or <cite>y_stop = None</cite> to indicate the minimum or
-maximum y value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
-<li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
-cross-corelation for unusualy big images. If axis = 0 (1), it
-ensures that the number of columns (rows) is not bigger than
-limit_size. Default is 1000. Set to False to bypass this limit.</p></li>
-<li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>s, fit, popt, R2, model</p>
-<p>s (spectrum): spectrum with shift values vs x centers</p>
-<p>fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points</p>
-<dl class="simple">
-<dt>popt (np.array): 1D array of polynomial coefficients</dt><dd><p>(including coefficients equal to zero) from highest degree to
-the constant term.</p>
-</dd>
-</dl>
-<p>R2 (number): R2 error</p>
-<p>model (function): funcion f(x_centers)</p>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.calculate_horizontal_roll_curvature">
-<span class="sig-name descname"><span class="pre">calculate_horizontal_roll_curvature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.calculate_horizontal_roll_curvature" title="Link to this definition"></a></dt>
-<dd><p>Calculate horizontal roll values to fix curvature.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1453,106 +1137,6 @@ the constant term.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.fix_vertical_roll_curvature">
-<span class="sig-name descname"><span class="pre">fix_vertical_roll_curvature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.fix_vertical_roll_curvature" title="Link to this definition"></a></dt>
-<dd><p>Roll column of pixels to fix curvature.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>deg</strong> (<em>int</em><em>, </em><em>optional</em>) – Degree of the curvature fitting polynomial.
-Default is 2.</p></li>
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <p>method used. Options are:</p>
-<p>1) ‘cc’: align columns via cross-correlation (cc), where cc for
-all spectra is calculated against the frist spectrum.</p>
-<p>2) ‘seq’: align via ‘cros-correlation’ (cc), where cc is
-calculated against previous column.</p>
-<ol class="arabic simple" start="3">
-<li><p>’max’: Align the max point of every column.</p></li>
-</ol>
-<p>4) ‘peak’: Fit one peak in each column and align them
-(requires that <cite>brixs.addons.fitting</cite> is imported)</p>
-</p></li>
-<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – y center pair of values <cite>(y_start, y_stop)</cite>, a list
-of pairs <cite>((yi_1, yf_1), (yi_2, yf_2), …)</cite>, or None. If None,
-this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>y_start = None</cite> or <cite>y_stop = None</cite> to indicate the minimum or
-maximum y value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
-<li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
-cross-corelation for unusualy big images. If axis = 0 (1), it
-ensures that the number of columns (rows) is not bigger than
-limit_size. Default is 1000. Set to False to bypass this limit.</p></li>
-<li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>s, fit, popt, R2, model</p>
-<p>s (spectrum): spectrum with shift values vs x centers</p>
-<p>fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points</p>
-<dl class="simple">
-<dt>popt (np.array): 1D array of polynomial coefficients</dt><dd><p>(including coefficients equal to zero) from highest degree to
-the constant term.</p>
-</dd>
-</dl>
-<p>R2 (number): R2 error</p>
-<p>model (function): funcion f(x_centers)</p>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="brixs.Image.fix_horizontal_roll_curvature">
-<span class="sig-name descname"><span class="pre">fix_horizontal_roll_curvature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cc'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.fix_horizontal_roll_curvature" title="Link to this definition"></a></dt>
-<dd><p>Roll row of pixels to fix curvature.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>deg</strong> (<em>int</em><em>, </em><em>optional</em>) – Degree of the curvature fitting polynomial.
-Default is 2.</p></li>
-<li><p><strong>mode</strong> (<em>string</em><em>, </em><em>optional</em>) – <p>method used. Options are:</p>
-<p>1) ‘cc’: align rows via cross-correlation (cc), where cc for
-all spectra is calculated against the frist spectrum.</p>
-<p>2) ‘seq’: align via ‘cros-correlation’ (cc), where cc is
-calculated against previous row.</p>
-<ol class="arabic simple" start="3">
-<li><p>’max’: Align the max point of every row.</p></li>
-</ol>
-<p>4) ‘peak’: Fit one peak in each row and align them
-(requires that <cite>brixs.addons.fitting</cite> is imported)</p>
-</p></li>
-<li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – x center pair of values <cite>(x_start, x_stop)</cite>, a list
-of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
-this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
-<li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
-cross-corelation for unusualy big images. If axis = 0 (1), it
-ensures that the number of columns (rows) is not bigger than
-limit_size. Default is 1000. Set to False to bypass this limit.</p></li>
-<li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>s, fit, popt, R2, model</p>
-<p>s (spectrum): spectrum with shift values vs y centers</p>
-<p>fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points</p>
-<dl class="simple">
-<dt>popt (np.array): 1D array of polynomial coefficients</dt><dd><p>(including coefficients equal to zero) from highest degree to
-the constant term.</p>
-</dd>
-</dl>
-<p>R2 (number): R2 error</p>
-<p>model (function): funcion f(y_centers)</p>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="brixs.Image.pcolormesh">
 <span class="sig-name descname"><span class="pre">pcolormesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colorbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.pcolormesh" title="Link to this definition"></a></dt>
 <dd><p>Display data as a mesh. Wrapper for <a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html">matplotlib.pyplot.pcolormesh()</a>.</p>
@@ -1590,7 +1174,7 @@ intensity drops below 0.01 % of the maximum.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="brixs.Image.imshow">
-<span class="sig-name descname"><span class="pre">imshow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colorbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lower'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.imshow" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">imshow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colorbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'upper'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.imshow" title="Link to this definition"></a></dt>
 <dd><p>Display data as an image. Wrapper for <a class="reference external" href="https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html">matplotlib.pyplot.imshow()</a>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -1655,7 +1239,7 @@ intensity drops below 0.01 % of the maximum.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="brixs.Image.plot">
-<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colorbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lower'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.plot" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colorbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'upper'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.Image.plot" title="Link to this definition"></a></dt>
 <dd><p>Display data as an image with axis based on x and y centers. Wrapper for <a class="reference external" href="https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html">matplotlib.pyplot.imshow()</a>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>

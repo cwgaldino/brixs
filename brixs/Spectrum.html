@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spectrum &mdash; brixs 0.9.6 documentation</title>
+  <title>Spectrum &mdash; brixs 0.9.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -16,7 +16,7 @@
   
         <script src="../_static/jquery.js?v=5d32c60e"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=564a08b9"></script>
+        <script src="../_static/documentation_options.js?v=f2328ca0"></script>
         <script src="../_static/doctools.js?v=9a2dae69"></script>
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -215,10 +215,10 @@ to copy user defined attributes from.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectrum</span></code></a></p>
@@ -234,8 +234,10 @@ an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 <p class="admonition-title">Warning</p>
 <p>Attrs are saved as comments if only_data is False. Saving attrs to file
 is not always reliable because requires converting variables to string.
-Only attrs that are of type: string, number, and list of number and strings are
-saved somewhat correctly. Dictionaries are not saved.</p>
+Only attrs that are of type: string, number, and list of number,</p>
+<blockquote>
+<div><p>list of list of number and strings have been tested. Dictionaries are not saved.</p>
+</div></blockquote>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -395,8 +397,14 @@ x vector, it sets <code class="xref py py-attr docutils literal notranslate"><sp
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>mode</strong> (<em>str</em><em>, </em><em>optional</em>) – increasing or decreasing.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>duplicated datapoints are averaged.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -559,10 +567,10 @@ term.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectrum</span></code></a></p>
@@ -581,10 +589,10 @@ an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -714,10 +722,10 @@ x will be used.</p></li>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#brixs.Spectrum" title="brixs.Spectrum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectrum</span></code></a></p>
@@ -756,10 +764,10 @@ between 0 and 10 and between 90 and 100 separately.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>number</p>
@@ -783,10 +791,10 @@ an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>number</p>
@@ -810,10 +818,10 @@ an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>number</p>
@@ -837,10 +845,10 @@ an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>number</p>
@@ -864,10 +872,10 @@ an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 <dd class="field-odd"><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>number</p>
@@ -902,10 +910,10 @@ that the x-coordinates reflect this experimental condition.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 <li><p><strong>**kwargs</strong> (<em>dict</em>) – kwargs to be passed to ss.fit_peak() function when <cite>mode=’peak’</cite></p></li>
 </ul>
 </dd>
@@ -938,10 +946,10 @@ s.R2    = R2 factor of the fitting.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

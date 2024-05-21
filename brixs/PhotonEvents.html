@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PhotonEvents &mdash; brixs 0.9.6 documentation</title>
+  <title>PhotonEvents &mdash; brixs 0.9.7 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -16,7 +16,7 @@
   
         <script src="../_static/jquery.js?v=5d32c60e"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=564a08b9"></script>
+        <script src="../_static/documentation_options.js?v=f2328ca0"></script>
         <script src="../_static/doctools.js?v=9a2dae69"></script>
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
         <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -192,7 +192,7 @@ to copy user defined attributes from.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="brixs.PhotonEvents.copy">
-<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.copy" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attrs2crop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.copy" title="Link to this definition"></a></dt>
 <dd><p>Return a copy of the object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -209,6 +209,9 @@ indicate the edge of the image.</p></li>
 <li><p><strong>y_stop</strong> (<em>int</em>) – pixel range in terms of
 x_centers and y_centers. Interval is inclusive. Use None to
 indicate the edge of the image.</p></li>
+<li><p><strong>attrs2crop</strong> (<em>None</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – list of attrs to be crop
+toghether with the data (x and y). attrs must be a list of same
+length as the number of photon events.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -219,12 +222,17 @@ indicate the edge of the image.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="brixs.PhotonEvents.clip">
-<span class="sig-name descname"><span class="pre">clip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.clip" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">clip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attrs2clip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.clip" title="Link to this definition"></a></dt>
 <dd><p>Return a masked copy of the object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>mask</strong> (<em>list</em>) – list with rectangular coordinates <cite>(x_start, x_stop, y_start, y_stop)</cite>
-or a list with multiple rectangular coordinates, i.e., <cite>[(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), …])</cite></p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask</strong> (<em>list</em>) – list with rectangular coordinates <cite>(x_start, x_stop, y_start, y_stop)</cite>
+or a list with multiple rectangular coordinates, i.e., <cite>[(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), …])</cite></p></li>
+<li><p><strong>attrs2clip</strong> (<em>None</em><em> or </em><em>list</em><em>, </em><em>optional</em>) – list of attrs to be cliped
+toghether with the data (x and y). attrs must be a list of same
+length as the number of photon events.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-attr docutils literal notranslate"><span class="pre">PhotonEvents</span></code></a></p>
@@ -240,8 +248,10 @@ or a list with multiple rectangular coordinates, i.e., <cite>[(x1_start, x1_stop
 <p class="admonition-title">Warning</p>
 <p>Attrs are saved as comments if only_data is False. Saving attrs to file
 is not always reliable because requires converting variables to string.
-Only attrs that are of type: string, number, and list of number and strings are
-saved somewhat correctly. Dictionaries are not saved.</p>
+Only attrs that are of type: string, number, and list of number,</p>
+<blockquote>
+<div><p>list of list of number and strings have been tested. Dictionaries are not saved.</p>
+</div></blockquote>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -334,8 +344,14 @@ shifted. If list, then it must be of the same size as the number of</p>
 </div></blockquote>
 </p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhotonEvents</span></code></a></p>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>pe.xlim is set to None.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhotonEvents</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -353,8 +369,14 @@ shifted. If list, then it must be of the same size as the number of</p>
 </div></blockquote>
 </p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhotonEvents</span></code></a></p>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>pe.ylim is set to None.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#brixs.PhotonEvents" title="brixs.PhotonEvents"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhotonEvents</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -369,8 +391,14 @@ shifted. If list, then it must be of the same size as the number of</p>
 coefficients equal to zero) from highest degree to the constant
 term.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>pe.xlim is set to None.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -385,8 +413,14 @@ term.</p>
 coefficients equal to zero) from highest degree to the constant
 term.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>pe.ylim is set to None.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -399,8 +433,14 @@ term.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>f</strong> (<em>function</em>) – function where argument is x coordinates</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>pe.ylim is set to None.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -413,8 +453,14 @@ term.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>f</strong> (<em>function</em>) – function where argument is y coordinates</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>pe.xlim is set to None.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="Image.html#brixs.Image" title="brixs.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">Image</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -547,10 +593,10 @@ calculated against previous column.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 <li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
 cross-corelation for unusualy big images. If axis = 0 (1), it
 ensures that the number of columns (rows) is not bigger than
@@ -587,10 +633,10 @@ calculated against previous row.</p>
 <li><p><strong>limits</strong> (<em>None</em><em> or </em><em>list</em>) – a pair of values <cite>(x_start, x_stop)</cite>, a list
 of pairs <cite>((xi_1, xf_1), (xi_2, xf_2), …)</cite>, or None. If None,
 this function simply returns None. If pairs, each pair
-represents the start and stop of a data range from x. Use
-<cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate the minimum or
-maximum x value of the data, respectively. If limits = [], i.e.,
-an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
+represents the start and stop of a data range from x. Limits are
+inclusive. Use <cite>x_start = None</cite> or <cite>x_stop = None</cite> to indicate
+the minimum or maximum x value of the data, respectively. If
+limits = [], i.e., an empty list, it assumes <cite>limits = (None, None)</cite>.</p></li>
 <li><p><strong>limit_size</strong> (<em>int</em><em> or </em><em>False</em><em>, </em><em>optional</em>) – prevents from mistakenly calculating
 cross-corelation for unusualy big images. If axis = 0 (1), it
 ensures that the number of columns (rows) is not bigger than
@@ -814,13 +860,15 @@ the constant term.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="brixs.PhotonEvents.plot">
-<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.plot" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_limits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#brixs.PhotonEvents.plot" title="Link to this definition"></a></dt>
 <dd><p>Display data as an image. Wrapper for <a class="reference external" href="https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.scatter.html">matplotlib.pyplot.scatter()</a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>ax</strong> (<em>matplotlib.axes</em><em>, </em><em>optional</em>) – axes for plotting on.</p></li>
 <li><p><strong>s</strong> (<em>number</em><em>, </em><em>optional</em>) – The marker size in points**2. Default is 0.1.</p></li>
+<li><p><strong>show_limits</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True and pe.xlim and pe.ylim are
+defined, it will draw a grey rectangle around xlim and ylim.</p></li>
 <li><p><strong>x_start</strong> (<em>int</em>) – pixel range in terms of
 x_centers and y_centers. Interval is inclusive. Use None to
 indicate the edge of the image.</p></li>
