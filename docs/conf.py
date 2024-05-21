@@ -14,7 +14,7 @@ import sphinx_rtd_theme
 project = 'brixs'
 copyright = '2024, Carlos Galdino'
 author = 'Carlos Galdino'
-release = '0.9.6'
+release = '0.9.7'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

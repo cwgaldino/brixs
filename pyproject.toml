@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "brixs"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = ["numpy >= 1.15", "matplotlib>=3.4"]
 requires-python = ">=3.7"
 authors = [
