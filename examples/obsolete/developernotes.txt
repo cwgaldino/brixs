@@ -1,3 +1,12 @@
+All
+- see if Parent class works for PhotonEvents. If it does, expand it to other objects. Also, maybe try and include pe.get_core_attrs() to the parent class.
+
+PhotonEvents
+- pe._copy(): we could use eval to use list comprhension to crop the photon events and the attrs2crop simuteniously. I think execution would be much faster this way.
+
+- pe2 = pe.copy() and pe2=pe.clip() copy xlim and ylim from pe. Maybe we should update these based on the mask given. Not sure if this is the best because the user can pass ubsurdly larg masks to avoid croping data and that would mess up the limits.
+
+
 ############
 # Spectrum #
 ############

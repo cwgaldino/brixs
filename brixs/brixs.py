@@ -91,6 +91,50 @@ class _Meta(type):
                 new_attrs[name] = value
 
         return type(class_name, bases, new_attrs)
+
+class _BrixsObject(object): 
+    """Parent class defining common attrs and methods"""   
+    #########
+    # attrs #
+    #########       
+    def get_attrs(self):
+        """return attrs that are user defined.""" 
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+    
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words}
+
+    def get_methods(self):
+        """return a list of methods available"""
+        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
+    
+    def remove_attrs(self):
+        """Delete all user defined attrs."""
+        for attr in self.get_attrs():
+            self.__delattr__(attr)
+
+    def copy_attrs_from(self, s):
+        """Copy user defined attributes from another brixs object.
+
+        Args:
+            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
+                to copy user defined attributes from.
+        
+        Returns:
+            None
+        """
+        # check type
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
+
+        # transfer attrs
+        for attr in s.get_attrs():
+            value = copy.deepcopy(s.__dict__[attr])
+            self.__setattr__(attr, value)
+
 # %%
 
 # %% ========================= common support functions =================== %% #
@@ -7537,7 +7581,7 @@ class Image(metaclass=_Meta):
         return pos
 
 # %% ============================= PhotonEvents =========================== %% #
-class PhotonEvents(metaclass=_Meta):
+class PhotonEvents(_BrixsObject, metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
     Args:
@@ -7845,55 +7889,13 @@ class PhotonEvents(metaclass=_Meta):
             self._y = np.delete(self.y, item)
         else:
             raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
-            
+              
     #########
     # attrs #
+    #########
     def get_core_attrs(self): 
         """return a list of core attrs"""
         return settings._reserved_words['PhotonEvents']['pseudovars']
-       
-    def get_attrs(self):
-        """return attrs that are user defined.""" 
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
-    
-    def get_attrs_dict(self):
-        """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words}
-
-    def get_methods(self):
-        """return a list of methods available"""
-        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
-    
-    def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in self.get_attrs():
-            self.__delattr__(attr)
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
-    ###########
-    # attrs 2 #
-    ###########
-    pass
 
     ###########
     # support #
@@ -7975,7 +7977,6 @@ class PhotonEvents(metaclass=_Meta):
             final.append((temp[0], temp[1], temp[2], temp[3]))   
         return final
 
-
     ################
     # core methods #
     ################
@@ -7984,7 +7985,7 @@ class PhotonEvents(metaclass=_Meta):
     ########
     # copy #
     ########
-    def _copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+    def _copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None, attrs2crop=None):
         """Same as copy(), but attributes are not copied to the new object."""
         #############
         # copy data #
@@ -8035,39 +8036,80 @@ class PhotonEvents(metaclass=_Meta):
             else:
                 y_stop = self.ylim[1]
 
-        # ##################
-        # # validate input #
-        # ##################
-        # assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        # assert y_stop > y_start, f'y_start must be smaller than y_stop.'     
+        #################################
+        # assert validity of attrs2clip #
+        #################################
+        if attrs2crop is not None:
+            _attrs2crop = {}
+            assert isinstance(attrs2crop, Iterable), f'attrs2crop must be a list (Iterable), not type `{type(attrs2crop)}`'
+            for attr in attrs2crop:
+                assert hasattr(self, attr), f'attrs2crop cannot find attr `{attr}`'
+                assert isinstance(self.__getattribute__(attr), Iterable), f'cannot clip attr `{attr}`. It must be an Iterable'
+                assert len(self.__getattribute__(attr)), f'cannot clip attr `{attr}` (length={len(self.__getattribute__(attr))}) because it does not have the same lenght as the number of photon events ({len(self)})'
+                _attrs2crop[attr] = []
+
+        ##################
+        # validate input #
+        ##################
+        assert x_stop > x_start, f'x_start ({x_start}) must be smaller than x_stop ({x_stop})'
+        assert y_stop > y_start, f'y_start ({y_start}) must be smaller than y_stop ({y_stop})'     
         
         ########
         # crop #
         ########
-        temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
-        return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=(x_start, x_stop), ylim=(y_start, y_stop))
-    
-    def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
+        if attrs2crop is not None:  # exection is much slower with attrs
+            x = []
+            y = []
+            for i in range(len(self)):
+                _x = self.x[i]
+                _y = self.y[i]
+                if (_x > x_start and _x < x_stop) and (_y > y_start and _y < y_stop):
+                    x.append(_x)
+                    y.append(_y)
+                    for attr in _attrs2crop:
+                        _attrs2crop[attr].append(self.__getattribute__(attr)[i])
+            # _pe = PhotonEvents(x=x, y=y, xlim=(x_start, x_stop), ylim=(y_start, y_stop))
+            _pe = PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+            for attr in _attrs2crop:
+                _pe.__setattr__(attr, _attrs2crop[attr])
+            return _pe
+        else:
+            temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
+            # return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=(x_start, x_stop), ylim=(y_start, y_stop))
+            return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+        
+    def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None, attrs2crop=None):
         """Return a copy of the object.
 
         Args:
             x_start, x_stop, y_start, y_stop (int): pixel range in terms of
                 x_centers and y_centers. Interval is inclusive. Use None to 
                 indicate the edge of the image.
+            attrs2crop (None or list, optional): list of attrs to be crop 
+                toghether with the data (x and y). attrs must be a list of same
+                length as the number of photon events.
 
         Returns:
             :py:attr:`PhotonEvents`
         """
-        pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, attrs2crop=attrs2crop)
+        if attrs2crop is not None:
+            _attr2crop = {attr: pe.__getattribute__(attr) for attr in attrs2crop}
         pe.copy_attrs_from(self)
+        if attrs2crop is not None:
+            for attr in attrs2crop:
+                pe.__setattr__(attr, _attr2crop[attr])
         return pe
 
-    def clip(self, mask):
+    def clip(self, mask, attrs2clip=None):
         """Return a masked copy of the object.
 
         Args:
             mask (list): list with rectangular coordinates `(x_start, x_stop, y_start, y_stop)`
                 or a list with multiple rectangular coordinates, i.e., `[(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])`
+            attrs2clip (None or list, optional): list of attrs to be cliped 
+                toghether with the data (x and y). attrs must be a list of same
+                length as the number of photon events.
 
         Returns:
             :py:attr:`PhotonEvents`
@@ -8088,17 +8130,56 @@ class PhotonEvents(metaclass=_Meta):
         for m in mask:
             assert len(m) == 4, 'mask must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
         
+        #################################
+        # assert validity of attrs2clip #
+        #################################
+        if attrs2clip is not None:
+            _attrs2clip = {}
+            assert isinstance(attrs2clip, Iterable), f'attrs2clip must be a list (Iterable), not type `{type(attrs2clip)}`'
+            for attr in attrs2clip:
+                assert hasattr(self, attr), f'attrs2clip cannot find attr `{attr}`'
+                assert isinstance(self.__getattribute__(attr), Iterable), f'cannot clip attr `{attr}`. It must be an Iterable'
+                assert len(self.__getattribute__(attr)), f'cannot clip attr `{attr}` (length={len(self.__getattribute__(attr))}) because it does not have the same lenght as the number of photon events ({len(self)})'
+                _attrs2clip[attr] = []
+
         ########
         # clip #
         ########
         x = []
         y = []
+        xlim = None
+        ylim = None
         for x_start, x_stop, y_start, y_stop in mask: 
-            pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
-            x.append(pe.x)
-            y.append(pe.y)
-        pe = PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+            _pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, attrs2crop=attrs2clip)
+            if _pe.x is not None:
+                x += list(_pe.x)
+                y += list(_pe.y)
+                if attrs2clip is not None:
+                    for attr in _attrs2clip:
+                        _attrs2clip[attr] += _pe.__getattribute__(attr)
+            
+            # # fix xlim and ylim
+            # if _pe.xlim is not None:
+            #     if xlim is None: xlim = list(_pe.xlim)
+            #     if _pe.xlim[0] < xlim[0]: xlim[0] = _pe.xlim[0]
+            #     if _pe.xlim[1] > xlim[1]: xlim[1] = _pe.xlim[1]
+            # if _pe.ylim is not None:
+            #     if ylim is None: ylim = list(_pe.ylim)
+            #     if _pe.ylim[0] < ylim[0]: ylim[0] = _pe.ylim[0]
+            #     if _pe.ylim[1] > ylim[1]: ylim[1] = _pe.ylim[1]
+        
+        # check xlim and ylim
+        if xlim is None:
+            xlim = copy.deepcopy(self.xlim)
+        if ylim is None:
+            ylim = copy.deepcopy(self.ylim)
+
+        # final
+        pe = PhotonEvents(x=x, y=y, xlim=xlim, ylim=ylim)
         pe.copy_attrs_from(self)
+        if attrs2clip is not None:
+            for attr in _attrs2clip:
+                pe.__setattr__(attr, _attrs2clip[attr])
 
         return pe
 

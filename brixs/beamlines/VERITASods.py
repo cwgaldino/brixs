@@ -581,7 +581,7 @@ def update(*args, **kwargs):
 
                 # paste on spreadsheet
                 try:
-                    pe = VERITAS.read(filepath, scan)
+                    pe = VERITAS.read(filepath, scan, verbose=False)
 
                     # sort attrs
                     for col, attr in enumerate(header):
@@ -602,7 +602,11 @@ def update(*args, **kwargs):
                                 set_cells_data(sheet, (col, row), value)
                                 unlock_undo(doc)
                             else:
-                                pass
+                                if attr == 'error':
+                                    value = ''
+                                    lock_undo(doc)
+                                    set_cells_data(sheet, (col, row), value)
+                                    unlock_undo(doc)
                 except Exception as e:
                     for col, attr in enumerate(header):
                         if attr != '':

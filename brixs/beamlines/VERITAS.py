@@ -1029,54 +1029,7 @@ def _clip(self, mask):
     Returns:
         :py:attr:`PhotonEvents`
     """
-    ######################
-    # assert mask format #
-    ######################
-    assert isinstance(mask, Iterable), 'mask must be iterable'
-    if len(mask) == 4:
-        if isinstance(mask[0], Iterable) == False:
-            mask = [mask, ] 
-    for m in mask:
-        assert len(m) == 4, 'mask must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
-        
-    ########
-    # clip #
-    ########
-    x = []
-    y = []
-    time_bunch = []
-    time_absolute = []
-    xstart = None
-    xstop  = None
-    ystart = None
-    ystop  = None
-    for r in mask:
-        temp = np.array([(x, y, t, t2) for x, y, t, t2 in zip(self.x, self.y, self.time_bunch, self.time_absolute) if ((x > r[0] and x < r[1]) and (y > r[2] and y < r[3]))])
-        x += list(temp[:, 0])
-        y += list(temp[:, 1])
-        time_bunch    += list(temp[:, 2])
-        time_absolute += list(temp[:, 3])
-        if xstart is None: xstart = r[0]
-        if xstop is None:  xstop  = r[1]
-        if ystart is None: ystart = r[2]
-        if ystop is None:  ystop  = r[3]
-        if r[0] < xstart: xstart = r[0]
-        if r[1] > xstop:  xstop  = r[1]
-        if r[2] < ystart: ystart = r[2]
-        if r[3] > ystop:  ystop  = r[3]
-
-
-    #########
-    # final #
-    #########
-    pe = br.PhotonEvents(x=x, y=y)
-    pe.copy_attrs_from(self)
-    pe.xlim = [xstart, xstop]
-    pe.ylim = [ystart, ystop]
-    pe.time_absolute = time_absolute
-    pe.time_bunch    = time_bunch
-
-    return pe
+    return self.clip(mask=mask, attrs2clip=['time_bunch', 'time_absolute'])
 br.PhotonEvents.clip2 = _clip
 
 def _plot_a2scan(self):
@@ -1165,6 +1118,69 @@ br.Dummy.curvature_correction_with_broken_intervals = _curvature_correction_with
 # %%
 
 # %% ============================ obsolete ================================ %% #
+def _clip(self, mask):
+    """Return a masked copy of the object (VERITAS).
+
+    Note:
+        This is different from pe.clip() because this also clips the time.
+
+    Args:
+        mask (list): list with rectangular coordinates `(x_start, x_stop, y_start, y_stop)`
+            or a list with multiple rectangular coordinates, i.e., `[(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])`
+
+    Returns:
+        :py:attr:`PhotonEvents`
+    """
+    ######################
+    # assert mask format #
+    ######################
+    assert isinstance(mask, Iterable), 'mask must be iterable'
+    if len(mask) == 4:
+        if isinstance(mask[0], Iterable) == False:
+            mask = [mask, ] 
+    for m in mask:
+        assert len(m) == 4, 'mask must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
+        
+    ########
+    # clip #
+    ########
+    x = []
+    y = []
+    time_bunch = []
+    time_absolute = []
+    xstart = None
+    xstop  = None
+    ystart = None
+    ystop  = None
+    for r in mask:
+        temp = np.array([(x, y, t, t2) for x, y, t, t2 in zip(self.x, self.y, self.time_bunch, self.time_absolute) if ((x > r[0] and x < r[1]) and (y > r[2] and y < r[3]))])
+        x += list(temp[:, 0])
+        y += list(temp[:, 1])
+        time_bunch    += list(temp[:, 2])
+        time_absolute += list(temp[:, 3])
+        if xstart is None: xstart = r[0]
+        if xstop is None:  xstop  = r[1]
+        if ystart is None: ystart = r[2]
+        if ystop is None:  ystop  = r[3]
+        if r[0] < xstart: xstart = r[0]
+        if r[1] > xstop:  xstop  = r[1]
+        if r[2] < ystart: ystart = r[2]
+        if r[3] > ystop:  ystop  = r[3]
+
+
+    #########
+    # final #
+    #########
+    pe = br.PhotonEvents(x=x, y=y)
+    pe.copy_attrs_from(self)
+    pe.xlim = [xstart, xstop]
+    pe.ylim = [ystart, ystop]
+    pe.time_absolute = time_absolute
+    pe.time_bunch    = time_bunch
+
+    return pe
+# br.PhotonEvents.clip2 = _clip
+
 def _find_empty(self, mask, axis=0):
     """Find pixel cols or rows that are outside of mask
     
@@ -1188,7 +1204,7 @@ def _find_empty(self, mask, axis=0):
                 empty[i] = False
                 
     return empty
-br.Image.find_empty = _find_empty
+# br.Image.find_empty = _find_empty
 
 def _get_filtered_spectra(self, mask, axis=0):
     empty = self.find_empty(mask=mask, axis=axis)
@@ -1210,7 +1226,7 @@ def _get_filtered_spectra(self, mask, axis=0):
         
     filtered._x_centers = [s.x_center for s in filtered]
     return filtered
-br.Image.get_filtered_spectra = _get_filtered_spectra
+# br.Image.get_filtered_spectra = _get_filtered_spectra
 # %%
 
 
