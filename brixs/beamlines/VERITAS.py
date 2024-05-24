@@ -180,6 +180,7 @@ rixs_attrs = {'ignore':{}, 'raw':{}, 'string':{}, 'round2':{},
 h = rixs_attrs['ignore']  # attrs that are added in the post processing -> keep them here because scanlist uses attrs_dict as reference
 h['scan']                     = ''
 h['pol']                      = ''
+h['th']                       = ''
 h['exposure_time_calculated'] = ''
 h['number_of_photons']        = ''
 h['exposure_time_calculated_via_photon_time'] = ''
@@ -204,7 +205,7 @@ for _string in ('mean', 'min', 'max', 'sigma'):
     h['arm_energy' + _string]  = 'External/veritasarm_energy/position'
     h['E' + _string]           = 'External/beamline_energy/position'
     h['T' + _string]           = 'External/b316a-o01/dia/tco-02/Temperature'
-    h['th' + _string]          = 'External/a_mp1_yaw/position'
+    h['th_veritas' + _string]          = 'External/a_mp1_yaw/position'
 
 h = rixs_attrs['round2']
 h['exit_slit'] = 'startmetadata/a_slit1_v/position'
@@ -216,6 +217,7 @@ xas_attrs = {'ignore': {}, 'raw':{}, 'string':{}, 'round2':{}}
 h = xas_attrs['ignore']
 h['scan']           = ''
 h['pol']            = ''
+h['th']             = ''
 h['scanned_motors'] = ''
 h['scan_type']      = ''
 h['elapsed_time']   = ''
@@ -248,7 +250,7 @@ h['exit_slit']     = 'measurement/pre_scan_snapshot/a_slit1_v'
 h['E']             = 'measurement/pre_scan_snapshot/beamline_energy'
 h['temperature1']  = 'measurement/pre_scan_snapshot/lakeshore_1'
 h['temperature2']  = 'measurement/pre_scan_snapshot/lakeshore_2'
-h['th']            = 'measurement/pre_scan_snapshot/a_mp1_yaw'                        
+h['th_veritas']    = 'measurement/pre_scan_snapshot/a_mp1_yaw'                        
 # %%
 
 # %% ============================= read =================================== %% #
@@ -389,7 +391,22 @@ def read(filepath, scan, verbose=True):
                 if hasattr(pe, attr):
                     if pe.__getattribute__(attr) is not None:
                         pe.__setattr__(attr, pe.__getattribute__(attr)/1000)
-                        
+
+            # real th
+            if hasattr(pe, 'th_veritas'):
+                if pe.__getattribute__('th_veritas') is not None:
+                    pe.__setattr__('th', pe.__getattribute__('th_veritas')-285+90)
+            if hasattr(pe, 'th_veritas_max'):
+                if pe.__getattribute__('th_veritas_max') is not None:
+                    pe.__setattr__('th_max', pe.__getattribute__('th_veritas_max')-285+90)
+            if hasattr(pe, 'th_veritas_min'):
+                if pe.__getattribute__('th_veritas_min') is not None:
+                    pe.__setattr__('th_min', pe.__getattribute__('th_veritas_min')-285+90)
+            if hasattr(pe, 'th_veritas_sigma'):
+                if pe.__getattribute__('th_veritas_sigma') is not None:
+                    pe.__setattr__('th_sigma', pe.__getattribute__('th_veritas_sigma'))
+                           
+
             # # post processing
             # pe.cutoff                     = None
             # pe.time_bunch_histogram       = None
@@ -487,9 +504,11 @@ def read(filepath, scan, verbose=True):
                 # which above that we consider that `b` is at it's next step. With that we can 
                 # infer all the `b` points used
                 bfinal = np.linspace(float(command.split(' ')[6]), float(command.split(' ')[7]), int(command.split(' ')[8]) + 1)
+                # afinal = np.linspace(float(command.split(' ')[6]), float(command.split(' ')[7]), int(command.split(' ')[8]) + 1)
                 
                 # find `a` motor points (method 2)
                 afinal = np.linspace(float(command.split(' ')[2]), float(command.split(' ')[3]), int(command.split(' ')[4]) + 1)
+                # bfinal = np.linspace(float(command.split(' ')[2]), float(command.split(' ')[3]), int(command.split(' ')[4]) + 1)
 
                 # reshape data
                 ss = br.Dummy([TEY, MCP, TFY, RMU])
@@ -504,6 +523,7 @@ def read(filepath, scan, verbose=True):
                     print(command)
                     # ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[4])+1, int(command.split(' ')[8])+1))])
                     ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[8])+1, int(command.split(' ')[4])+1))])
+                    # ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[4])+1, int(command.split(' ')[8])+1))])
 
                     # print(ss[j].shape)
                     # print(ss[j].x_centers)
@@ -563,6 +583,11 @@ def read(filepath, scan, verbose=True):
                 else:
                     s.elapsed_time = None
 
+                # real th
+                if hasattr(s, 'th_veritas'):
+                    if s.__getattribute__('th_veritas') is not None:
+                        s.__setattr__('th', s.__getattribute__('th_veritas')-285+90)
+     
             ss.header = ('TEY', 'MCP', 'TFY', 'RMU')
             TEY.label = 'TEY'
             MCP.label = 'MCP'
@@ -579,7 +604,7 @@ def read(filepath, scan, verbose=True):
     return
 # %%
 
-# %% =========================== processing =============================== %% #
+# %% ============================= RIXS =================================== %% #
 def _process(filepath, scan, mask=None, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv='self', curv_nbins=(20, 1000), sbins=1200, calib=None):
     """
         s = s.set_factor(1/sum([m[3]-m[2] for m in mask]))
@@ -834,6 +859,8 @@ def process(filepath, scan, mask, tcutoff=3e7, tnbins=10000, period=1458, offset
     return d['s']
 # %%
 
+
+# %%
 
 # %% ========================== Time support ============================== %% #
 def _apply_time_cutoff(self, value=3e7):

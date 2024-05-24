@@ -1157,54 +1157,6 @@ def roll_plot3(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
 # br.Spectra.roll_plot3 = roll_plot3
 
 # %% IMAGE
-import pyqtgraph as pg
-def _fancy_plot(self):
-    """plot image using pyqtgraph
-
-    Note:
-        If x centers are uniform, it will plot as a function of x centers, otherwise 
-            it will plot as a function of pixels. Same for y centers.
-
-    Returns:
-        None
-    """
-    # check interactive
-    assert plt.isinteractive(), 'interactive mode is not enabled. fancy_plot() only works if matplotlib interactive mode is enabled -> plt.ion()'
-
-    # check step
-    if self.x_step is None:
-        try: 
-            self.check_x_step()
-        except ValueError: 
-            pass
-    if self.y_step is None:
-        try: 
-            self.check_y_step()
-        except ValueError: 
-            pass
-
-    # fix pos and scale
-    pos   = [0, 0]
-    scale = [1, 1]
-    if self.x_step is not None:
-        x        = self.x_centers
-        dx       = self.x_step
-        pos[0]   = x[0]-dx/2
-        scale[0] = (x[-1]-x[0]+dx)/len(x)
-    if self.y_step is not None:
-        y        = self.y_centers
-        dy       = self.y_step
-        pos[1]   = y[0] - dy/2
-        scale[1] = (y[-1]-y[0]+dy)/len(y)
-
-    # plot
-    imv1 = pg.ImageView(view=pg.PlotItem())
-    imv1.setPredefinedGradient('thermal')
-    imv1.setImage(self.data, pos=pos, scale=scale)
-    imv1.show()
-    return imv1
-br.Image.fancy_plot = _fancy_plot
-
 def linecuts(self, axis=0, xlim=None, ylim=None, ilim=None, keep=None, **kwargs):
     """[EXPERIMENTAL] Plot image and flip trhough linecuts with keyboard arrows.
 
@@ -1657,4 +1609,19 @@ def roll_plot(self, axis=0, vlines=None, hlines=None, **kwargs):
     return
 # br.Image.roll_plot = roll_plot
 
-# %%
+# %% Other
+from IPython import get_ipython
+def is_notebook():
+    """[EXPERIMENTAL] Return True if running from a ipython interactive terminal or jupyter notebook."""
+    # assert IPythonok, 'is_notebook() cannot check for notebook\nError: python package `IPython` not found\nmaybe install it via ``pip install IPython``' 
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return True  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+

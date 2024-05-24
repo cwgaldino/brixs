@@ -7,6 +7,8 @@ PhotonEvents
 - pe2 = pe.copy() and pe2=pe.clip() copy xlim and ylim from pe. Maybe we should update these based on the mask given. Not sure if this is the best because the user can pass ubsurdly larg masks to avoid croping data and that would mess up the limits.
 
 
+
+
 ############
 # Spectrum #
 ############
