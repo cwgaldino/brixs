@@ -439,16 +439,17 @@ def set_window_size(*args):
         return 
     
     figManager = _get_current_fig_manager()
-    x,y = get_window_position()
+    x, y       = get_window_position()
 
     try:  # tested on tKinter backend
         figureGeometry = str(height) + 'x' + str(width) + '+' + str(x) + '+' + str(y)
         figManager.window.wm_geometry(figureGeometry)
     except AttributeError:
         try:  # tested on qt4 and qt5 backends
-            figManager.window.setGeometry(x, y, height, width)
+            # figManager.window.setGeometry(x, y, height, width)
+            figManager.window.setGeometry(y, x, height, width)
         except AttributeError:
-            warnings.warn('Backend not suported.')
+            warnings.warn('Backend not supported.')
 
     # This also works:
     # plt.gcf().set_size_inches(height, width)
