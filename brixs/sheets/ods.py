@@ -6,6 +6,7 @@ Usage:
     >>> from brixs.sheets.ods import new_sheet, remove_sheet_by_name, remove_sheet_by_position, move_sheet, copy_sheet
     >>> from brixs.sheets.ods import get_style_names, remove_style, new_style, select_active_sheet
     >>> from brixs.sheets.ods import get_cells, get_last_used_row, get_last_used_col
+    >>> from brixs.sheets.ods import delete_rows
     >>> from brixs.sheets.ods import merge, unmerge
     >>> from brixs.sheets.ods import get_row, get_row_data, get_col_data, set_row_data, get_cells_data, set_cells_data
     >>> from brixs.sheets.ods import get_property_names, get_property_value, set_property_value
@@ -215,6 +216,23 @@ def get_last_used_col(sheet):
     cursor.gotoEndOfUsedArea(False)
     return cursor.getRangeAddress().EndColumn
 
+def delete_rows(sheet, start, stop):
+    """delete rows
+    
+    Args:
+        sheet (sheet): sheet object
+        start, stop (int): number of the first and last row to delete. Starts from 
+            0.
+    
+    Returns:
+        None
+    """
+    assert isinstance(start, int), f'start must be an integer, not type `{type(start)}`'
+    assert isinstance(stop, int), f'stop must be an integer, not type `{type(stop)}`'
+    assert start <= stop, f'start must less or the same as stop'
+
+    oRows = sheet.getRows()
+    oRows.removeByIndex(start, stop-start+1)
 
 def merge(cells):
     """merge cells"""

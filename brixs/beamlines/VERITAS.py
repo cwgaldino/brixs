@@ -205,7 +205,7 @@ for _string in ('mean', 'min', 'max', 'sigma'):
     h['arm_energy' + _string]  = 'External/veritasarm_energy/position'
     h['E' + _string]           = 'External/beamline_energy/position'
     h['T' + _string]           = 'External/b316a-o01/dia/tco-02/Temperature'
-    h['th_veritas' + _string]          = 'External/a_mp1_yaw/position'
+    h['th_veritas' + _string]  = 'External/a_mp1_yaw/position'
 
 h = rixs_attrs['round2']
 h['exit_slit'] = 'startmetadata/a_slit1_v/position'
@@ -353,7 +353,7 @@ def read(filepath, scan, verbose=True):
                 pe.pol = None
 
             # round 2
-            for _attr in ('th', 'tth', 'E', 'T', 'gap', 'arm_energy', 'mono_energy', 'phase'):
+            for _attr in ('th_veritas', 'tth', 'E', 'T', 'gap', 'arm_energy', 'mono_energy', 'phase'):
                 for suffix in ('', '_max', '_min', '_sigma'):
                     attr = _attr + suffix
                     if hasattr(pe, attr):
@@ -393,18 +393,18 @@ def read(filepath, scan, verbose=True):
                         pe.__setattr__(attr, pe.__getattribute__(attr)/1000)
 
             # real th
-            if hasattr(pe, 'th_veritas'):
-                if pe.__getattribute__('th_veritas') is not None:
-                    pe.__setattr__('th', pe.__getattribute__('th_veritas')-285+90)
-            if hasattr(pe, 'th_veritas_max'):
-                if pe.__getattribute__('th_veritas_max') is not None:
-                    pe.__setattr__('th_max', pe.__getattribute__('th_veritas_max')-285+90)
-            if hasattr(pe, 'th_veritas_min'):
-                if pe.__getattribute__('th_veritas_min') is not None:
-                    pe.__setattr__('th_min', pe.__getattribute__('th_veritas_min')-285+90)
-            if hasattr(pe, 'th_veritas_sigma'):
-                if pe.__getattribute__('th_veritas_sigma') is not None:
-                    pe.__setattr__('th_sigma', pe.__getattribute__('th_veritas_sigma'))
+            # if hasattr(pe, 'th_veritas'):
+            #     if pe.__getattribute__('th_veritas') is not None:
+            #         pe.__setattr__('th', pe.__getattribute__('th_veritas')-285+90)
+            # if hasattr(pe, 'th_veritas_max'):
+            #     if pe.__getattribute__('th_veritas_max') is not None:
+            #         pe.__setattr__('th_max', pe.__getattribute__('th_veritas_max')-285+90)
+            # if hasattr(pe, 'th_veritas_min'):
+            #     if pe.__getattribute__('th_veritas_min') is not None:
+            #         pe.__setattr__('th_min', pe.__getattribute__('th_veritas_min')-285+90)
+            # if hasattr(pe, 'th_veritas_sigma'):
+            #     if pe.__getattribute__('th_veritas_sigma') is not None:
+            #         pe.__setattr__('th_sigma', pe.__getattribute__('th_veritas_sigma'))
                            
 
             # # post processing
@@ -583,10 +583,10 @@ def read(filepath, scan, verbose=True):
                 else:
                     s.elapsed_time = None
 
-                # real th
-                if hasattr(s, 'th_veritas'):
-                    if s.__getattribute__('th_veritas') is not None:
-                        s.__setattr__('th', s.__getattribute__('th_veritas')-285+90)
+                # # real th
+                # if hasattr(s, 'th_veritas'):
+                #     if s.__getattribute__('th_veritas') is not None:
+                #         s.__setattr__('th', s.__getattribute__('th_veritas')-285+90)
      
             ss.header = ('TEY', 'MCP', 'TFY', 'RMU')
             TEY.label = 'TEY'

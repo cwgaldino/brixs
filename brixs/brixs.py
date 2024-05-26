@@ -1495,7 +1495,7 @@ class Spectrum(metaclass=_Meta):
         """
         if limits is None: limits = (None, None)
         temp  = self._copy(limits=limits)
-        assert len(temp.y) > 0, 'no data points within limits = {limits}'
+        assert temp.y is not None, 'no data points within limits = {limits}'
         value = -np.mean(temp.y)
         return self.set_offset(value)
     
@@ -1517,7 +1517,7 @@ class Spectrum(metaclass=_Meta):
         """
         if limits is None: limits = (None, None)
         temp = self._copy(limits=limits)
-        assert len(temp.y) > 0, 'no data points within limits = {limits}'
+        assert temp.y is not None, 'no data points within limits = {limits}'
         return self.set_factor(value/np.mean(temp.y))
 
     ############
@@ -4050,9 +4050,35 @@ class Spectra(metaclass=_Meta):
         Returns:
             :py:class:`Spectra`
         """
-        ss = self.copy()
+        ############################
+        # check for empty spectrum #
+        ############################
+        text = ''
+        flag = False
         for i, s in enumerate(self):
-            ss[i] = s.floor(limits=limits)
+            if s.x is None:
+                flag = True
+                text += f'{i}: empty\n'
+            else:
+                text += f'{i}: ok\n'
+        if flag: raise ValueError(f'some spectra are empty:\n{text}')
+
+        # floor
+        ss   = self.copy()
+        text = ''
+        flag = False
+        for i, s in enumerate(self):
+            try:
+                ss[i] = s.floor(limits=limits)
+                text += f'{i}: ok\n'
+            except AssertionError:
+                flag = True
+                _s   = Spectrum()
+                _s.copy_attrs_from(s)
+                ss[i] = s
+                text += f'{i}: empty\n'
+        if flag:
+            print(f'Warning: some spectra has no datapoints within limits={limits}\n{text}')
         return ss
 
     def normalize(self, value=1, limits=None):
