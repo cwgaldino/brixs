@@ -156,6 +156,7 @@ from brixs.sheets.ods import get_sheet_by_position, get_sheet_by_name, get_activ
 from brixs.sheets.ods import new_sheet, remove_sheet_by_name, remove_sheet_by_position, move_sheet, copy_sheet
 from brixs.sheets.ods import get_style_names, remove_style, new_style, select_active_sheet
 from brixs.sheets.ods import get_cells, get_last_used_row, get_last_used_col
+from brixs.sheets.ods import delete_rows
 from brixs.sheets.ods import merge, unmerge
 from brixs.sheets.ods import get_row, get_row_data, get_col_data, set_row_data, get_cells_data, set_cells_data
 from brixs.sheets.ods import get_property_names, get_property_value, set_property_value
@@ -348,6 +349,7 @@ def _check_settings(settings):
                'XAS filepath':          'B2',
                'Save after update':     'B4',
                'Intercalate bkg color': 'B5',
+               'Reset data':            'E4',
                'RIXS: number of scans': 'J1',
                'RIXS: next row':        'J2',
                'XAS: number of scans':  'J3',
@@ -383,6 +385,11 @@ def _check_settings(settings):
     value = values['Intercalate bkg color']
     if value not in ('yes', 'no'):
         msgbox(f"`Intercalate bkg color` in settings cannot be {value}\n\navailable options = ('yes', 'no')", type_msg='errorbox')
+        return 
+    
+    value = values['Reset data']
+    if value not in ('yes', 'no'):
+        msgbox(f"`Reset data` in settings cannot be {value}\n\navailable options = ('yes', 'no')", type_msg='errorbox')
         return 
 
     return values
@@ -452,7 +459,8 @@ def new_empty(*args, **kwargs):
         text += '    XAS filepath:\n        path to h5 file with XAS scans\n\n'
         text += "    Save after update:\n        if `yes`, spreadsheet will saved after running the `update` macro\n\n" 
         text += "    Intercalate bkg color:\n        if `yes`, lines will have alternating bkg color\n\n" 
-        text += '\n2) Run update macro:\n'
+        text += "    Reset data:\n        if `yes`, all data (rows) is deleted and re-read again upon update\n\n" 
+        text += '2) Run update macro:\n'
         text += '    Tools > Macros > Run Macro > `Application Macros`:`mymacro`:`update` > Run'
         _instruct(settings, text, 'A8:F26')
 
@@ -472,6 +480,7 @@ def new_empty(*args, **kwargs):
         _input(settings, 'XAS filepath',          'A2', 'B2:F2', '', True)
         _input(settings, 'Save after update',     'A4', 'B4', 'yes', True)
         _input(settings, 'Intercalate bkg color', 'A5', 'B5', 'yes', True)
+        _input(settings, 'Reset data',            'D4', 'E4', 'no', True)
 
     ############
     # Internal #
@@ -544,6 +553,25 @@ def update(*args, **kwargs):
     
     # get settings from settings sheet
     values = _check_settings(settings)
+
+    #########
+    # reset #
+    #########
+    if values['Reset data'] == 'yes':
+        lock_undo(doc)
+        if get_last_used_row(rixs) >= 2:
+            delete_rows(sheet=rixs, start=2, stop=get_last_used_row(rixs))
+        if get_last_used_row(xas) >= 2:
+            delete_rows(sheet=xas,  start=2, stop=get_last_used_row(xas))
+        settings.unprotect('123456')
+        set_cells_data(settings, 'J1', 0)
+        set_cells_data(settings, 'J2', 2)
+        set_cells_data(settings, 'J3', 0)
+        set_cells_data(settings, 'J4', 2)
+        settings.protect('123456')
+        set_cells_data(settings, 'E4', 'no')
+        unlock_undo(doc)
+        values = _check_settings(settings)
 
     ############
     # METADATA #
