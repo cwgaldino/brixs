@@ -13,7 +13,8 @@ import json
 import os
 import re
 
-# %% -------------------------- operating system ------------------------ %% #
+# %% ----------------- supporting functions from query -------------------- %% #
+# backpack developers note --> if these function change, it needs to be copied to query.py
 import platform
 def _operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
@@ -34,7 +35,6 @@ is_windows = _operating_system() == 'windows'
 is_linux   = _operating_system() == 'linux'
 is_mac     = _operating_system() == 'mac'
 
-# %% ------------------------ supporting functions ------------------------ %% #
 import sys
 def _query(question, default="yes"):
     """Ask a yes/no question and return answer.
@@ -49,7 +49,7 @@ def _query(question, default="yes"):
 
     Returns:
         True for "yes" or False for "no".
-    """
+    """    
     valid = {"yes": True, "y": True, "ye": True, "Y": True, "YES": True, "YE": True,
              "no": False, "n": False, "No":True, "NO":True, "N":True}
     if default is None:

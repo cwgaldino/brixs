@@ -10,6 +10,9 @@ import sys
 # %% -------------------------- operating system ------------------------ %% #
 def operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
+    # backpack developers note!!!!
+    # if this function changes, it needs to be copied to these files: filemanip
+
     system = platform.system().lower()
     is_windows = system == 'windows'
     is_linux = system == 'linux'
@@ -42,6 +45,9 @@ def query(question, default="yes"):
     Returns:
         True for "yes" or False for "no".
     """
+    # backpack developers note!!!!
+    # if this function changes, it needs to be copied to these files: filemanip
+
     valid = {"yes": True, "y": True, "ye": True, "Y": True, "YES": True, "YE": True,
              "no": False, "n": False, "No":True, "NO":True, "N":True}
     if default is None:
@@ -72,6 +78,9 @@ def copy2clipboard(txt):
 
     on linux it uses ``xclip`` package (``sudo apt install xclip``).
     """
+    # backpack developers note!!!!
+    # if this function changes, it needs to be copied to these files: figmanip
+
     if is_windows:
         # cmd='echo ' + txt.strip() + ' | clip'
         cmd=f'echo|set /p={txt.strip()}| clip'

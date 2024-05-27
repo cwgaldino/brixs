@@ -504,30 +504,21 @@ def read(filepath, scan, verbose=True):
                 # which above that we consider that `b` is at it's next step. With that we can 
                 # infer all the `b` points used
                 bfinal = np.linspace(float(command.split(' ')[6]), float(command.split(' ')[7]), int(command.split(' ')[8]) + 1)
-                # afinal = np.linspace(float(command.split(' ')[6]), float(command.split(' ')[7]), int(command.split(' ')[8]) + 1)
                 
                 # find `a` motor points (method 2)
                 afinal = np.linspace(float(command.split(' ')[2]), float(command.split(' ')[3]), int(command.split(' ')[4]) + 1)
-                # bfinal = np.linspace(float(command.split(' ')[2]), float(command.split(' ')[3]), int(command.split(' ')[4]) + 1)
 
                 # reshape data
                 ss = br.Dummy([TEY, MCP, TFY, RMU])
                 for j, s in enumerate(ss):
-                    # ss[j] = br.Image(data=[row if i%2 == 0 else row[::-1] for i, row in enumerate(s.y.reshape(len(afinal), len(bfinal)))])
-                    # print(len(s.y))
-                    # ss[j] = br.Image(data=[row if i%2 == 0 else row[::-1] for i, row in enumerate(s.y.reshape(int(command.split(' ')[4])+1, int(command.split(' ')[8])+1))])
                     y = copy.deepcopy(s.y)
                     if len(y) < (len(afinal) * len(bfinal)):
                         y = np.array(list(y) + [y[-1]]*((len(afinal) * len(bfinal))-len(y)))
                         ss.error = 'mesh interrupted early'
-                    print(command)
-                    # ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[4])+1, int(command.split(' ')[8])+1))])
-                    ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[8])+1, int(command.split(' ')[4])+1))])
-                    # ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[4])+1, int(command.split(' ')[8])+1))])
-
-                    # print(ss[j].shape)
-                    # print(ss[j].x_centers)
-                    # print(afinal)
+                    if command.split(' ')[-1] == 'True':
+                        ss[j] = br.Image(data=[row if i%2 == 0 else row[::-1] for i, row in enumerate(y.reshape(int(command.split(' ')[8])+1, int(command.split(' ')[4])+1))])
+                    else:
+                        ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(int(command.split(' ')[8])+1, int(command.split(' ')[4])+1))])
                     ss[j].x_centers = afinal
                     ss[j].y_centers = bfinal
 

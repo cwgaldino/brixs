@@ -43,7 +43,8 @@ is_windows = _operating_system() == 'windows'
 is_linux   = _operating_system() == 'linux'
 is_mac     = _operating_system() == 'mac'
 
-# %% ------------------------ supporting functions ------------------------ %% #
+# %% --------------- supporting functions from numanip -------------------- %% #
+# backpack developers note --> if these function change, it needs to be copied to numanip.py
 import numbers
 def _is_number(n):
     """Returns True if variable is number."""
@@ -77,13 +78,14 @@ def _n_decimal_places(number, count_zero=False):
     Returns:
         number of decimal places in number.
     """
-
     n = abs(decimal.Decimal(str(number)).as_tuple().exponent)
     if count_zero == False and n == 1:
         if str(number)[-1] == '0':
             return 0
     return n
 
+# %% ------------ supporting functions from arraymanip -------------------- %% #
+# backpack developers note --> if these function change, it needs to be copied to arraymanip.py
 def _index(x, value, closest=True):
     """Returns the first index of the element in array.
 
@@ -97,7 +99,9 @@ def _index(x, value, closest=True):
         index (int)
     """
     if closest:
-        return int(np.argmin(np.abs(np.array(x)-value)))
+        _inner1 = np.array(x) - value
+        _inner2 = np.ma.masked_array(_inner1, np.isnan(_inner1))
+        return int(np.argmin(np.abs(_inner2)))
     else:
         return np.where(x == value)[0]
 
@@ -202,6 +206,7 @@ def _extract(x, y, ranges, invert=False):
     else:
         raise RuntimeError('No data points within the selected range.')
 
+# %% ---------------- supporting functions from query --------------------- %% #
 import subprocess
 def _copy2clipboard(txt):
     """Copy text to clipboard.
@@ -1113,6 +1118,8 @@ def note(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
     # _x, _y = inv.transform((_x, _y))
     # # print(_x)
     # print(f'x={_x}, y={_y}')
+
+    plt.autoscale(True)
 
     # final
     # print(kwargs)
