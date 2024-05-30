@@ -466,7 +466,7 @@ def load_Comments(filepath, comment_flag='#', stop_flag='#'):
     else:
         return comments[:]
 
-def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', header='', footer='', delimiter=', ', comment_flag='# ', newline='\n', check_overwrite=False):
+def save_data(obj, filepath='./untitled.txt', add_labels=True, fmt='% .10e', header='', footer='', delimiter=',', comment_flag='# ', newline='\n', check_overwrite=False):
     r"""Save an array or a dictionary in a txt file.
 
     Args:

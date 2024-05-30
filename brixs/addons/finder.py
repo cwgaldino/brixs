@@ -334,7 +334,7 @@ def search(parameters, folderpath):
     if isinstance(search_result, Path):
         if verbose:
             print(f'Loading data already processed: {search_result.name}')
-        return br.Spectrum(search_result)
+        return br.Spectrum(filepath=search_result)
     else:
         return None
 
@@ -365,7 +365,7 @@ def searchss(parameters, folderpath):
     if isinstance(search_result, Path):
         if verbose:
             print(f'Loading data already processed: {search_result.name}')
-        return br.Spectra(search_result)
+        return br.Spectra(filepath=search_result)
     else:
         return None
     
