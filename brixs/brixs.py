@@ -6709,15 +6709,17 @@ class Image(metaclass=_Meta):
         """Set intensity to zero inside limits to zero.
 
         Args:
-            x, y (int, optional): x and y position to sample background intensity.
-            n, nx, ny (int, optional): size of the pixel window around x, y.
+            x_start, x_stop, y_start, y_stop (int): data range where average will
+                be set to zero. Pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
 
         Returns:
-            None
+            Copy of image
         """
         temp  = self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
         value = temp.calculate_average()
-        return self.copy().set_factor(value)
+        return self.copy().set_offset(-value)
 
     ############
     # advanced #
@@ -6859,12 +6861,31 @@ class Image(metaclass=_Meta):
     # calculation and info #
     ########################
     def calculate_average(self):
-        """returns the average intensity (matrix element) value
+        """returns the average intensity value"""
+        return self.data.mean()
+        # return np.mean([s.calculate_y_average() for s in self.columns])
 
-        Returns:
-            number
-        """
-        return np.mean([s.calculate_y_average() for s in self.columns])
+    def calculate_sigma(self):
+        """returns the standard deviation of intensity values"""
+        return self.data.std()
+
+    def max(self):
+        """return max intensity value"""
+        return np.max(self.data)
+    
+    def min(self):
+        """return min intensity value"""
+        return np.min(self.data)
+
+    def mean(self):
+        """returns the average intensity value"""
+        return self.data.mean()
+
+    def std(self):
+        """returns the standard deviation of intensity values"""
+        return self.data.std()
+
+
 
     def calculate_histogram(self, nbins=None):
         """Compute the intensity histogram of the data. Wrapper for `numpy.histogram()`_.
