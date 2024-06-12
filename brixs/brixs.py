@@ -7634,7 +7634,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     Args:
         x, y (list or array, optional): array with x, y photon events coordinates
         xlim, ylim (list, optional): two element tuple with min and max possible 
-            x and y coordinates.
+            x and y coordinates. Only used for reference and plotting.
         filepath (str or Path, optional): filepath.
         **kwargs: kwargs are passed to :py:func:`PhotonEvents.load` function.
 
@@ -7697,8 +7697,6 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if value is None:
             self._x = None
             self._y = None
-            # self._xlim = None
-            # self._ylim = None
             return
         ###################################
         # asserting validity of the input #
@@ -7739,8 +7737,6 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if value is None:
             self._x = None
             self._y = None
-            # self._xlim = None
-            # self._ylim = None
             return
         ###################################
         # asserting validity of the input #
@@ -7800,8 +7796,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             assert value[1] > value[0], f'max value must be bigger than min value'
 
             # check if data is within limits
-            if self.x is not None:
-                assert max(self.x) <= value[-1] or min(self.x) >= value[0], f'xlim={value} not allowed because x coordinates (from {min(self.x)} to {max(self.x)}) are outside xlim. xlim set to None'
+            # if self.x is not None:
+            #     assert max(self.x) <= value[-1] and min(self.x) >= value[0], f'xlim={value} not allowed because x coordinates (from {min(self.x)} to {max(self.x)}) are outside xlim. xlim set to None'
 
             #################
             # set attribute #
@@ -7839,9 +7835,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             assert value[1] > value[0], f'max value must be bigger than min value'
 
             # check if data is within limits
-            if self.y is not None:
-                assert max(self.y) <= value[-1] or min(self.y) >= value[0], f'ylim={value} not allowed bacause y coordinates (from {min(self.y)} to {max(self.y)}) are outside ylim. ylim set to None'
-
+            # if self.y is not None:
+            #     assert max(self.y) <= value[-1] and min(self.y) >= value[0], f'ylim={value} not allowed bacause y coordinates (from {min(self.y)} to {max(self.y)}) are outside ylim. ylim set to None'
 
             #################
             # set attribute #
