@@ -1167,7 +1167,7 @@ class Spectrum(metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
-            header = filemanip.load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
             if header:
                 for line in header:
                     if ':' not in line:
@@ -3430,7 +3430,7 @@ class Spectra(metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
-            header = filemanip.load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
             if header:
                 for line in header:
                     if ':' not in line:
@@ -6167,7 +6167,7 @@ class Image(metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
-            header = filemanip.load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
             if header:
                 for line in header:
                     if ':' not in line:
@@ -8394,7 +8394,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
-            header = filemanip.load_Comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
+            header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
             if header:
                 for line in header:
                     if ':' not in line:

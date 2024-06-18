@@ -119,7 +119,7 @@ def _str2datetime(string):
     """convert VERITAS date/time string pattern to date --> '2022-07-20 21:08:36.921'
 
     Args:
-        string (str): string with I21 date string
+        string (str): string with VERITAS date string
 
     Return
         datetime.datetime object

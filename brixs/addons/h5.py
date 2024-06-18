@@ -78,7 +78,7 @@ def sort_metadata(f, attrs_dict, verbose=True):
                     only so you can set attrs_dict as a full list of attrs, without 
                     having to left attrs out. attrs_dict can than be used elsewhere 
                     (i.e., building scan lists).
-                1) `raw`: no pre-processing
+                1) `raw`: no processing
                 2) `string`: turn into type `str` 
                 3) `bool`: turn into type `bool`
                 4) `mean, `min`, `max`, `sigma`: Calculate the mean, min, max, and standard deviation of numeric iterables

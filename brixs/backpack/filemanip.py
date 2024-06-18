@@ -236,7 +236,7 @@ def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='li
 
     Args:
         dirpath (str or pathlib.Path, optional): directory path.
-        string (str, optional): string to filter filenames.
+        string (str, optional): string to filter filenames by.
         ref (int, optional): index of the reference number to be used as key.
         _type (string, optional): if 'int', dict keys are transformed in integers.
             If 'float', dict keys are transformed into float.
@@ -413,7 +413,7 @@ def load_obj(filepath, dict_keys_to_int=False):
             obj = json.load(file)
     return obj
 
-def load_Comments(filepath, comment_flag='#', stop_flag='#'):
+def load_comments(filepath, comment_flag='#', stop_flag='#'):
     """Return comments from text files.
 
     Comments must be indicated at the beginning of the line by the comment flag.
