@@ -376,9 +376,8 @@ def save(parameters, s, folderpath):
         folderpath (string or Path): folderpath to save spectra.
         string (string): string to save in the finder file
         s (br.spectrum): spectrum to be saved
-        filepath (Path or str): filepath that points to a file which odd lines 
-        list the parameters used to process a certain spectrum and the next line
-        gives the associated filepath of this spectrum.
+        folderpath (string or Path): folderpath to save spectra. This folder path
+            must contain a file named 'finder.txt'. If not, one will be created.
 
     Returns:
         None
@@ -454,11 +453,16 @@ def _save(s, string, folderpath):
         f.close()
 
     # get number of files to create filename
-    fl = [int(filename.name.split('.')[0].split('_')[1]) for filename in br.filelist(folderpath, string='*.dat')]
+    # print(br.filelist(folderpath, string='finderfile*.dat'))
+    # print('aaaaa')
+
+    fl = [int(filename.name.split('.')[0].split('_')[1]) for filename in br.filelist(folderpath, string='finderfile*.dat')]
     if len(fl) == 0:
         fl = (-1, )
+    # print(fl)
     filename = 'finderfile_' + str(max(fl) + 1) + '.dat'
     filepath2save = folderpath/filename
+    # print(filepath2save)
 
     # save spectrum
     if isinstance(s, br.Spectrum):
