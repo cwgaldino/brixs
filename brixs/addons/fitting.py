@@ -242,7 +242,7 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     return arr100, popt, err, lambda x: function2fit(x, *popt)
 
 # %% ====================== Spectrum peak fitting ========================= %% #
-def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, ranges=None):     
+def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, limits=None):     
     r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
 
     .. math:: y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
@@ -279,7 +279,7 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
             returned will be the sum of the ``w`` of the first and second half.
         moving_average_window (int, optional): window size for smoothing the
             data for finding the peak. Default is 1.
-        ranges (list): a pair of values or a list of pairs. Each pair represents
+        limits (list): a pair of values or a list of pairs. Each pair represents
             the start and stop of a data range from x. Use None to indicate
             the minimum or maximum x value of the data.
 
@@ -293,12 +293,12 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
         3) One standard deviation errors on the parameters
         4) Peak function
     """
-    if ranges is None:
+    if limits is None:
         x0 = self.x
         y0 = self.y
     else:
-        ranges = self._validate_ranges(ranges)
-        s0 = self._extract(ranges)
+        limits = self._check_limits(limits)
+        s0 = self._copy(limits)
         x0 = s0.x
         y0 = s0.y
 
@@ -338,7 +338,7 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
 br.Spectrum.fit_peak = _fit_peak
 
 # %% ======================= Spectra peak fitting ========================= %% #
-def _fit_peak2(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, ranges=None):     
+def _fit_peak2(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, limits=None):     
     r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
 
     .. math:: y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
@@ -375,7 +375,7 @@ def _fit_peak2(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, f
             returned will be the sum of the ``w`` of the first and second half.
         moving_average_window (int, optional): window size for smoothing the
             data for finding the peak. Default is 1.
-        ranges (list): a pair of values or a list of pairs. Each pair represents
+        limits (list): a pair of values or a list of pairs. Each pair represents
             the start and stop of a data range from x. Use None to indicate
             the minimum or maximum x value of the data.
 
@@ -389,13 +389,13 @@ def _fit_peak2(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, f
         3) list of one-standard deviation errors on the parameters
         4) Peak functions
     """
-    ss   = br.Spectrum()
+    ss   = br.Spectra()
     ss.copy_attrs_from(self)
     popt = []
     err  = []
     f    = []
     for s in self:
-        fit, _popt, _err, _f = s.fit_peak(guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=guess_offset, fixed_m=fixed_m, moving_average_window=moving_average_window, asymmetry=asymmetry, ranges=ranges)
+        fit, _popt, _err, _f = s.fit_peak(guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=guess_offset, fixed_m=fixed_m, moving_average_window=moving_average_window, asymmetry=asymmetry, limits=limits)
         ss.append(fit)
         popt.append(_popt)
         err.append(_err)
