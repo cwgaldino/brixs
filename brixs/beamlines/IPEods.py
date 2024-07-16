@@ -1,12 +1,10 @@
-"""Macro for creating an online scanlist for experiments
+"""Macro for creating an online scanlist for ipe beamline
 
-See below instruction on how to use/install it
-
-Items 1 -- 5   will talk about how to install this macro
-Items 6 -- 8  will talk about how to use this macro
-Item  9       will talk about how to write a new macro or edit this one
+###############
+# Last edited #
+###############
+galdino 16-07-2024
  
-
 #######################################
 # 1. Download and install libreoffice #
 #######################################
@@ -19,7 +17,7 @@ Follow the instructions on the libreoffice webpage, download and install it.
 
 Option 1: via zaz-pip libreoffice extension
 
-1. Go to zaz-pip git page here -> https://git.cuates.net/elmau/zaz-pip/src/branch/master/source
+1. Go to zaz-pip git page here -> https://git.cuates.net/elmau/zaz-pip
 2. Follow the instructions on the git page for installation
 3. Follow instructions on the git page for installing packages
 
@@ -37,7 +35,18 @@ C://Users//galdin_c//Appdata//Roaming//Python//Python38//site-packages
 # 2b. Install pip on libreoffice (LINUX) #
 ##########################################
 
-To do. Must be similar as on Windows.
+Option 1: via zaz-pip libreoffice extension 
+
+1. Go to zaz-pip git page here -> https://git.cuates.net/elmau/zaz-pip
+2. Follow the instructions on the git page for installation
+3. Follow instructions on the git page for installing packages
+
+Option 2: via pypi bootstrap [I never tested this option!!]
+
+1. Download the pypi bootstrap here -> https://bootstrap.pypa.io/get-pip.py
+2. Start a command prompt at the LibreOfice installation directory (e.g., cd /usr/lib/libreoffice/program)
+3. Run python <path-to-get-pip>\get-pip.py
+4. Use command python -m pip install <package-name> for installing packages
 
 ################################
 # 3. Install required packages #
@@ -92,12 +101,18 @@ Tools > Macros > Run Macro > library:`Application Macros` > <name-of-this-file> 
 # 7. add a Macro shortcut on libreoffice #
 ##########################################
 
-View > Toolbars > Customize > Macros > Application Macros > select the desired Macro >
-> press the right arrow
+View > Toolbars > Customize
 
-Down below there is a panel called `Customize` in which you can press the button 
-`insert` to insert a separator. You can also press the button `Modify` to change
-the name of the macro or put an icon. 
+Select the Toolbars tab
+
+set Category to Macros:Application Macros (left panel)
+
+Move the desired Macros from the left panel o the right panel (assigned commands)
+by pressing the right arrow between the left and right panels.
+
+Down below the Customize windows there is a button called `insert`. Use this to 
+insert a separator. You can also press the button `Modify` to change the name of
+ the macro or put an icon. 
 
 ############################
 # 8. How to use this macro #
@@ -137,10 +152,11 @@ import datetime
 import sys
 
 # %% -------------------------- brixs imports ----------------------------- %% #
-path2brixs = Path(r'C:\Users\galdin_c\github\brixs')
+# path2brixs = Path(r'/ibira/lnls/beamlines/ipe/proposals/20232623/proc/brixs/')
+path2brixs = Path(r'/usr/local/scripts/apps/brixs/')
 sys.path.append(str(path2brixs))
 import brixs as br
-import brixs.beamlines.IPE2 as IPE
+import brixs.beamlines.IPE as ipe
 
 # common
 from brixs.sheets.common import letter2num, str2num
@@ -165,6 +181,8 @@ from brixs.sheets.ods import get_border, set_border
 from brixs.sheets.ods import get_protection, lock_cells, unlock_cells
 # %%
 
+import brixs.addons.fitting
+
 # %% -------------------------- uno definitions --------------------------- %% #
 def get_current_document():
     """Return document object"""
@@ -178,7 +196,7 @@ def get_current_selection():
 
 # %% --------------------------- test functions --------------------------- %% #
 def test1(*args, **kwargs):
-    msgbox(letter2num('a'))
+    msgbox('test 1')
 
 def test2(*args, **kwargs):
     doc = get_current_document()
@@ -202,7 +220,7 @@ def _input(sheet, text, text_position, input_position, input_default='', editabl
             If merged, width is applied to each column. Default is 'False
 
     Usage:
-        _input(sheet=settings, text='RIXS filepath', text_position='A1', 
+        _input(sheet=settings, text='RIXS folderpath', text_position='A1', 
                input_position='B1:F1', input_default='', 
                editable=True, 
                input_width=4000)
@@ -333,8 +351,10 @@ def _check_document():
     settings = get_sheet_by_name(doc, 'settings')
     rixs     = get_sheet_by_name(doc, 'RIXS')
     xas      = get_sheet_by_name(doc, 'XAS')
+    # _1D      = get_sheet_by_name(doc, 'ASCAN')
+    # _2D      = get_sheet_by_name(doc, 'MESH')
 
-    return doc, settings, rixs, xas
+    return doc, settings, rixs, xas#, _1D, _2D
 
 def _check_settings(settings):
     """Check if options in the settings sheet are sound
@@ -345,8 +365,8 @@ def _check_settings(settings):
     Returns:
         dictionary
     """
-    address = {'RIXS filepath':         'B1',
-               'XAS filepath':          'B2',
+    address = {'RIXS folderpath':         'B1',
+               'XAS folderpath':          'B2',
                'Save after update':     'B4',
                'Intercalate bkg color': 'B5',
                'Reset data':            'E4',
@@ -365,16 +385,16 @@ def _check_settings(settings):
     ###########################
     # validate INPUT settings #
     ###########################
-    value = values['RIXS filepath']
+    value = values['RIXS folderpath']
     if value != '':
-        if Path(value).exists() == False or Path(value).is_file() == False:
-            msgbox(f'`RIXS filepath` in settings does not exist or do not point to a file', type_msg='errorbox')
+        if Path(value).exists() == False or Path(value).is_dir() == False:
+            msgbox(f'`RIXS folderpath` in settings does not exist or do not point to a folder', type_msg='errorbox')
             return
         
-    value = values['XAS filepath']
+    value = values['XAS folderpath']
     if value != '':
-        if Path(value).exists() == False or Path(value).is_file() == False:
-            msgbox(f'`XAS filepath` in settings does not exist or do not point to a file', type_msg='errorbox')
+        if Path(value).exists() == False or Path(value).is_dir() == False:
+            msgbox(f'`XAS folderpath` in settings does not exist or do not point to a folder', type_msg='errorbox')
             return
 
     value = values['Save after update']
@@ -396,18 +416,19 @@ def _check_settings(settings):
 # %%
 
 # ============================================================================ #
-# ======================== MACRO - VERITAS - 2024-05-18 ====================== #
+# ============================= MACRO - IPE ================================== #
 # %% ====================================================================== %% #
 
 # %% rixs metadata list
 rixs_attrs = []
-for key in IPE.rixs_attrs:
-    for attr in IPE.rixs_attrs[key]:
+for key in ipe.rixs_attrs:
+    for attr in ipe.rixs_attrs[key]:
         rixs_attrs.append(attr)
 rixs_attrs = list(np.sort(rixs_attrs))
 
 # %% xas metadata list
-xas_attrs = ['start_time', 'command', 'energy', 'ring_current', 'cff', 'GR', 'MR', 'GR_offset', 'MR_offset', 'GT', 'MT', 'line_density', 'und_phaseMon', 'FOE_right', 'FOE_left', 'FOE_top', 'FOE_bottom', 'FOE_Vgap', 'FOE_Voffset', 'FOE_Hgap', 'FOE_Hoffset', 'WBS_right', 'WBS_left', 'WBS_top', 'WBS_bottom', 'WBS_Vgap', 'WBS_Voffset', 'WBS_Hgap', 'WBS_Hoffset', 'MPS1A_Vgap', 'MPS1A_Hgap', 'MPS2B_Vgap', 'MPS2B_Hgap', 'WBS_MKS', 'M1_MKS', 'PGM_MKS', 'M4_MKS', 'M5_MKS', 'MPS1A_MKS', 'MPS2B_MKS', 'M7_MKS', 'WBS_pump', 'M1_pump', 'PVS_pump', 'PGM_pump', 'MVS1_pump', 'M4_pump', 'MVS2_pump', 'M5_pump', 'PGshutter_pump', 'TPA_1A_pump', 'TPA_1B_pump', 'TPB_1A_pump', 'TPB_1B_pump', 'MPS1A_pump', 'MPS2B_pump', 'TPA_2A_pump', 'TPA_2B_pump', 'TPB_2A_pump', 'TPB_2B_pump', 'MVS3A_pump', 'MVS4B_pump', 'M7_pump', 'M1_X', 'M1_Y', 'M1_Z', 'M1_Rx', 'M1_Ry', 'M1_Rz', 'M4_X', 'M4_Y', 'M4_Z', 'M4_Rx', 'M4_Ry', 'M4_Rz', 'M4_Uy', 'M4_Ry_piezo', 'M5_X', 'M5_Y', 'M5_Z', 'M5_Rx', 'M5_Ry', 'M5_Rz', 'M5_Uy', 'M5_Ry_piezo', 'M6_X', 'M6_Y', 'M6_Z', 'M6_Rx', 'M6_Ry', 'M6_Rz', 'M6_Uy', 'M6_Rx_piezo', 'M6_Ry_piezo', 'M7_X', 'M7_Y', 'M7_Z', 'M7_Rx', 'M7_Ry', 'M7_Rz', 'M7_Uy', 'M7_Rx_piezo', 'M7_Ry_piezo', 'M1_collector', 'M1_collector_rng', 'MVS1', 'MVS1_rng', 'MVS2', 'MVS2_rng', 'MVS3A', 'MVS3A_rng', 'MVS4B', 'MVS4B_rng', 'MPS1A_HDSL', 'MPS1A_HDSL_rng', 'MPS1A_HDSR', 'MPS1A_HDSR_rng', 'MPS2B_HDSL', 'MPS2B_HDSL_rng', 'MPS2B_HDSR', 'MPS2B_HDSR_rng', 'MBS3A_topC', 'MBS3A_bottomC', 'MBS3A_leftC', 'MBS3A_rightC', 'MBS4B_topC', 'MBS4B_bottomC', 'MBS4B_leftC', 'MBS4B_rightC', 'MVS5A', 'MVS5A_rng', 'MVS6B', 'MVS6B_rng', 'XPS_i0', 'XPS_i0_rngN', 'XPS_tey', 'XPS_tey_rngN', 'XPS_fy', 'XPS_fy_rngN', 'RIXS_i0', 'RIXS_i0_rngN', 'RIXS_tey', 'RIXS_tey_rngN', 'RIXS_fy', 'RIXS_fy_rngN', 'RIXS_pd', 'RIXS_pd_rng', 'RIO_P_AvgTime', 'RIO_R_AvgTime', 'RIXS_X', 'RIXS_Y', 'RIXS_Z', 'RIXS_Ry', 'RIXS_SAMPLE_X', 'RIXS_SAMPLE_Z', 'RIXS_GRAS_Rx1', 'RIXS_GRAS_Rz1', 'RIXS_GRAS_X', 'RIXS_GRAS_Y', 'RIXS_GRAS_Z', 'RIXS_DETS_Y', 'RIXS_DETS_Z', 'XPS_X', 'XPS_Y', 'XPS_Z', 'XPS_Ry']
+# xas_attrs = ['scan', 'start_time', 'command', 'energy', 'ring_current', 'cff', 'GR', 'MR', 'GR_offset', 'MR_offset', 'GT', 'MT', 'line_density', 'und_phaseMon', 'FOE_right', 'FOE_left', 'FOE_top', 'FOE_bottom', 'FOE_Vgap', 'FOE_Voffset', 'FOE_Hgap', 'FOE_Hoffset', 'WBS_right', 'WBS_left', 'WBS_top', 'WBS_bottom', 'WBS_Vgap', 'WBS_Voffset', 'WBS_Hgap', 'WBS_Hoffset', 'MPS1A_Vgap', 'MPS1A_Hgap', 'MPS2B_Vgap', 'MPS2B_Hgap', 'WBS_MKS', 'M1_MKS', 'PGM_MKS', 'M4_MKS', 'M5_MKS', 'MPS1A_MKS', 'MPS2B_MKS', 'M7_MKS', 'WBS_pump', 'M1_pump', 'PVS_pump', 'PGM_pump', 'MVS1_pump', 'M4_pump', 'MVS2_pump', 'M5_pump', 'PGshutter_pump', 'TPA_1A_pump', 'TPA_1B_pump', 'TPB_1A_pump', 'TPB_1B_pump', 'MPS1A_pump', 'MPS2B_pump', 'TPA_2A_pump', 'TPA_2B_pump', 'TPB_2A_pump', 'TPB_2B_pump', 'MVS3A_pump', 'MVS4B_pump', 'M7_pump', 'M1_X', 'M1_Y', 'M1_Z', 'M1_Rx', 'M1_Ry', 'M1_Rz', 'M4_X', 'M4_Y', 'M4_Z', 'M4_Rx', 'M4_Ry', 'M4_Rz', 'M4_Uy', 'M4_Ry_piezo', 'M5_X', 'M5_Y', 'M5_Z', 'M5_Rx', 'M5_Ry', 'M5_Rz', 'M5_Uy', 'M5_Ry_piezo', 'M6_X', 'M6_Y', 'M6_Z', 'M6_Rx', 'M6_Ry', 'M6_Rz', 'M6_Uy', 'M6_Rx_piezo', 'M6_Ry_piezo', 'M7_X', 'M7_Y', 'M7_Z', 'M7_Rx', 'M7_Ry', 'M7_Rz', 'M7_Uy', 'M7_Rx_piezo', 'M7_Ry_piezo', 'M1_collector', 'M1_collector_rng', 'MVS1', 'MVS1_rng', 'MVS2', 'MVS2_rng', 'MVS3A', 'MVS3A_rng', 'MVS4B', 'MVS4B_rng', 'MPS1A_HDSL', 'MPS1A_HDSL_rng', 'MPS1A_HDSR', 'MPS1A_HDSR_rng', 'MPS2B_HDSL', 'MPS2B_HDSL_rng', 'MPS2B_HDSR', 'MPS2B_HDSR_rng', 'MBS3A_topC', 'MBS3A_bottomC', 'MBS3A_leftC', 'MBS3A_rightC', 'MBS4B_topC', 'MBS4B_bottomC', 'MBS4B_leftC', 'MBS4B_rightC', 'MVS5A', 'MVS5A_rng', 'MVS6B', 'MVS6B_rng', 'XPS_i0', 'XPS_i0_rngN', 'XPS_tey', 'XPS_tey_rngN', 'XPS_fy', 'XPS_fy_rngN', 'RIXS_i0', 'RIXS_i0_rngN', 'RIXS_tey', 'RIXS_tey_rngN', 'RIXS_fy', 'RIXS_fy_rngN', 'RIXS_pd', 'RIXS_pd_rng', 'RIO_P_AvgTime', 'RIO_R_AvgTime', 'RIXS_X', 'RIXS_Y', 'RIXS_Z', 'RIXS_Ry', 'RIXS_SAMPLE_X', 'RIXS_SAMPLE_Z', 'RIXS_GRAS_Rx1', 'RIXS_GRAS_Rz1', 'RIXS_GRAS_X', 'RIXS_GRAS_Y', 'RIXS_GRAS_Z', 'RIXS_DETS_Y', 'RIXS_DETS_Z', 'XPS_X', 'XPS_Y', 'XPS_Z', 'XPS_Ry']
+xas_attrs = ['scan', 'start_time', 'scan_type', 'exposure', 'temperatureA', 'temperatureB', 'samplex', 'sampley', 'samplez', 'th']
 
 # %% new empty file 
 def new_empty(*args, **kwargs):
@@ -422,6 +443,8 @@ def new_empty(*args, **kwargs):
     settings = new_sheet(doc, 'settings', i=0)
     rixs     = new_sheet(doc, 'RIXS',     i=1)
     xas      = new_sheet(doc, 'XAS',      i=2)
+    # _1D      = new_sheet(doc, 'ASCAN',    i=3)
+    # _2D      = new_sheet(doc, 'MESH',     i=4)
     remove_sheet_by_name(doc, 'Sheet1')
     select_active_sheet(doc, settings)
 
@@ -472,8 +495,8 @@ def new_empty(*args, **kwargs):
     # Inputs #
     ##########
     if True:
-        _input(settings, 'RIXS folderpath',         'A1', 'B1:F1', '', True, input_width=4000)
-        _input(settings, 'XAS folderpath',          'A2', 'B2:F2', '', True)
+        _input(settings, 'RIXS folderpath',       'A1', 'B1:F1', '', True, input_width=4000)
+        _input(settings, 'XAS folderpath',        'A2', 'B2:F2', '', True)
         _input(settings, 'Save after update',     'A4', 'B4', 'yes', True)
         _input(settings, 'Intercalate bkg color', 'A5', 'B5', 'yes', True)
         _input(settings, 'Reset data',            'D4', 'E4', 'no', True)
@@ -483,10 +506,10 @@ def new_empty(*args, **kwargs):
     ############
     if True:
         _output(settings, 'RIXS: number of scans', 'I1', 'J1', 0)
-        _output(settings, 'RIXS: next row',        'I2', 'J2', 2)
+        _output(settings, 'RIXS: current row',     'I2', 'J2', 2)
 
         _output(settings, 'XAS: number of scans', 'I3', 'J3', 0)
-        _output(settings, 'XAS: next row',        'I4', 'J4', 2)
+        _output(settings, 'XAS: current row',     'I4', 'J4', 2)
 
     ###########
     # protect #
@@ -498,7 +521,7 @@ def new_empty(*args, **kwargs):
     ##########
     if True:
         # rixs
-        final = ['empty1', 'empty2'] + rixs_attrs + ['error', 'Comments']
+        final = ['comments', 'error'] + rixs_attrs + ['']
         set_row_data(rixs, 0, final)
         set_row_data(rixs, 1, final[2:-1], start_col=2)
 
@@ -517,7 +540,7 @@ def new_empty(*args, **kwargs):
             set_width(col, get_width(col)*1.1)
 
         # XAS
-        final = ['empty1', 'empty2'] + xas_attrs + ['error', 'Comments']
+        final = ['comments', 'error'] + xas_attrs + ['']
         set_row_data(xas, 0, final)
         set_row_data(xas, 1, final[2:-1], start_col=2)
 
@@ -572,10 +595,10 @@ def update(*args, **kwargs):
     ############
     # METADATA #
     ############
-    for i, filepath in enumerate((values['RIXS filepath'], values['XAS filepath'])):
-        if filepath != '':
+    for i, folderpath in enumerate((values['RIXS folderpath'], values['XAS folderpath'])):
+        if folderpath != '':
             # scanlist
-            scanlist = IPE.scanlist(filepath=filepath)
+            scanlist = ipe.scanlist(folderpath=folderpath)
 
             # get sheet and next_row
             if i == 0:
@@ -590,7 +613,7 @@ def update(*args, **kwargs):
             last_col = get_last_used_col(sheet)
 
             # loop each scan and load metadata
-            for _row, scan in enumerate(scanlist[int(next_row - 2):]):
+            for _row, scan in enumerate(list(scanlist)[int(next_row - 2):]):
                 row = next_row
 
                 # color row (intercalated)
@@ -605,13 +628,17 @@ def update(*args, **kwargs):
 
                 # paste on spreadsheet
                 try:
-                    pe = IPE.read(filepath, scan, verbose=False)
+                    if i == 0:
+                        pe1, pe2, pes1, pes2 = ipe.read(scanlist[scan], verbose=False)
+                    elif i == 1:
+                        pe1, TFY, I0, PD     = ipe.read(scanlist[scan], verbose=False)
+
 
                     # sort attrs
                     for col, attr in enumerate(header):
                         if attr != '':
-                            if hasattr(pe, attr):
-                                value = getattr(pe, attr)
+                            if hasattr(pe1, attr):
+                                value = getattr(pe1, attr)
                                 if isinstance(value, datetime.datetime):
                                     value = str(value) 
                                 elif isinstance(value, list) or isinstance(value, tuple):
