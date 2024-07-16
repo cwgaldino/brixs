@@ -1989,8 +1989,13 @@ class Spectrum(metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################        
-    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, limits=None, switch_xy=False, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
+
+        Note:
+            If `label` is `None` and if spectrum have attr 
+            `label`, this attr will be used as label, e.g., 
+            `plt.plot(s.x, s.y, label=s.label)`.  
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
@@ -2000,6 +2005,10 @@ class Spectrum(metaclass=_Meta):
                  on the y-coordinates. Factor is applied first.
             roll (int, optional): Roll value of array elements of the x-coordinates
             smooth (int, optional): number of points to average data. Default is 1.
+            label (str, number, optional): if str or number, this label will be 
+                applied. If None and if spectrum have attr `label`, 
+                this attr will be used as label, e.g., `plt.plot(s.x, s.y, label=s.label)`.
+                Default is None. 
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
@@ -2055,7 +2064,16 @@ class Spectrum(metaclass=_Meta):
 
             ids = np.arange(len(y))//int(smooth)
             y = np.bincount(ids, y)/np.bincount(ids)
-        
+
+        #########
+        # label #
+        #########
+        if label is None:
+            if self.hasattr('label'):
+                kwargs['label'] = self.label
+        else:
+            kwargs['label'] = label    
+
         ###################
         # figure and axes #
         ###################
@@ -4972,6 +4990,7 @@ class Spectra(metaclass=_Meta):
 
             s.x     = values
             s.y     = calculated shifts
+            s.fit   = speectrum type (polynomial curve)
             s.popt  = polynomial coeff. (highest power first.) that fit the calibration curve.
             s.model = function f(x) of the calibration curve.
             s.R2    = R2 factor of the fitting.
@@ -4985,7 +5004,8 @@ class Spectra(metaclass=_Meta):
 
         # return
         final = Spectrum(x=-np.array(x), y=values)
-        popt, model, R2 = final.polyfit(deg=deg)
+        arr100, popt, R2, model = final.polyfit(deg=deg)
+        final.fit       = arr100
         final.popt      = popt
         final.model     = model
         final.R2        = R2
@@ -5157,8 +5177,13 @@ class Spectra(metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################  
-    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, **kwargs):
         """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
+
+        Note:
+            If `label` is `None` and if spectrum inside spectra have attr 
+            `label`, this attr will be used as label, e.g., 
+            `plt.plot(s.x, s.y, label=s.label)`.  
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
@@ -5171,6 +5196,12 @@ class Spectra(metaclass=_Meta):
             roll (int or list, optional): Roll value of array elements of the x-coordinates.
                 If list, it must have the same length as the number of spectra.
             smooth (int, optional): number of points to average data. Default is 1.
+            label (str, number, or list, optional): if str or number, this label will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra. If None and if 
+                spectrum `s` inside spectra `ss` have attr `label`, 
+                this attr will be used as label, e.g., `plt.plot(s.x, s.y, label=s.label)`.
+                Default is None. 
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
@@ -5203,7 +5234,7 @@ class Spectra(metaclass=_Meta):
         #####################################
         # vertical and horizontal increment #
         #####################################
-        vi  = [hi]*len(self)
+        vi  = [vi]*len(self)
         hi  = [hi]*len(self)
 
         #########
@@ -5220,6 +5251,14 @@ class Spectra(metaclass=_Meta):
             assert len(factor) == len(self), f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}'
         else:
             factor = [factor]*len(self)
+            
+        ##########
+        # label #
+        ##########
+        if isinstance(label, Iterable) == True and isinstance(label, str) == False:
+            assert len(label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}'
+        else:
+            label = [label]*len(self)
 
         #####################################################
         # percentage wise vertical and horizontal increment #
@@ -5258,7 +5297,7 @@ class Spectra(metaclass=_Meta):
         ########
         temp = [0]*len(self)
         for i in range(len(self)):
-            temp[i] = self.data[i].plot(ax=ax, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, **kwargs)
+            temp[i] = self.data[i].plot(ax=ax, label=label, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, **kwargs)
 
         return temp
 
@@ -6510,7 +6549,7 @@ class Image(metaclass=_Meta):
         return self._set_horizontal_roll(value=value)
     
     def set_vertical_shift(self, value):
-        """Roll pixels rows left and right in terms of x centers.
+        """Roll pixels columns up and down in terms of y centers.
 
         Note:
             The shift value in terms of y center scale is converted to number of
@@ -6645,7 +6684,7 @@ class Image(metaclass=_Meta):
         im = self.copy()
         for i, v in enumerate(value):
             if v != 0:
-                s = Spectrum(im._data[i, :]).set_roll(v)
+                s = Spectrum(y=im._data[i, :]).set_roll(v)
                 im._data[i, :] = s.y
         return im
 
@@ -6904,14 +6943,17 @@ class Image(metaclass=_Meta):
         """
         if nbins is None:
             nbins = 1000
-            hist, bin_edges = np.histogram(arraymanip.flatten(self._data), bins=nbins)
+            _flat  = arraymanip.flatten(self._data)
+            flat = _flat[~np.isnan(_flat)]
+
+            hist, bin_edges = np.histogram(flat, bins=nbins)
             while max(hist) < self.shape[0]*self.shape[1]*0.05:
                 nbins -= 10
-                hist, bin_edges = np.histogram(arraymanip.flatten(self._data), bins=nbins)
+                hist, bin_edges = np.histogram(flat, bins=nbins)
                 if nbins < 50:
                     break
         elif numanip.is_integer(nbins):
-            hist, bin_edges = np.histogram(arraymanip.flatten(self._data), bins=int(nbins))
+            hist, bin_edges = np.histogram(flat, bins=int(nbins))
         else:
             raise TypeError('nbins must be a integer')
 
@@ -6976,7 +7018,7 @@ class Image(metaclass=_Meta):
         return np.sort(list(numanip.factors(self.shape[0]))), np.sort(list(numanip.factors(self.shape[1])))
 
 
-    def calculate_horizontal_shift(self, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_horizontal_shift(self, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """Calculate intensity misalignments in terms of x centers.
 
         Args:
@@ -6993,7 +7035,7 @@ class Image(metaclass=_Meta):
                  4) 'peak': Fit one peak in each row and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+            xlimits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Limits are
@@ -7016,10 +7058,10 @@ class Image(metaclass=_Meta):
                 raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
 
         # calculate
-        values = ss.calculate_shift(mode=mode, limits=limits, **kwargs)
+        values = ss.calculate_shift(mode=mode, limits=xlimits, **kwargs)
         return values
     
-    def calculate_vertical_shift(self, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_vertical_shift(self, mode='cc', ylimits=None, limit_size=1000, **kwargs):
         """Calculate intensity misalignments in terms of y centers.
 
         Args:
@@ -7036,7 +7078,7 @@ class Image(metaclass=_Meta):
                  4) 'peak': Fit one peak in each column and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+            ylimits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Limits are
@@ -7059,13 +7101,13 @@ class Image(metaclass=_Meta):
                 raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
 
         # calculate
-        values = ss.calculate_shift(mode=mode, limits=limits, **kwargs)
+        values = ss.calculate_shift(mode=mode, limits=ylimits, **kwargs)
         return values
     
     ############
     # composed #
     ############
-    def calculate_vertical_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=1000, **kwargs):
         """Calculate vertical shift values to fix curvature.
 
         Args:
@@ -7084,7 +7126,7 @@ class Image(metaclass=_Meta):
                  4) 'peak': Fit one peak in each column and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+            ylimits (None or list): y center pair of values `(y_start, y_stop)`, a list 
                 of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Use 
@@ -7114,14 +7156,14 @@ class Image(metaclass=_Meta):
             model (function): funcion f(x_centers)
         """
         im = self.copy().floor()
-        values = im.calculate_vertical_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        values = im.calculate_vertical_shift(mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
 
         # calculate poly
         s = Spectrum(x=self.x_centers, y=values)
         fit, popt, R2, model = s.polyfit(deg=deg)
         return s, fit, popt, R2, model
     
-    def calculate_horizontal_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """Calculate horizontal shift values to fix curvature.
 
         Args:
@@ -7140,7 +7182,7 @@ class Image(metaclass=_Meta):
                  4) 'peak': Fit one peak in each row and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+            xlimits (None or list): x center pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Use 
@@ -7170,7 +7212,7 @@ class Image(metaclass=_Meta):
             model (function): funcion f(y_centers)
         """
         im = self.copy().floor()
-        values = im.calculate_horizontal_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        values = im.calculate_horizontal_shift(mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
 
         # calculate poly
         s = Spectrum(x=self.y_centers, y=values)
@@ -7178,7 +7220,7 @@ class Image(metaclass=_Meta):
         return s, fit, popt, R2, model
     
 
-    def fix_vertical_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def fix_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=1000, **kwargs):
         """Roll column of pixels to fix curvature.
 
         Args:
@@ -7197,7 +7239,7 @@ class Image(metaclass=_Meta):
                  4) 'peak': Fit one peak in each column and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+            ylimits (None or list): y center pair of values `(y_start, y_stop)`, a list 
                 of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Use 
@@ -7226,11 +7268,11 @@ class Image(metaclass=_Meta):
 
             model (function): funcion f(x_centers)
         """
-        s, fit, popt, R2, model = self.calculate_vertical_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        s, fit, popt, R2, model = self.calculate_vertical_shift_curvature(deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
 
         return self.set_vertical_shift_via_polyval(popt) 
     
-    def fix_horizontal_shift_curvature(self, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def fix_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """Roll row of pixels to fix curvature.
 
         Args:
@@ -7249,7 +7291,7 @@ class Image(metaclass=_Meta):
                  4) 'peak': Fit one peak in each row and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+            xlimits (None or list): x center pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Use 
@@ -7278,7 +7320,7 @@ class Image(metaclass=_Meta):
 
             model (function): funcion f(y_centers)
         """
-        s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
 
         return self.set_horizontal_shift_via_polyval(popt) 
 
@@ -7531,7 +7573,7 @@ class Image(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{orgin}`'
+        assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{origin}`'
         kwargs['origin'] = origin
         if 'cmap' not in kwargs:
             kwargs['cmap'] = 'jet'
@@ -7634,7 +7676,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     Args:
         x, y (list or array, optional): array with x, y photon events coordinates
         xlim, ylim (list, optional): two element tuple with min and max possible 
-            x and y coordinates. Only used for reference and plotting.
+            x and y coordinates. Used for reference, for defining binning limits
+             and for plotting.
         filepath (str or Path, optional): filepath.
         **kwargs: kwargs are passed to :py:func:`PhotonEvents.load` function.
 
@@ -8041,19 +8084,12 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if x_start is None and x_stop is None and y_start is None and y_stop is None:
             return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
 
-        ########################################
-        # check if extract is really necessary #
-        ########################################
-        if x_start <= min(self.x) and x_stop >= max(self.x):
-            if y_start <= min(self.y) and y_stop >= max(self.y):
-                return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
-            
         ###############################
         # check if empty PhotonEvents #
         ###############################
         if self.x is None:
             return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
-
+            
         #################
         # check if None #
         #################
@@ -8077,6 +8113,13 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 y_stop  = max(self.y)
             else:
                 y_stop = self.ylim[1]
+
+        ########################################
+        # check if extract is really necessary #
+        ########################################
+        if x_start <= min(self.x) and x_stop >= max(self.x):
+            if y_start <= min(self.y) and y_stop >= max(self.y):
+                return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
 
         #################################
         # assert validity of attrs2clip #
@@ -8116,9 +8159,15 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 _pe.__setattr__(attr, _attrs2crop[attr])
             return _pe
         else:
+            # if len(self.x) == 0:
+            #     return PhotonEvents(xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+                
             temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
-            # return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=(x_start, x_stop), ylim=(y_start, y_stop))
-            return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+            
+            if len(temp) == 0: # no photons inside limits
+                return PhotonEvents(xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+            else:
+                return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
         
     def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None, attrs2crop=None):
         """Return a copy of the object.
@@ -8668,7 +8717,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     ############
     # composed #
     ############
-    def calculate_vertical_shift(self, ncols, nrows, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_vertical_shift(self, ncols, nrows, mode='cc', ylimits=None, limit_size=1000, **kwargs):
         """Calculate intensity misalignments in terms of y centers.
 
         Args:
@@ -8704,9 +8753,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             list
         """
         im = self.binning(ncols=ncols, nrows=nrows)
-        return im.calculate_vertical_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        return im.calculate_vertical_shift(mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
 
-    def calculate_horizontal_shift(self, ncols, nrows, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_horizontal_shift(self, ncols, nrows, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """Calculate intensity misalignments in terms of x centers.
 
         Args:
@@ -8724,7 +8773,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                  4) 'peak': Fit one peak in each row and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+            xlimits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Limits are
@@ -8742,10 +8791,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             list
         """
         im = self.binning(ncols=ncols, nrows=nrows)
-        return im.calculate_horizontal_shift(mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        return im.calculate_horizontal_shift(mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
 
 
-    def calculate_vertical_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_vertical_shift_curvature(self, ncols, nrows, deg=2, mode='cc', ylimits=None, limit_size=1000, **kwargs):
         """Calculate vertical shift values to fix curvature.
         
         Args:
@@ -8765,7 +8814,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                  4) 'peak': Fit one peak in each column and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): y center pair of values `(y_start, y_stop)`, a list 
+            ylimits (None or list): y center pair of values `(y_start, y_stop)`, a list 
                 of pairs `((yi_1, yf_1), (yi_2, yf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Use 
@@ -8795,9 +8844,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             model (function): funcion f(x_centers)
         """
         im = self.binning(ncols=ncols, nrows=nrows)
-        return im.calculate_vertical_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        return im.calculate_vertical_shift_curvature(deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
      
-    def calculate_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def calculate_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """Calculate horizontal shift values to fix curvature.
         
         Args:
@@ -8817,7 +8866,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                  4) 'peak': Fit one peak in each row and align them 
                  (requires that `brixs.addons.fitting` is imported)
 
-            limits (None or list): x center pair of values `(x_start, x_stop)`, a list 
+            xlimits (None or list): x center pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
                 represents the start and stop of a data range from x. Use 
@@ -8847,10 +8896,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             model (function): funcion f(y_centers)
         """
         im = self.binning(ncols=ncols, nrows=nrows)
-        return im.calculate_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        return im.calculate_horizontal_shift_curvature(deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
      
 
-    def fix_vertical_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def fix_vertical_shift_curvature(self, ncols, nrows, deg=2, mode='cc', ylimits=None, limit_size=1000, **kwargs):
         """shift photon events vertically to fix curvature.
 
         Args:
@@ -8899,10 +8948,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
             model (function): funcion f(x_centers)
         """   
-        im = self.binning(ncols=ncols, nrows=nrows)
-        return im.fix_vertical_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
+        s, fit, popt, R2, model = self.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size)
+        return self.set_vertical_shift_via_polyval(p=popt)
 
-    def fix_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', limits=None, limit_size=1000, **kwargs):
+    def fix_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """shift photon events horizontally to fix curvature.
 
         Args:
@@ -8951,9 +9000,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
             model (function): funcion f(y_centers)
         """   
-        im = self.binning(ncols=ncols, nrows=nrows)
-        return im.fix_horizontal_shift_curvature(deg=deg, mode=mode, limits=limits, limit_size=limit_size, **kwargs)
-
+        s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size)
+        return self.set_horizontal_shift_via_polyval(p=popt)
 
     ##########################        
     # plot and visualization #
@@ -8997,10 +9045,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if show_limits:
             if self.xlim is not None and self.ylim is not None:
                 if hasattr(ax, 'gca'):
-                    figmanip.rectangle(xlim=self.xlim, ylim=self.ylim, color='grey', lw=1)
+                    figmanip.rectangle(xlim=self.xlim, ylim=self.ylim, edgecolor='grey', lw=1)
                     ax.gca().autoscale_view()
                 else:
-                    figmanip.rectangle(ax=ax, xlim=self.xlim, ylim=self.ylim, color='grey', lw=1)
+                    figmanip.rectangle(ax=ax, xlim=self.xlim, ylim=self.ylim, edgecolor='grey', lw=1)
                     ax.autoscale_view()
         return pos
 
