@@ -1,9 +1,18 @@
-"""Macro for creating an online scanlist for ipe beamline
+"""Macro for creating an online scanlist for experiments
 
 ###############
 # Last edited #
 ###############
-galdino 16-07-2024
+galdino 27-06-2024
+
+############
+# contents #
+############
+See below instruction on how to use/install it
+
+Items 1 -- 5  how to install this macro
+Items 6 -- 8  how to use this macro
+Item  9       how to write a new macro or edit this one
  
 #######################################
 # 1. Download and install libreoffice #
@@ -156,7 +165,7 @@ import sys
 path2brixs = Path(r'/usr/local/scripts/apps/brixs/')
 sys.path.append(str(path2brixs))
 import brixs as br
-import brixs.beamlines.IPE as ipe
+import brixs.beamlines.IPE2 as ipe
 
 # common
 from brixs.sheets.common import letter2num, str2num
