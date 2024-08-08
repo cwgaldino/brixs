@@ -26,7 +26,7 @@ except:
 mpl.rcParams['lines.linewidth'] = 1
 mpl.rcParams['lines.linestyle'] = '-'
 mpl.rcParams['lines.markersize'] = 4
-mpl.rcParams['lines.marker'] = 'o'
+mpl.rcParams['lines.marker'] = ''
 mpl.rcParams['axes.titlesize'] = 20
 mpl.rcParams['axes.labelsize'] = 16
 mpl.rcParams['axes.grid'] = True
@@ -278,7 +278,7 @@ def curvature(folderpath, prefix, x_min=0, x_max=3300):
     for ccd in (1, 2):
         pe = readSPE(folderpath=folderpath, prefix=prefix, ccd=ccd, x_min=x_min, x_max=x_max, curvature=True)
         # binning
-        im = pe.binning(nbins=(int(3*1590), 15))
+        im = pe.binning(nbins=(int(2*1590), 15))
 
         # Calculate shifts
         im.calculate_roll()
