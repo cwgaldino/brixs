@@ -1420,6 +1420,21 @@ class Spectrum(metaclass=_Meta):
         s._step         = None
         s._monotonicity = None
         return s
+    
+    def set_y_via_function(self, f):
+        """Set y to f(x, y).
+
+        Args:
+            f (function): function where argument is x- and y-coordinate elements
+
+        Returns:
+            :py:class:`Spectrum`
+        """
+        s    = self.copy()
+        s._y = np.array([f(x, y) for x, y in zip(s.x, s.y)])
+        s._step         = None
+        s._monotonicity = None
+        return s
 
     def set_roll(self, value):
         """Roll array elements for the x-coordinates
@@ -2069,7 +2084,7 @@ class Spectrum(metaclass=_Meta):
         # label #
         #########
         if label is None:
-            if self.hasattr('label'):
+            if hasattr(self, 'label'):
                 kwargs['label'] = self.label
         else:
             kwargs['label'] = label    
@@ -5297,7 +5312,7 @@ class Spectra(metaclass=_Meta):
         ########
         temp = [0]*len(self)
         for i in range(len(self)):
-            temp[i] = self.data[i].plot(ax=ax, label=label, offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, **kwargs)
+            temp[i] = self.data[i].plot(ax=ax, label=label[i], offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, **kwargs)
 
         return temp
 

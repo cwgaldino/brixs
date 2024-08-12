@@ -204,7 +204,7 @@ def _read_rixs(filepath, curv=True, verbose=True):
         metadata = h5.sort_metadata(f=f, attrs_dict=rixs_attrs, verbose=verbose)
         for attr in metadata:
             setattr(pe1, attr, metadata[attr][0])
-            setattr(pe1, attr, metadata[attr][0])
+            setattr(pe2, attr, metadata[attr][0])
 
         # date
         temp = br.get_modified_date(filepath)
@@ -304,6 +304,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
         y2 = list()
         dummy1 = br.Dummy()
         dummy2 = br.Dummy()
+        _pe1 = False
         for j, filepath in enumerate(filelist):
             if j not in skip:
                 try:
@@ -316,6 +317,11 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
                     dummy2.append(_pe2)
                 except Exception as e:
                     print(f' === ERROR! Image {j} cannot be loaded: {e} ===\n{filepath}')
+
+        # raise error if no image is loaded                    
+        assert _pe1 != False, f'no image could be loaded for fpath: {fpath}'      
+
+        # start photon events
         pe1 = br.PhotonEvents(x=x1, y=y1, xlim=_pe1.xlim, ylim=_pe1.ylim)
         pe2 = br.PhotonEvents(x=x2, y=y2, xlim=_pe2.xlim, ylim=_pe2.ylim)
         
