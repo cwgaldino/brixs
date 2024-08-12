@@ -9,6 +9,7 @@ import numpy as np
 import datetime
 import warnings
 import fnmatch
+import shutil
 import json
 import os
 import re
@@ -76,7 +77,7 @@ def _query(question, default="yes"):
 
 # %% ================================ files =============================== %% #
 def rename_files(filelist, pattern, new_pattern, ask=True):
-    """Change the filename pattern of files.
+    r"""Change the filename pattern of files.
 
     Args:
         filelist (list): list of filepaths (string or pathlib.Path object).
@@ -151,8 +152,49 @@ def rename_files(filelist, pattern, new_pattern, ask=True):
     else:
         warnings.warn('Files NOT renamed.')
 
-# %% ============================== remove/create ========================= %% #
+def copy_file(filepath, folderpath):
+    """Copy file at filepath to folderpath
+
+    Args:
+        filepath (str or path): file to be copied
+        folderpath (str or path): destination folderpath
+
+    Returns:
+        None
+    """
+    folderpath = Path(folderpath)
+    filepath = Path(filepath)
+    
+    assert folderpath.is_dir() == True,  'folderpath must point to a folder'
+    assert filepath.is_dir()   == False, 'filepath must point to a file'
+    assert filepath.exists()   == True,  'file cannot be found'
+    shutil.copy(filepath, folderpath)
+    return
+
+def copy_files(target, destination, verbose=True): 
+    """copy all files from one directory to another.
+
+    Args:
+        target (str or path): target folderpath
+        destination (str or path): destination folderpath
+        
+    Returns:
+        None
+    """   
+    assert target.is_dir()      == True,  'target must point to a folder'
+    assert destination.is_dir() == True,  'destination must point to a folder'
+    assert target.exists()      == True,  'target cannot be found'
+    assert destination.exists() == True,  'destination cannot be found'
+
+    for filepath in filelist(dirpath=target):
+        copy_file(filepath, destination)
+        if verbose: print(f'copied: {filepath}')
+    if verbose: print('done')
+    return
+
+# %% ================================ directories ========================= %% #
 def mkdir(dirpath):
+    """create new directory (it also creates parent folders if they do not exist)"""
     dirpath = Path(dirpath)
     dirpath.mkdir(parents=True, exist_ok=True)
 
@@ -256,7 +298,7 @@ def parsed_filelist(dirpath='.', string='*', ref=0, _type='int', return_type='li
 
     temp = dict()
 
-    p = '[\d]+[.,\d]+|[\d]*[.][\d]+|[\d]+'
+    p = r'[\d]+[.,\d]+|[\d]*[.][\d]+|[\d]+'
 
     for filepath in file_list:
         if re.search(p, filepath.name) is not None:

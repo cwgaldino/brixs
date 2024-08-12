@@ -943,7 +943,7 @@ def rtext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
     if 'va' or 'verticalalignment' not in kwargs:
         kwargs['va'] = 'center'
 
-    print(f'x={x + xoffset}, y={y}')
+    # print(f'x={x + xoffset}, y={y}')
     return ax.text(x + xoffset, y, s, kwargs)
 
 def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
@@ -982,10 +982,10 @@ def ltext(x, s, yoffset=0, xoffset=0, ax=None, copy_color=False, **kwargs):
         kwargs['va'] = 'center'
     
     # write
-    print(f'x={x + xoffset}, y={y}')
+    # print(f'x={x + xoffset}, y={y}')
     return ax.text(x + xoffset, y, s, **kwargs)
 
-def note(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
+def note(s, loc='upper left', x=None, y=None, ax=None, coord='axes', **kwargs):
     """Write text to a pre-defined locations (auto-position text). Wrapper for `plt.text()`_.
 
     Text is written in axes coord (i.e. text does not move with the data). The 
@@ -1023,7 +1023,7 @@ def note(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
     leg = ax.get_legend()
 
     # create ghost legend
-    plt.autoscale(False)
+    # ax.autoscale(False) # do we really need this?
     # line, = ax.plot([])
     temp  = ax.legend(labels=[''], loc='upper left')
     
@@ -1119,7 +1119,7 @@ def note(s, loc='upper left', x=None, y=None, ax=None, **kwargs):
     # # print(_x)
     # print(f'x={_x}, y={_y}')
 
-    plt.autoscale(True)
+    # ax.autoscale(True)  # do we really need this
 
     # final
     # print(kwargs)
