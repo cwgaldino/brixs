@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Support functions for reading files from IPE beamline - Sirius.
 
-Last edited: Carlos Galdino 2024-07-16
+Last edited: Carlos Galdino 2024-06-12
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
@@ -87,15 +87,18 @@ def _str2datetime(string):
     return datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=seconds)
 # %%
 
-# %% ========================== rixs metadata ============================= %% #
-rixs_attrs = {'ignore': {}, 'raw':{}}
+# %% =========================== metadata ============================= %% #
+_attrs = {}
 
-h = rixs_attrs['ignore']
+# %% ========================== rixs metadata ============================= %% #
+_attrs['rixs'] = {'ignore': {}, 'raw':{}}
+
+h = _attrs['rixs']['ignore']
 h['modified_date'] = ''
 h['scan']          = ''
 h['error']         = ''
 
-h = rixs_attrs['raw']
+h = _attrs['rixs']['raw']
 h['Energy']              = 'entry/instrument/NDAttributes/Energy'
 h['Energy_SP']           = 'entry/instrument/NDAttributes/Energy_SP'
 h['NDArrayEpicsTSSec']   = 'entry/instrument/NDAttributes/NDArrayEpicsTSSec'
@@ -124,30 +127,19 @@ h['RIXS_DY']             = 'entry/instrument/NDAttributes/RIXS_DY'
 h['TempA']               = 'entry/instrument/NDAttributes/TempA'
 h['TempB']               = 'entry/instrument/NDAttributes/TempB'
 h['Undulator']           = 'entry/instrument/NDAttributes/Undulator'  
-                   
 
-# %% =========================== xas metadata ============================= %% #
-# xas_attrs = {'ignore': {}, 'raw':{}, 'string':{}, 'round2':{}}                     
-# %%
 
-# %% ========================== ascan metadata ============================ %% #
-ascan_attrs = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
+# %% ========================== xas metadata ============================ %% #
+_attrs['xas'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
 
-h = ascan_attrs['ignore']
-h['modified_date'] = ''
-h['motors']        = ''
-h['error']         = ''
-h['snake']         = ''  # mesh
-h['motor_x']       = ''  # mesh
-h['motor_y']       = ''  # mesh
-h['nstep_x']       = ''  # mesh
-h['nstep_y']       = ''  # mesh
-h['start_x']       = ''  # mesh
-h['start_y']       = ''  # mesh
-h['stop_x']        = ''  # mesh
-h['stop_y']        = ''  # mesh
+h = _attrs['xas']['ignore']
+h['modified_date']    = ''
+h['motors']           = ''
+h['error']            = ''
 
-h = ascan_attrs['string']
+h = _attrs['xas']['string']
+h['motors']           = 'entry/instrument/bluesky/metadata/motors'
+h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
 h['title']            = 'entry/title'
 h['entry_identifier'] = 'entry/entry_identifier'
 h['start_time']       = 'entry/start_time'
@@ -155,10 +147,71 @@ h['end_time']         = 'entry/end_time'
 h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
 h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
-h = ascan_attrs['raw']
+h = _attrs['xas']['raw']
 h['duration']         = 'entry/duration'
 h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
-h['proposal']         = 'entry/instrument/bluesky/metadata/Proposal'
+h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
+
+# %% ========================== ascan metadata ============================ %% #
+_attrs['ascan'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
+
+h = _attrs['ascan']['ignore']
+h['modified_date']    = ''
+h['motors']           = ''
+h['error']            = ''
+
+h = _attrs['ascan']['string']
+h['motors']           = 'entry/instrument/bluesky/metadata/motors'
+h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
+h['title']            = 'entry/title'
+h['entry_identifier'] = 'entry/entry_identifier'
+h['start_time']       = 'entry/start_time'
+h['end_time']         = 'entry/end_time'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+
+h = _attrs['ascan']['raw']
+h['duration']         = 'entry/duration'
+h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
+h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
+
+# %% ========================== mesh metadata ============================ %% #
+_attrs['mesh'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
+
+h = _attrs['mesh']['ignore']
+h['modified_date']    = ''
+h['motors']           = ''
+h['error']            = ''
+h['main_motor']       = 'entry/instrument/bluesky/metadata/main_motor'
+
+h = _attrs['mesh']['string']
+h['motors']           = 'entry/instrument/bluesky/metadata/motors'
+h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
+h['snaking']          = 'entry/instrument/bluesky/metadata/snaking'
+h['motor_x']          = 'entry/instrument/bluesky/metadata/motor_x'
+h['motor_y']          = 'entry/instrument/bluesky/metadata/motor_y'
+h['title']            = 'entry/title'
+h['entry_identifier'] = 'entry/entry_identifier'
+h['start_time']       = 'entry/start_time'
+h['end_time']         = 'entry/end_time'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+
+
+h = _attrs['mesh']['raw']
+h['duration']         = 'entry/duration'
+h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
+h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
+h['nstep_x']          = 'entry/instrument/bluesky/metadata/nstep_x'
+h['nstep_y']          = 'entry/instrument/bluesky/metadata/nstep_y'
+h['start_x']          = 'entry/instrument/bluesky/metadata/start_x'
+h['start_y']          = 'entry/instrument/bluesky/metadata/start_y'
+h['stop_x']           = 'entry/instrument/bluesky/metadata/stop_x'
+h['stop_y']           = 'entry/instrument/bluesky/metadata/stop_y'
+
+
+h = _attrs['mesh']['bool']
+h['snake']            = 'entry/instrument/bluesky/metadata/snake'
 
 # %% ========================= read (RIXS and XAS) ======================== %% #
 def _read_rixs(filepath, curv=True, verbose=True):
@@ -201,10 +254,10 @@ def _read_rixs(filepath, curv=True, verbose=True):
         #########
         # attrs #
         #########
-        metadata = h5.sort_metadata(f=f, attrs_dict=rixs_attrs, verbose=verbose)
+        metadata = h5.sort_metadata(f=f, attrs_dict=_attrs['rixs'], verbose=verbose)
         for attr in metadata:
             setattr(pe1, attr, metadata[attr][0])
-            setattr(pe2, attr, metadata[attr][0])
+            setattr(pe1, attr, metadata[attr][0])
 
         # date
         temp = br.get_modified_date(filepath)
@@ -238,7 +291,7 @@ def _read_rixs(filepath, curv=True, verbose=True):
 
     return pe1, pe2
 
-def read(fpath, verbose=True, start=0, stop=None, skip=[]):
+def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
     """Return data from folderpath (RIXS) or filepath (XAS, ascan, mesh) for IPE beamline
 
     Args:
@@ -289,7 +342,6 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
         assert stop >= start, f'stop ({stop}) must be equal or bigger than start ({start})'
         assert stop <= len(filelist) -1, f'stop ({stop}) must be equal or smaller than number of images indexes ({len(filelist)-1})'
 
-        
         # check skip
         for i in skip:
             assert i < start or i > stop, f'skip index ({i}) outside of start ({start}) stop ({start}) image indexes'
@@ -304,11 +356,11 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
         y2 = list()
         dummy1 = br.Dummy()
         dummy2 = br.Dummy()
-        _pe1 = False
         for j, filepath in enumerate(filelist):
+            print(filepath)
             if j not in skip:
                 try:
-                    _pe1, _pe2 = _read_rixs(filepath, verbose)
+                    _pe1, _pe2 = _read_rixs(filepath, curv, verbose)
                     x1.extend(_pe1.x)
                     y1.extend(_pe1.y)
                     x2.extend(_pe2.x)
@@ -317,11 +369,6 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
                     dummy2.append(_pe2)
                 except Exception as e:
                     print(f' === ERROR! Image {j} cannot be loaded: {e} ===\n{filepath}')
-
-        # raise error if no image is loaded                    
-        assert _pe1 != False, f'no image could be loaded for fpath: {fpath}'      
-
-        # start photon events
         pe1 = br.PhotonEvents(x=x1, y=y1, xlim=_pe1.xlim, ylim=_pe1.ylim)
         pe2 = br.PhotonEvents(x=x2, y=y2, xlim=_pe2.xlim, ylim=_pe2.ylim)
         
@@ -368,7 +415,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
         return pe1, pe2, dummy1, dummy2
 
     #########
-    # ascan #
+    # scans #
     #########
     elif fpath.suffix == '.nxs':
         with h5py.File(Path(fpath), 'r') as f:
@@ -376,140 +423,139 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
             # get scan type #
             #################
             scan_type = f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8")
-            # scan_type = 'mesh'
-
+            
+            #########
+            # attrs #
+            #########
+            metadata = h5.sort_metadata(f=f, attrs_dict=_attrs[scan_type], verbose=verbose)
+            try:
+                metadata['modified_date'] = br.get_modified_date(fpath)
+                metadata['start_time']    = _str2datetime(metadata['start_time'])
+                metadata['start_time']    = _str2datetime(metadata['start_time'])
+            except:
+                pass
+            
             ##############
             # get motors #
             ##############
-            motors = f['entry/instrument/bluesky/metadata/motors'][()].decode("utf-8").split('\n')[1:-1]
-            motors = [m[2:] for m in motors]
+            metadata['motors'] = [m[2:] for m in metadata['motors'].split('\n')[1:-1]]
+            motors = metadata['motors']
 
             #################
             # get detectors #
             #################
-            detectors = f['entry/instrument/bluesky/metadata/detectors'][()].decode("utf-8").split('\n')[:-1]
-            detectors = [d[2:] for d in detectors]
+            metadata['detectors'] = [d[2:] for d in metadata['detectors'].split('\n')[:-1]]
+            detectors = metadata['detectors'] 
 
             ###################
             # addtional attrs #
             ###################
             metadata_ = {}
-
+            _group = 'entry/instrument/bluesky/streams/baseline'
+            for _key in list(f[_group].keys()):
+                metadata[_key] = f[f'{_group}/{_key}/value'][()]
+            
             #############
             # read data #
             #############
-            x = f['entry/data/' + motors[0]][()]
-            if 'RIXS_pd' in detectors:
-                PD = br.Spectrum(x=x, y=f['entry/data/RIXS_pd'][()])
-            else:
-                PD = br.Spectrum()
-            if 'RIXS_fy' in detectors:
-                TFY = br.Spectrum(x=x, y=f['entry/data/RIXS_fy'][()])
-            else:
-                TFY = br.Spectrum()
-            if 'RIXS_tey in detectors':
-                TEY = br.Spectrum(x=x, y=f['entry/data/RIXS_tey'][()])
-            else:
-                TEY = br.Spectrum()
-            if 'RIXS_i0' in detectors:
-                I0 = br.Spectrum(x=x, y=f['entry/data/RIXS_i0'][()])
-            else:
-                I0 = br.Spectrum()        
-            _ss  = br.Spectra([TEY, TFY, I0, PD])
-            for s in [_ for _ in _ss] + [_ss]:
-                    s.EPOCH = f['entry/data/EPOCH'][()]
-                    for motor in motors:
-                        s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
-        #########
-        # ascan #
-        #########
-        if scan_type == 'ascan':
-            assert len(motors) == 1, f'number of motors ({len(motors)}) is not compatible with scan type (ascan)'
-            ss = _ss
+            _motors = {}
+            for motor in motors:
+                _motors[motor] = f[f'entry/data/{motor}'][()]
+            
+            _detectors = {}
+            for detector in detectors:
+                _detectors[detector] = f[f'entry/data/{detector}'][()]
 
-        ##########
-        # a2scan #
-        ##########
-        elif scan_type == 'a2scan':
-            raise NotImplmentedError('read a2scan not implemented')
+            ss  = br.Spectra()
 
-        ##########
-        # a3scan #
-        ##########
-        elif scan_type == 'a3scan':
-            raise NotImplmentedError('read a2scan not implemented')
+            #########
+            # xas #
+            #########
+            if scan_type == 'xas':
+                x = f[f'entry/data/energy'][()]
+                for _key in _detectors.keys():
+                    _s = br.Spectrum(x=x, y=_detectors[_key])
+                    _s.detector=_key
+                    ss.append(_s)
 
-        ########
-        # mesh #
-        ########
-        elif scan_type == 'mesh':
-            ##############
-            # mesh attrs #
-            ##############
-            with h5py.File(Path(fpath), 'r') as f:
-                snake = f['entry/instrument/bluesky/metadata/snaking'][()].decode("utf-8").split('\n')[1:-1]
-                metadata_['snake']   = [m[2:]=='true' for m in snake]
-                metadata_['motor_x'] = f['entry/instrument/bluesky/metadata/motor_x'][()].decode("utf-8")
-                metadata_['motor_y'] = f['entry/instrument/bluesky/metadata/motor_y'][()].decode("utf-8")
-                metadata_['nstep_x'] = int(f['entry/instrument/bluesky/metadata/nstep_x'][()])
-                metadata_['nstep_y'] = int(f['entry/instrument/bluesky/metadata/nstep_y'][()])
-                metadata_['start_x'] = f['entry/instrument/bluesky/metadata/start_x'][()]
-                metadata_['start_y'] = f['entry/instrument/bluesky/metadata/start_y'][()]
-                metadata_['stop_x']  = f['entry/instrument/bluesky/metadata/stop_x'][()]
-                metadata_['stop_y']  = f['entry/instrument/bluesky/metadata/stop_y'][()]
-
-            # find `x` motor points (frozen motor --> always motor_y)
-            bfinal = np.linspace(metadata_['start_y'], metadata_['stop_y'], metadata_['nstep_y'])
-                
-            # find `y` motor points
-            afinal = np.linspace(metadata_['start_x'], metadata_['stop_x'], metadata_['nstep_x'])
-
-            # reshape data
-            ss = br.Dummy([TEY, TFY, I0, PD])
-            for j, s in enumerate(_ss):
-                # get y
-                y = copy.deepcopy(s.y)
-
-                # check if scan finished
-                if len(y) < (len(afinal) * len(bfinal)):
-                    # y = np.array(list(y) + [y[-1]]*((len(afinal) * len(bfinal))-len(y)))
-                    y = np.array(list(y) + [None]*((len(afinal) * len(bfinal))-len(y)))
-                    metadata_['error']  = 'mesh interrupted early'
-
-                # reashape (check snake)
-                if metadata_['snake'][motors.index(metadata_['motor_x'])] == True:
-                    ss[j] = br.Image(data=[row if i%2 == 0 else row[::-1] for i, row in enumerate(y.reshape(metadata_['nstep_y'], metadata_['nstep_x']))])
+            #########
+            # ascan #
+            #########
+            if scan_type == 'ascan':
+                assert len(motors) == 1, f'number of motors ({len(motors)}) is not compatible with scan type (ascan)'
+                if 'main_motor' in metadata:
+                    x = _motors[metadata['main_motor']]
                 else:
-                    ss[j] = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(metadata_['nstep_y'], metadata_['nstep_x']))])
-                ss[j].x_centers = afinal
-                ss[j].y_centers = bfinal
+                    x = _motors[list(_motors.keys())[0]]
+                for _key in _detectors.keys():
+                    _s = br.Spectrum(x=x, y=_detectors[_key])
+                    _s.detector=_key
+                    ss.append(_s)
 
-        #########
-        # attrs #
-        #########
-        with h5py.File(Path(fpath), 'r') as f:
-            metadata = h5.sort_metadata(f=f, attrs_dict=ascan_attrs, verbose=verbose)
-        metadata.update(metadata_)
+            ##########
+            # a2scan #
+            ##########
+            if scan_type == 'a2scan':
+                raise NotImplmentedError('read a2scan not implemented')
 
-        # fix metadata
-        metadata['motors'] = motors
-        try:
-            metadata['modified_date'] = br.get_modified_date(fpath)
-            metadata['start_time']    = _str2datetime(metadata['start_time'])
-            metadata['start_time']    = _str2datetime(metadata['start_time'])
-        except:
-            pass
+            ##########
+            # a3scan #
+            ##########
+            elif scan_type == 'a3scan':
+                raise NotImplmentedError('read a2scan not implemented')
 
-        # set metadata
-        for s in [_ for _ in ss] + [ss]:
-            for attr in metadata:
-                setattr(s, attr, metadata[attr])
-        
+            ########
+            # mesh #
+            ########
+            elif scan_type == 'mesh':
+                assert len(motors) == 2, f'number of motors ({len(motors)}) is not compatible with scan type (mesh)'
+                ss = br.Dummy()
+                # getting snaking attr
+                snake = metadata['snaking'].split('\n')[1:-1]
+                metadata['snake'] = [m[2:]=='true' for m in snake]
+
+                # find `x` motor points
+                afinal = np.linspace(metadata['start_x'], metadata['stop_x'], metadata['nstep_x'])
+
+                # find `y` motor points (frozen motor --> always motor_y)
+                bfinal = np.linspace(metadata['start_y'], metadata['stop_y'], metadata['nstep_y'])
+
+                # reshape data
+                for j, _key in  enumerate(_detectors.keys()):
+                    # get intensities
+                    y = _detectors[_key]
+
+                    # check if scan finished
+                    if len(y) < (len(afinal) * len(bfinal)):
+                        # y = np.array(list(y) + [y[-1]]*((len(afinal) * len(bfinal))-len(y)))
+                        y = np.array(list(y) + [None]*((len(afinal)*len(bfinal)) - len(y)))
+                        metadata['error']  = 'mesh interrupted early'
+
+                    # reashape (check snake)
+                    if metadata['snake'][motors.index(metadata['motor_x'])] == True:
+                        _s = br.Image(data=[row if i%2 == 0 else row[::-1] for i, row in enumerate(y.reshape(metadata['nstep_y'], metadata['nstep_x']))])
+                    else:
+                        _s = br.Image(data=[row if i%2 == 0 else row[::] for i, row in enumerate(y.reshape(metadata['nstep_y'], metadata['nstep_x']))])
+                    _s.x_centers = afinal
+                    _s.y_centers = bfinal
+                    _s.detector=_key
+                    ss.append(_s)
+
+            metadata.update(metadata_)
+            for s in [_ for _ in ss] + [ss]:
+                s.EPOCH = f['entry/data/EPOCH'][()]
+                for motor in motors:
+                    s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
+
+                for attr in metadata:
+                    setattr(s, attr, metadata[attr])
+            ss.create_attr_from_spectra('detector', '_detectors')
+
         return ss
 
-    #######
-    # XAS #
-    #######
+    ###########
+    # XAS old #
+    ###########
     else:
         ################
         # get metadata #
@@ -519,7 +565,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[]):
         assert 'scan_type' in comments, 'scan type not found. File corrupted'
 
         #############
-        # XAS (old) #
+        # XAS old 2 #
         #############
         if comments['scan_type'] == 'xas old':
             #############
@@ -657,12 +703,25 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     #############
     pe1, pe2, pes1, pes2 = read(folderpath, start=start, stop=stop, skip=skip)
    
-    ############
-    # spectrum #
-    ############
+    ################
+    # ccd spectrum #
+    ################
     s1  = pe1.integrated_rows_vs_y_centers(nrows=sbins)
     s2  = pe2.integrated_rows_vs_y_centers(nrows=sbins)
     ss1 = br.Spectra([s1, s2])
+    
+    #########
+    # calib #
+    #########
+    if isinstance(calib, Iterable):
+        ss1.calib = calib[0]
+        ss1.shift = -(pe1.Energy - calib[1])
+    elif calib:
+        ss1.calib = calib
+    
+    ################
+    # sum spectrum #
+    ################
     ss2 = ss1.interp().align()
     s   = ss2.calculate_sum()
     
@@ -684,15 +743,7 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     # else:
     #     s = None
     
-    #########
-    # calib #
-    #########
-    if isinstance(calib, Iterable):
-        s.calib = calib[0]
-        s.shift = -(s.Energy - calib[1])
-    elif calib:
-        s.calib = calib
-    #s.shift = -800*calib
+
 
     return {'pe1':pe1, 'pe2':pe2, 'pes1':pes1, 'pes2':pes2, 'ss1':ss1, 'ss2':ss2, 's':s}
 
@@ -913,22 +964,119 @@ def process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=[
     return d['s']
 
 # %% =========================== alignment plot =============================== %% #
-def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, start=0, stop=None, skip=[]):
-    """return rixs spectrum
+def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, start=0, stop=None, skip=[], limits=None, motor_list=None, **kwargs):
+    """Plot alignment analisys
+    
+    Use ss.create_attr_from_spectra(attr) to substitute atype fot attr
+    
+    Args:
+        folderpath (str or path): folderpath with rixs images.
+        scans (list): scans IDs. Ex (1, 534, 458).
+        atype (string): type of the alignment.
+        sbins (int): number of bins for converting photon events to spectrum (
+            number of points in the spectrum).
+        calib (number or list, optional): if not None, the x axis is multipled by calib.
+            You can give two numbers (linear and constant terms), like calib=[calib, shift].
+        norm (bool, optional): if True, spectrum is divided by the exposure time,
+            number of images, and number of bins (sbins).
+        start, stop, skip (list, optional): For RIXS only. Start and stop are 
+            the indexes for the first and last image to sum (inclusive). 
+            Default start is 0 and the default for stop is the None, which
+            will get up to the last image available. skip should be a list with
+            image number indexes to not read (skip). Default is an empty list [].
+        motor_list (list): list of motor positions if the atype is \'motor\'.
+        
+    Returns:
+        Spectrum
     """
     
     assert atype in ['r1', 'r2', 'z', 'motor'], "atype must be 'r1', 'r2', 'z' or 'motor'"
+    if atype == 'motor':
+        assert motor_list is not None, 'If atype=\'motor\' you must put a motor_list=[pos1, pos2]'
+        assert len(motor_list) == len(scans), 'motor_list and scans must have the same len'
     
     basepath = Path(folderpath)
-    ss = br.Spectra()
-    si = br.Spectra([br.Spectrum()]*2)
-    fiti  = br.Spectra([br.Spectrum()]*2)
+    
+    ss   = br.Spectra()
+    popt = list()
+    ss1  = br.Spectra()
+    ss2  = br.Spectra()
+    
+    si    = br.Spectra([br.Spectrum()]*2)
+    ssi   = [ss1, ss2]
+    fiti  = [br.Spectra(),br.Spectra()]
     popti = [[],[]]
+    
+    ss1.__i = 0
+    ss2.__i = 0
+    
     rixs_z  = list()
     rixs_gz = list()
     rixs_dz = list()
     rixs_dy = list()
-    popt = list()
+    
+    ######################
+    # change keybindings #
+    ######################
+    try:
+        matplotlib.rcParams['keymap.back'].remove('left')
+        matplotlib.rcParams['keymap.forward'].remove('right')
+    except ValueError:
+        pass
+
+    ###################
+    # keyboard events #
+    ###################
+    def keyboard(event, ssi, fiti, popti, ax, x):
+        for i in range(2):
+            if event.key == 'right':
+                # increase i
+                ssi[i].__i = ssi[i].__i + 1
+                if ssi[i].__i >= len(ssi[i]):
+                    ssi[i].__i = len(ssi[i]) - 1
+        
+            elif event.key == 'left':# or event.key == 'down':
+                # decrease i
+                ssi[i].__i = ssi[i].__i - 1
+                if ssi[i].__i < 0:
+                    ssi[i].__i = 0
+            else:
+                return
+                    
+        # clear axis
+        ax.cla()
+        
+        # set labels
+        if calib is None:
+            ax.set_xlabel('pixel')
+        else:
+            ax.set_xlabel('Energy (eV)')
+        ax.set_ylabel('counts/bin')
+        
+        # change title
+        ax.set_title('Use left/right keyboard keys to flip through images: ' + str(ssi[0].__i) + '/' + str(len(ssi[0])-1), fontsize='small')
+
+        # plot axes 0        
+        ax1.plot([], [], marker='', linestyle='', label='ccd  scan   pos', color='black')
+        ssi[0][ssi[i].__i].plot(ax=ax1, marker='.', label=f'  {1}   {str(ssi[0][ssi[i].__i].scan).zfill(4)}  {x1[ssi[i].__i]}')
+        ssi[1][ssi[i].__i].plot(ax=ax1, marker='.', label=f'  {2}   {str(ssi[1][ssi[i].__i].scan).zfill(4)}  {x1[ssi[i].__i]}')
+        
+        fiti[0][ssi[i].__i].plot(ax=ax1, linestyle='--', color='darkblue')
+        fiti[1][ssi[i].__i].plot(ax=ax1, linestyle='--', color='red')
+        
+        c = 7.5*max([popti[0][ssi[i].__i][2], popti[1][ssi[i].__i][2]])
+        ax.set_xlim(min([popti[0][ssi[i].__i][1], popti[1][ssi[i].__i][1]])-c, max([popti[0][ssi[i].__i][1], popti[1][ssi[i].__i][1]])+c)
+        ax.legend()
+        
+        plt.draw()
+    
+    if not limits:
+        limits=np.array([500, 1300])
+        if isinstance(calib, Iterable):
+            limits = (limits-calib[1])*calib[0]
+        elif calib:
+            limits = limits*calib  
+        
     for scan in scans:
         z  = None
         gz = None
@@ -941,11 +1089,13 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
         tmp = _process(folderpath, sbins=sbins, calib=calib, norm=norm, start=start, stop=stop, skip=skip)
         s = tmp['s']
         
-        
         for i in range(2):
-            si[i] = tmp['ss2'][i]
-            fiti[i], popt, R2, model = si[i].fit_peak(fixed_m=0, asymmetry=False, limits=[500, 1300])        
+            si[i] = tmp['ss1'][i]
+            ssi[i].append(si[i])
+            fit, popt, R2, model = si[i].fit_peak(fixed_m=0, asymmetry=False, limits=limits)
+            fiti[i].append(fit)
             popti[i].append(popt)
+            
         
         if hasattr(s, 'RIXS_Z'):
             z = round(s.RIXS_Z,3)
@@ -957,19 +1107,11 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
             dz = round(s.RIXS_DZ,3)
             rixs_dz.append(dz)
         if hasattr(s, 'RIXS_DY'):
-            dy = round(s.RIXS_Z,3)
+            dy = round(s.RIXS_DY,3)
             rixs_dy.append(round(s.RIXS_DY, 3))
             
-        if atype == 'z':
-            s.label = f'RIXS_Z = {z}'
-        elif atype == 'r1':
-            s.label = f'RIXS_GZ = {gz}'
-        elif atype == 'r2':
-            s.label = f'RIXS_DZ = {dz}'
-            
         ss.append(s)
-
-    
+   
     if atype == 'z':
         x1 = rixs_z
         x2 = rixs_z
@@ -985,11 +1127,11 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
         x2 = rixs_dy
         x1_label = 'RIXS_DZ'
         x2_label = 'RIXS_DY'
-    # elif atype == 'motor':
-    #     x1 = rixs_z
-    #     x2 = rixs_z
-    #     x1_label = 'RIXS_Z'
-    #     x2_label = 'RIXS_Z'
+    elif atype == 'motor':
+        x1 = motor_list
+        x2 = motor_list
+        x1_label = 'motor'
+        x2_label = 'motor'
     
     # Ordenar x, y e z juntos
     _sorted = sorted(zip(x1, x2, popti[0], popti[1]), key=lambda item: item[0])
@@ -1002,23 +1144,31 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     popt1_new = [list(column) for column in zip(*popt1_sorted)]
 
     fig, axs = plt.subplots(3, 2, figsize=(10, 12))
+    fig.suptitle(f'{atype.upper()} - Aligment', fontweight="bold")
+    
     ax1 = plt.subplot2grid((3, 2), (0, 0), colspan=2)
     ax2 = plt.subplot2grid((3, 2), (1, 0))
     ax3 = plt.subplot2grid((3, 2), (1, 1))
     ax4 = plt.subplot2grid((3, 2), (2, 0))
     ax5 = plt.subplot2grid((3, 2), (2, 1))
     
-    fig.suptitle(f'{atype.upper()} - Aligment')
-    ss.plot(ax=ax1)
+    
+    ax1.set_title('Use left/right keyboard keys to flip through images: 0/' + str(len(scans)-1), fontsize='small')
+    ax1.plot([], [], marker='', linestyle='', label='ccd  scan   pos', color='black')
+    ssi[0][0].plot(ax=ax1, marker='.', label=f'  {1}   {str(ssi[0][0].scan).zfill(4)}  {x1[0]}')
+    ssi[1][0].plot(ax=ax1, marker='.', label=f'  {2}   {str(ssi[1][0].scan).zfill(4)}  {x1[0]}')
+    fiti[0][0].plot(ax=ax1, linestyle='--', color='darkblue')
+    fiti[1][0].plot(ax=ax1, linestyle='--', color='red')
     ax1.legend()
-    ax1.set_xlim(min(popt0_new[1])*0.96, max(popt0_new[1])*1.04)
+    c = 7.5*max([popti[0][0][2], popti[1][0][2]])
+    ax1.set_xlim(min([popti[0][0][1], popti[1][0][1]])-c, max([popti[0][0][1], popti[1][0][1]])+c)
     ax1.set_ylabel('counts/bin')
     if calib is None:
-        ax1.set_xlabel('x (pixel)')
+        ax1.set_xlabel('pixel')
     else:
         ax1.set_xlabel('Energy (eV)')
 
-    ax2.set_title('fwhm')
+    ax2.set_title('fwhm', fontweight="bold")
     ax2.plot(x1_sorted, popt0_new[2], 'o-', label='ccd 1')
     ax2.plot(x1_sorted, popt1_new[2], 'o-', label='ccd 2')
     ax2.set_xlabel(x1_label)
@@ -1029,11 +1179,11 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax22.xaxis.set_label_coords(0.5, 0.90)
     ax2.legend()
     if calib is None:
-        ax2.set_ylabel('y (pixel)')
+        ax2.set_ylabel('pixel')
     else:
         ax2.set_ylabel('Energy (eV)')
     
-    ax3.set_title('center')
+    ax3.set_title('center', fontweight="bold")
     ax3.plot(x1_sorted, popt0_new[1], 'o-', label='ccd 1')
     ax3.plot(x1_sorted, popt1_new[1], 'o-', label='ccd 2')
     ax3.set_xlabel(x1_label)
@@ -1042,10 +1192,13 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax32.plot(x2_sorted, popt1_new[1], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
     ax32.set_xlabel(x2_label)
     ax32.xaxis.set_label_coords(0.5, 0.90)
-    ax3.set_ylabel('y (pixel)')
+    if calib is None:
+        ax3.set_ylabel('pixel')
+    else:
+        ax3.set_ylabel('Energy (eV)')
     ax3.legend()
     
-    ax4.set_title('amplitude')
+    ax4.set_title('amplitude', fontweight="bold")
     ax4.plot(x1_sorted, popt0_new[0], 'o-', label='ccd 1')
     ax4.plot(x1_sorted, popt1_new[0], 'o-', label='ccd 2')
     ax4.set_xlabel(x1_label)
@@ -1057,7 +1210,7 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax4.set_ylabel('counts/bin')
     ax4.legend()
     
-    ax5.set_title('offset')
+    ax5.set_title('offset', fontweight="bold")
     ax5.plot(x1_sorted, popt0_new[3], 'o-', label='ccd 1')
     ax5.plot(x1_sorted, popt1_new[3], 'o-', label='ccd 2')
     ax5.set_xlabel(x1_label)
@@ -1066,10 +1219,15 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax52.plot(x2_sorted, popt1_new[3], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
     ax52.set_xlabel(x2_label)
     ax52.xaxis.set_label_coords(0.5, 0.90)
-    ax5.set_ylabel('y (pixel)')
+    ax5.set_ylabel('counts/bin')
     ax5.legend()
     
-    plt.subplots_adjust(hspace=0.6, wspace=0.4)
+    plt.subplots_adjust(hspace=0.5, wspace=0.4)
+    
+    ######################
+    # register callbacks #
+    ######################
+    fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ssi=ssi, fiti=fiti, popti=popti, ax=ax1, x=x1))
     
     return [x1_sorted, x2_sorted], [popt0_new, popt1_new]
 
@@ -1096,13 +1254,13 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     #####################
     # initialize figure #
     #####################
-    fig, axes = br.subplots(1, 6, sharey='row', figsize=figsize)
+    fig, axes = br.subplots(1, 5, sharey='row', figsize=figsize)
     # fig.subplots_adjust(top=0.99, bottom=0.05, left=0.05, right=0.99)
 
     #############
     # read file #
     #############
-    pe1, pe2, pes1, pes2 = read(fpath=folderpath)
+    pe1, pe2, pes1, pes2 = read(fpath=folderpath, curv=False)
     if ccd == 1:
         pe = pe1
     elif ccd == 2:
@@ -1127,6 +1285,7 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     ####################
     if popt is None:
         s, fit, popt, R2, model = pe.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode='cc', ylimits=ylimits, limit_size=1000)
+        fit = fit.crop(xlimits[0], xlimits[1])
     # print(f'ccd{ccd+1} curvature= {list(popt[ccd])}')
         
     ########
@@ -1134,18 +1293,18 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     ########
 
     # plot photon events (raw)
-    pe.plot(axes[0], color='black')
+    #pe.plot(axes[0], color='black')
 
     # plot reduced image
-    pos = im.plot(axes[2])
+    pos = im.plot(axes[1])
 
     # plot photon events (raw) with vertical bins
-    pe.plot(axes[1], color='black')
-    br.axvlines(ax=axes[1], x=pos.x_edges, colors='red', lw=.5)
+    pe.plot(axes[0], color='black')
+    br.axvlines(ax=axes[0], x=pos.x_edges, colors='red', lw=.5)
 
     # plot horizontal integration of each vertical bin
     cols = im.columns.switch_xy()#.flip_y()
-    cols.plot(axes[3])
+    cols.plot(axes[2])
 
     # get max and min y (makes plot nicer)
     cols2 = im.columns
@@ -1157,18 +1316,18 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
 
     # plot fitting
     offset = cols[0].y[np.argmax(cols[0].x)]
-    pe.plot(axes[4], color='black')
-    fit.plot(axes[4], factor=-1, offset=offset, color='red')
+    pe.plot(axes[3], color='black')
+    fit.plot(axes[3], factor=-1, offset=offset, color='red')
 
     # set shifts
-    pe.plot(axes[5], color='black')
+    pe.plot(axes[4], color='black')
 
     # fix curvature
     pe = pe.set_vertical_shift_via_polyval(p=popt)
-    pe.plot(axes[5], color='red')
+    pe.plot(axes[4], color='red')
 
     # set y lim
-    for i in range(6):
+    for i in range(5):
         axes[i].set_ylim(ymin, ymax)
         axes[i].set_xlabel(f'x subpixel')
 
@@ -1176,11 +1335,7 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
 
     return popt
 
-
-
-
 # %%
-
 
 # %% EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL 
 
