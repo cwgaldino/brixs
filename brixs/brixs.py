@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Core brixs module. Defines the main objects: Spectrum, Spectra, PhotonEvents, Image"""
+"""Core brixs module. Defines the main objects: Spectrum, Spectra, PhotonEvents, Image, Dummy"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 import matplotlib.pyplot as plt
@@ -411,6 +411,28 @@ class Spectrum(metaclass=_Meta):
             >>> print(s.get_core_attrs()) # print list of core attrs
             >>> print(s.get_attrs())      # print list of attrs
             >>> print(s.get_methods())    # print list of methods available
+
+    Attributes:
+        Every BRIXS object has 5 types of attributes: `Core` (stores the main 
+        data of the object), `Check` (asserts data quality), `Modifiers` 
+        (absolute values of 'shift', 'factor', 'offset', 'calib'), `Labels` 
+        (labels for datapoints), `User`(user-defined attributes).
+
+        *1. Core*
+            x, y (array): 1D arrays.
+        
+        *2. Check*
+            step (number): 
+            monotonicity (string): 
+        
+        *3. Modifiers*
+
+        *4. Labels*
+
+        *
+    
+    Note:
+        [FOR DEVELOPERS] 
     """
     _read_only     = ['step', 'monotonicity']
     _non_removable = []
