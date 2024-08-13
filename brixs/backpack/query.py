@@ -75,11 +75,31 @@ def query(question, default="yes"):
 
 # %% =============================== time ================================= %% #
 def start_time():
-    """returns current time"""
+    """returns current time
+    
+    Usage:
+
+        >>> start = br.start_time()
+        >>> run......
+        >>> print(br.stop_time(start))
+    
+    Returns:
+        number (start time)
+    """
     return time.time()
 
 def stop_time(start):
-    """returns current time subtracted by the start time"""
+    """returns current time subtracted by the start time
+    
+    Usage:
+
+        >>> start = br.start_time()
+        >>> run......
+        >>> print(br.stop_time(start))
+    
+    Returns:
+        number (elapsed time)
+    """
     return time.time() - start
 
 # %% =========================== clipboard ================================ %% #
