@@ -5,6 +5,7 @@
 # %% ------------------------- Standard Imports --------------------------- %% #
 import subprocess
 import platform
+import time
 import sys
 
 # %% -------------------------- operating system ------------------------ %% #
@@ -71,6 +72,15 @@ def query(question, default="yes"):
                              "('y' or 'n').\n")
     return
 # %%
+
+# %% =============================== time ================================= %% #
+def start_time():
+    """returns current time"""
+    return time.time()
+
+def stop_time(start):
+    """returns current time subtracted by the start time"""
+    return time.time() - start
 
 # %% =========================== clipboard ================================ %% #
 def copy2clipboard(txt):
