@@ -1,6 +1,29 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Core brixs module. Defines the main objects: Spectrum, Spectra, PhotonEvents, Image, Dummy"""
+"""Core brixs module. Defines the main objects: Spectrum, Spectra, PhotonEvents, Image, Dummy
+
+Every BRIXS object has 5 types of attributes: `Core` (stores the main 
+data of the object), `Check` (asserts data quality), `Modifiers` 
+(absolute values of 'shift', 'factor', 'offset', 'calib'), `Labels` 
+(labels for datapoints), `User`(user-defined attributes).
+
+*[FOR DEVELOPERS]* Check attrs:
+    
+    `check` attrs cannot be user modifiable and shall only 
+    be modified via 'check methods'
+
+*[FOR DEVELOPERS]* Writing new methods:
+    
+    Methods shall avoid changing the `core` attrs inside 
+    `self`. Instead, a copy of self shall be created, modified, and 
+    returned to the user. If `core` attrs are modified directly on `self`, 
+    this should be explicitly clear in the docstring.
+
+    Methods must ensure that `check` attrs are still valid after operation
+    on `self` or on the copy of `self`. If `check` attrs are not valid 
+    anymore, reset them to None.
+
+"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 import matplotlib.pyplot as plt
@@ -413,10 +436,8 @@ class Spectrum(metaclass=_Meta):
             >>> print(s.get_methods())    # print list of methods available
 
     Attributes:
-        Every BRIXS object has 5 types of attributes: `Core` (stores the main 
-        data of the object), `Check` (asserts data quality), `Modifiers` 
-        (absolute values of 'shift', 'factor', 'offset', 'calib'), `Labels` 
-        (labels for datapoints), `User`(user-defined attributes).
+        Every BRIXS object has 5 types of attributes: 
+        `Core` , `Check`, `Modifiers`, `Labels`, `User`.
 
         *1. Core*
             x, y (array): 1D arrays.
@@ -424,10 +445,10 @@ class Spectrum(metaclass=_Meta):
         *2. Check*
             step (number): None or a number if the step between two data points 
                 is the same through out the x vector. Can only be modified by 
-                s.check_step() function.
+                s.check_step() method.
             monotonicity (string): None if data is not monotonic or 'increasing'
-                 or 'decreasing'. Can only be modifed by s.check_monotonicity()
-                 function.
+                 or 'decreasing'. Can only be modified by s.check_monotonicity()
+                 method.
 
         *3. Modifiers*
             calib, factor, shift, offset (number): absolute values of 
@@ -438,27 +459,7 @@ class Spectrum(metaclass=_Meta):
 
         *5. User*
             anything that the user defined on the fly.        
-
-    Note:
-        *[FOR DEVELOPERS]* Check attrs
-        
-            `check` attrs cannot be user modifiable and shall only 
-            be modified via 'check methods'
-
-    Note:
-        *[FOR DEVELOPERS]* Writing new methods
-        
-            Methods shall avoid changing the `core` attrs inside 
-            `self`. Instead, a copy of self shall be created, modified, and 
-            returned to the user. If `core` attrs are modified directly on `self`, 
-            this should be explicitly clear in the docstring.
-
-            Methods must be written in 
-
-        
-
-
-    """
+   """
     _read_only     = ['step', 'monotonicity']
     _non_removable = []
 
@@ -2180,6 +2181,35 @@ class Spectra(metaclass=_Meta):
             >>> print(ss.get_core_attrs()) # print list of core attrs
             >>> print(ss.get_attrs())      # print list of attrs
             >>> print(ss.get_methods())    # print list of methods available
+
+        Attributes:
+            Every BRIXS object has 5 types of attributes: 
+            `Core` , `Check`, `Modifiers`, `Labels`, `User`.
+
+            *1. Core*
+                data (list): list of Spectrum objects
+            
+            *2. Check*
+                length (int): None or lenght of spectra if every spectrum has the 
+                    same lenght. Can only be modified by ss.check_lenght() method.
+                step (number): None or a number if the step between two data points 
+                    is the same through out the x vector for all spectra. Can only be modified by 
+                    s.check_step() method.
+                x (array): None or 1D array if every spectra has the same x vector.
+                    Can only be modifed by ss.check_same_x() method.
+                monotonicity (string): None if data is not monotonic or 'increasing'
+                    or 'decreasing' if every spectrum has the same monotonicity.
+                    Can only be modified by ss.check_monotonicity()
+                    method.
+
+            *3. Modifiers*
+                None
+            
+            *4. Labels*
+                None
+
+            *5. User*
+                anything that the user defined on the fly.        
     """
     _read_only     = ['step', 'length', 'x', 'monotonicity']
     _non_removable = []
@@ -5385,6 +5415,39 @@ class Image(metaclass=_Meta):
             >>> print(im.get_core_attrs()) # print list of core attrs
             >>> print(im.get_attrs())      # print list of attrs
             >>> print(im.get_methods())    # print list of methods available
+    
+    Attributes:
+        Every BRIXS object has 5 types of attributes: 
+        `Core` , `Check`, `Modifiers`, `Labels`, `User`.
+
+        *1. Core*
+            data (array): 2D array.
+        
+        *2. Check*
+            x_step, y_step (number): None or a number if the step between two data points 
+                at x_centers or y_centers. Can only be modified by 
+                im.check_x_step() and im.check_y_step() methods.
+            x_monotonicity, y_monotonicity (string): None if data is not monotonic or 'increasing'
+                 or 'decreasing' if x_center or y_centers is monotonic. Can only
+                 be modified by im.check_x_monotonicity() and im.check_y_monotonicity()
+                 methods.
+
+        *3. Modifiers*
+            factor, offset (number): absolute values of 
+            modifications made to the data. 
+        
+        *4. Labels*
+        x_centers, y_centers (array): 1D arrays representing values associated 
+            with each pixel row and column. These
+            are connected with x_centers and y_centers (i.e. changing x_edges also 
+            changes x_centers and vice-versa).
+        x_edges, y_edges (array): 1D arrays with same lenght of x_centers and 
+        y_centers plus 1 representing the edges of the pixel rows and columns. These
+            are connected with x_centers and y_centers (i.e. changing x_edges also 
+            changes x_centers and vice-versa).
+
+        *5. User*
+            anything that the user defined on the fly.        
     """
     # read only and non-removable arguments
     _read_only     = ['x_step', 'x_monotonicity', 'y_step', 'y_monotonicity']
@@ -7738,7 +7801,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     Args:
         x, y (list or array, optional): array with x, y photon events coordinates
         xlim, ylim (list, optional): two element tuple with min and max possible 
-            x and y coordinates. Used for reference, for defining binning limits
+            x and y coordinates. Used for defining binning limits
              and for plotting.
         filepath (str or Path, optional): filepath.
         **kwargs: kwargs are passed to :py:func:`PhotonEvents.load` function.
@@ -7754,6 +7817,27 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             >>> print(pe.get_core_attrs()) # print list of core attrs
             >>> print(pe.get_attrs())      # print list of attrs
             >>> print(pe.get_methods())    # print list of methods available
+
+    Attributes:
+        Every BRIXS object has 5 types of attributes: 
+        `Core` , `Check`, `Modifiers`, `Labels`, `User`.
+
+        *1. Core*
+            x, y (array): 1D arrays with uncorrelated x, y data
+        
+        *2. Check*
+            None
+
+        *3. Modifiers*
+            None
+        
+        *4. Labels*
+            xlim, ylim (number): two element tuple with min and max possible 
+                x and y coordinates. Used for defining binning limits
+                and for plotting.
+
+        *5. User*
+            anything that the user defined on the fly.        
     """
     _read_only = []
     _non_removable = []
@@ -7764,8 +7848,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # Initializing attributes #
         ###########################
         # core
-        self._x    = None
-        self._y    = None
+        self._x = None
+        self._y = None
+
+        # check
+        pass
 
         # modifiers
         pass
