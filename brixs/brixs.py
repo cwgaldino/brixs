@@ -15,13 +15,25 @@ data of the object), `Check` (asserts data quality), `Modifiers`
 *[FOR DEVELOPERS]* Writing new methods:
     
     Methods shall avoid changing the `core` attrs inside 
-    `self`. Instead, a copy of self shall be created, modified, and 
+    `self`. Instead, a copy of `self` shall be created, modified, and 
     returned to the user. If `core` attrs are modified directly on `self`, 
     this should be explicitly clear in the docstring.
 
-    Methods must ensure that `check` attrs are still valid after operation
+    Methods that return a copy of `self` must (as much as possible) copy all 
+    suitable attrs (`Modifiers`, `Labels`, and `User`). As for `Check` attrs, 
+    methods must ensure that `check` attrs are still valid after operation
     on `self` or on the copy of `self`. If `check` attrs are not valid 
-    anymore, reset them to None.
+    anymore, reset them to None.  
+
+    Methods should take into consideration what happens in case the object is 
+    'empty' (object with no data).  
+
+*[FOR DEVELOPERS]* Copy() methods must copy all attrs including all 4 attrs types
+    (data, check, modifiers, labels) within _copy() and user attrs included in copy().
+
+*[FOR DEVELOPERS]* one should avoid using `check` methods inside functions/methods. It's
+    preferable to raise an error and let the user deal with it or at least check 
+    if check attrs are defined already before calling the check methods. 
 
 """
 
@@ -1003,6 +1015,9 @@ class Spectrum(metaclass=_Meta):
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
 
+        Note:
+            spectrum is not required to be monotonic. 
+
         Returns:
             :py:class:`Spectrum`
         """
@@ -1250,6 +1265,11 @@ class Spectrum(metaclass=_Meta):
                 Step uniformity is verified by the following equation:
 
                     (max(steps) - min(steps))/np.mean(steps) * 100 < max_error
+            
+            Note:
+                If s.step is well defined, then s.monotonicity is also well defined. 
+                If spectrum has only one datapoint, step will be set to None and 
+                monotonicity set to 'increasing'.
 
             Returns:
                 None
@@ -1265,6 +1285,14 @@ class Spectrum(metaclass=_Meta):
         ########################
         if self.x is None:
             raise ValueError('cannot check step for empty spectrum')
+        
+        #####################################
+        # check spectrum with one datapoint #
+        #####################################
+        if len(self.x) == 1:
+            self._step = None
+            self._monotonicity = 'increasing'
+            return
         
         # if data is not monotonic, than it is not uniform
         if self.monotonicity is None:
@@ -1282,11 +1310,17 @@ class Spectrum(metaclass=_Meta):
         # set step
         self._step = np.mean(d)
 
+        return
+
     def check_monotonicity(self):
         """Sets monotonicity attribute to 'increasing' or 'decreasing'.
 
         Raises:
             ValueError if data is not monotonic.
+
+        Note:
+            If spectrum has only one datapoint, step will be set to None and 
+            monotonicity set to 'increasing'.
 
         Returns:
             None
@@ -1742,6 +1776,9 @@ class Spectrum(metaclass=_Meta):
                 x will be used.
             stop (number, optional): final x value. If None, the maximum value of
                 x will be used.
+        
+        Note:
+            spectrum is not required to be monotonic. 
 
         Returns:
             :py:class:`Spectrum`
@@ -5416,6 +5453,14 @@ class Image(metaclass=_Meta):
             >>> print(im.get_attrs())      # print list of attrs
             >>> print(im.get_methods())    # print list of methods available
     
+    Notes:
+        Three methods for ploting images are defined:
+            im.imshow(): pixels are squares. x and y axes are given in terms of pixels
+            im.plot(): Pixels are squares. x and y axes are given in terms of x and y centers 
+                (x_centers and y_centers must be monotonic).
+            im.pcolormesh(): Allows for irregular pixel row/columns. x and y axes are 
+                set based on x and y edges (or x and y centers when edges are not available).
+
     Attributes:
         Every BRIXS object has 5 types of attributes: 
         `Core` , `Check`, `Modifiers`, `Labels`, `User`.
@@ -5438,13 +5483,12 @@ class Image(metaclass=_Meta):
         
         *4. Labels*
         x_centers, y_centers (array): 1D arrays representing values associated 
-            with each pixel row and column. These
-            are connected with x_centers and y_centers (i.e. changing x_edges also 
-            changes x_centers and vice-versa).
-        x_edges, y_edges (array): 1D arrays with same lenght of x_centers and 
-        y_centers plus 1 representing the edges of the pixel rows and columns. These
-            are connected with x_centers and y_centers (i.e. changing x_edges also 
-            changes x_centers and vice-versa).
+            with each pixel row and column. Note that, defining x_edges and 
+             y_edges changes x_centers and y_centers.
+        x_edges, y_edges (array): None or monotonic 1D arrays with same lenght 
+            of x_centers and y_centers plus 1 representing the edges of the 
+            pixel rows and columns. These are connected with x_centers and 
+            y_centers (i.e., changing x_edges also changes x_centers).
 
         *5. User*
             anything that the user defined on the fly.        
@@ -5566,23 +5610,24 @@ class Image(metaclass=_Meta):
             if self.data is None:
                 self._x_centers = None 
                 self._x_edges   = None 
+                self._x_step         = None
+                self._x_monotonicity = None
                 return
             else:
                 value = np.arange(0, self.data.shape[1])
         elif isinstance(value, Iterable):
             assert len(value) == self.shape[1], f"number of x centers ({len(value)}) must be the same as the number of pixel columns ({self.shape[1]})"
-            # assert arraymanip.check_monotonicity(value) == 1, f"x centers must be a monotonically increasing array"
         else:
             raise ValueError(f"x centers must be None or an iterable (list, tuple, or 1D array)")
         
         # setting centers
         self._x_centers = np.array(value, dtype='float')
-        # setting edges
-        if len(value) == 1:
-            self._x_edges = [value[0] - 0.5] + [value[0] + 0.5]
-        else:
-            temp         = list(arraymanip.moving_average(value, 2))
-            self._x_edges = [2*value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
+        self._x_edges   = None
+
+        # reseting checks
+        self._x_step         = None
+        self._x_monotonicity = None
+        return
     @x_centers.deleter
     def x_centers(self):
         self._x_centers = np.arange(0, self.data.shape[1])
@@ -5596,23 +5641,24 @@ class Image(metaclass=_Meta):
             if self.data is None:
                 self._y_centers = None 
                 self._y_edges   = None 
+                self._y_step         = None
+                self._y_monotonicity = None
                 return
             else:
                 value = np.arange(0, self.data.shape[0])
         elif isinstance(value, Iterable):
             assert len(value) == self.shape[0], f"number of y centers ({len(value)}) must be the same as the number of pixel columns ({self.shape[0]})"
-            # assert arraymanip.check_monotonicity(value) == 1, f"y centers must be a monotonically increasing array"
         else:
             raise ValueError(f"y centers must be None or an iterable (list, tuple, or 1D array)")
         
         # setting centers
         self._y_centers = np.array(value, dtype='float')
-        # setting edges
-        if len(value) == 1:
-            self._y_edges = [value[0] - 0.5] + [value[0] + 0.5]
-        else:
-            temp = list(arraymanip.moving_average(value, 2))
-            self._y_edges = [2*value[0] - temp[0]] + temp + [2*value[-1] - temp[-1]]
+        self._y_edges  = None
+        
+        # reseting checks
+        self._y_step         = None
+        self._y_monotonicity = None
+        return
     @y_centers.deleter
     def y_centers(self):
         self._y_centers  = np.arange(0, self.data.shape[0])
@@ -5633,11 +5679,14 @@ class Image(metaclass=_Meta):
                 value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
             assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns plus one ({self.shape[1] + 1})"
-            # assert arraymanip.check_monotonicity(value) == 1, f"x edges must be a monotonically increasing array"
+            monotonicity = arraymanip.check_monotonicity(value)
+            assert monotonicity != 0, f"edge values must be a monotonically array (either increasing or decreasing)"
         else:
             raise ValueError(f"x edges must be None or an iterable (list, tuple, or 1D array)")
-        self._x_edges   = np.array(value, dtype='float')
-        self._x_centers = np.array(arraymanip.moving_average(value, 2), dtype='float')
+        
+        self._x_edges        = np.array(value, dtype='float')
+        self._x_monotonicity = 'increasing' if monotonicity == 1 else 'decreasing'
+        self._x_centers      = np.array(arraymanip.moving_average(value, 2), dtype='float')
     @x_edges.deleter
     def x_edges(self):
         raise NotImplementedError('this is not implemented yet')
@@ -5658,11 +5707,13 @@ class Image(metaclass=_Meta):
                 value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
             assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows plus one ({self.shape[0] + 1})"
-            # assert arraymanip.check_monotonicity(value) == 1, f"y edges must be a monotonically increasing array"
-            self._y_centers = np.array(arraymanip.moving_average(value, 2), dtype='float')
+            monotonicity = arraymanip.check_monotonicity(value)
+            assert monotonicity != 0, f"edge values must be a monotonically array (either increasing or decreasing)"
         else:
             raise ValueError(f"y edges must be None or an iterable (list, tuple, or 1D array)")
         self._y_edges = np.array(value, dtype='float')
+        self._y_monotonicity = 'increasing' if monotonicity == 1 else 'decreasing'
+        self._y_centers = np.array(arraymanip.moving_average(value, 2), dtype='float')
     @y_edges.deleter
     def y_edges(self):
         raise NotImplementedError('this is not implemented yet')
@@ -6035,7 +6086,79 @@ class Image(metaclass=_Meta):
     ################
     # core methods #
     ################
-    pass
+    def estimate_x_edges_from_centers(self):
+        """Returns copy of image with x_edges defined from averaging x_centers
+
+        Note:
+            x_centers must be at least monotonic.
+
+        Returns:
+            Image with x_edges defined
+        """
+        ########################
+        # check if empty image #
+        ########################
+        if self.x_centers is None:
+            return self.copy()
+        
+        ##################
+        # check validity #
+        ##################
+        if self.x_monotonicity is None:
+            try:
+                self.check_x_monotonicity()
+            except ValueError:
+                raise ValueError('x_centers must be monotonic for calculating x_edges')
+
+        #################
+        # setting edges #
+        #################
+        im = self.copy()
+        centers = im.x_centers
+        if len(centers) == 1:
+            im._x_edges = [centers[0] - 0.5] + [centers[0] + 0.5]
+        else:
+            temp = list(arraymanip.moving_average(centers, 2))
+            im._x_edges = [2*centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
+        
+        return im
+
+    def estimate_y_edges_from_centers(self):
+        """Returns copy of image with y_edges defined from averaging y_centers
+
+        Note:
+            y_centers must be at least monotonic.
+
+        Returns:
+            Image with y_edges defined
+        """
+        ########################
+        # check if empty image #
+        ########################
+        if self.y_centers is None:
+            return self.copy()
+        
+        ##################
+        # check validity #
+        ##################
+        if self.y_monotonicity is None:
+            try:
+                self.check_y_monotonicity()
+            except ValueError:
+                raise ValueError('y_centers must be monotonic for calculating y_edges')
+
+        #################
+        # setting edges #
+        #################
+        im = self.copy()
+        centers = im.y_centers
+        if len(centers) == 1:
+            im._y_edges = [centers[0] - 0.5] + [centers[0] + 0.5]
+        else:
+            temp = list(arraymanip.moving_average(centers, 2))
+            im._y_edges = [2*centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
+        
+        return im
 
     ########
     # copy #
@@ -6058,8 +6181,10 @@ class Image(metaclass=_Meta):
             im._y_monotonicity = self.y_monotonicity
             im._factor         = self.factor
             im._offset         = self.offset
-            im.x_centers       = copy.deepcopy(self.x_centers)
-            im.y_centers       = copy.deepcopy(self.y_centers)
+            im._x_centers      = copy.deepcopy(self.x_centers)
+            im._y_centers      = copy.deepcopy(self.y_centers)
+            im._x_edges        = copy.deepcopy(self.x_edges)
+            im._y_edges        = copy.deepcopy(self.y_edges)
             return im
         
         ########################
@@ -6073,8 +6198,10 @@ class Image(metaclass=_Meta):
             im._y_monotonicity = self.y_monotonicity
             im._factor         = self.factor
             im._offset         = self.offset
-            im.x_centers       = copy.deepcopy(self.x_centers)
-            im.y_centers       = copy.deepcopy(self.y_centers)
+            im._x_centers      = copy.deepcopy(self.x_centers)
+            im._y_centers      = copy.deepcopy(self.y_centers)
+            im._x_edges        = copy.deepcopy(self.x_edges)
+            im._y_edges        = copy.deepcopy(self.y_edges)
             return im
         
         #################
@@ -6097,8 +6224,10 @@ class Image(metaclass=_Meta):
                 im._y_monotonicity = self.y_monotonicity
                 im._factor         = self.factor
                 im._offset         = self.offset
-                im.x_centers       = copy.deepcopy(self.x_centers)
-                im.y_centers       = copy.deepcopy(self.y_centers)
+                im._x_centers      = copy.deepcopy(self.x_centers)
+                im._y_centers      = copy.deepcopy(self.y_centers)
+                im._x_edges        = copy.deepcopy(self.x_edges)
+                im._y_edges        = copy.deepcopy(self.y_edges)
                 return im
             
         ##################
@@ -6110,10 +6239,52 @@ class Image(metaclass=_Meta):
         ########
         # crop #
         ########
+        # crop y
         _im = self.columns.stack_spectra_as_columns(x_centers=self.x_centers, limits=[y_start, y_stop])
         if _im.data is None: return Image()
+        # crop x
         im = _im.rows.stack_spectra_as_rows(y_centers=_im.y_centers, limits=[x_start, x_stop])
         if im.data is None: return Image()
+
+        # edges y
+        if self.y_edges is not None:
+            edges = np.array(self.y_edges)
+            if self.y_monotonicity is None:
+                try:
+                    self.check_y_monotonicity()
+                except ValueError:
+                    raise ValueError('y edges must be monotonic. Please, set suitable y edges (or set y_edges to None).')
+            if self.y_monotonicity.startswith('inc'):
+                if y_start < y_stop:
+                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_start].max() and _ <= edges[edges > y_stop].min()]
+                else:
+                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
+            else:
+                if y_start < y_stop:
+                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_start].max() and _ <= edges[edges > y_stop].min()]
+                else:
+                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
+        
+        # edges x
+        if self.x_edges is not None:
+            edges = np.array(self.x_edges)
+            if self.x_monotonicity is None:
+                try:
+                    self.check_x_monotonicity()
+                except ValueError:
+                    raise ValueError('x edges must be monotonic. Please, set suitable y edges (or set y_edges to None).')
+            if self.x_monotonicity.startswith('inc'):
+                if x_start < x_stop:
+                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_start].max() and _ <= edges[edges > x_stop].min()]
+                else:
+                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_stop].max() and _ <= edges[edges > x_start].min()]
+            else:
+                if x_start < x_stop:
+                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_stop].max() and _ <= edges[edges > x_start].min()]
+                else:
+                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_start].max() and _ <= edges[edges > x_stop].min()]
+        
+        # attrs
         im._x_step         = self.x_step
         im._y_step         = self.y_step
         im._x_monotonicity = self.x_monotonicity
@@ -6382,12 +6553,20 @@ class Image(metaclass=_Meta):
         if self.data is None:
             raise ValueError('cannot operate on empty image') 
 
+        ##############
+        # check step #
+        ##############
         s = Spectrum(x=self.x_centers)
         try:
             s.check_step()
         except ValueError:
             raise ValueError(f"Step in the x centers seems not to be uniform. Set im.x_centers = None or change im.x_centers")
         self._x_step = s.step
+
+        ###############################
+        # monotonicity comes for free #
+        ###############################
+        self._x_monotonicity = s._monotonicity
         return
 
     def check_y_step(self, max_error=0.1):
@@ -6426,6 +6605,11 @@ class Image(metaclass=_Meta):
         except ValueError:
             raise ValueError(f"Step in the y centers seems not to be uniform. Set im.y_centers = None or change im.y_centers")
         self._y_step = s.step
+
+        ###############################
+        # monotonicity comes for free #
+        ###############################
+        self._y_monotonicity = s._monotonicity
         return
     
     def check_x_monotonicity(self):
@@ -6913,11 +7097,17 @@ class Image(metaclass=_Meta):
         # transfer attrs #
         ##################
         im.copy_attrs_from(self)
-        im.x_centers = copy.deepcopy(self.y_centers)
-        im.y_centers = copy.deepcopy(self.x_centers)       
-
+        im._x_step         = self.y_step
+        im._y_step         = self.x_step
+        im._x_monotonicity = self.y_monotonicity
+        im._y_monotonicity = self.x_monotonicity
+        im.factor          = self.factor
+        im.offset          = self.offset
+        im.x_centers       = copy.deepcopy(self.y_centers)
+        im.y_centers       = copy.deepcopy(self.x_centers)       
+        im.x_edges         = copy.deepcopy(self.y_edges)
+        im.y_edges         = copy.deepcopy(self.x_edges) 
         return im
-
 
     def x_interp(self, start=None, stop=None, num=None, step=None, x=None):
         """return image with interpolated x centers
@@ -6935,15 +7125,32 @@ class Image(metaclass=_Meta):
         Return:
             :py:class:`Image`
         """
+        ###############
+        # get columns #
+        ###############
         cols = self.columns
 
+        ##########
+        # interp #
+        ##########
         cols.ref = self.x_centers
         ss = cols.interp_spectra(ref='ref', start=start, stop=stop, num=num, step=step, x=x)
-        
         im = ss.stack_spectra_as_columns()
+
+        ##################
+        # transfer attrs #
+        ##################
         im.copy_attrs_from(self)
-        im.x_centers = ss.ref
-        im.y_centers = self.y_centers
+        im._x_step         = None
+        im._y_step         = self.y_step
+        im._x_monotonicity = None
+        im._y_monotonicity = self.y_monotonicity
+        im.factor          = self.factor
+        im.offset          = self.offset
+        im.x_centers       = ss.ref
+        im.y_centers       = copy.deepcopy(self.y_centers)     
+        im.x_edges         = None
+        im.y_edges         = copy.deepcopy(self.y_edges)
         return im
 
     def y_interp(self, start=None, stop=None, num=None, step=None, y=None):
@@ -6962,14 +7169,32 @@ class Image(metaclass=_Meta):
         Return:
             :py:class:`Image`
         """
+        ############
+        # get rows #
+        ############
         rows = self.rows
+
+        ##########
+        # interp #
+        ##########      
         rows.ref = self.y_centers
         ss = rows.interp_spectra(ref='ref', start=start, stop=stop, num=num, step=step, x=y)
-        
         im = ss.stack_spectra_as_rows()
+    
+        ##################
+        # transfer attrs #
+        ##################
         im.copy_attrs_from(self)
-        im.x_centers = self.x_centers
-        im.y_centers = ss.ref
+        im._x_step         = self.x_step
+        im._y_step         = None
+        im._x_monotonicity = self.x_monotonicity
+        im._y_monotonicity = None
+        im.factor          = self.factor
+        im.offset          = self.offset
+        im.x_centers       = copy.deepcopy(self.x_centers)
+        im.y_centers       = ss.ref
+        im.x_edges         = copy.deepcopy(self.x_edges)
+        im.y_edges         = None
         return im
 
 
@@ -6999,6 +7224,18 @@ class Image(metaclass=_Meta):
         assert self.shape[1] % nrows == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {nrows}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[1])))}"
         assert self.shape[0] % ncols == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {ncols}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[0])))}"
 
+        # is uniform
+        if self.x_step is None:
+            try:
+                self.check_x_step()
+            except ValueError:
+                raise ValueError('x_centers not uniform. Binning only makes sense for uniform images. Fix x_centers or set it to None')
+        if self.y_step is None:
+            try:
+                self.check_y_step()
+            except ValueError:
+                raise ValueError('y_centers not uniform. Binning only makes sense for uniform images. Fix y_centers or set it to None')
+
         ###############
         # Calculation #
         ###############
@@ -7006,21 +7243,99 @@ class Image(metaclass=_Meta):
         reduced    = Image(np.add.reduceat(np.add.reduceat(self._data, list(map(float, np.arange(0, self.shape[0], _bins_size[0]))), axis=0), list(map(float, np.arange(0, self.shape[1], _bins_size[1]))), axis=1))
         
         # x and y centers
-        _x_edges = np.arange(0, self.shape[1]+_bins_size[1]/2, _bins_size[1])
-        _y_edges = np.arange(0, self.shape[0]+_bins_size[0]/2, _bins_size[0])
-        
-        reduced._x_centers = arraymanip.moving_average(_x_edges, n=2)
-        reduced._y_centers = arraymanip.moving_average(_y_edges, n=2)
-        reduced._x_edges = _x_edges
-        reduced._y_edges = _y_edges
+        reduced._x_centers = Spectrum(x=self.x_centers).smooth(int(self.shape[1]/nrows), force_divisible=True).x
+        reduced._y_centers = Spectrum(x=self.y_centers).smooth(int(self.shape[0]/ncols), force_divisible=True).x
+        # _x_edges = np.arange(0, self.shape[1]+_bins_size[1]/2, _bins_size[1])
+        # _y_edges = np.arange(0, self.shape[0]+_bins_size[0]/2, _bins_size[0])
+        # reduced._x_centers = arraymanip.moving_average(_x_edges, n=2)
+        # reduced._y_centers = arraymanip.moving_average(_y_edges, n=2)
+        # reduced._x_edges = _x_edges
+        # reduced._y_edges = _y_edges
+        reduced = reduced.estimate_x_edges_from_centers()
+        reduced = reduced.estimate_y_edges_from_centers()
 
         ##################
         # transfer attrs #
         ##################
         reduced.copy_attrs_from(self)
-
+        reduced._x_step         = None
+        reduced._y_step         = None
+        reduced._x_monotonicity = self.x_monotonicity
+        reduced._y_monotonicity = self.y_monotonicity
+        reduced.factor          = self.factor
+        reduced.offset          = self.offset
+        # reduced.x_centers       = None
+        # reduced.y_centers       = None
+        # reduced.x_edges         = None
+        # reduced.y_edges         = None
         return reduced
     
+
+    def rows_moving_average(self, n):
+        """Returns an Image object with moving average on rows.
+
+            Note:
+                moving average is also applied to x_centers.
+
+            Args:
+                n (int): number of points to average.
+
+            Returns:
+                :py:class:`Image` with number of columns given by (number_of_columns - n + 1)
+        """
+        
+        final = Image(data=(np.zeros((self.shape[0], self.shape[1]-n+1))))
+        for i, row in enumerate(self.rows):
+            final._data[i, :] = row.moving_average(n)
+            if i == final.shape[0]:
+                break
+        final.copy_attrs_from(self)
+
+        # la
+        final.x_centers = Spectrum(y=self.x_centers).moving_average(n).y
+        final.y_centers = self.y_centers
+
+        return final
+
+    def columns_moving_average(self, n):
+        """Returns an Image object with moving average on columns.
+
+            Note:
+                moving average is also applied to y_centers.
+
+            Args:
+                n (int): number of points to average.
+
+            Returns:
+                :py:class:`Image` with number of rows given by (number_of_rows - n + 1)
+        """
+        
+        final = br.Image(data=(np.zeros((self.shape[0]-n+1, self.shape[1]))))
+        for j, column in enumerate(self.columns):
+            final._data[:, j] = column.moving_average(n)
+            if j == final.shape[1]:
+                break
+                
+        final.copy_attrs_from(self)
+        final.x_centers = self.x_centers
+        final.y_centers = br.Spectrum(y=self.y_centers).moving_average(n).y
+        return final
+
+    def moving_average(self, n):
+        """Returns an Image object with 2d moving average.
+
+            Note:
+                moving average is also applied to x_centers and y_centers.
+
+            Args:
+                n (int): number of points to average.
+
+            Returns:
+                :py:class:`Image` with number of rows given by (number_of_rows - n + 1) 
+                and columns given by (number_of_columns - n + 1)
+        """
+        return self.rows_moving_average(n).columns_moving_average(n)
+
     ########################
     # calculation and info #
     ########################
@@ -7456,9 +7771,9 @@ class Image(metaclass=_Meta):
     def pcolormesh(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
-        If x_centers and y_centers have irregular pixel separation, pcolormesh
-            does its best to defined pixel edges so centers labels correspond 
-            to the real centers (nearest possible).
+        If x_edges and y_edges are not defined and x_centers and y_centers have 
+            irregular pixel separation, pcolormesh does its best to defined pixel 
+            edges so centers labels correspond to the real centers (nearest possible).
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
@@ -7498,14 +7813,6 @@ class Image(metaclass=_Meta):
             if 'vmax' not in kwargs:
                 kwargs['vmax'] = vmax
 
-        ######################
-        # check monotonicity #
-        ######################
-        if self.x_monotonicity is None:
-            self.check_x_monotonicity()
-        if self.y_monotonicity is None:
-            self.check_y_monotonicity()
-
         ####################
         # colorbar divider #
         ####################
@@ -7521,11 +7828,27 @@ class Image(metaclass=_Meta):
             if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
                 figure()
 
-        # plot
-        X, Y = np.meshgrid(im.x_centers, im.y_centers)
+        #############
+        # get edges #
+        #############
+        if im.x_edges is None: 
+            if im.x_monotonicity is None:
+                im.check_x_monotonicity()
+            im = im.estimate_x_edges_from_centers()
+        if im.y_edges is None: 
+            if im.y_monotonicity is None:
+                im.check_y_monotonicity()
+            im = im.estimate_y_edges_from_centers()
+
+        ########
+        # plot #
+        ########
+        X, Y = np.meshgrid(im.x_edges, im.y_edges)
         pos  = ax.pcolormesh(X, Y, im.data, **kwargs)
 
-        # colorbar
+        ############
+        # colorbar #
+        ############
         if colorbar:
             if divider:
                 divider = make_axes_locatable(ax)
@@ -7543,10 +7866,10 @@ class Image(metaclass=_Meta):
         return pos
     
     def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
-        """Display data as an image. Wrapper for `matplotlib.pyplot.imshow()`_.
+        """Display data as an image in terms of pixels. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
-            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh().
+            Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh().
             For image with axis in terms of x and y centers, use Image.plot().        
 
         Args:
@@ -7648,7 +7971,7 @@ class Image(metaclass=_Meta):
         """Display data as an image with axis based on x and y centers. Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
-            Pixels are always square. For irregular pixel row/columns, see Image.pcolormesh()
+            Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh()
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
@@ -7744,7 +8067,12 @@ class Image(metaclass=_Meta):
             # dx = np.mean(np.diff(x))
             # extent_x = [x[0]-dx/2, x[-1]+dx/2]
 
+            if im.x_edges is None:
+                im = im.estimate_x_edges_from_centers()
             extent_x = [min(im.x_edges), max(im.x_edges)]
+
+            if im.y_edges is None:
+                im = im.estimate_y_edges_from_centers()
             if origin == 'upper':
                 extent_y = [max(im.y_edges), min(im.y_edges)]
             else:
