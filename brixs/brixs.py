@@ -7101,12 +7101,12 @@ class Image(metaclass=_Meta):
         im._y_step         = self.x_step
         im._x_monotonicity = self.y_monotonicity
         im._y_monotonicity = self.x_monotonicity
-        im.factor          = self.factor
-        im.offset          = self.offset
-        im.x_centers       = copy.deepcopy(self.y_centers)
-        im.y_centers       = copy.deepcopy(self.x_centers)       
-        im.x_edges         = copy.deepcopy(self.y_edges)
-        im.y_edges         = copy.deepcopy(self.x_edges) 
+        im._factor          = self.factor
+        im._offset          = self.offset
+        im._x_centers       = copy.deepcopy(self.y_centers)
+        im._y_centers       = copy.deepcopy(self.x_centers)       
+        im._x_edges         = copy.deepcopy(self.y_edges)
+        im._y_edges         = copy.deepcopy(self.x_edges) 
         return im
 
     def x_interp(self, start=None, stop=None, num=None, step=None, x=None):
@@ -7145,12 +7145,12 @@ class Image(metaclass=_Meta):
         im._y_step         = self.y_step
         im._x_monotonicity = None
         im._y_monotonicity = self.y_monotonicity
-        im.factor          = self.factor
-        im.offset          = self.offset
-        im.x_centers       = ss.ref
-        im.y_centers       = copy.deepcopy(self.y_centers)     
-        im.x_edges         = None
-        im.y_edges         = copy.deepcopy(self.y_edges)
+        im._factor          = self.factor
+        im._offset          = self.offset
+        im._x_centers       = ss.ref
+        im._y_centers       = copy.deepcopy(self.y_centers)     
+        im._x_edges         = None
+        im._y_edges         = copy.deepcopy(self.y_edges)
         return im
 
     def y_interp(self, start=None, stop=None, num=None, step=None, y=None):
@@ -7189,12 +7189,12 @@ class Image(metaclass=_Meta):
         im._y_step         = None
         im._x_monotonicity = self.x_monotonicity
         im._y_monotonicity = None
-        im.factor          = self.factor
-        im.offset          = self.offset
-        im.x_centers       = copy.deepcopy(self.x_centers)
-        im.y_centers       = ss.ref
-        im.x_edges         = copy.deepcopy(self.x_edges)
-        im.y_edges         = None
+        im._factor          = self.factor
+        im._offset          = self.offset
+        im._x_centers       = copy.deepcopy(self.x_centers)
+        im._y_centers       = ss.ref
+        im._x_edges         = copy.deepcopy(self.x_edges)
+        im._y_edges         = None
         return im
 
 
@@ -7262,12 +7262,12 @@ class Image(metaclass=_Meta):
         reduced._y_step         = None
         reduced._x_monotonicity = self.x_monotonicity
         reduced._y_monotonicity = self.y_monotonicity
-        reduced.factor          = self.factor
-        reduced.offset          = self.offset
-        # reduced.x_centers       = None
-        # reduced.y_centers       = None
-        # reduced.x_edges         = None
-        # reduced.y_edges         = None
+        reduced._factor          = self.factor
+        reduced._offset          = self.offset
+        # reduced._x_centers       = None
+        # reduced._y_centers       = None
+        # reduced._x_edges         = None
+        # reduced._y_edges         = None
         return reduced
     
 
@@ -7283,18 +7283,35 @@ class Image(metaclass=_Meta):
             Returns:
                 :py:class:`Image` with number of columns given by (number_of_columns - n + 1)
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
         
+        ##################
+        # moving average #
+        ##################
         final = Image(data=(np.zeros((self.shape[0], self.shape[1]-n+1))))
         for i, row in enumerate(self.rows):
             final._data[i, :] = row.moving_average(n)
             if i == final.shape[0]:
                 break
+
+        ##################
+        # transfer attrs #
+        ##################
         final.copy_attrs_from(self)
-
-        # la
-        final.x_centers = Spectrum(y=self.x_centers).moving_average(n).y
-        final.y_centers = self.y_centers
-
+        final._x_step         = None
+        final._y_step         = self.y_step
+        final._x_monotonicity = self.x_monotonicity
+        final._y_monotonicity = self.y_monotonicity
+        final._factor         = self.factor
+        final._offset         = self.offset
+        final._x_centers      = Spectrum(y=self.x_centers).moving_average(n).y
+        final._y_centers      = copy.deepcopy(self.y_centers)
+        final._x_edges        = None
+        final._y_edges        = copy.deepcopy(self.y_edges)
         return final
 
     def columns_moving_average(self, n):
@@ -7309,16 +7326,35 @@ class Image(metaclass=_Meta):
             Returns:
                 :py:class:`Image` with number of rows given by (number_of_rows - n + 1)
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
         
-        final = br.Image(data=(np.zeros((self.shape[0]-n+1, self.shape[1]))))
+        ##################
+        # moving average #
+        ##################
+        final = Image(data=(np.zeros((self.shape[0]-n+1, self.shape[1]))))
         for j, column in enumerate(self.columns):
             final._data[:, j] = column.moving_average(n)
             if j == final.shape[1]:
                 break
-                
+                   
+        ##################
+        # transfer attrs #
+        ##################
         final.copy_attrs_from(self)
-        final.x_centers = self.x_centers
-        final.y_centers = br.Spectrum(y=self.y_centers).moving_average(n).y
+        final._x_step         = self.x_step
+        final._y_step         = None
+        final._x_monotonicity = self.x_monotonicity
+        final._y_monotonicity = self.y_monotonicity
+        final._factor         = self.factor
+        final._offset         = self.offset
+        final._x_centers      = copy.deepcopy(self.x_centers)
+        final._y_centers      = Spectrum(y=self.y_centers).moving_average(n).y
+        final._x_edges        = copy.deepcopy(self.x_edges)
+        final._y_edges        = None
         return final
 
     def moving_average(self, n):
