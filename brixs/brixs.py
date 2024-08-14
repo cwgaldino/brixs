@@ -422,17 +422,42 @@ class Spectrum(metaclass=_Meta):
             x, y (array): 1D arrays.
         
         *2. Check*
-            step (number): 
-            monotonicity (string): 
-        
+            step (number): None or a number if the step between two data points 
+                is the same through out the x vector. Can only be modified by 
+                s.check_step() function.
+            monotonicity (string): None if data is not monotonic or 'increasing'
+                 or 'decreasing'. Can only be modifed by s.check_monotonicity()
+                 function.
+
         *3. Modifiers*
-
+            calib, factor, shift, offset (number): absolute values of 
+            modifications made to the data. 
+        
         *4. Labels*
+            None
 
-        *
-    
+        *5. User*
+            anything that the user defined on the fly.        
+
     Note:
-        [FOR DEVELOPERS] 
+        *[FOR DEVELOPERS]* Check attrs
+        
+            `check` attrs cannot be user modifiable and shall only 
+            be modified via 'check methods'
+
+    Note:
+        *[FOR DEVELOPERS]* Writing new methods
+        
+            Methods shall avoid changing the `core` attrs inside 
+            `self`. Instead, a copy of self shall be created, modified, and 
+            returned to the user. If `core` attrs are modified directly on `self`, 
+            this should be explicitly clear in the docstring.
+
+            Methods must be written in 
+
+        
+
+
     """
     _read_only     = ['step', 'monotonicity']
     _non_removable = []
