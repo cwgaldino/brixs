@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Support functions for reading files from IPE beamline - Sirius.
 
-Last edited: Carlos Galdino 2024-06-12
+Last edited: Felipe Custódio and Carlos Galdino 2024-08-15
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
@@ -18,6 +18,8 @@ import copy
 # %% ------------------------------ brixs --------------------------------- %% #
 import brixs as br
 import brixs.addons.h5 as h5
+br.Dummy.create_attr_from_spectra = br.Spectra.create_attr_from_spectra
+br.Dummy.get_by_attr = br.Spectra.get_by_attr
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import h5py
