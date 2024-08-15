@@ -75,7 +75,7 @@ def query(question, default="yes"):
 
 # %% =============================== time ================================= %% #
 def start_time():
-    """returns tuple with (process time, performance time)
+    """returns tuple with (process time, perf counter)
 
     perf counter will run like a 'stopwatch' (almost like real time measurement).
     
@@ -94,12 +94,12 @@ def start_time():
         >>> print(br.stop_time(start_time))
     
     Returns:
-        tuple (process time, performance time)
+        tuple (process time, perf counter)
     """
-    return (time.process_time(), time.perf_time())
+    return (time.process_time(), time.perf_counter())
 
 def stop_time(start_time):
-    """returns (process time, performance time) subtracted by the start time
+    """returns (process time, perf counter) subtracted by the start time
 
     perf counter will run like a 'stopwatch' (almost like real time measurement).
     
@@ -118,9 +118,9 @@ def stop_time(start_time):
         >>> print(br.stop_time(start_time))
     
     Returns:
-        tuple (elapsed process time, elapsed performance time)
+        tuple (elapsed process time, elapsed perf counter)
     """
-    return (start_time[0] - time.process_time(), start_time[0] - time.perf_time())
+    return (start_time[0] - time.process_time(), start_time[1] - time.perf_counter())
 
 # %% =========================== clipboard ================================ %% #
 def copy2clipboard(txt):
