@@ -75,32 +75,32 @@ def query(question, default="yes"):
 
 # %% =============================== time ================================= %% #
 def start_time():
-    """returns current time
+    """returns tuple with (process time, performance time)
     
     Usage:
 
-        >>> start = br.start_time()
+        >>> start_time = br.start_time()
         >>> run......
-        >>> print(br.stop_time(start))
+        >>> print(br.stop_time(start_time))
     
     Returns:
-        number (start time)
+        tuple (process time, performance time)
     """
-    return time.time()
+    return (time.process_time(), time.perf_time())
 
-def stop_time(start):
-    """returns current time subtracted by the start time
+def stop_time(start_time):
+    """returns (process time, performance time) subtracted by the start time
     
     Usage:
 
-        >>> start = br.start_time()
+        >>> start_time = br.start_time()
         >>> run......
-        >>> print(br.stop_time(start))
+        >>> print(br.stop_time(start_time))
     
     Returns:
-        number (elapsed time)
+        tuple (elapsed process time, elapsed performance time)
     """
-    return time.time() - start
+    return (start_time[0] - time.process_time(), start_time[0] - time.perf_time())
 
 # %% =========================== clipboard ================================ %% #
 def copy2clipboard(txt):
