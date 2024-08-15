@@ -76,6 +76,16 @@ def query(question, default="yes"):
 # %% =============================== time ================================= %% #
 def start_time():
     """returns tuple with (process time, performance time)
+
+    perf counter will run like a 'stopwatch' (almost like real time measurement).
+    
+    process time will return the time spent by the computer for the 
+    current process. This way, process time does not include:
+     sleep-time, OS-scheduling artifacts, time spent on 'external resources', 
+     'system call' ... In general, if and only if, your function is entirely 
+    CPU bound, does not access 
+    external resources, nor cause any system call whatsoever, 
+    process_time is the more accurate and better choice.
     
     Usage:
 
@@ -90,6 +100,16 @@ def start_time():
 
 def stop_time(start_time):
     """returns (process time, performance time) subtracted by the start time
+
+    perf counter will run like a 'stopwatch' (almost like real time measurement).
+    
+    process time will return the time spent by the computer for the 
+    current process. This way, process time does not include:
+     sleep-time, OS-scheduling artifacts, time spent on 'external resources', 
+     'system call' ... In general, if and only if, your function is entirely 
+    CPU bound, does not access 
+    external resources, nor cause any system call whatsoever, 
+    process_time is the more accurate and better choice.
     
     Usage:
 
