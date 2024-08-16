@@ -7214,15 +7214,15 @@ class Image(metaclass=_Meta):
         # asserting validity of the input #
         ###################################
         if ncols is None:
-            ncols = self.shape[0]
+            ncols = self.shape[1]
         if nrows is None:
-            nrows = self.shape[1]
+            nrows = self.shape[0]
         if numanip.is_integer(ncols) == False or numanip.is_integer(nrows)  == False or ncols < 0 or nrows < 0:
             raise ValueError("Number of bins must be a positive integer.")
 
         # is divisible
-        assert self.shape[1] % nrows == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {nrows}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[1])))}"
-        assert self.shape[0] % ncols == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {ncols}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[0])))}"
+        assert self.shape[1] % ncols == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {ncols}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[1])))}"
+        assert self.shape[0] % nrows == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {nrows}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[0])))}"
 
         # is uniform
         if self.x_step is None:
@@ -7239,12 +7239,12 @@ class Image(metaclass=_Meta):
         ###############
         # Calculation #
         ###############
-        _bins_size = np.array((self.shape[0]/ncols, self.shape[1]/nrows))
+        _bins_size = np.array((self.shape[0]/nrows, self.shape[1]/ncols))
         reduced    = Image(np.add.reduceat(np.add.reduceat(self._data, list(map(float, np.arange(0, self.shape[0], _bins_size[0]))), axis=0), list(map(float, np.arange(0, self.shape[1], _bins_size[1]))), axis=1))
         
         # x and y centers
-        reduced._x_centers = Spectrum(x=self.x_centers).smooth(int(self.shape[1]/nrows), force_divisible=True).x
-        reduced._y_centers = Spectrum(x=self.y_centers).smooth(int(self.shape[0]/ncols), force_divisible=True).x
+        reduced._x_centers = Spectrum(x=self.x_centers).smooth(int(self.shape[1]/ncols), force_divisible=True).x
+        reduced._y_centers = Spectrum(x=self.y_centers).smooth(int(self.shape[0]/nrows), force_divisible=True).x
         # _x_edges = np.arange(0, self.shape[1]+_bins_size[1]/2, _bins_size[1])
         # _y_edges = np.arange(0, self.shape[0]+_bins_size[0]/2, _bins_size[0])
         # reduced._x_centers = arraymanip.moving_average(_x_edges, n=2)
@@ -7528,7 +7528,7 @@ class Image(metaclass=_Meta):
         Returns:
             list
         """
-        ss = self.rows
+        ss = self.columns
         if limit_size:
             if len(ss) > limit_size:
                 raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
@@ -7571,7 +7571,7 @@ class Image(metaclass=_Meta):
         Returns:
             list
         """
-        ss = self.columns
+        ss = self.rows
         if limit_size:
             if len(ss) > limit_size:
                 raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
