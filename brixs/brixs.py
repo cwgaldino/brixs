@@ -42,6 +42,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
 import warnings
+import bisect
 import copy
 
 # %% -------------------------- Special Imports --------------------------- %% #
@@ -1446,6 +1447,7 @@ class Spectrum(metaclass=_Meta):
         s          = self.copy()
         s._y      *= value
         s._factor *= value
+        s._offset *= value
         return s
 
     def set_calib(self, value):
@@ -1465,6 +1467,7 @@ class Spectrum(metaclass=_Meta):
         s         = self.copy()
         s._x     *= value
         s._calib *= value
+        s._shift *= value
         return s
 
     ###############
@@ -6247,12 +6250,70 @@ class Image(metaclass=_Meta):
         ########
         # crop #
         ########
-        # crop y
-        _im = self.columns.stack_spectra_as_columns(x_centers=self.x_centers, limits=[y_start, y_stop])
-        if _im.data is None: return Image()
-        # crop x
-        im = _im.rows.stack_spectra_as_rows(y_centers=_im.y_centers, limits=[x_start, x_stop])
-        if im.data is None: return Image()
+        # assert that centers are monotonic
+        if self.x_monotonicity is None:
+            try:
+                self.check_x_monotonicity()
+            except ValueError:
+                raise ValueError('x_centers must be monotonic for croping to make sense. Fix x_centers or set it to None')
+        if self.y_monotonicity is None:
+            try:
+                self.check_y_monotonicity()
+            except ValueError:
+                raise ValueError('y_centers must be monotonic for croping to make sense. Fix y_centers or set it to None')
+        # convert start and stop from centers to pixel
+        if self.y_monotonicity.startswith('inc'):
+            if x_stop < x_start:
+                _x_start = x_stop
+                _x_stop  = x_start
+            else:
+                _x_start = x_start
+                _x_stop  = x_stop
+            _x_start = bisect.bisect_left(self.x_centers, _x_start)
+            _x_stop  = bisect.bisect_right(self.x_centers, _x_stop)
+            if y_stop < y_start:
+                _y_start = y_stop
+                _y_stop  = y_start
+            else:
+                _y_start = y_start
+                _y_stop  = y_stop
+            _y_start = bisect.bisect_left(self.y_centers, _y_start)
+            _y_stop  = bisect.bisect_right(self.y_centers, _y_stop)
+
+            im = Image(data=data[_y_start:_y_stop, _x_start:_x_stop])
+            im.x_centers = self.x_centers[_x_start:_x_stop]
+            im.y_centers = self.x_centers[_y_start:_y_stop]
+
+        elif self.y_monotonicity.startswith('dec'):
+            x_centers = self.x_centers[::-1]
+            if x_stop < x_start:
+                _x_start = x_stop
+                _x_stop  = x_start
+            else:
+                _x_start = x_start
+                _x_stop  = x_stop                
+            x_start = bisect.bisect_left(x_centers, _x_start)
+            x_stop  = bisect.bisect_right(x_centers, _x_stop)
+            y_centers = self.y_centers[::-1]
+            if y_stop < y_start:
+                _y_start = y_stop
+                _y_stop  = y_start
+            else:
+                _y_start = y_start
+                _y_stop  = y_stop                
+            y_start = bisect.bisect_left(y_centers, y_start)
+            y_stop  = bisect.bisect_right(y_centers, y_start)
+
+            im = Image(data=data[::-1, ::-1][_y_start:_y_stop, _x_start:_x_stop][::-1, ::-1])
+            im.x_centers = self.x_centers[::-1][_x_start:_x_stop][::-1]
+            im.y_centers = self.x_centers[::-1][_y_start:_y_stop][::-1]
+        else:
+            raise ValueError('monotonicity can only be `increasing` or `decreasing` or None')
+        # _im = self.columns.stack_spectra_as_columns(x_centers=self.x_centers, limits=[y_start, y_stop])
+        # if _im.data is None: return Image()
+        # # crop x
+        # im = _im.rows.stack_spectra_as_rows(y_centers=_im.y_centers, limits=[x_start, x_stop])
+        # if im.data is None: return Image()
 
         # edges y
         if self.y_edges is not None:

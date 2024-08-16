@@ -120,7 +120,7 @@ def stop_time(start_time):
     Returns:
         tuple (elapsed perf counter, elapsed process time)
     """
-    return (time.perf_counter() - start_time[1], time.process_time() - start_time[0])
+    return (time.perf_counter() - start_time[0], time.process_time() - start_time[1])
 
 # %% =========================== clipboard ================================ %% #
 def copy2clipboard(txt):
