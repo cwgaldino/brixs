@@ -6880,6 +6880,7 @@ class Image(metaclass=_Meta):
         im          = self.copy()
         im._data   *= float(value)
         im._factor *= float(value)
+        im._offset *= float(value)
         return im
 
     def set_horizontal_shift(self, value):
