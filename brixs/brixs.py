@@ -2081,6 +2081,14 @@ class Spectrum(metaclass=_Meta):
         """
         return self.y[self.index(x=x, closest=closest)]
 
+    def get_x_where_y_is_max(self):
+        """return x value where y is max"""
+        return self.x[np.argmax(self.y)]
+    
+    def get_x_where_y_is_min(self):
+        """return x value where y is min"""
+        return self.x[np.argmin(self.y)]
+    
     ############
     # composed #
     ############
@@ -5678,7 +5686,7 @@ class Image(metaclass=_Meta):
                 temp    = list(arraymanip.moving_average(centers, 2))
                 value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns plus one ({self.shape[1] + 1})"
+            assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns ({self.shape[1]}) plus one ({self.shape[1] + 1})"
             monotonicity = arraymanip.check_monotonicity(value)
             assert monotonicity != 0, f"edge values must be a monotonically array (either increasing or decreasing)"
         else:
@@ -5706,7 +5714,7 @@ class Image(metaclass=_Meta):
                 temp    = list(arraymanip.moving_average(centers, 2))
                 value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows plus one ({self.shape[0] + 1})"
+            assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows ({self.shape[0]}) plus one ({self.shape[0] + 1})"
             monotonicity = arraymanip.check_monotonicity(value)
             assert monotonicity != 0, f"edge values must be a monotonically array (either increasing or decreasing)"
         else:
@@ -6253,17 +6261,21 @@ class Image(metaclass=_Meta):
                 try:
                     self.check_y_monotonicity()
                 except ValueError:
-                    raise ValueError('y edges must be monotonic. Please, set suitable y edges (or set y_edges to None).')
+                    raise ValueError('y edges must be monotonic. Please, set suitable y edges (or set y_edges to None).')  # this error might never be used because if y_edges are defined, then y_edges are monotonic by definition
             if self.y_monotonicity.startswith('inc'):
-                if y_start < y_stop:
-                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_start].max() and _ <= edges[edges > y_stop].min()]
-                else:
-                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
-            else:
-                if y_start < y_stop:
-                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_start].max() and _ <= edges[edges > y_stop].min()]
-                else:
-                    im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
+                im.y_edges = [_ for _ in edges if _ >= edges[edges < im.y_centers[0]].max() and _ <= edges[edges > im.y_centers[-1]].min()]
+            elif self.y_monotonicity.startswith('dec'):
+                im.y_edges = [_ for _ in edges if _ >= edges[edges < im.y_centers[-1]].max() and _ <= edges[edges > im.y_centers[0]].min()]
+            #     if y_start < y_stop:
+            #         print([_ for _ in edges if _ > edges[edges < y_start].max() and _ < edges[edges > y_stop].min()])
+            #         im.y_edges = [_ for _ in edges if _ > edges[edges < y_start].max() and _ < edges[edges > y_stop].min()]
+            #     else:
+            #         im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
+            # else:
+            #     if y_start < y_stop:
+            #         im.y_edges = [_ for _ in edges if _ >= edges[edges < y_start].max() and _ <= edges[edges > y_stop].min()]
+            #     else:
+            #         im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
         
         # edges x
         if self.x_edges is not None:
@@ -6855,7 +6867,7 @@ class Image(metaclass=_Meta):
         ########
         # roll #
         ########
-        return self._set_horizontal_roll(value=value)
+        return self.set_horizontal_roll(value=value)
     
     def set_vertical_shift(self, value):
         """Roll pixels columns up and down in terms of y centers.
@@ -6903,9 +6915,9 @@ class Image(metaclass=_Meta):
         ########
         # roll #
         ########
-        return self._set_vertical_roll(value=value)
+        return self.set_vertical_roll(value=value)
 
-    def _set_horizontal_roll(self, value):
+    def set_horizontal_roll(self, value):
         """Roll pixels rows left and right.
 
         Note:
@@ -6947,11 +6959,11 @@ class Image(metaclass=_Meta):
         im = self.copy()
         for i, v in enumerate(value):
             if v != 0:
-                s = Spectrum(im._data[:, i]).set_roll(v)
-                im._data[:, i] = s.y
+                s = Spectrum(y=im._data[i, :]).set_roll(v)
+                im._data[i, :] = s.y
         return im
     
-    def _set_vertical_roll(self, value):
+    def set_vertical_roll(self, value):
         """Roll pixels columns up and down.
 
         Note:
@@ -6993,8 +7005,8 @@ class Image(metaclass=_Meta):
         im = self.copy()
         for i, v in enumerate(value):
             if v != 0:
-                s = Spectrum(y=im._data[i, :]).set_roll(v)
-                im._data[i, :] = s.y
+                s = Spectrum(y=im._data[:, i]).set_roll(v)
+                im._data[:, i] = s.y
         return im
 
     ###############
@@ -7528,7 +7540,7 @@ class Image(metaclass=_Meta):
         Returns:
             list
         """
-        ss = self.columns
+        ss = self.rows
         if limit_size:
             if len(ss) > limit_size:
                 raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
@@ -7571,7 +7583,7 @@ class Image(metaclass=_Meta):
         Returns:
             list
         """
-        ss = self.rows
+        ss = self.columns
         if limit_size:
             if len(ss) > limit_size:
                 raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
@@ -7631,7 +7643,7 @@ class Image(metaclass=_Meta):
 
             model (function): funcion f(x_centers)
         """
-        im = self.copy().floor()
+        im = self.copy()
         values = im.calculate_vertical_shift(mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
 
         # calculate poly
@@ -7687,7 +7699,7 @@ class Image(metaclass=_Meta):
 
             model (function): funcion f(y_centers)
         """
-        im = self.copy().floor()
+        im = self.copy()
         values = im.calculate_horizontal_shift(mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
 
         # calculate poly
