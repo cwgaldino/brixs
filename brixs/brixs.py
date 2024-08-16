@@ -644,6 +644,7 @@ class Spectrum(metaclass=_Meta):
         _s = self.set_calib(1/self._calib).set_calib(value)
         self.x      = _s.x
         self._calib = value
+        self._shift = _s.shift
     @calib.deleter
     def calib(self):
         raise AttributeError('Cannot delete object.')
@@ -680,6 +681,7 @@ class Spectrum(metaclass=_Meta):
         _s = self.set_factor(1/self._factor).set_factor(value)
         self.y      = _s.y
         self._factor= value
+        self._offset = _s.offset
     @factor.deleter
     def factor(self):
         raise AttributeError('Cannot delete object.')
@@ -5816,6 +5818,7 @@ class Image(metaclass=_Meta):
         _im = self.set_factor(1/self._factor).set_factor(value)
         self._data   = _im.data
         self._factor = value
+        self._offset = _im.offset
     @factor.deleter
     def factor(self):
         raise AttributeError('Cannot delete object.')
