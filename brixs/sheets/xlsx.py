@@ -5,7 +5,7 @@
 Usage
 
     >>> # import
-    >>> from xlsx import xlsx, new_xlsx
+    >>> from brixs.sheets.xlsx import xlsx, new_xlsx
     >>> 
     >>> # create new xlsx file or open an existing file
     >>> sheet = new_xlsx(filepath)  # new file
