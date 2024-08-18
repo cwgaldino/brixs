@@ -6394,7 +6394,158 @@ class Image(metaclass=_Meta):
     #################
     # save and load #
     #################
-    def save(self, filepath=None, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
+    def savenpy(self, filepath, check_overwrite=False, verbose=False, **kwargs):
+        """Save image as numpy binary (.npy). Wrapper for Wrapper for `np.save()`_.
+
+        Warning:
+            metadata is not saved to file
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename ends in .gz, the file is automatically saved in
+                compressed gzip format.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            verbose (bool, optional): turn verbose on and off. Default is `False`.
+            **kwargs: kwargs are passed to ``np.save()`` that saves the data.
+
+        Returns:
+            None
+
+        See Also:
+            :py:func:`Image.loadnpy`
+
+        .. _np.save(): https://numpy.org/doc/stable/reference/generated/numpy.save.html
+        """
+        ##############################
+        # check for wrong parameters #
+        ##############################
+        if 'folderpath' in kwargs:
+            raise ValueError('folderpath is not a valid parameter.\nPlease, use filepath')
+        
+        ######################################
+        # check if filepath points to a file #
+        ######################################
+        filepath = Path(filepath)
+        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+        if filepath.exists():
+            assert filepath.is_file(), 'filepath must point to a file'
+
+        ###################
+        # check overwrite #
+        ###################
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+
+        ########
+        # save #
+        ########
+        np.save(Path(filepath).with_suffix('.npy'), self._data, **kwargs)
+
+    def loadnpy(self, filepath, verbose=False, **kwargs):
+        """Load data from a numpy binary file (.npy). Wrapper for `np.load()`_.
+
+        Warning:
+            metadata is not saved to file
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename extension is .gz or .bz2, the file is first 
+                decompressed. Last used filepath is saved to im.filepath.
+            only_data (bool, optional): If True, header and footer are ignored and
+                only data is loaded.
+            verbose (book, optional): Default is False. If True, it will print
+                an warning when attributes cannot be loaded from the file.
+            **kwargs: kwargs are passed to ``np.load()`` that loads the data.
+
+        Returns:
+            None
+
+        See Also:
+            :py:func:`Image.savenpy`
+
+        .. _np.loadnpy(): https://numpy.org/doc/stable/reference/generated/numpy.load.html
+        """
+        ############
+        # filepath #
+        ############
+        filepath = Path(filepath)
+        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
+        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+
+        ########
+        # read #
+        ########
+        data = np.load(Path(filepath), **kwargs)
+
+        ##########
+        # assign #
+        ##########
+        self.data = data
+
+    def savetiff(self, filepath, check_overwrite=False, verbose=False, **kwargs):
+        """Save image as tiff. Wrapper for Wrapper for `plt.imsave()`_.
+
+        Warning:
+            metadata is not saved to file
+
+        Args:
+            filepath (string or path object, optional): filepath or file handle.
+                If the filename ends in .gz, the file is automatically saved in
+                compressed gzip format.
+            check_overwrite (bool, optional): if True, it will check if file exists
+                and ask if user wants to overwrite file.
+            verbose (bool, optional): turn verbose on and off. Default is `False`.
+            **kwargs: kwargs are passed to ``plt.imsave()`` that saves the data.
+
+        Returns:
+            None
+
+        See Also:
+            :py:func:`Image.loadtiff`
+
+        .. _plt.imsave(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imsave.html
+        """
+        ##############################
+        # check for wrong parameters #
+        ##############################
+        if 'folderpath' in kwargs:
+            raise ValueError('folderpath is not a valid parameter.\nPlease, use filepath')
+        
+        ######################################
+        # check if filepath points to a file #
+        ######################################
+        filepath = Path(filepath)
+        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+        if filepath.exists():
+            assert filepath.is_file(), 'filepath must point to a file'
+
+        ###################
+        # check overwrite #
+        ###################
+        if check_overwrite:
+            if filepath.exists() == True:
+                if filepath.is_file() == True:
+                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                        pass
+                    else:
+                        return
+                else:
+                    raise AttributeError('filepath not pointing to a file.')
+
+        ########
+        # save #
+        ########
+        plt.imsave(Path(filepath).with_suffix('.tiff'), self._data, **kwargs)
+
+    def savetxt(self, filepath, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Warning:
@@ -6406,9 +6557,7 @@ class Image(metaclass=_Meta):
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
-                compressed gzip format. If None, filepath can be inferred from a
-                user defined attr 'im.filepath'. Default is None.  Last used 
-                filepath is saved to im.filepath.
+                compressed gzip format.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             check_overwrite (bool, optional): if True, it will check if file exists
@@ -6452,6 +6601,7 @@ class Image(metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        filepath = Path(filepath)
         assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
         if filepath.exists():
             assert filepath.is_file(), 'filepath must point to a file'
@@ -6510,7 +6660,7 @@ class Image(metaclass=_Meta):
         ########
         np.savetxt(Path(filepath), self._data, **kwargs)
 
-    def load(self, filepath, only_data=False, verbose=False, **kwargs):
+    def loadtxt(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Warning:
