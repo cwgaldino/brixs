@@ -5465,6 +5465,11 @@ class Image(metaclass=_Meta):
             >>> print(im.get_core_attrs()) # print list of core attrs
             >>> print(im.get_attrs())      # print list of attrs
             >>> print(im.get_methods())    # print list of methods available
+
+    Notes:
+        in numpy arrays, the start of slices are inclusive but the stop are exclusive, 
+         i.e. array[start(inclusive):stop(exclusive)]. In brixs Images, both start
+         and stop are inclusives, i.e. im[start(inclusive):stop(inclusive)].
     
     Notes:
         Three methods for ploting images are defined:
@@ -5826,6 +5831,107 @@ class Image(metaclass=_Meta):
     #################
     # magic methods #
     #################
+    def __getitem__(self, item):
+        if isinstance(item, tuple):
+            # assert
+            assert len(item) == 2, 'indexing must be lenght 2. Tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop)'
+            
+            # from centers to index
+            if isinstance(item[0], slice) or isinstance(item[1], slice):
+                if isinstance(item[0], slice):
+                    y_start = item[0].start
+                    y_stop  = item[0].stop
+                else:
+                    x_start = item[0]
+                    x_stop = item[0]
+                if isinstance(item[1], slice):
+                    x_start = item[1].start
+                    x_stop  = item[1].stop
+                else:
+                    x_start = item[1]
+                    x_stop = item[1]
+            
+                # get slice
+                return self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+
+            else:
+                return self._data[arraymanip.index(self.y_centers, item[0]), arraymanip.index(self.x_centers, item[1])]
+        else:
+            raise TypeError('Index must be a tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop), not {}'.format(type(item).__name__))
+
+    def __setitem__(self, item, value):
+        if isinstance(item, tuple):
+            # assert
+            assert len(item) == 2, 'indexing must be lenght 2. Tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop)'
+            
+            # from centers to index
+            if isinstance(item[0], slice) or isinstance(item[1], slice):
+                if isinstance(item[0], slice):
+                    y_start = item[0].start
+                    y_stop  = item[0].stop
+                else:
+                    y_start = item[0]
+                    y_stop  = item[0]
+                if isinstance(item[1], slice):
+                    x_start = item[1].start
+                    x_stop  = item[1].stop
+                else:
+                    x_start = item[1]
+                    x_stop  = item[1]
+            
+                # set slice
+                # assert that centers are monotonic
+                if self.x_monotonicity is None:
+                    try:
+                        self.check_x_monotonicity()
+                    except ValueError:
+                        raise ValueError('x_centers must be monotonic for croping to make sense. Fix x_centers or set it to None')
+                if self.y_monotonicity is None:
+                    try:
+                        self.check_y_monotonicity()
+                    except ValueError:
+                        raise ValueError('y_centers must be monotonic for croping to make sense. Fix y_centers or set it to None')
+                # convert start and stop from centers to pixel
+                if x_stop < x_start:
+                    _x_start2 = x_stop
+                    _x_stop2  = x_start
+                else:
+                    _x_start2 = x_start
+                    _x_stop2  = x_stop
+                if self.x_monotonicity.startswith('inc'):
+                    x_centers = self.x_centers
+                    _x_start = bisect.bisect_left(x_centers, _x_start2)
+                    _x_stop  = bisect.bisect_right(x_centers, _x_stop2)
+                else:
+                    x_centers = self.x_centers[::-1]
+                    _x_stop  = len(x_centers) - bisect.bisect_left(x_centers, _x_start2)
+                    _x_start = len(x_centers) - bisect.bisect_right(x_centers, _x_stop2)
+
+                if y_stop < y_start:
+                    _y_start2 = y_stop
+                    _y_stop2  = y_start
+                else:
+                    _y_start2 = y_start
+                    _y_stop2  = y_stop
+                if self.y_monotonicity.startswith('inc'):
+                    y_centers = self.y_centers
+                    _y_start = bisect.bisect_left(y_centers, _y_start2)
+                    _y_stop  = bisect.bisect_right(y_centers, _y_stop2)
+                else:
+                    y_centers = self.y_centers[::-1]
+                    _y_stop  = len(y_centers) - bisect.bisect_left(y_centers, _y_start2)
+                    _y_start = len(y_centers) - bisect.bisect_right(y_centers, _y_stop2)
+
+                self._data[_y_start:_y_stop, _x_start:_x_stop] = value
+                return 
+
+            else:
+                assert numanip.is_number(value), f'value must be a number, not {type(value)}'
+                self._data[arraymanip.index(self.y_centers, item[0]), arraymanip.index(self.x_centers, item[1])] = value
+                return 
+        else:
+            raise TypeError('Index must be a tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop), not {}'.format(type(item).__name__))
+
     def __setattr__(self, name, value):
         if name in settings._forbidden_words['Image']:
             raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
@@ -6096,7 +6202,7 @@ class Image(metaclass=_Meta):
             vmin = min([min(x) for x in self.data])
             vmax = max([max(x) for x in self.data])
         return vmin, vmax
-    
+
     ################
     # core methods #
     ################
@@ -6265,59 +6371,40 @@ class Image(metaclass=_Meta):
             except ValueError:
                 raise ValueError('y_centers must be monotonic for croping to make sense. Fix y_centers or set it to None')
         # convert start and stop from centers to pixel
-        if self.y_monotonicity.startswith('inc'):
-            if x_stop < x_start:
-                _x_start = x_stop
-                _x_stop  = x_start
-            else:
-                _x_start = x_start
-                _x_stop  = x_stop
-            _x_start = bisect.bisect_left(self.x_centers, _x_start)
-            _x_stop  = bisect.bisect_right(self.x_centers, _x_stop)
-            if y_stop < y_start:
-                _y_start = y_stop
-                _y_stop  = y_start
-            else:
-                _y_start = y_start
-                _y_stop  = y_stop
-            _y_start = bisect.bisect_left(self.y_centers, _y_start)
-            _y_stop  = bisect.bisect_right(self.y_centers, _y_stop)
-
-            im = Image(data=data[_y_start:_y_stop, _x_start:_x_stop])
-            im.x_centers = self.x_centers[_x_start:_x_stop]
-            im.y_centers = self.x_centers[_y_start:_y_stop]
-
-        elif self.y_monotonicity.startswith('dec'):
-            x_centers = self.x_centers[::-1]
-            if x_stop < x_start:
-                _x_start = x_stop
-                _x_stop  = x_start
-            else:
-                _x_start = x_start
-                _x_stop  = x_stop                
-            x_start = bisect.bisect_left(x_centers, _x_start)
-            x_stop  = bisect.bisect_right(x_centers, _x_stop)
-            y_centers = self.y_centers[::-1]
-            if y_stop < y_start:
-                _y_start = y_stop
-                _y_stop  = y_start
-            else:
-                _y_start = y_start
-                _y_stop  = y_stop                
-            y_start = bisect.bisect_left(y_centers, y_start)
-            y_stop  = bisect.bisect_right(y_centers, y_start)
-
-            im = Image(data=data[::-1, ::-1][_y_start:_y_stop, _x_start:_x_stop][::-1, ::-1])
-            im.x_centers = self.x_centers[::-1][_x_start:_x_stop][::-1]
-            im.y_centers = self.x_centers[::-1][_y_start:_y_stop][::-1]
+        if x_stop < x_start:
+            _x_start2 = x_stop
+            _x_stop2  = x_start
         else:
-            raise ValueError('monotonicity can only be `increasing` or `decreasing` or None')
-        # _im = self.columns.stack_spectra_as_columns(x_centers=self.x_centers, limits=[y_start, y_stop])
-        # if _im.data is None: return Image()
-        # # crop x
-        # im = _im.rows.stack_spectra_as_rows(y_centers=_im.y_centers, limits=[x_start, x_stop])
-        # if im.data is None: return Image()
+            _x_start2 = x_start
+            _x_stop2  = x_stop
+        if self.x_monotonicity.startswith('inc'):
+            x_centers = self.x_centers
+            _x_start = bisect.bisect_left(x_centers, _x_start2)
+            _x_stop  = bisect.bisect_right(x_centers, _x_stop2)
+        else:
+            x_centers = self.x_centers[::-1]
+            _x_stop  = len(x_centers) - bisect.bisect_left(x_centers, _x_start2)
+            _x_start = len(x_centers) - bisect.bisect_right(x_centers, _x_stop2)
 
+        if y_stop < y_start:
+            _y_start2 = y_stop
+            _y_stop2  = y_start
+        else:
+            _y_start2 = y_start
+            _y_stop2  = y_stop
+        if self.y_monotonicity.startswith('inc'):
+            y_centers = self.y_centers
+            _y_start = bisect.bisect_left(y_centers, _y_start2)
+            _y_stop  = bisect.bisect_right(y_centers, _y_stop2)
+        else:
+            y_centers = self.y_centers[::-1]
+            _y_stop  = len(y_centers) - bisect.bisect_left(y_centers, _y_start2)
+            _y_start = len(y_centers) - bisect.bisect_right(y_centers, _y_stop2)
+
+        im = Image(data=data[_y_start:_y_stop, _x_start:_x_stop])
+        im.x_centers = self.x_centers[_x_start:_x_stop]
+        im.y_centers = self.y_centers[_y_start:_y_stop]
+ 
         # edges y
         if self.y_edges is not None:
             edges = np.array(self.y_edges)
@@ -6330,17 +6417,6 @@ class Image(metaclass=_Meta):
                 im.y_edges = [_ for _ in edges if _ >= edges[edges < im.y_centers[0]].max() and _ <= edges[edges > im.y_centers[-1]].min()]
             elif self.y_monotonicity.startswith('dec'):
                 im.y_edges = [_ for _ in edges if _ >= edges[edges < im.y_centers[-1]].max() and _ <= edges[edges > im.y_centers[0]].min()]
-            #     if y_start < y_stop:
-            #         print([_ for _ in edges if _ > edges[edges < y_start].max() and _ < edges[edges > y_stop].min()])
-            #         im.y_edges = [_ for _ in edges if _ > edges[edges < y_start].max() and _ < edges[edges > y_stop].min()]
-            #     else:
-            #         im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
-            # else:
-            #     if y_start < y_stop:
-            #         im.y_edges = [_ for _ in edges if _ >= edges[edges < y_start].max() and _ <= edges[edges > y_stop].min()]
-            #     else:
-            #         im.y_edges = [_ for _ in edges if _ >= edges[edges < y_stop].max() and _ <= edges[edges > y_start].min()]
-        
         # edges x
         if self.x_edges is not None:
             edges = np.array(self.x_edges)
@@ -6350,16 +6426,10 @@ class Image(metaclass=_Meta):
                 except ValueError:
                     raise ValueError('x edges must be monotonic. Please, set suitable y edges (or set y_edges to None).')
             if self.x_monotonicity.startswith('inc'):
-                if x_start < x_stop:
-                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_start].max() and _ <= edges[edges > x_stop].min()]
-                else:
-                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_stop].max() and _ <= edges[edges > x_start].min()]
-            else:
-                if x_start < x_stop:
-                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_stop].max() and _ <= edges[edges > x_start].min()]
-                else:
-                    im.x_edges = [_ for _ in edges if _ >= edges[edges < x_start].max() and _ <= edges[edges > x_stop].min()]
-        
+                im.x_edges = [_ for _ in edges if _ >= edges[edges < im.x_centers[0]].max() and _ <= edges[edges > im.x_centers[-1]].min()]
+            elif self.x_monotonicity.startswith('dec'):
+                im.x_edges = [_ for _ in edges if _ >= edges[edges < im.x_centers[-1]].max() and _ <= edges[edges > im.x_centers[0]].min()]
+            
         # attrs
         im._x_step         = self.x_step
         im._y_step         = self.y_step
