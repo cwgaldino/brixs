@@ -95,6 +95,10 @@ def _connect2methods(sheet):
         None
     """
     sheet.save             = types.MethodType(_save, sheet)
+
+    sheet.get_col_data     = types.MethodType(_get_col_data, sheet)
+    sheet.get_row_data     = types.MethodType(_get_row_data, sheet)
+
     sheet.set_row          = types.MethodType(_set_row, sheet)
     sheet.set_row_fill     = types.MethodType(_set_row_fill, sheet)
     sheet.set_row_font     = types.MethodType(_set_row_font, sheet)
@@ -177,6 +181,48 @@ def _save(self, filepath=None):
     
     self.parent.save(filepath)
     return
+
+# %% ============================ Sheet manipulation ====================== %% #
+def _get_col_data(self, col, start_row=1, stop_row=None):
+    """get values from column
+
+    Args:
+        col (int): column number or letter
+        start_row, stop_row (int): row to start and stop reading. Default is 
+            start_row=1 and stop_row=None (max row with data)
+
+    Returns:
+        list
+    """
+    if isinstance(col, str) == False:
+        col = get_column_letter(col)
+    
+    if stop_row is None:
+        stop_row = self.max_row
+    return [_[0].value for _ in self[f'{col}{start_row}:{col}{stop_row}']]
+
+def _get_row_data(self, row, start_col=1, stop_col=None):
+    """get values from row
+
+    Args:
+        row (int): row number
+        start_col, stop_col (int): column to start and stop reading. Default is 
+            start_col=1 and stop_col=None (max column with data)
+
+    Returns:
+        list
+    """    
+    assert row > 0, 'row cannot 0 or negative'
+    if stop_col is None:
+        stop_col = self.max_column
+    
+    if isinstance(start_col, str) == False:
+        start_col = get_column_letter(start_col)
+    if isinstance(stop_col, str) == False:
+        stop_col = get_column_letter(stop_col)
+        
+    return [_.value for _ in self[f'{start_col}{row}:{stop_col}{row}'][0]]
+
 
 def _set_row(self, values, row, start_col=1):
     """Write values in a row.
