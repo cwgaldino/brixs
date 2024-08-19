@@ -85,6 +85,8 @@ def read(filepath, verbose=False):
     #################
     # metadata list #
     #################
+    # attrs: same for all images
+    # attrs2: different for each image
     attrs = {'string':   {'script_name':      'entry/current_script_name',
                           'command':          'entry/diamond_scan/scan_command',
                           'facility_user_id': 'entry/user01/facility_user_id',
@@ -111,7 +113,7 @@ def read(filepath, verbose=False):
     ##########################
     # open file and get data #
     ##########################
-    ind    = []
+    ind = br.Dummy()
     with h5py.File(Path(filepath), 'r') as f:
 
         ########
@@ -166,17 +168,19 @@ def read(filepath, verbose=False):
     # print(attrs)
     for _type in attrs:
         for name in attrs[_type]:
-            for _im in ind + [im]:
+            im.__setattr__(name, attrs[_type][name])
+            ind.__setattr__(name, attrs[_type][name])
+            for _im in ind:
                 _im.__setattr__(name, attrs[_type][name])
     for _type in attrs2:
         for name in attrs2[_type]:
+            im.__setattr__(name, attrs2[_type][name])
+            ind.__setattr__(name, attrs2[_type][name])
             for i, _im in enumerate(ind):
                 if attrs2[_type][name] is None:
                     _im.__setattr__(name, None)
                 else:
                     _im.__setattr__(name, attrs2[_type][name][i])
-            im.__setattr__(name, attrs2[_type][name])
-
     return im, ind
 
 def read_xas(filepath, verbose=False):
