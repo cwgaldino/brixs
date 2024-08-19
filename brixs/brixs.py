@@ -9925,7 +9925,29 @@ class Dummy():
     ########
     # copy #
     ########
-    pass
+    def _copy(self):
+        """Same as self.copy(), but attrs are NOT copied."""
+        #############
+        # copy data #
+        #############
+        data = copy.deepcopy(self.data)
+        return Dummy(data=data)
+
+
+    def copy(self):
+        """Return a copy of the object.
+
+        Usage:
+            >>> # full copy
+            >>> dummy2 = dummy1.copy()  # dummy2 is now a copy of dummy1
+
+        Returns:
+            :py:attr:`Dummy`
+        """
+        dummy = self._copy()
+        dummy.copy_attrs_from(self)
+        return dummy
+    
 
     #################
     # save and load #
