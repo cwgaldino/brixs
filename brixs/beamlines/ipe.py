@@ -101,34 +101,34 @@ h['scan']          = ''
 h['error']         = ''
 
 h = _attrs['rixs']['raw']
-h['Energy']              = 'entry/instrument/NDAttributes/Energy'
-h['Energy_SP']           = 'entry/instrument/NDAttributes/Energy_SP'
-h['NDArrayEpicsTSSec']   = 'entry/instrument/NDAttributes/NDArrayEpicsTSSec'
-h['NDArrayEpicsTSnSec']  = 'entry/instrument/NDAttributes/NDArrayEpicsTSnSec'
-h['NDArrayTimeStamp']    = 'entry/instrument/NDAttributes/NDArrayTimeStamp'
-h['NDArrayUniqueId']     = 'entry/instrument/NDAttributes/NDArrayUniqueId'
-h['PGM_Cff']             = 'entry/instrument/NDAttributes/PGM_Cff'
-h['PGM_GR']              = 'entry/instrument/NDAttributes/PGM_GR'
-h['PGM_GT']              = 'entry/instrument/NDAttributes/PGM_GT'
-h['PGM_MR']              = 'entry/instrument/NDAttributes/PGM_MR'
-h['PGM_MT']              = 'entry/instrument/NDAttributes/PGM_MT'
-h['RIXSCam_ActualImage'] = 'entry/instrument/NDAttributes/RIXSCam_ActualImage'
-h['RIXSCam_NumImages']   = 'entry/instrument/NDAttributes/RIXSCam_NumImages'
-h['RIXSCam_exposure']    = 'entry/instrument/NDAttributes/RIXSCam_exposure'
-h['RIXS_Ry']             = 'entry/instrument/NDAttributes/RIXS_Ry'
-h['RIXS_X']              = 'entry/instrument/NDAttributes/RIXS_X'
-h['RIXS_Y']              = 'entry/instrument/NDAttributes/RIXS_Y'
-h['RIXS_Z']              = 'entry/instrument/NDAttributes/RIXS_Z'
-h['RIXS_GX']             = 'entry/instrument/NDAttributes/RIXS_GX'
-h['RIXS_GY']             = 'entry/instrument/NDAttributes/RIXS_GY'
-h['RIXS_GZ']             = 'entry/instrument/NDAttributes/RIXS_GZ'
-h['RIXS_GRx1']           = 'entry/instrument/NDAttributes/RIXS_GRx1'
-h['RIXS_GRz1']           = 'entry/instrument/NDAttributes/RIXS_GRz1'
-h['RIXS_DZ']             = 'entry/instrument/NDAttributes/RIXS_DZ'
-h['RIXS_DY']             = 'entry/instrument/NDAttributes/RIXS_DY'
-h['TempA']               = 'entry/instrument/NDAttributes/TempA'
-h['TempB']               = 'entry/instrument/NDAttributes/TempB'
-h['Undulator']           = 'entry/instrument/NDAttributes/Undulator'  
+# h['Energy']              = 'entry/instrument/NDAttributes/Energy'
+# h['Energy_SP']           = 'entry/instrument/NDAttributes/Energy_SP'
+# h['NDArrayEpicsTSSec']   = 'entry/instrument/NDAttributes/NDArrayEpicsTSSec'
+# h['NDArrayEpicsTSnSec']  = 'entry/instrument/NDAttributes/NDArrayEpicsTSnSec'
+# h['NDArrayTimeStamp']    = 'entry/instrument/NDAttributes/NDArrayTimeStamp'
+# h['NDArrayUniqueId']     = 'entry/instrument/NDAttributes/NDArrayUniqueId'
+# h['PGM_Cff']             = 'entry/instrument/NDAttributes/PGM_Cff'
+# h['PGM_GR']              = 'entry/instrument/NDAttributes/PGM_GR'
+# h['PGM_GT']              = 'entry/instrument/NDAttributes/PGM_GT'
+# h['PGM_MR']              = 'entry/instrument/NDAttributes/PGM_MR'
+# h['PGM_MT']              = 'entry/instrument/NDAttributes/PGM_MT'
+# h['RIXSCam_ActualImage'] = 'entry/instrument/NDAttributes/RIXSCam_ActualImage'
+# h['RIXSCam_NumImages']   = 'entry/instrument/NDAttributes/RIXSCam_NumImages'
+# h['RIXSCam_exposure']    = 'entry/instrument/NDAttributes/RIXSCam_exposure'
+# h['RIXS_Ry']             = 'entry/instrument/NDAttributes/RIXS_Ry'
+# h['RIXS_X']              = 'entry/instrument/NDAttributes/RIXS_X'
+# h['RIXS_Y']              = 'entry/instrument/NDAttributes/RIXS_Y'
+# h['RIXS_Z']              = 'entry/instrument/NDAttributes/RIXS_Z'
+# h['RIXS_GX']             = 'entry/instrument/NDAttributes/RIXS_GX'
+# h['RIXS_GY']             = 'entry/instrument/NDAttributes/RIXS_GY'
+# h['RIXS_GZ']             = 'entry/instrument/NDAttributes/RIXS_GZ'
+# h['RIXS_GRx1']           = 'entry/instrument/NDAttributes/RIXS_GRx1'
+# h['RIXS_GRz1']           = 'entry/instrument/NDAttributes/RIXS_GRz1'
+# h['RIXS_DZ']             = 'entry/instrument/NDAttributes/RIXS_DZ'
+# h['RIXS_DY']             = 'entry/instrument/NDAttributes/RIXS_DY'
+# h['TempA']               = 'entry/instrument/NDAttributes/TempA'
+# h['TempB']               = 'entry/instrument/NDAttributes/TempB'
+# h['Undulator']           = 'entry/instrument/NDAttributes/Undulator'  
 
 
 # %% ========================== xas metadata ============================ %% #
@@ -241,11 +241,11 @@ def _read_rixs(filepath, curv=True, verbose=True):
         # read data #
         #############
         data = (f['entry/data/data'][:])
-        x    = data[:, 2]
+        x = data[:, 2]
         if curv:
-            y    = data[:, 4]
+            y = data[:, 4]
         else:
-            y    = data[:, 3]
+            y = data[:, 3]
             
         #############################
         # Create PhotonEvent object #
@@ -260,6 +260,11 @@ def _read_rixs(filepath, curv=True, verbose=True):
         for attr in metadata:
             setattr(pe1, attr, metadata[attr][0])
             setattr(pe1, attr, metadata[attr][0])
+
+        _group = 'entry/instrument/NDAttributes'
+        for attr in list(f[_group].keys()):
+            setattr(pe1, attr, f[f'{_group}/{attr}'][0])
+            setattr(pe1, attr, f[f'{_group}/{attr}'][0])
 
         # date
         temp = br.get_modified_date(filepath)
@@ -277,15 +282,15 @@ def _read_rixs(filepath, curv=True, verbose=True):
             image_number = name.split('_')[1].split('.')[0]
             setattr(pe1, 'scan', scan)
             setattr(pe2, 'scan', scan)
-            setattr(pe1, 'scan', image_number)
-            setattr(pe2, 'scan', image_number)
+            setattr(pe1, 'image_number', image_number)
+            setattr(pe2, 'image_number', image_number)
         elif len(name.split('_')) == 3:
             scan         = name.split('_')[1]
             image_number = name.split('_')[2].split('.')[0]
             setattr(pe1, 'scan', scan)
             setattr(pe2, 'scan', scan)
-            setattr(pe1, 'scan', image_number)
-            setattr(pe2, 'scan', image_number)
+            setattr(pe1, 'image_number', image_number)
+            setattr(pe2, 'image_number', image_number)
 
         # ccd
         setattr(pe1, 'ccd', 1)
@@ -359,7 +364,6 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
         dummy1 = br.Dummy()
         dummy2 = br.Dummy()
         for j, filepath in enumerate(filelist):
-            print(filepath)
             if j not in skip:
                 try:
                     _pe1, _pe2 = _read_rixs(filepath, curv, verbose)
@@ -433,7 +437,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             try:
                 metadata['modified_date'] = br.get_modified_date(fpath)
                 metadata['start_time']    = _str2datetime(metadata['start_time'])
-                metadata['start_time']    = _str2datetime(metadata['start_time'])
+                metadata['end_time']      = _str2datetime(metadata['end_time'])
             except:
                 pass
             
@@ -626,9 +630,9 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             PD.mode  = 'PD'
             return ss
         
-        #######
-        # XAS #
-        #######
+        ###############
+        # XAS Galdino #
+        ###############
         elif comments['scan_type'] == 'xas':
             #############
             # load file #
@@ -964,6 +968,65 @@ def process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=[
     # br.finder.save(s=d['s'], parameters=parameters, folderpath=br.finder.folderpath)
 
     return d['s']
+
+def sequence(folderpath, scans, sbins, calib=True, norm=True):
+    """return a list with rixs spectra
+
+    Example:
+
+    >>> # ss1 will have 3 spectra
+    >>> ss1 = sequence([100, 101, 102])
+    >>>
+    >>> # ss2 will have 3 spectra. The middle one will a sum of 2 spectra
+    >>> ss2 = sequence([100, [101, 102], 103])
+
+    Args:
+        scans (list): list of rixs scan number. Replace a scan number for a list to 
+            sum spectra inside list.
+        sbins (int): number of bins for converting photon events to spectrum (number 
+            of points in the spectrum).
+        calib (number, optional): if not None, the x axis is multipled by calib
+        norm (bool, optional): if True, spectrum is divided by the exposure time,
+            number of images, and number of bins (sbins).
+        
+    Returns:
+        Spectra
+    """
+    folderpath = Path(folderpath)
+    ss = br.Spectra()
+    for scan in scans:
+        if isinstance(scan, Iterable):
+            _ss = br.Spectra()
+            for _scan in scan:
+                _ss.append(process(folderpath/str(_scan).zfill(4), sbins=sbins, calib=calib, norm=norm))
+            # fix attrs
+            for attr in _ss[0].get_attrs():
+                try:
+                    _ss.create_attr_from_spectra(attr)        
+
+                    if attr.endswith('_min'):
+                        _ss.__setattr__(attr, min(_ss.__getattr__(attr)))
+                    elif attr.endswith('_max') or attr.endswith('_sigma'):
+                        _ss.__setattr__(attr, max(_ss.__getattr__(attr)))
+                    else:
+                        _ss.__setattr__(attr, np.mean(_ss.__getattr__(attr)))
+                except:
+                    pass
+            ss.append(_ss.align().interp().calculate_sum())
+
+        else:
+            ss.append(process(folderpath/str(scan).zfill(4), sbins=sbins, calib=calib, norm=norm))
+
+    #########
+    # attrs #
+    #########
+    for attr in ss[0].get_attrs():
+        try:
+            ss.create_attr_from_spectra(attr)
+        except:
+            pass
+
+    return ss
 
 # %% =========================== alignment plot =============================== %% #
 def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, start=0, stop=None, skip=[], limits=None, motor_list=None, **kwargs):
