@@ -18,7 +18,7 @@ from .brixs import subplots
 # this avoids errors when converting from one object to another (e.g. im -> s)
 # this also avoid that import methods or variables are overwritten
 # reserved words:  methods, vars, and pseudovars for each object
-# forbidden words: all methods from all objects + pseudovar from all other objects
+# forbidden words: all methods from same object + methods, vars, and pseudovar from all other objects
 import types
 for object in (Spectrum, Spectra, Image, PhotonEvents, Dummy):
     name  = object.__name__

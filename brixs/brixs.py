@@ -498,6 +498,10 @@ class Spectrum(metaclass=_Meta):
         # labels
         pass
 
+        # extra
+        for extra in settings._extra['Spectrum']:
+            self.__setattr__(extra, settings._extra['Spectrum'][extra](self))
+
         ################
         # loading data #
         ################
@@ -1416,6 +1420,12 @@ class Spectrum(metaclass=_Meta):
         s         = self.copy()
         s._x     += value
         s._shift += value
+
+        # extra
+        for extra in settings._modfiers['shift']:
+            if hasattr(s, extra):
+                s.__getattribute__(extra).set_shift(value)
+            
         return s
 
     def set_offset(self, value):
@@ -1430,6 +1440,12 @@ class Spectrum(metaclass=_Meta):
         s          = self.copy()
         s._y      += value
         s._offset += value
+
+        # extra
+        for extra in settings._modfiers['offset']:
+            if hasattr(s, extra):
+                s.__getattribute__(extra).set_offset(value)
+            
         return s
 
     def set_factor(self, value):
@@ -1450,6 +1466,12 @@ class Spectrum(metaclass=_Meta):
         s._y      *= value
         s._factor *= value
         s._offset *= value
+
+        # extra
+        for extra in settings._modfiers['factor']:
+            if hasattr(s, extra):
+                s.__getattribute__(extra).set_factor(value)
+            
         return s
 
     def set_calib(self, value):
@@ -1470,6 +1492,12 @@ class Spectrum(metaclass=_Meta):
         s._x     *= value
         s._calib *= value
         s._shift *= value
+
+        # extra
+        for extra in settings._modfiers['calib']:
+            if hasattr(s, extra):
+                s.__getattribute__(extra).set_calib(value)
+            
         return s
 
     ###############
@@ -2284,6 +2312,10 @@ class Spectra(metaclass=_Meta):
         # labels
         pass
 
+        # extra
+        for extra in settings._extra['Spectra']:
+            self.__setattr__(extra, settings._extra['Spectra'][extra](self))
+
         ################
         # loading data #
         ################
@@ -3004,6 +3036,8 @@ class Spectra(metaclass=_Meta):
         # extract #
         ###########
         x, ys = arraymanip.extract(x, ys, limits=limits)
+        if len(ys.shape) == 1:
+            ys = np.array([[_] for _ in ys])
         return x, ys
     
     ################
@@ -3182,6 +3216,7 @@ class Spectra(metaclass=_Meta):
             
         ss = Spectra()
         x, ys = self._gather_ys(limits=limits)
+
         for i in range(len(self)):
             ss.append(Spectrum(x=x, y=ys[:, i]))
         # ss._length       = self.length
@@ -7084,6 +7119,7 @@ class Image(metaclass=_Meta):
         im = self.copy()
         im._data   += float(value)
         im._offset += float(value)
+
         return im
 
     def set_factor(self, value):

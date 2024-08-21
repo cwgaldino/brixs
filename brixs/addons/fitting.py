@@ -338,7 +338,7 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
 br.Spectrum.fit_peak = _fit_peak
 
 # %% ======================= Spectra peak fitting ========================= %% #
-def _fit_peak2(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, limits=None):     
+def _fit_peak_spectra(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, limits=None):     
     r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
 
     .. math:: y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
@@ -401,7 +401,7 @@ def _fit_peak2(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, f
         err.append(_err)
         f.append(_f)
     return ss, popt, err, f
-br.Spectra.fit_peak = _fit_peak2
+br.Spectra.fit_peak = _fit_peak_spectra
 
 # %% ====================== basic model functions ========================= %% #
 br.gaussian          = _gaussian

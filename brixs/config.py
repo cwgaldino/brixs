@@ -1,6 +1,64 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""BRIXS settings file"""
+"""BRIXS settings file
+
+
+###################
+# DEVELOPERS NOTE #
+###################
+
+Internal variables:
+
+################################
+# Reserved and forbidden words #
+################################
+1) These words will raise an error if the user try to define attrs with these words
+
+2) This avoids errors when converting from one object to another (e.g. im -> s)
+
+3) This also avoid that import methods or variables are overwritten
+
+reserved words:  methods, vars, and pseudovars for a object, i.e., the reserved 
+words of a Spectrum object are all the words representing methods, vars, and pseudovars
+in a Spectrum object (pseudovars are vars defined via @property decorator)
+
+forbidden words: all methods from a object + pseudovar from all other objects, i.e.,
+the forbidden words of a Spectrum object are all methods defined for a spectrum 
+object plus all methods and pseudovars of all other objects (as long the pseudovars
+from other objects are not equal to pseudovars in Spectrum).
+
+#########
+# extra #
+#########
+`extra` allows for posterior addition of new methods and attrs after brixs has 
+been imported. For example, the `model` module requires
+ the `model` attr to be initialized inside Spectrum.__init__(). However, the
+module `model` only exist if we import it, see below
+
+import brixs as br
+import brixs.model
+
+to make the attr brixs.model.model() to be added inside Spectrum.__init__() we
+add the model class to extra. See below.
+
+br.settings._extra['Spectrum']['model'] = Model
+
+Note that `self` is passed to Model.
+
+#############
+# Modifiers #
+#############
+settings._modifiers allow for adding new objects that respond accordingly when
+set_shift, set_calib, ... are called. For example, when one calls s.set_shift(10)
+them the spectrum s is shifted by 10, and also everything else inside 
+settings._modifiers['shift']. If 'model' is in settings._modifiers['shift'], then
+s.set_shift() also calls s.model.set_shift().
+
+For now, settings._modifiers is only implemented for Spectrum and Spectra. But 
+it should be trivial to expand it to Image and PhotonEvents. I just did not do 
+it yet, because I see no need.
+
+"""
 
 # %% ---------------------------- help text ------------------------------- %% #
 text = """**figure**
@@ -56,13 +114,14 @@ class _settings():
         ############
         # internal #
         ############
-        self._figure_count   = 1
         self._forbidden_words = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
         self._reserved_words  = {'Spectrum':    {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'Spectra':     {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'Image':       {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []},
                                  'Dummy':       {'methods':[], 'vars':[], 'pseudovars': []}}
+        self._extra    = {'Spectrum':{}, 'Spectra':{}, 'Image':{}, 'PhotonEvents':{}, 'Dummy':{}}
+        self._modfiers = {'shift':[], 'offset':[], 'factor':[], 'calib':[]}
 
         #############
         # help text #
