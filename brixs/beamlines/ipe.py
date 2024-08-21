@@ -252,7 +252,6 @@ def _read_rixs(filepath, curv=True, verbose=True):
         #############################
         pe1 = br.PhotonEvents(x=x, y=y, xlim=(18, 1650),   ylim=(0, 1608)).crop(18,   1650, None, None)
         pe2 = br.PhotonEvents(x=x, y=y, xlim=(1668, 3300), ylim=(0, 1608)).crop(1668, 3300, None, None)
-
         #########
         # attrs #
         #########
@@ -375,6 +374,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                     dummy2.append(_pe2)
                 except Exception as e:
                     print(f' === ERROR! Image {j} cannot be loaded: {e} ===\n{filepath}')
+        
         pe1 = br.PhotonEvents(x=x1, y=y1, xlim=_pe1.xlim, ylim=_pe1.ylim)
         pe2 = br.PhotonEvents(x=x2, y=y2, xlim=_pe2.xlim, ylim=_pe2.ylim)
         
@@ -390,8 +390,9 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                     setattr(pe1, attr + '_sigma', np.std(temp))
                 except:
                     setattr(pe1, attr, None)
+
         pe1.ccd = 1
-        pe1.modified_date = dummy1[0].modified_date
+        pe1.modified_date = _pe1.modified_date
         pe1.number_of_images = len(filelist)
         try:
             pe1.scan = int(fpath.name)
@@ -411,7 +412,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                 except:
                     setattr(pe2, attr, None)
         pe2.ccd = 2
-        pe2.modified_date = dummy2[0].modified_date
+        pe2.modified_date = _pe2.modified_date
         pe2.number_of_images = len(filelist) - len(skip)
         try:
             pe2.scan = int(fpath.name)
@@ -708,7 +709,6 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     # read file #
     #############
     pe1, pe2, pes1, pes2 = read(folderpath, start=start, stop=stop, skip=skip)
-   
     ################
     # ccd spectrum #
     ################
@@ -1351,7 +1351,6 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     if popt is None:
         s, fit, popt, R2, model = pe.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode='cc', ylimits=ylimits, limit_size=1000)
         fit = fit.crop(xlimits[0], xlimits[1])
-    # print(f'ccd{ccd+1} curvature= {list(popt[ccd])}')
         
     ########
     # plot #
