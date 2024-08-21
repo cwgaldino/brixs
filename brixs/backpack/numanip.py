@@ -20,7 +20,8 @@ def is_integer(n):
     elif isinstance(n, float):
         return n.is_integer()
     elif isinstance(n, str):
-        try: is_integer(float(n))
+        try: 
+            return is_integer(float(n))
         except ValueError:
             return False
     else:
@@ -38,7 +39,9 @@ def is_number(n):
     elif isinstance(n, numbers.Number):
         return True
     elif isinstance(n, str):
-        try: is_number(float(n))
+        try: 
+            is_number(float(n))
+            return True
         except ValueError:
             return False
     else:

@@ -46,8 +46,11 @@ is_mac     = _operating_system() == 'mac'
 # %% --------------- supporting functions from numanip -------------------- %% #
 # backpack developers note --> if these function change, it needs to be copied to numanip.py
 import numbers
-def _is_number(n):
+def is_number(n):
     """Returns True if variable is number."""
+    # backpack developers note!!!!
+    # if this function changes, it needs to be copied to these files: figmanip
+
     if isinstance(n, int):
         return True
     elif isinstance(n, float):
@@ -55,12 +58,14 @@ def _is_number(n):
     elif isinstance(n, numbers.Number):
         return True
     elif isinstance(n, str):
-        try: _is_number(float(n))
+        try: 
+            is_number(float(n))
+            return True
         except ValueError:
             return False
     else:
         False
-
+        
 def _round_to_1(x):
     """return the most significant digit"""
     return round(x, -int(np.floor(np.log10(abs(x)))))
