@@ -1,6 +1,44 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Model object for fitting
+"""Model object for fitting.
+
+################
+# Introduction #
+################
+
+Lmfit is already rather straight forward, but two things are still a pain. On 
+top of basic functionality, I needed the fitting module to be able to: (1) fit 
+multiple spectra in a sequence passing the output of one fit as an input for the
+ next fit (like when we are fitting spectra as a function of temperature), and 
+(2) fit multiple spectra at once where fit parameters for specific features are 
+the same for all spectra (for example, for when we want to fit the elastic line 
+in all spectra but you want the constrain that the elastic line have the same 
+width in all spectra).
+
+The ideia is that both br.Spectrum() and br.Spectra() have an attribute called 
+'model':
+
+s = br.spectrum()
+s.model
+
+ss = br.Spectra()
+ss.model
+
+This attr 'model' is nothing more than a lmfit.Parameters object with a few 
+extra functions attached to it. Note that, s.model is used for fitting one 
+spectrum, while ss.model is used for multiple fittings.
+
+One can define 'components' to a model (that's the best name I could think of). 
+So one of the components that I defined is 'Peaks'. Therefore one can do:
+
+s.model.peaks.add(amp=10, c=0, w=3)
+
+And all parameters of a peak are added to the lmfit.Parameters object.
+
+
+#########
+# Model #
+#########
 
 `Model` is a lmfit.Parameters object (note the `s` in Parameters). 
 
@@ -38,7 +76,7 @@ i1 is the entry number. For example, one spectrum may have multiple peaks. Each
 peak will have a number i1.  
 
 
-See more notes: brixs/model/model.py
+See more notes at: brixs/model/model.py
 """
 
 
