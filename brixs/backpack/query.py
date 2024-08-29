@@ -75,7 +75,7 @@ def query(question, default="yes"):
 
 # %% =============================== time ================================= %% #
 def start_time():
-    """returns tuple with (perf counter, process time)
+    """returns tuple with (perf counter, process time) in ns
 
     perf counter will run like a 'stopwatch' (almost like real time measurement).
     
@@ -94,12 +94,12 @@ def start_time():
         >>> print(br.stop_time(start_time))
     
     Returns:
-        tuple (perf counter, process time)
+        tuple (perf counter, process time) in ns
     """
-    return (time.perf_counter(), time.process_time())
+    return (time.perf_counter_ns(), time.process_time_ns())
 
 def stop_time(start_time):
-    """returns (perf counter, process time) subtracted by the start time
+    """returns (perf counter, process time) subtracted by the start time in ns
 
     perf counter will run like a 'stopwatch' (almost like real time measurement).
     
@@ -118,9 +118,33 @@ def stop_time(start_time):
         >>> print(br.stop_time(start_time))
     
     Returns:
-        tuple (elapsed perf counter, elapsed process time)
+        tuple (elapsed perf counter, elapsed process time) in ns
     """
-    return (time.perf_counter() - start_time[0], time.process_time() - start_time[1])
+    return (time.perf_counter_ns() - start_time[0], time.process_time_ns() - start_time[1])
+
+def stop_time_seconds(start_time):
+    """returns (perf counter, process time) subtracted by the start time in seconds
+
+    perf counter will run like a 'stopwatch' (almost like real time measurement).
+    
+    process time will return the time spent by the computer for the 
+    current process. This way, process time does not include:
+     sleep-time, OS-scheduling artifacts, time spent on 'external resources', 
+     'system call' ... In general, if and only if, your function is entirely 
+    CPU bound, does not access 
+    external resources, nor cause any system call whatsoever, 
+    process_time is the more accurate and better choice.
+    
+    Usage:
+
+        >>> start_time = br.start_time()
+        >>> run......
+        >>> print(br.stop_time_seconds(start_time))
+    
+    Returns:
+        tuple (elapsed perf counter, elapsed process time) in seconds
+    """
+    return (round((time.perf_counter_ns() - start_time[0])/1e9, 2), round((time.process_time_ns() - start_time[1])/1e9, 2))
 
 # %% =========================== clipboard ================================ %% #
 def copy2clipboard(txt):
