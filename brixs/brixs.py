@@ -1085,7 +1085,7 @@ class Spectrum(metaclass=_Meta):
     #################
     # save and load #
     #################     
-    def save(self, filepath, only_data=False, check_overwrite=False, verbose=False, **kwargs):
+    def save(self, filepath, number_of_decimal_places=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Warning:
@@ -1098,6 +1098,12 @@ class Spectrum(metaclass=_Meta):
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
+            number_of_decimal_places (int, optional): if not None, this argument
+                defines the number of decimal places to save the data (it does
+                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                number_of_decimal_places. Default is None. If None, the number
+                of decimal places will be such that data will be saved with the 
+                best precision necessary.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             check_overwrite (bool, optional): if True, it will check if file exists
@@ -1157,8 +1163,16 @@ class Spectrum(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'fmt' not in kwargs: # pick best format
-            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
+        if 'fmt' in kwargs: # pick best format
+            pass
+        elif number_of_decimal_places is not None:
+            kwargs['fmt'] = f'%.{number_of_decimal_places}f'
+        else:
+            if self.check_nan():
+                temp = self.copy().remove_nan()
+            else:
+                temp = self.copy()
+            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(temp.data)])
             kwargs['fmt'] = f'%.{decimal}f'
         kwargs.setdefault('delimiter', ', ')
         kwargs.setdefault('newline', '\n')
@@ -1299,6 +1313,30 @@ class Spectrum(metaclass=_Meta):
     #########
     # check #
     #########
+    def check_nan(self):
+        """return True if x or y have non-numeric (NaN) values"""
+        if np.isnan(self.x).any():
+            return True
+        else:
+            return np.isnan(self.y).any()
+        
+    def remove_nan(self):
+        """remove data points (x, y) that contain non-numeric (NaN) values"""
+        if self.check_nan() == False:
+            return self.copy()
+        else:
+            index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
+            x = np.delete(self.x, index2remove)
+            y = np.delete(self.y, index2remove)
+
+            # copy
+            s = self.copy()
+            s._x = x
+            s._y = y
+            # reset checks
+            self._step = None
+            return s
+    
     def check_step(self, max_error=0.1):
         """Checks vector uniformity of the x-coordinates.
 
@@ -3299,7 +3337,7 @@ class Spectra(metaclass=_Meta):
     #################
     # save and load #
     #################
-    def save(self, folderpath, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, only_data=False, verbose=False, **kwargs):
+    def save(self, folderpath, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, number_of_decimal_places=None, only_data=False, verbose=False, **kwargs):
         r"""Save spectra. Wrapper for `numpy.savetxt()`_.
 
         Warning:
@@ -3322,6 +3360,12 @@ class Spectra(metaclass=_Meta):
                 spectrum index. Example: 'spectrum_{i}_T{T}K.dat'
             zfill (int, optional): number of digits for file numbering. If `None`,
                 zfill will be determined.
+            number_of_decimal_places (int, optional): if not None, this argument
+                defines the number of decimal places to save the data (it does
+                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                number_of_decimal_places. Default is None. If None, the number
+                of decimal places will be such that data will be saved with the 
+                best precision necessary.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             verbose (bool, optional): turn verbose on and off. Default is `False`.
@@ -3387,7 +3431,7 @@ class Spectra(metaclass=_Meta):
                 filename = f'{prefix}' + f'{i_str}' + f'{suffix}'
 
             if verbose:  print(f'{i}/{len(self)-1}: {filename}')
-            s.save(filepath=folderpath/filename, only_data=only_data, check_overwrite=False, verbose=False, **kwargs)
+            s.save(filepath=folderpath/filename, number_of_decimal_places=number_of_decimal_places, only_data=only_data, check_overwrite=False, verbose=False, **kwargs)
         # if verbose: print('Done!')
     
     def load(self, folderpath, string='*', only_data=False, verbose=False, **kwargs):
@@ -3458,13 +3502,19 @@ class Spectra(metaclass=_Meta):
         self._x            = None
         self._monotonicity = None
 
-    def save_all_single_file(self, filepath, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
+    def save_all_single_file(self, filepath, number_of_decimal_places=None, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
         r"""Save all Spectra in one single file. Wrapper for `numpy.savetxt()`_.
 
         Args:
             filepath (string or path object): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
+            number_of_decimal_places (int, optional): if not None, this argument
+                defines the number of decimal places to save the data (it does
+                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                number_of_decimal_places. Default is None. If None, the number
+                of decimal places will be such that data will be saved with the 
+                best precision necessary.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             limits (list, optional): a pair of x-coordinate values or a list of
@@ -3550,12 +3600,22 @@ class Spectra(metaclass=_Meta):
             x, ys = self._gather_ys(limits=limits)
 
             # kwargs
-            if 'fmt' not in kwargs: # pick best format
-                decimal = max([numanip.n_decimal_places(x) for x in self.x])
-                temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
-                if temp_decimal > decimal:
-                    decimal = copy.deepcopy(temp_decimal)
-                kwargs['fmt'] = f'%.{decimal}f'
+            if 'fmt' in kwargs: # pick best format
+                pass
+            elif number_of_decimal_places is not None:
+                kwargs['fmt'] = f'%.{number_of_decimal_places}f'
+            else: # pick best format
+                if self.check_nan():
+                    pass
+                #     temp = self.copy().remove_nan()
+                # else:
+                #     temp = self.copy()
+                else:
+                    decimal = max([numanip.n_decimal_places(x) for x in self.x])
+                    temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
+                    if temp_decimal > decimal:
+                        decimal = copy.deepcopy(temp_decimal)
+                    kwargs['fmt'] = f'%.{decimal}f'
 
             # final data to save
             final = np.zeros((self.length, len(self)+1))
@@ -3682,6 +3742,28 @@ class Spectra(metaclass=_Meta):
     #########
     # check #
     #########
+    def check_nan(self):
+        """return True if x or y have non-numeric (NaN) values"""
+        for s in self:
+            if s.check_nan():
+                return True
+        return False
+    
+    def remove_nan(self):
+        """remove data points (x, y) that contain non-numeric (NaN) values"""
+        if self.check_nan() == False:
+            return self.copy()
+        else:
+            ss = self.copy()
+
+            for i, s in enumerate(ss):
+                ss[i] = s.remove_nan()
+            # reset checks
+            ss._step   = None
+            ss._length = None
+            ss._x      = None
+            return s    
+    
     def check_monotonicity(self):
         """Sets monotonicity attribute to 'increasing' or 'decreasing'.
 
@@ -6886,6 +6968,18 @@ class Image(metaclass=_Meta):
     #########
     # check #
     #########
+    def check_nan(self):
+        """return True if data have non-numeric (NaN) values"""
+        if np.isnan(self.data).any():
+            return True
+        return False
+    
+    def find_nan(self):
+        """Return a list with positions where non-numeric (NaN) values were found"""
+        if self.check_nan():
+            return np.argwhere(np.isnan(self.data))
+        return []
+        
     def check_x_step(self, max_error=0.1):
         """Checks vector uniformity of the x centers.
 
@@ -9347,8 +9441,28 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     #########
     # check #
     #########
-    pass
+    def check_nan(self):
+        """return True if x or y have non-numeric (NaN) values"""
+        if np.isnan(self.x).any():
+            return True
+        else:
+            return np.isnan(self.y).any()
+        
+    def remove_nan(self):
+        """remove data points (x, y) that contain non-numeric (NaN) values"""
+        if self.check_nan() == False:
+            return self.copy()
+        else:
+            index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
+            x = np.delete(self.x, index2remove)
+            y = np.delete(self.y, index2remove)
 
+            # copy
+            pe = self.copy()
+            pe._x = x
+            pe._y = y
+            return pe
+    
     #############
     # modifiers #
     #############
