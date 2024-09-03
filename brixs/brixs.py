@@ -220,6 +220,36 @@ def _attr2str(attrs_dict, verbose):
                 for line in _attr2str(attrs_dict[name], verbose):
                     final.append('    ' + line)
                 final.append('}')
+            ##################
+            # type: Spectrum #
+            ##################
+            elif isinstance(attrs_dict[name], Spectrum):
+                x = list(attrs_dict[name].x)
+                y = list(attrs_dict[name].y)
+                final.append(f'{name}: ' + f'Spectrum(x={x}, y={y})')
+            #################
+            # type: Spectra #
+            #################
+            elif isinstance(attrs_dict[name], Spectra):
+                _internal = ''
+                for _s in attrs_dict[name]:
+                    x = list(_s.x)
+                    y = list(_s.y)
+                    _internal += f'Spectrum(x={x}, y={y}), '
+                final.append(f'{name}: ' + f'Spectra(data=[' + _internal + '])')
+            ######################
+            # type: PhotonEvents #
+            ######################
+            elif isinstance(attrs_dict[name], PhotonEvents):
+                x = list(attrs_dict[name].x)
+                y = list(attrs_dict[name].y)
+                final.append(f'{name}: ' + f'PhotonEvents(x={x}, y={y})')
+            ######################
+            # type: PhotonEvents #
+            ######################
+            elif isinstance(attrs_dict[name], Image):
+                _data = [list(_) for _ in attrs_dict[name].data]
+                final.append(f'{name}: ' + f'Image(data={_data})')
             ########################
             # type: list and tuple #
             ########################
@@ -276,7 +306,7 @@ def _str2attr(header, indentation=0, verbose=False):
             else:
                 try:
                     value = eval(str(value).strip())
-                except:
+                except:# Exception as e:
                     value = str(value).strip()
                 
             try:
