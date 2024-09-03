@@ -413,6 +413,19 @@ def extract(x, y, limits, invert=False):
         # raise RuntimeError('No data points within the selected range.')
 
 # %% ========================== Experimental ============================== %% #
+def array2list(arr):
+    """recursively transform a numpy array to a list"""
+    final = []
+    if isinstance(arr, Iterable) and isinstance(arr, str) == False:
+        for item in arr:
+            if isinstance(item, Iterable):
+                final.append(array2list(item))
+            else:
+                final.append(item)
+        return final
+    else:
+        return arr
+    
 def flatten(x):
     """[EXPERIMENTAL] Return a copy of the array collapsed into one dimension."""
     assert isinstance(x, Iterable), 'input must be Iterable (list, tuple, array)'
