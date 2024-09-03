@@ -183,6 +183,9 @@ def _attr2str(attrs_dict, verbose):
 
         Note: 
             nested dictionaries will be indented with 4 spaces.
+
+        Warning:
+            numpy arrays will return a `list`.
         
         Args:
             attrs_dict (dict): a dictionary with attr names and values, e.g., 
@@ -254,7 +257,7 @@ def _attr2str(attrs_dict, verbose):
             # type: list and tuple #
             ########################
             elif isinstance(attrs_dict[name], Iterable):
-                final.append(f'{name}: {list(attrs_dict[name])}')
+                final.append(f'{name}: {arraymanip.array2list(attrs_dict[name])}')
             ################
             # type: number #
             ################
