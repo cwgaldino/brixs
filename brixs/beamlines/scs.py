@@ -7,6 +7,7 @@ Last edited: Carlos Galdino 2024-Sept-03
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 from collections.abc import Iterable
+from IPython.display import Audio
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
@@ -24,10 +25,16 @@ from toolbox_scs.detectors.hrixs import hRIXS
 # %%
 
 # %% ============================= settings =============================== %% #
-settings = {'default_proposal': None}
+settings = {'default_proposal': None,
+            'has_multiple_energy_max_error': 1.0,
+            'has_multiple_delays_max_error': 0.001}
 # %%
 
 # %% ========================= useful functions =========================== %% #
+def make_sound(freq=200, duration=0.5):
+    beep = np.sin(2*np.pi*freq*np.arange(duration*5000*2)/10000)
+    return Audio(beep, rate=10000, autoplay=True)
+
 def scanlist(proposal):
     """Return list of scans available for a proposal"""
     # folderpath = Path(folderpath)
@@ -63,28 +70,122 @@ def verify_params(scan, params=None, proposal=None):
         proposal = settings['default_proposal']
     assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
 
-    run, ds = _get_dataset(scan, proposal=proposal)
+    run, ds = _get_dataset_xas(scan, proposal=proposal)
 
     return tb.check_peak_params(run, 'FastADC2_9raw', params=params)
 
+def has_multiple_energy(ds, max_error=None):
+    """Returns True if the photon energy setpoint varies
+    
+    Returns true if: absolute sum of the photon energy setpoint 
+            variation is more then the max_error times the average
+            photon energy setpoint
+        
+    Args:
+        ds (xarray.Dataset): dataset
+        max_error (number, optional): percentage (of the x step) value 
+            of the max error. Default is 0.1 %.
+    
+    Returns:
+        bool                
+    """
+    if max_error is None:
+        max_error = settings['has_multiple_energy_max_error']
+        
+    if sum(abs(np.diff(ds['nrj_target']))) > ds['nrj_target'].mean()*max_error/100:
+        return True
+    return False
+
+def _find_duplicate_indexes(arr, max_error=None):
+
+    indexes = {arr[0]: [0, ]}
+    values  = {arr[0]: [arr[0], ]}
+
+    for i, item in enumerate(arr[1:]):
+        new = True
+        for _item in values:
+
+            average = np.mean(values[_item])
+            _min = average - average*max_error/100
+            _max = average + average*max_error/100
+
+            # this deals with negative numbers
+            if _min > _max:
+                _min, _max = (_max, _min)
+
+            if item >= _min and item <= _max:
+                indexes[_item].append(i+1)
+                values[_item].append(item)
+                new = False
+                break
+        if new:
+            indexes[item] = [i+1, ]
+            values[item]  = [item, ]  
+    return {np.mean(values[key]): indexes[key] for key in values}
+
+# def find_duplicate_delays(scan, max_error=None, proposal=None):
+
+#     #######################
+#     # get proposal number #
+#     #######################
+#     if proposal is None:
+#         proposal = settings['default_proposal']
+#     assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+#     ####################
+#     # get dataset info #
+#     ####################
+#     run, ds = tb.load(proposal, scan, fields=['PP800_DelayLine'])
+#     delay_line = ds['PP800_DelayLine'].values + 0
+
+#     #############
+#     # max error #
+#     #############
+#     if max_error is None:
+#         max_error = settings['has_multiple_delay_max_error']
+
+#     return _find_duplicate_indexes(delay_line, max_error=max_error)
+
 # %% =========================== time zero ================================ %% #
-# this will force every spectrum object to have the following attrs: t0_ and t0
-# When t0 changes, s.time_delay is calculated based on s.delay_line if s.delay_line exists
-br.Spectrum.t0_   = None
+# this will force every spectrum object to have the following attrs: 
+# t0_ and t0
+# is_time_trace
+# When t0 changes, s.delay_line is calculated based on s.time_delay if s.time_delay exists
+# t0_ and time_delay must be defined for all spectra
+br.Spectrum.is_time_trace = False
+br.Spectrum.t0_ = None
 def getter(self):
     if hasattr(self, 't0_'):
         return self.t0_
 def setter(self, value):
-    if value is None:
-        self.t0_ = None
-        if hasattr(self, 'time_delay'):
-            self.time_delay = None
-    else:
-        self.t0_ = value
-        if hasattr(self, 'delay_line'):
-            self.time_delay = tb.positionToDelay(self.delay_line, origin=value)
+    if hasattr(self, 'time_delay'):
+        # print([float(_) for _ in self.time_delay])
+        # print(tb.delayToPosition([int(_) for _ in self.time_delay], origin=int(self.t0_)))
+        # print(self.t0_)
+        # self.t0_ = 300.0
+        # if self.t0_ is not None:
+        if isinstance(self.time_delay, Iterable):
+            delay_line      = [tb.delayToPosition(_, origin=self.t0_) for _ in self.time_delay]
+            self.time_delay = [tb.positionToDelay(_, origin=value) for _ in delay_line]
+        else:
+            delay_line      = tb.delayToPosition(self.time_delay, origin=self.t0_)
+            self.time_delay = tb.positionToDelay(delay_line, origin=value)
+        if hasattr(self, 'is_time_trace'):
+            if self.is_time_trace:
+                self.x = self.time_delay
+    self.t0_ = value
     return
 setattr(br.Spectrum, 't0', property(getter, setter, ))
+
+def getter(self):
+    if hasattr(self, 'time_delay') and hasattr(self, 't0_'):
+        if isinstance(self.time_delay, Iterable):
+            return [tb.delayToPosition(_, origin=self.t0_) for _ in self.time_delay]
+        else:
+            return tb.delayToPosition(self.time_delay, self.t0_)
+def setter(self, value):
+    raise ValueError('cannot set delay_line value. Change time_delay instead or t0')
+setattr(br.Spectrum, 'delay_line', property(getter, setter, ))
 # %%
 
 # %% ============================= metadata =============================== %% #
@@ -106,59 +207,8 @@ _attrs += ['XRD_DRY', 'XRD_SRX', 'XRD_SRY', 'XRD_SRZ']
 _attrs += ['XRD_SXT1Y', 'XRD_SXT2Y', 'XRD_SXTX', 'XRD_SXTZ']
 # %%
 
-# %% ============================== XAS =================================== %% #
-# def _set_x_as_delayline(self):
-#     """Change x axis from time delay to delay line"""
-#     assert hasattr(self, 'type_'), 'for s.set_x_as_timedelay() to work, s.type_ must be defined'
-#     assert self.type_ == 'time trace', 's.set_x_as_timedelay() is only valid if s.type_ = "time trace"'
-    
-#     if hasattr(self, 'delay_line'):
-#         if isinstance(self.delay_line, Iterable):
-#             assert len(self.delay_line) == len(self.x), f's.delay_line (len={len(self.delay_line)} must have the same length as the signal data (len={len(self)})'
-#             self.x = self.delay_line
-#             self.xlabel_ = 'delay_line'
-#         else:
-#             raise ValueError('s.delay_line is not iterable and cannot be set as x')
-#     else:
-#         raise ValueError('spectrum does not have attr `delay_line`')
-# br.Spectrum.set_x_as_delayline = _set_x_as_delayline
-
-# def _set_x_as_timedelay(self):  
-#     """Change x axis from delay line to time delay"""
-#     assert hasattr(self, 'type_'), 'for s.set_x_as_timedelay() to work, s.type_ must be defined'
-#     assert self.type_ == 'time trace', 's.set_x_as_timedelay() is only valid if s.type_ = "time trace"'
-    
-#     if hasattr(self, 'time_delay'):
-#         if isinstance(self.time_delay, Iterable):
-#             assert len(self.time_delay) == len(self.x), f's.time_delay (len={len(self.time_delay)} must have the same length as the signal data (len={len(self)})'
-#             self.x = self.time_delay
-#             self.xlabel_ = 'time_delay'
-#         else:
-#             raise ValueError('s.time_delay is not iterable and cannot be set as x')
-#     else:
-#         raise ValueError('spectrum does not have attr `time_delay`')
-# br.Spectrum.set_x_as_timedelay = _set_x_as_timedelay
-
-def _check_energy_change(ds, max_error=0.1):
-    """Returns True if the photon energy setpoint varies
-    
-    Returns true if: absolute sum of the photon energy setpoint 
-            variation is more then the max_error times the average
-            photon energy setpoint
-        
-    Args:
-        ds (xarray.Dataset): dataset
-        max_error (number, optional): percentage (of the x step) value 
-            of the max error. Default is 0.1 %.
-    
-    Returns:
-        bool                
-    """
-    if sum(abs(np.diff(ds['nrj_target']))) > ds['nrj_target'].mean()*max_error/100:
-        return True
-    return False
-
-def _get_dataset(scan, proposal=None):
+# %% ============================== XAS (Basic) =========================== %% #
+def _get_dataset_xas(scan, proposal=None):
     """return run and dataset for a scan (rixs related fields are not loaded)
 
     Args:
@@ -187,13 +237,13 @@ def _get_dataset(scan, proposal=None):
     
     return run, ds
 
-def _ds2spectrum(ds2, step=0.1, isdelay='auto'):#, debug=False):
+def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=False):
     """return spectrum from dataset
 
     Args:
         ds2 (dataset)
         step 
-        isdelay (bool, optional): 
+        is_time_trace_ (bool, optional): 
         debug (bool): 
 
     Return:
@@ -202,44 +252,37 @@ def _ds2spectrum(ds2, step=0.1, isdelay='auto'):#, debug=False):
     ######################################
     # check if delay scan or energy scan # 
     ######################################
-    if isdelay == 'auto':
-        if _check_energy_change(ds=ds2, max_error=0.1):
-            isdelay = False
+    if is_time_trace == 'auto':
+        if has_multiple_energy(ds=ds2):
+            is_time_trace = False
         else:
-            isdelay = True
+            is_time_trace = True
     
     ################
     # get metadata # 
     ################
     metadata = {}
-    # metadata['type_']      = 'time trace' if isdelay else 'xas'
-    # metadata['xlabel_']    = 'time_delay' if isdelay else 'photon energy'
+
     metadata['raw']  = {attr: ds2[attr].values + 0 for attr in _attrs}
     metadata['stat'] = {attr: {'avg': np.mean(metadata['raw'][attr]),
                                'min': np.min(metadata['raw'][attr]),
                                'max': np.max(metadata['raw'][attr]),
                                'std': np.std(metadata['raw'][attr])} for attr in metadata['raw']}
+    if raw == False: del metadata['raw']
 
-    if isdelay:
-        metadata['delay_line'] = metadata['stat']['PP800_DelayLine'].values + 0
-    else:
-        metadata['delay_line'] = metadata['stat']['PP800_DelayLine']['avg']
-    metadata['t0']         = None
-    metadata['time_delay'] = None#tb.positionToDelay(metadata['delay_line'], origin=300)   # delay in ps
-    metadata['E']          = metadata['stat']['nrj']['avg']
-    metadata['sample_z']   = metadata['stat']['XRD_STZ']['avg']
-    metadata['sample_y']   = metadata['stat']['XRD_STY']['avg']
-    metadata['sample_x']   = metadata['stat']['XRD_STX']['avg']
+    metadata['E']          = round(metadata['stat']['nrj']['avg'], 2)
+    metadata['sample_z']   = round(metadata['stat']['XRD_STZ']['avg'], 5)
+    metadata['sample_y']   = round(metadata['stat']['XRD_STY']['avg'], 5)
+    metadata['sample_x']   = round(metadata['stat']['XRD_STX']['avg'], 5)
     metadata['GATT']       = metadata['stat']['GATT_pressure']['avg']
-    metadata['exit_slit']  = metadata['stat']['ESLIT']['avg']
-
+    metadata['exit_slit']  = round(metadata['stat']['ESLIT']['avg'], 2)
 
     ##################################################################
     # creating dummy entry for normalized and non-normalized spectra #
     ##################################################################
-    ds2['i0_sa3']        = ds2['SCS_SA3']
+    ds2['i0_sa3']  = ds2['SCS_SA3']
+    ds2['i0_none'] = (('trainId', 'sa3_pId'), np.zeros(ds2['FastADC2_9peaks'].shape) + 1)
     # ds2['i0_photonflux'] = (('trainId', 'sa3_pId'), [[_]*ds2['FastADC2_9peaks'].shape[1] for _ in ds2['SCS_photonFlux'].values])
-    ds2['i0_none']       = (('trainId', 'sa3_pId'), np.zeros(ds2['FastADC2_9peaks'].shape) + 1)
     
     # params=None, 
     # bunchPattern='sase3'
@@ -248,13 +291,13 @@ def _ds2spectrum(ds2, step=0.1, isdelay='auto'):#, debug=False):
     ##################################################
     # delay values
     # ds2['delay_line'] = ds2['PP800_DelayLine']
-    ds2['time_delay'] = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)   # delay in ps
     # ds2['delay_line'] = tb.delayToPosition(ds2['time_delay'], origin=300) # delay in motor position
     
     ####################
     # creating spectra #
     ####################
-    if isdelay:
+    if is_time_trace:
+        ds2['time_delay'] = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)   # delay in ps
         bins = int((np.amax(ds2['time_delay'])-np.amin(ds2['time_delay']))/step)
         nrjkey = 'time_delay'
     else:
@@ -266,76 +309,94 @@ def _ds2spectrum(ds2, step=0.1, isdelay='auto'):#, debug=False):
     raw  = tb.xas(ds2, bins, Iokey='i0_none', Itkey='FastADC2_9peaks', nrjkey=nrjkey, fluorescence=True, plot=False)
     TFY     = br.Spectrum(x=temp['nrj'], y=temp['muA'])
     TFY.i0  = br.Spectrum(x=temp['nrj'], y=temp['muIo'])
-    TFY.raw = br.Spectrum(x=raw['nrj'],  y=raw['muIo'])
+    TFY.not_norm = br.Spectrum(x=raw['nrj'],  y=raw['muIo'])
 
-    del ds2['dummi0_sa3y1']
+    del ds2['i0_sa3']
     del ds2['i0_none']
 
     # metadata for final spectrum
     for attr in metadata:
         TFY.__setattr__(attr, metadata[attr])
+    TFY.t0_ = 300
+    if is_time_trace:
+        TFY.is_time_trace = True
+        TFY.time_delay    = TFY.x
+    else:
+        TFY.is_time_trace = False
+        # TFY.time_delay    = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)
+        # TFY.time_delay    = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)
+        TFY.time_delay    = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=300)
+        # TFY.delay_line = tb.delayToPosition(TFY.x, origin=300)
     
-    # # normalized by SCS_photonFlux
-    # temp    = tb.xas(ds2, bins, Iokey='i0_photonflux', Itkey='FastADC2_9peaks', nrjkey=nrjkey, fluorescence=True, plot=False)
-    # TFY2    = br.Spectrum(x=temp['nrj'], y=temp['muA'])
-    # TFY2.i0 = br.Spectrum(x=temp['nrj'], y=temp['muIo'])
-
-    # not normalized
-    # temp   = tb.xas(ds2, bins, Iokey='i0_none', Itkey='FastADC2_9peaks', nrjkey=nrjkey, fluorescence=True, plot=False)
-    # RAW    = br.Spectrum(x=temp['nrj'], y=temp['muA'])
-    # RAW.i0 = br.Spectrum(x=temp['nrj'], y=temp['muIo'])
-    
-    # # delete dummy
-    # del ds2['dummi0_sa3y1']
-    # # del ds2['i0_photonflux']
-    # del ds2['i0_none']
-    # # if debug: print('calc xas: ', br.stop_time_seconds(start_time))
-
-    ############
-    # metadata #
-    ############
-    # _metadata_delay = ['time_delay', 'delay_line']
-    # _metadata2 = _metadata + _metadata_delay
-    # for s in (TFY1, TFY2, RAW):
-    #     if isdelay:
-    #         s.xlabel = 'Delay (ps)'
-    #     else:
-    #         s.xlabel = 'Photon energy (eV)'
-            
-        
-    #     for field in _metadata2:  # the "+ 0" is just there to transform if from array to number
-    #         try:
-    #             s.__setattr__(field, ds2[field].mean().values + 0)
-    #             s.__setattr__(field + '_min', ds2[field].min().values + 0)
-    #             s.__setattr__(field + '_max', ds2[field].max().values + 0)
-    #             s.__setattr__(field + '_std', ds2[field].std().values + 0)
-
-    #             # simplify names
-    #             if field in _metadata_simple_names and hasattr(s, field):
-    #                 name = _metadata_simple_names[field]
-    #                 for suffix in ['', '_min', '_max', '_std']:
-    #                     s.__setattr__(name + suffix, s.__getattribute__(field + suffix))
-    #         except Exception as e:
-    #             if debug: print('ERROR', field, e)
-
-    #     # if delay data, then we need time_delay and delay_line as arrays
-    #     if isdelay:
-    #         for field in _metadata_delay:
-    #             s.__setattr__(field, ds2[field].values)
-            
-    #     s.torigin = t0
-    
-    # ##################################
-    # # average signal from all trains #
-    # ##################################
-    # # for now, this is only used for plotting
-    # ds2['FastADC2_9raw_avg'] = ds2['FastADC2_9raw'].mean(dim='trainId')
-                
-    # if debug: print('final: ', br.stop_time_seconds(start_time))
-    # return {'ds2':ds2, 'TFY1': TFY1, 'TFY2': TFY2, 'RAW': RAW}
     return {'ds2':ds2, 'TFY': TFY}
 
-def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdelay='auto', bunchPattern='sase3', debug=False):
+# @br.finder.track
+# def _process_xas(scan, onoff=False, params=None, step=0.1, t0=300, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
+#     d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+#     s = d['TFY']
+
+#     ##########
+#     # set t0 #
+#     ##########
+#     s.t0 = t0
+
+#     return s
+
+# def process_xas(scan, onoff=False, params=None, step=0.1, t0=300, is_time_trace='auto', bunchPattern='sase3', raw=False, proposal=None):
+#     #######################
+#     # get proposal number #
+#     #######################
+#     if proposal is None:
+#         proposal = settings['default_proposal']
+#     assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+#     ###############
+#     # get dataset #
+#     ###############
+#     ds = _get_dataset_xas(scan=scan, proposal=proposal)
+#     delay_line = ds['PP800_DelayLine'].values + 0
+
+#     ################################
+#     # Does it have multiple delays #
+#     ################################
+#     if is_tr == 'auto':
+#         is_tr = False
+#         if br.has_duplicates(delay_line, max_error=settings['has_multiple_delays_max_error']):
+#             is_tr = True
+
+#     #####################################
+#     # sort multiple delays if necessary #
+#     #####################################
+#     if is_tr:
+#         indexes    = _find_duplicate_indexes(delay_line, max_error=settings['has_multiple_delays_max_error'])
+#         delay_line_list = np.sort(list(indexes.keys()))[::-1]
+
+#         ss = br.Spectra()
+#         for delay in delay_line_list:
+#             _ds = ds.isel({'trainId': indexes[delay]})
+#             d = _dataset2dict(_ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+#             s = d['s']
+#             ss.append(s)
+
+#     else:
+#         d = _dataset2dict(ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+#         s = d['s']
+#         ss = br.Spectra([s, ])
+    
+#     return ss.data
+
+
+    
+#     s = _process_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+
+#     ##########
+#     # set t0 #
+#     ##########
+#     s.t0 = t0
+
+#     return s
+
+def _internal_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
     """Process XAS and time-trace from 1 run
     
     We are only counting the signal from the detectors if the signal matches in time with 
@@ -384,9 +445,10 @@ def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdela
     # start time (for debuging only)
     if debug: print('start')
     if debug: start_time = br.start_time()
+
     
     # load dataset
-    run, ds = _get_dataset(scan=scan, proposal=proposal)
+    run, ds = _get_dataset_xas(scan=scan, proposal=proposal)
     if debug: print('read data: ', br.stop_time_seconds(start_time))
     
     #####################################
@@ -404,7 +466,8 @@ def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdela
             params['npulses'] = ds['SCS_SA3'].shape[1]
     
     # calculation
-    ds2 = tb.get_digitizer_peaks(run, 'FastADC2_9raw', merge_with=ds, integParams=params, bunchPattern=bunchPattern)
+    _params = copy.deepcopy(params)  # save params (this is necessary because get_digitizer_peaks changes params (facepalm)
+    ds2 = tb.get_digitizer_peaks(run, 'FastADC2_9raw', merge_with=ds, integParams=_params, bunchPattern=bunchPattern)
     # ds2['FastADC2_raw'] = ds['FastADC2_raw']
     if debug: print('calc areas: ', br.stop_time_seconds(start_time))
     
@@ -414,8 +477,8 @@ def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdela
     if onoff:
         pumped   = ds2.isel({'sa3_pId': slice(0, None, 2)})
         unpumped = ds2.isel({'sa3_pId': slice(1, None, 2)})
-        on   = _ds2spectrum(pumped, step=step, isdelay=isdelay)
-        off  = _ds2spectrum(unpumped, step=step, isdelay=isdelay)
+        on   = _dataset2dict_xas(pumped, step=step, is_time_trace=is_time_trace, raw=raw)
+        off  = _dataset2dict_xas(unpumped, step=step, is_time_trace=is_time_trace, raw=raw)
         ds2 = on['ds2']
         TFY = on['TFY']
         TFY.off = off['TFY']
@@ -424,8 +487,8 @@ def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdela
         return {'ds':ds, 'ds2':ds2, 'TFY': TFY}
     
     else:
-        d    = _ds2spectrum(ds2, step=step, isdelay=isdelay)
-        ds2  = d['ds2']
+        d   = _dataset2dict_xas(ds2, step=step, is_time_trace=is_time_trace, raw=raw)
+        ds2 = d['ds2']
         TFY = d['TFY']
 
         ##################################
@@ -433,19 +496,60 @@ def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdela
         ##################################
         # for now, this is only used for plotting
         ds2['FastADC2_9raw_avg'] = ds['FastADC2_9raw'].mean(dim='trainId')
+
+    ############
+    # metadata #
+    ############
+    TFY.scan = scan
             
     if debug: print('final: ', br.stop_time_seconds(start_time))
     return {'ds':ds, 'ds2':ds2, 'TFY': TFY}
 
 @br.finder.track
-def process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, isdelay='auto', bunchPattern='sase3', debug=False):
-    d = _process_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, isdelay=isdelay, bunchPattern=bunchPattern, debug=debug)
-    return d['TFY']
+def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
+    """same as process but without t0"""
 
-def sequence_xas(scans, onoff=False, params=None, step=0.1, proposal=None, isdelay='auto', bunchPattern='sase3', debug=False):
+    # finder
+    s = br.finder.search(parameters=locals(), folderpath=br.finder.folderpath)
+    if s is not None:
+        return s
+
+    d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+    s = d['TFY']
+
+    return s
+
+def process_xas(scan, onoff=False, params=None, step=0.1, t0=300, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
+    # s = _process_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    # finder
+    _vars = locals()
+    _vars.pop('t0')
+    s = br.finder.search(parameters=_vars, folderpath=br.finder.folderpath)
+    if s is None:
+        d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+        s = d['TFY']
+        br.finder.save(s=s, parameters=_vars, folderpath=br.finder.folderpath)
+
+    ##########
+    # set t0 #
+    ##########
+    s.t0 = t0
+
+    return s
+
+# %% ============================ XAS (Advanced) ========================== %% #
+def sequence_xas(scans, onoff=False, params=None, step=0.1, t0=300, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
     ss = br.Spectra()
     for scan in scans:
-        ss.append(process_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, isdelay=isdelay, bunchPattern=bunchPattern, debug=debug))
+        ss.append(process_xas(scan=scan, onoff=onoff, params=params, step=step, t0=t0, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug))
     
     for attr in ss[0].get_attrs():
         try:
@@ -456,35 +560,9 @@ def sequence_xas(scans, onoff=False, params=None, step=0.1, proposal=None, isdel
     return ss
 # %%
 
-# %% ============================= RIXS =================================== %% #
-def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, 
-             curv=None, calib=None, norm=True, proposal=None):
-    """process rixs images via integration mode
+# %% ============================= RIXS (Basic) =========================== %% #
+def _get_dataset(scan, proposal=None):
 
-    images -> curv. corr. -> I0 norm. -> sum images to one image -> 
-    -> integrate columns to get a spectrum -> exposure norm -> calib
-    
-    Args:
-        scan (int): scan number
-        x_start, x_stop, y_start, y_stop (int, optional): detector limits to be
-            considered in px. If None, the whole image is used.
-        curv (list, optional): 1D array of polynomial coefficients (including 
-                coefficients equal to zero) from highest degree to the constant 
-                term so f(y) = an*y**n + ... + a1*y + a0 gives the horizontal 
-                shift (f(y)) for each pixel row (y). If None, no curvature correction
-                is applied. Default is None.
-        calib (number, optional): if not None, the x axis is multiplied by calib.
-            Calib can be a number (multiplicative term) or a tuple with two 
-            numbers (linear and constant terms), like calib=[calib, shift].
-        norm (bool, optional): if True, images are normalized by I0, while spectra
-            is also normalized by total exposure time (number of images and 
-            exposure per image. Default is True.
-        proposal (int, optional): proposal number. If None, proposal number will be read
-            from SCS.settings['default_proposal']. Default is None
-
-    Returns:
-        dictionary {'ds':ds, 'ims':ims, 'im':im, 's':s}
-    """    
     #######################
     # get proposal number #
     #######################
@@ -496,34 +574,37 @@ def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None,
     # get data #
     ############
     h  = hRIXS(proposal)
-    ds = h.from_run(scan, extra_fields=_attrs + ['hRIXS_exposure'])   
+    ds = h.from_run(scan, extra_fields=_attrs + ['hRIXS_exposure'])  
+    return ds
 
+def _dataset2dict(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, include_metadata_for_each_image=False):
+    
     ################
     # get metadata # 
     ################
     metadata = {}
+
+    # required metadata
     metadata['number_of_images'] = ds.dims['trainId']  # one image per train
     metadata['exposure']         = ds['hRIXS_exposure'].values + 0
     metadata['total_exposure']   = ds['hRIXS_exposure'].sum().values + 0
     metadata['i0']               = ds['SCS_photonFlux'].values + 0
-    metadata['t0']               = None
-    metadata['time_delay']       = None
-    # i0_sa3           = ds['SCS_SA3'].sum(dim='sa3_pId').values + 0
-    # i0_sa3           = ds['SCS_SA3'].mean(dim='sa3_pId').values + 0
 
+    # metadata per train
     metadata['raw']  = {attr: ds[attr].values + 0 for attr in _attrs}
     metadata['stat'] = {attr: {'avg': np.mean(metadata['raw'][attr]),
                                'min': np.min(metadata['raw'][attr]),
                                'max': np.max(metadata['raw'][attr]),
                                'std': np.std(metadata['raw'][attr])} for attr in metadata['raw']}
+    if include_metadata_for_each_image == False: del metadata['raw']
 
-    metadata['E']          = metadata['stat']['nrj']['avg']
-    metadata['delay_line'] = metadata['stat']['PP800_DelayLine']['avg']
-    metadata['sample_z']   = metadata['stat']['XRD_STZ']['avg']
-    metadata['sample_y']   = metadata['stat']['XRD_STY']['avg']
-    metadata['sample_x']   = metadata['stat']['XRD_STX']['avg']
+    # manual assignment
+    metadata['E']          = round(metadata['stat']['nrj']['avg'], 2)
+    metadata['sample_z']   = round(metadata['stat']['XRD_STZ']['avg'], 5)
+    metadata['sample_y']   = round(metadata['stat']['XRD_STY']['avg'], 5)
+    metadata['sample_x']   = round(metadata['stat']['XRD_STX']['avg'], 5)
     metadata['GATT']       = metadata['stat']['GATT_pressure']['avg']
-    metadata['exit_slit']  = metadata['stat']['ESLIT']['avg']
+    metadata['exit_slit']  = round(metadata['stat']['ESLIT']['avg'], 2)
 
     ################
     # brixs object #
@@ -531,10 +612,20 @@ def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None,
     ims = br.Dummy(data=[br.Image(data=_.values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop) for _ in ds['hRIXS_det']])    
     
     # metadata for individual images
-    for attr in metadata['raw']:
-        for i, _im in enumerate(ims):
-            ims[i].__setattr__(attr, metadata['raw'][attr][i])
+    if include_metadata_for_each_image:
+        for attr in metadata['raw']:
+            for i, _im in enumerate(ims):
+                ims[i].__setattr__(attr, metadata['raw'][attr][i])
     
+    # # scan
+    # ims.scan = scan
+    # for i, _im in enumerate(ims):
+    #     ims[i].scan = scan
+    
+    # time
+    ims.t0_ = 300
+    ims.time_delay = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=300)
+
     ########################
     # curvature correction #
     ########################
@@ -545,22 +636,35 @@ def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None,
     ####################
     # aggregate images #
     ####################
-    if norm:
-        im = br.Image(data=np.zeros(ims[0].shape))
-        for i, _im in enumerate(ims):
-            ims[i]   = _im.set_factor(1/metadata['i0'][i])
-            im.data += _im.set_factor(1/metadata['i0'][i]).data
-        im.x_centers = ims[0].x_centers
-        im.y_centers = ims[0].y_centers
-    else:
-        data2 = h.aggregate(ds=ds)
-        im    = br.Image(data=data2['hRIXS_det'].values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
-        if curv is not None:
-            im = im.set_horizontal_shift_via_polyval(p=curv)
+    im = br.Image(data=np.zeros(ims[0].shape))
+    for i, _im in enumerate(ims):
+        if norm:
+            factor = 1/metadata['i0'][i]
+        else:
+            factor = 1
+        ims[i]   = _im.set_factor(factor)
+        im.data += _im.set_factor(factor).data
+    im.x_centers = ims[0].x_centers
+    im.y_centers = ims[0].y_centers
+    # else:
+    #     h     = hRIXS(proposal)
+    #     data2 = h.aggregate(ds=ds)
+    #     im    = br.Image(data=data2['hRIXS_det'].values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+    #     if curv is not None:
+    #         im = im.set_horizontal_shift_via_polyval(p=curv)
 
-    # metadata for aggregated image
+    #################################
+    # metadata for aggregated image #
+    #################################
     for attr in metadata:
         im.__setattr__(attr, metadata[attr])
+    
+    # # scan
+    # im.scan = scan 
+
+    # time
+    im.t0_ = 300
+    im.time_delay = ims.time_delay
 
     ##################
     # final spectrum #
@@ -573,22 +677,59 @@ def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None,
     # metadata for final spectrum
     for attr in metadata:
         s.__setattr__(attr, metadata[attr])
-    
-    ###############
-    # calibration #
-    ###############
-    if calib is not None:
-        if isinstance(calib, br.Iterable):
-            s.shift = -calib[1]
-            s.calib = calib[0]
-        else:
-            s.calib = calib
 
     return {'ds':ds, 'ims':ims, 'im':im, 's':s}
 
-@br.finder.track
-def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, 
-            calib=None, norm=True, proposal=None):
+@br.finder.track2
+def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, is_tr='auto', include_metadata_for_each_image=False, proposal=None):
+    """internal function for _process()
+
+    Returns:
+        list with spectra
+    """    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    ###############
+    # get dataset #
+    ###############
+    ds = _get_dataset(scan=scan, proposal=proposal)
+    delay_line = ds['PP800_DelayLine'].values + 0
+
+    ################################
+    # Does it have multiple delays #
+    ################################
+    if is_tr == 'auto':
+        is_tr = False
+        if br.has_duplicates(delay_line, max_error=settings['has_multiple_delays_max_error']):
+            is_tr = True
+
+    #####################################
+    # sort multiple delays if necessary #
+    #####################################
+    if is_tr:
+        indexes    = _find_duplicate_indexes(delay_line, max_error=settings['has_multiple_delays_max_error'])
+        delay_line_list = np.sort(list(indexes.keys()))[::-1]
+
+        ss = br.Spectra()
+        for delay in delay_line_list:
+            _ds = ds.isel({'trainId': indexes[delay]})
+            d = _dataset2dict(_ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+            s = d['s']
+            ss.append(s)
+
+    else:
+        d = _dataset2dict(ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+        s = d['s']
+        ss = br.Spectra([s, ])
+    
+    return ss.data
+
+def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, t0=300, is_tr='auto', include_metadata_for_each_image=False, proposal=None):
     """process rixs images via integration mode
 
     images -> curv. corr. -> I0 norm. -> sum images to one image -> 
@@ -610,6 +751,7 @@ def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=Non
         norm (bool, optional): if True, images are normalized by I0, while spectra
             is also normalized by total exposure time (number of images and 
             exposure per image. Default is True.
+        t0 (number, optional): delay line t0 value. Default is 300.
         proposal (int, optional): proposal number. If None, proposal number will be read
             from SCS.settings['default_proposal']. Default is None
 
@@ -619,26 +761,77 @@ def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=Non
     if scan is Iterable:
         _ss = br.Spectra()
         for _scan in scan:
-            d = _process(scan=_scan, proposal=proposal, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, calib=calib, norm=norm)
-            _ss.append(d['s'])
+            _temp = _process(scan=_scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, is_tr=is_tr, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal)
+            if len(_temp) > 1:
+                raise ValueError(f'scan {_scan} has multiple delays. Cannot add this scan to other scans {scan}')
+            else:
+                _ss.append(_temp[0])
 
         for attr in _ss[0].get_attrs():
             try:
                 _ss.create_attr_from_spectra(attr)
             except:
                 pass
-
-        s = _ss.align().interp().calculate_sum()
-        return s
+        s = _ss.align().interp().calculate_average()
     else:
-        d = _process(scan=scan, proposal=proposal, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, calib=calib, norm=norm)
-        return d['s']
+        _temp = _process(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, is_tr=is_tr, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal)
+        if len(_temp) > 1:
+            s = br.Spectra(data=_temp)
+        else:
+            s = _temp[0]
 
-def verify(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, proposal=None, **kwargs):
-    """plot separate images for a run
-    
+    ###############
+    # calibration #
+    ###############
+    if calib is not None:
+        if isinstance(calib, br.Iterable):
+            s.shift = -calib[1]
+            s.calib = calib[0]
+        else:
+            s.calib = calib
+
+    ############
+    # metadata #
+    ############
+    if isinstance(s, br.Spectra):
+        print('multiple delays')
+        for _s in s:
+            # scan
+            _s.scan = scan 
+            # time
+            _s.t0 = t0
+        for attr in s[0].get_attrs():
+            try:
+                s.create_attr_from_spectra(attr)
+            except:
+                pass
+    else:
+        s.t0 = t0
+    s.scan = scan 
+
+    #################
+    # normalization #
+    #################
+    # if norm:
+    #     s = s.set_factor(1/s.total_exposure)
+
+    return s
+
+# %% ============================ RIXS (Advanced) ========================= %% #
+def sequence(scans, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, t0=300, include_metadata_for_each_image=False, proposal=None):
+    """return a list with rixs spectra
+
+    Example:
+
+    >>> # ss1 will have 3 spectra
+    >>> ss1 = sequence([100, 101, 102])
+    >>>
+    >>> # ss2 will have 3 spectra. The middle one will a sum of 2 spectra
+    >>> ss2 = sequence([100, [101, 102], 103])
+
     Args:
-        scan (int): scan number
+        scans (list): list of rixs scan number. Replace a scan number for a list to 
+            sum spectra inside list.
         x_start, x_stop, y_start, y_stop (int, optional): detector limits to be
             considered in px. If None, the whole image is used.
         curv (list, optional): 1D array of polynomial coefficients (including 
@@ -652,16 +845,62 @@ def verify(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None
         norm (bool, optional): if True, images are normalized by I0, while spectra
             is also normalized by total exposure time (number of images and 
             exposure per image. Default is True.
+        t0 (number, optional): delay line t0 value. Default is 300.
+        proposal (int, optional): proposal number. If None, proposal number will be read
+            from SCS.settings['default_proposal']. Default is None
+
+    Returns:
+        Spectra
+    """
+    ss = br.Spectra()
+    for scan in scans:
+        ss.append(process(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, calib=calib, norm=norm, is_tr=False, t0=t0, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal))
+    
+    for attr in ss[0].get_attrs():
+        try:
+            ss.create_attr_from_spectra(attr)
+        except:
+            pass
+
+    return ss
+
+def verify(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, include_metadata_for_each_image=False, proposal=None, **kwargs):
+    """plot separate images for a run
+    
+    Args:
+        scan (int): scan number
+        x_start, x_stop, y_start, y_stop (int, optional): detector limits to be
+            considered in px. If None, the whole image is used.
+        curv (list, optional): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term so f(y) = an*y**n + ... + a1*y + a0 gives the horizontal 
+                shift (f(y)) for each pixel row (y). If None, no curvature correction
+                is applied. Default is None.
+        norm (bool, optional): if True, images are normalized by I0, while spectra
+            is also normalized by total exposure time (number of images and 
+            exposure per image. Default is True.
         proposal (int, optional): proposal number. If None, proposal number will be read
             from SCS.settings['default_proposal']. Default is None
 
     Returns:
         dictionary {'ds':ds, 'ims':ims, 'im':im, 's':s}
     """    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    ###############
+    # get dataset #
+    ###############
+    ds = _get_dataset(scan=scan, proposal=proposal)
+    
     ################
     # process data #
     ################
-    d = _process(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, calib=calib, norm=norm, proposal=proposal)
+    d   = _dataset2dict(ds=ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal)
     ims = d['ims']
     im  = d['im']
     s   = d['s']
@@ -815,51 +1054,6 @@ def verify(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ims=ims, axes=axes))
     return d
 
-def sequence(scans, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, proposal=None):
-    """return a list with rixs spectra
-
-    Example:
-
-    >>> # ss1 will have 3 spectra
-    >>> ss1 = sequence([100, 101, 102])
-    >>>
-    >>> # ss2 will have 3 spectra. The middle one will a sum of 2 spectra
-    >>> ss2 = sequence([100, [101, 102], 103])
-
-    Args:
-        scans (list): list of rixs scan number. Replace a scan number for a list to 
-            sum spectra inside list.
-        x_start, x_stop, y_start, y_stop (int, optional): detector limits to be
-            considered in px. If None, the whole image is used.
-        curv (list, optional): 1D array of polynomial coefficients (including 
-                coefficients equal to zero) from highest degree to the constant 
-                term so f(y) = an*y**n + ... + a1*y + a0 gives the horizontal 
-                shift (f(y)) for each pixel row (y). If None, no curvature correction
-                is applied. Default is None.
-        calib (number, optional): if not None, the x axis is multiplied by calib.
-            Calib can be a number (multiplicative term) or a tuple with two 
-            numbers (linear and constant terms), like calib=[calib, shift].
-        norm (bool, optional): if True, images are normalized by I0, while spectra
-            is also normalized by total exposure time (number of images and 
-            exposure per image. Default is True.
-        proposal (int, optional): proposal number. If None, proposal number will be read
-            from SCS.settings['default_proposal']. Default is None
-
-    Returns:
-        Spectra
-    """
-    ss = br.Spectra()
-    for scan in scans:
-        ss.append(process(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, calib=calib, norm=norm, proposal=proposal))
-    
-    for attr in ss[0].get_attrs():
-        try:
-            ss.create_attr_from_spectra(attr)
-        except:
-            pass
-
-    return ss
-
 def verify_curv(scan, popt=None, ncols=None, nrows=None, deg=2, x_start=None, x_stop=None, y_start=None, y_stop=None, proposal=None):
     """plot step-by-step curvature correction process
     
@@ -884,10 +1078,22 @@ def verify_curv(scan, popt=None, ncols=None, nrows=None, deg=2, x_start=None, x_
     Returns:
         curvature correction optimized parameters (list)
     """    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    ###############
+    # get dataset #
+    ###############
+    ds = _get_dataset(scan=scan, proposal=proposal)
+    
     ################
     # process data #
     ################
-    d = _process(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, calib=None, norm=None, proposal=proposal)
+    d   = _dataset2dict(ds=ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=False, include_metadata_for_each_image=False, proposal=proposal)
     ims = d['ims']
     im  = d['im']
     s   = d['s']
@@ -988,7 +1194,7 @@ def verify_calib(scans, x_start=None, x_stop=None, y_start=None, y_stop=None, cu
     Returns:
         calibratio value
     """    
-    ss = sequence(scans=scans, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, proposal=proposal)
+    ss = sequence(scans=scans, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, calib=None, norm=norm, include_metadata_for_each_image=False, proposal=proposal)
     # ss = br.Spectra()
     # for scan in scans:
     #     ss.append(process(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, proposal=proposal))
@@ -1027,6 +1233,182 @@ def verify_calib(scans, x_start=None, x_stop=None, y_start=None, y_stop=None, cu
         
     return s.popt
 # %%
+
+# def pa():
+#     s = _dict2spectrum(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal)
+
+#     ################
+#     # get metadata # 
+#     ################
+#     metadata = {}
+#     metadata['number_of_images'] = ds.dims['trainId']  # one image per train
+#     metadata['exposure']         = ds['hRIXS_exposure'].values + 0
+#     metadata['total_exposure']   = ds['hRIXS_exposure'].sum().values + 0
+#     metadata['i0']               = ds['SCS_photonFlux'].values + 0
+#     # metadata['t0']               = None
+#     # metadata['time_delay']       = None
+#     # i0_sa3           = ds['SCS_SA3'].sum(dim='sa3_pId').values + 0
+#     # i0_sa3           = ds['SCS_SA3'].mean(dim='sa3_pId').values + 0
+
+#     metadata['raw']  = {attr: ds[attr].values + 0 for attr in _attrs}
+#     metadata['stat'] = {attr: {'avg': np.mean(metadata['raw'][attr]),
+#                                'min': np.min(metadata['raw'][attr]),
+#                                'max': np.max(metadata['raw'][attr]),
+#                                'std': np.std(metadata['raw'][attr])} for attr in metadata['raw']}
+#     if raw == False: del metadata['raw']
+
+#     metadata['E']          = round(metadata['stat']['nrj']['avg'], 2)
+#     # metadata['delay_line'] = metadata['stat']['PP800_DelayLine']['avg']
+#     # metadata['time_delay'] = tb.metadata['stat']['PP800_DelayLine']['avg']
+#     metadata['sample_z']   = round(metadata['stat']['XRD_STZ']['avg'], 5)
+#     metadata['sample_y']   = round(metadata['stat']['XRD_STY']['avg'], 5)
+#     metadata['sample_x']   = round(metadata['stat']['XRD_STX']['avg'], 5)
+#     metadata['GATT']       = metadata['stat']['GATT_pressure']['avg']
+#     metadata['exit_slit']  = round(metadata['stat']['ESLIT']['avg'], 2)
+
+#     ################
+#     # brixs object #
+#     ################
+#     ims = br.Dummy(data=[br.Image(data=_.values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop) for _ in ds['hRIXS_det']])    
+    
+#     # metadata for individual images
+#     if 'raw' in metadata:
+#         for attr in metadata['raw']:
+#             for i, _im in enumerate(ims):
+#                 ims[i].__setattr__(attr, metadata['raw'][attr][i])
+    
+#     # scan
+#     ims.scan = scan
+#     for i, _im in enumerate(ims):
+#         ims[i].scan = scan
+    
+#     # time
+#     ims.t0_ = 300
+#     ims.time_delay = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=300)
+
+#     ########################
+#     # curvature correction #
+#     ########################
+#     if curv is not None:
+#         for i, _im in enumerate(ims):
+#             ims[i] = _im.set_horizontal_shift_via_polyval(p=curv)
+    
+#     ####################
+#     # aggregate images #
+#     ####################
+#     if norm:
+#         im = br.Image(data=np.zeros(ims[0].shape))
+#         for i, _im in enumerate(ims):
+#             ims[i]   = _im.set_factor(1/metadata['i0'][i])
+#             im.data += _im.set_factor(1/metadata['i0'][i]).data
+#         im.x_centers = ims[0].x_centers
+#         im.y_centers = ims[0].y_centers
+#     else:
+#         data2 = h.aggregate(ds=ds)
+#         im    = br.Image(data=data2['hRIXS_det'].values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+#         if curv is not None:
+#             im = im.set_horizontal_shift_via_polyval(p=curv)
+
+#     #################################
+#     # metadata for aggregated image #
+#     #################################
+#     for attr in metadata:
+#         im.__setattr__(attr, metadata[attr])
+    
+#     # scan
+#     im.scan = scan 
+
+#     # time
+#     im.t0_ = 300
+#     im.time_delay = ims.time_delay
+
+#     ##################
+#     # final spectrum #
+#     ##################
+#     if norm:
+#         s = im.integrated_columns_vs_x_centers().set_factor(1/metadata['total_exposure'])
+#     else:
+#         s = im.integrated_columns_vs_x_centers()
+
+#     # metadata for final spectrum
+#     for attr in metadata:
+#         s.__setattr__(attr, metadata[attr])
+
+#     return {'ds':ds, 'ims':ims, 'im':im, 's':s}
+
+# @br.finder.track
+# def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, 
+#              curv=None, norm=True, proposal=None, raw=False):
+#     """same as internal but with finder"""
+#     d = _internal(scan=scan, proposal=proposal, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, raw=raw)
+#     return d['s']
+
+# def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, 
+#             calib=None, norm=True, t0=300, proposal=None, raw=False):
+#     """process rixs images via integration mode
+
+#     images -> curv. corr. -> I0 norm. -> sum images to one image -> 
+#     -> integrate columns to get a spectrum -> exposure norm -> calib
+    
+#     Args:
+#         scan (int or list): scan number. If list of scans, scans will be aligned
+#             via cross-correlation and summed up.
+#         x_start, x_stop, y_start, y_stop (int, optional): detector limits to be
+#             considered in px. If None, the whole image is used.
+#         curv (list, optional): 1D array of polynomial coefficients (including 
+#                 coefficients equal to zero) from highest degree to the constant 
+#                 term so f(y) = an*y**n + ... + a1*y + a0 gives the horizontal 
+#                 shift (f(y)) for each pixel row (y). If None, no curvature correction
+#                 is applied. Default is None.
+#         calib (number, optional): if not None, the x axis is multiplied by calib.
+#             Calib can be a number (multiplicative term) or a tuple with two 
+#             numbers (linear and constant terms), like calib=[calib, shift].
+#         norm (bool, optional): if True, images are normalized by I0, while spectra
+#             is also normalized by total exposure time (number of images and 
+#             exposure per image. Default is True.
+#         t0 (number, optional): delay line t0 value. Default is 300.
+#         proposal (int, optional): proposal number. If None, proposal number will be read
+#             from SCS.settings['default_proposal']. Default is None
+
+#     Returns:
+#         spectrum
+#     """
+#     if scan is Iterable:
+#         _ss = br.Spectra()
+#         for _scan in scan:
+#             s = _process(scan=_scan, proposal=proposal, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, raw=raw)
+#             _ss.append(s)
+
+#         for attr in _ss[0].get_attrs():
+#             try:
+#                 _ss.create_attr_from_spectra(attr)
+#             except:
+#                 pass
+
+#         s = _ss.align().interp().calculate_sum()
+
+
+#     else:
+#         s = _process(scan=scan, proposal=proposal, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm)
+    
+#     ###############
+#     # calibration #
+#     ###############
+#     if calib is not None:
+#         if isinstance(calib, br.Iterable):
+#             s.shift = -calib[1]
+#             s.calib = calib[0]
+#         else:
+#             s.calib = calib
+
+#     ##########
+#     # set t0 #
+#     ##########
+#     s.t0 = t0
+
+#     return s
+
+
 
 # %% ============================= Centroid =============================== %% #
 def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_threshold_max=None, include_doubles=True, MAX_PHOTONS=100000):
