@@ -215,12 +215,29 @@ def all_equal(array):
         return True
     return all(first == x for x in iterator)
 
-def has_duplicates(array):
-    """Returns True if given array contains any duplicates."""
-    if len(array) == len(set(array)):
-        return False
+def has_duplicates(arr, max_error=0):
+    """Returns True if given array contains any duplicates.
+    
+    Args:
+        arr (iterable): list of numbers
+        max_error (number, optional): max error allowed to consider two numbers
+            equal in percentage of the average value of the array. If zero,
+            numbers are requires to be "equal" to be considered duplicated. 
+            Default is zero.
+
+    Returns:
+        bool        
+    """
+
+    if max_error == 0:
+        if len(arr) == len(set(arr)):
+            return False
+        else:
+            return True
     else:
-        return True
+        if sum(abs(np.diff(arr))) > np.mean(arr)*max_error/100:
+            return True
+        return False
     
 def remove_duplicates(array):
     """Returns the sorted unique elements of an array. Wrapper for np.unique()"""
