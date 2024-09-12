@@ -3445,7 +3445,7 @@ class Spectra(metaclass=_Meta):
         # set filenames #
         #################
         if zfill is None:
-            zfill = figmanip.n_digits(len(self)-1)
+            zfill = numanip.n_digits(len(self)-1)
 
         # saving
         # if verbose: print('saving {} files...')
