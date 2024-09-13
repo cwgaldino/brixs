@@ -2282,7 +2282,10 @@ class Spectrum(metaclass=_Meta):
         # limits #
         ##########
         if limits is not None:
-            self = self._copy(limits=limits)
+            temp = self._copy(limits=limits)
+            if self.hasattr('label'):
+                temp.label = self.label
+            self = temp
         x = self.x
         y = self.y
 
