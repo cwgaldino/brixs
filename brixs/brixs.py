@@ -2564,7 +2564,7 @@ class Spectra(metaclass=_Meta):
         super().__setattr__(name, value)
 
     def __getitem__(self, item):
-        if isinstance(item, int):
+        if numanip.is_integer(item, allow_float=False, allow_str=False):
             return self._data[item]
         elif isinstance(item, slice):
             ss = Spectra(self._data[item])
