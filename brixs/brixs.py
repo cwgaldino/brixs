@@ -2675,7 +2675,7 @@ class Spectra(metaclass=_Meta):
                 name is used.
 
         Returns:
-            None
+            :py:class:`Spectra`
         """
         # assert all spectra has attr
         # check if all spectra has attr
@@ -2686,7 +2686,11 @@ class Spectra(metaclass=_Meta):
 
         # create new attr
         if name is None: name = attr
-        self.__setattr__(name, [getattr(s, attr) for s in self])
+        
+        # copy
+        ss = self.copy()
+        ss.__setattr__(name, [getattr(s, attr) for s in self])
+        return ss
 
     def reorder_by_attr(self, attr, attrs2reorder=None, decreasing=False):
         """Reorder spectra based on a Spectra attr.
