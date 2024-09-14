@@ -96,8 +96,90 @@ def has_multiple_energy(ds, max_error=None):
         return True
     return False
 
-def _find_duplicate_indexes(arr, max_error=None):
+def _digitize_via_binning(arr, bins, xmin=None, xmax=None):
+    """Returns dictionary with bin values (keys) and indexes.
+    
+    Args:
+        arr (list): list with values.
+        bins (int, str, list): 
+        
+            If bins is a list, it is assumed to be the bins edges. 
+            
+            Bins in inclusive at the bin_edge with smaller value, 
+            and excusive at the bin_edge with higher value.
+        
+            (from np.histogram_bin_edges):
+            If bins is an int, it defines the number of equal-width 
+            bins in the given range (10, by default). If bins is a sequence, it defines the 
+            bin edges, including the rightmost edge, allowing for non-uniform bin widths.
 
+            If bins is a string from the list below, histogram_bin_edges will use the method 
+            chosen to calculate the optimal bin width and consequently the number of bins 
+            (see the Notes section for more detail on the estimators) from the data that 
+            falls within the requested range. While the bin width will be optimal for the 
+            actual data in the range, the number of bins will be computed to fill the entire 
+            range, including the empty portions. For visualisation, using the ‘auto’ option 
+            is suggested. Weighted data is not supported for automated bin size selection.
+
+            ‘auto’
+            Minimum bin width between the ‘sturges’ and ‘fd’ estimators. Provides good 
+            all-around performance.
+
+            ‘fd’ (Freedman Diaconis Estimator)
+            Robust (resilient to outliers) estimator that takes into account data variability 
+            and data size.
+
+            ‘doane’
+            An improved version of Sturges’ estimator that works better with non-normal datasets.
+
+            ‘scott’
+            Less robust estimator that takes into account data variability and data size.
+
+            ‘stone’
+            Estimator based on leave-one-out cross-validation estimate of the integrated squared error. 
+            Can be regarded as a generalization of Scott’s rule.
+
+            ‘rice’
+            Estimator does not take variability into account, only data size. Commonly overestimates 
+            number of bins required.
+
+            ‘sturges’
+            R’s default method, only accounts for data size. Only optimal for gaussian data and 
+            underestimates number of bins for large non-gaussian datasets.
+
+            ‘sqrt’
+            Square root (of data size) estimator, used by Excel and other programs for its speed and simplicity.
+        xmin, xmax (int, optional): minimum/maximum value for bins (only used if bins are not explicitly 
+            given. Default is None. If None, min and max array values are used. 
+            
+        Returns:
+            indexes (dict), bin_edges (list)
+    """
+    if isinstance(bins, Iterable)==False or isinstance(bins, str):
+        bin_edges = np.histogram_bin_edges(arr, bins=20, range=None, weights=None)
+    else:
+        bin_edges = bins
+    temp = np.digitize(arr, bins=bin_edges, right=False)
+    
+    indexes = {}
+    for i in range(len(bin_edges[:-1])):
+        # indexes[(bin_edges[i]+bin_edges[i+1])/2] = [_ for _ in np.argwhere(temp==i+1)]
+        indexes[(bin_edges[i]+bin_edges[i+1])/2] = [int(_[0]) for _ in list(np.argwhere(temp==i+1))]
+        
+    return indexes, bin_edges
+
+def _digitize_via_duplicates(arr, max_error=None):
+    """Returns dict with mean values (keys) and indexes:
+
+    Args:
+        arr (list): list with values.
+        max_error (number or None): percentage value of max allowed error between 
+            numbers for them to be considered duplicates. if None, numbers are 
+            considerate the same only if they are real duplicates.
+
+    Returns:
+        indexes (dict)
+    """
     indexes = {arr[0]: [0, ]}
     values  = {arr[0]: [arr[0], ]}
 
@@ -123,6 +205,7 @@ def _find_duplicate_indexes(arr, max_error=None):
             values[item]  = [item, ]  
     return {np.mean(values[key]): indexes[key] for key in values}
 
+
 # def find_duplicate_delays(scan, max_error=None, proposal=None):
 
 #     #######################
@@ -144,7 +227,7 @@ def _find_duplicate_indexes(arr, max_error=None):
 #     if max_error is None:
 #         max_error = settings['has_multiple_delay_max_error']
 
-#     return _find_duplicate_indexes(delay_line, max_error=max_error)
+#     return _digitize_via_duplicates(delay_line, max_error=max_error)
 
 # %% =========================== time zero ================================ %% #
 # this will force every spectrum object to have the following attrs: 
@@ -368,7 +451,7 @@ def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=F
 #     # sort multiple delays if necessary #
 #     #####################################
 #     if is_tr:
-#         indexes    = _find_duplicate_indexes(delay_line, max_error=settings['has_multiple_delays_max_error'])
+#         indexes    = _digitize_via_duplicates(delay_line, max_error=settings['has_multiple_delays_max_error'])
 #         delay_line_list = np.sort(list(indexes.keys()))[::-1]
 
 #         ss = br.Spectra()
@@ -712,7 +795,7 @@ def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=No
     # sort multiple delays if necessary #
     #####################################
     if is_tr:
-        indexes    = _find_duplicate_indexes(delay_line, max_error=settings['has_multiple_delays_max_error'])
+        indexes    = _digitize_via_duplicates(delay_line, max_error=settings['has_multiple_delays_max_error'])
         delay_line_list = np.sort(list(indexes.keys()))[::-1]
 
         ss = br.Spectra()
