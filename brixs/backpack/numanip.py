@@ -9,23 +9,50 @@ import decimal
 import numbers
 
 # %% ============================= functions ============================== %% #
-def is_integer(n):
-    """Returns True if number is integer."""
+def is_integer(n, allow_float=True, allow_str=True):
+    """Returns True if number is integer. 
+    
+    Args:
+        n (number): number
+        allow_float (bool, optional): if True, floats can be considered int if 
+            int(number) = number, i.e., number with no decimal places.
+        allow_str (bool, optional): if True, it tries to convert str to number.
+            then it is considered int if int((float(number)) = float(number), 
+            i.e., string is number with no decimal places.
+
+    returns
+        bool
+    """
     if isinstance(n, int):
+        return True
+    elif isinstance(n, np.int8):
+        return True
+    elif isinstance(n, np.int16):
         return True
     elif isinstance(n, np.int32):
         return True
     elif isinstance(n, np.int64):
         return True
-    elif isinstance(n, float):
-        return n.is_integer()
-    elif isinstance(n, str):
-        try: 
-            return is_integer(float(n))
-        except ValueError:
-            return False
-    else:
-        return False
+    elif isinstance(n, np.uint8):
+        return True
+    elif isinstance(n, np.uint16):
+        return True
+    elif isinstance(n, np.uint32):
+        return True
+    elif isinstance(n, np.uint64):
+        return True
+    
+    if allow_float:
+        if isinstance(n, float):
+            return n.is_integer()
+    if allow_str:
+        if isinstance(n, str):
+            try: 
+                return float(n).is_integer()
+            except ValueError:
+                return False
+
+    return False
     
 def is_number(n):
     """Returns True if variable is number."""

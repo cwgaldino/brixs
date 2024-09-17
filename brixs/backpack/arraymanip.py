@@ -215,12 +215,29 @@ def all_equal(array):
         return True
     return all(first == x for x in iterator)
 
-def has_duplicates(array):
-    """Returns True if given array contains any duplicates."""
-    if len(array) == len(set(array)):
-        return False
+def has_duplicates(arr, max_error=0):
+    """Returns True if given array contains any duplicates.
+    
+    Args:
+        arr (iterable): list of numbers
+        max_error (number, optional): max error allowed to consider two numbers
+            equal in percentage of the average value of the array. If zero,
+            numbers are requires to be "equal" to be considered duplicated. 
+            Default is zero.
+
+    Returns:
+        bool        
+    """
+
+    if max_error == 0:
+        if len(arr) == len(set(arr)):
+            return False
+        else:
+            return True
     else:
-        return True
+        if sum(abs(np.diff(arr))) > np.mean(arr)*max_error/100:
+            return True
+        return False
     
 def remove_duplicates(array):
     """Returns the sorted unique elements of an array. Wrapper for np.unique()"""
@@ -413,6 +430,19 @@ def extract(x, y, limits, invert=False):
         # raise RuntimeError('No data points within the selected range.')
 
 # %% ========================== Experimental ============================== %% #
+def array2list(arr):
+    """recursively transform a numpy array to a list"""
+    final = []
+    if isinstance(arr, Iterable) and isinstance(arr, str) == False:
+        for item in arr:
+            if isinstance(item, Iterable):
+                final.append(array2list(item))
+            else:
+                final.append(item)
+        return final
+    else:
+        return arr
+    
 def flatten(x):
     """[EXPERIMENTAL] Return a copy of the array collapsed into one dimension."""
     assert isinstance(x, Iterable), 'input must be Iterable (list, tuple, array)'

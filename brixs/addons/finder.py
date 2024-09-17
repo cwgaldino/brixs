@@ -90,7 +90,7 @@ br.finder.verbose = True
 >>> def processing_function(parameters, folderpath):
 >>> 
 >>>     # try and find if spectrum has already been calculated
->>>     s = search(parameters, folderpath=folderpath)
+>>>     s = br.finder.search(parameters, folderpath=br.finder.folderpath)
 >>>     if s is not None:
 >>>         return s
 >>>     
@@ -123,7 +123,7 @@ verbose    = True
 
 import inspect
 def track(func):
-    """test"""
+    """track one spectrum (should work for spectra too, if saved in one file)"""
     def inner(*args, **kwargs):
         
         ######################################################
@@ -168,6 +168,7 @@ def track(func):
     return inner
 
 def track2(func):
+    """track 2 returns a list of spectra saved individually. function must return list"""
     def inner(*args, **kwargs):
         
         ######################################################
@@ -202,6 +203,7 @@ def track2(func):
                 kwargs['i1212___'] = i
                 mult[i] = search(parameters=kwargs, folderpath=folderpath)
                 del mult[i].i1212___total
+            # return br.Spectra(data=mult)
             return mult
         _ = kwargs.pop('i1212___')
         
@@ -224,6 +226,8 @@ def track2(func):
     return inner
 
 def trackss(func):
+    """function must return ss. ss is saved in one file
+    """
     def inner(*args, **kwargs):
         
         ######################################################

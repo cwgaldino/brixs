@@ -252,6 +252,7 @@ def _read_rixs(filepath, curv=True, verbose=True):
         #############################
         pe1 = br.PhotonEvents(x=x, y=y, xlim=(18, 1650),   ylim=(0, 1608)).crop(18,   1650, None, None)
         pe2 = br.PhotonEvents(x=x, y=y, xlim=(1668, 3300), ylim=(0, 1608)).crop(1668, 3300, None, None)
+        
         #########
         # attrs #
         #########
@@ -390,7 +391,6 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                     setattr(pe1, attr + '_sigma', np.std(temp))
                 except:
                     setattr(pe1, attr, None)
-
         pe1.ccd = 1
         pe1.modified_date = _pe1.modified_date
         pe1.number_of_images = len(filelist)
@@ -461,10 +461,13 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             ###################
             # addtional attrs #
             ###################
-            metadata_ = {}
-            _group = 'entry/instrument/bluesky/streams/baseline'
-            for _key in list(f[_group].keys()):
-                metadata[_key] = f[f'{_group}/{_key}/value'][()]
+            try:
+                metadata_ = {}
+                _group = 'entry/instrument/bluesky/streams/baseline'
+                for _key in list(f[_group].keys()):
+                    metadata[_key] = f[f'{_group}/{_key}/value'][()]
+            except:
+                pass
             
             #############
             # read data #
@@ -524,6 +527,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                 # getting snaking attr
                 snake = metadata['snaking'].split('\n')[1:-1]
                 metadata['snake'] = [m[2:]=='true' for m in snake]
+                metadata['snaking'] = [m[2:]=='true' for m in snake]
 
                 # find `x` motor points
                 afinal = np.linspace(metadata['start_x'], metadata['stop_x'], metadata['nstep_x'])
@@ -713,6 +717,7 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     # read file #
     #############
     pe1, pe2, pes1, pes2 = read(folderpath, start=start, stop=stop, skip=skip)
+    
     ################
     # ccd spectrum #
     ################
@@ -753,8 +758,6 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     # else:
     #     s = None
     
-
-
     return {'pe1':pe1, 'pe2':pe2, 'pes1':pes1, 'pes2':pes2, 'ss1':ss1, 'ss2':ss2, 's':s}
 
 def verify(folderpath, sbins, calib=None, norm=True, **kwargs):

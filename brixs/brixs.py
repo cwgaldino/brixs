@@ -174,16 +174,23 @@ class _BrixsObject(object):
 # %%
 
 # %% ========================= common support functions =================== %% #
-def _attr2str(s, attrs, verbose):
-    """returns a list with strings for each attr and attr value
-    
+def _attr2str(attrs_dict, verbose):
+    """returns a list with strings ("name: value") for each attr and attr value
+
+        Note:
+            This function is similar to json.dump(), but formatting is more 
+            appropriate and gives us more flexibility.
+
+        Note: 
+            nested dictionaries will be indented with 4 spaces.
+
         Warning:
-            eval() must be able to run the attr value string in order for the attr value
-            to be later readable by load() functions
+            numpy arrays will return a `list`.
         
         Args:
-            s (brixs object): Spectrum, Spectra, Image, PhotonEvents
-            attrs (list): list of attr names
+            attrs_dict (dict): a dictionary with attr names and values, e.g., 
+                {'attr1': 10, 'attr2': [1, 2, 3]}. Values can be numbers, lists,
+                arrays, dict, None, datetime.
             verbose (bool): if True, message is printed when attr cannot be 
                 converted to string.
         
@@ -195,47 +202,123 @@ def _attr2str(s, attrs, verbose):
     #######################
     # collect attr values #
     #######################
-    for name in attrs:
+    for name in attrs_dict:
         try:
             ##############
             # type: None #
             ##############
-            if s.__dict__[name] is None:
+            if attrs_dict[name] is None:
                 final.append(f'{name}: None')
             #############
             # type: str #
             #############
-            elif isinstance(s.__dict__[name], str):
-                temp2 = str(s.__dict__[name]).replace('\n','\\n')
+            elif isinstance(attrs_dict[name], str):
+                temp2 = str(attrs_dict[name]).replace('\n','\\n')
                 final.append(f'{name}: \"{temp2}\"')
             ##############
             # type: dict #
             ##############
-            elif isinstance(s.__dict__[name], dict) or isinstance(s.__dict__[name], MutableMapping):
-                if verbose:
-                    type_ = str(type(s.__dict__[name]))
-                    print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
+            elif isinstance(attrs_dict[name], dict) or isinstance(attrs_dict[name], MutableMapping):
+                final.append(f'{name}: ' + '{')
+                for line in _attr2str(attrs_dict[name], verbose):
+                    final.append('    ' + line)
+                final.append('}')
+            ##################
+            # type: Spectrum #
+            ##################
+            elif isinstance(attrs_dict[name], Spectrum):
+                x = list(attrs_dict[name].x)
+                y = list(attrs_dict[name].y)
+                final.append(f'{name}: ' + f'Spectrum(x={x}, y={y})')
+            #################
+            # type: Spectra #
+            #################
+            elif isinstance(attrs_dict[name], Spectra):
+                _internal = ''
+                for _s in attrs_dict[name]:
+                    x = list(_s.x)
+                    y = list(_s.y)
+                    _internal += f'Spectrum(x={x}, y={y}), '
+                final.append(f'{name}: ' + f'Spectra(data=[' + _internal + '])')
+            ######################
+            # type: PhotonEvents #
+            ######################
+            elif isinstance(attrs_dict[name], PhotonEvents):
+                x = list(attrs_dict[name].x)
+                y = list(attrs_dict[name].y)
+                final.append(f'{name}: ' + f'PhotonEvents(x={x}, y={y})')
+            ######################
+            # type: PhotonEvents #
+            ######################
+            elif isinstance(attrs_dict[name], Image):
+                _data = [list(_) for _ in attrs_dict[name].data]
+                final.append(f'{name}: ' + f'Image(data={_data})')
             ########################
             # type: list and tuple #
             ########################
-            elif isinstance(s.__dict__[name], Iterable):
-                final.append(f'{name}: {list(s.__dict__[name])}')
+            elif isinstance(attrs_dict[name], Iterable):
+                final.append(f'{name}: {arraymanip.array2list(attrs_dict[name])}')
             ################
             # type: number #
             ################
-            elif numanip.is_number(s.__dict__[name]):
-                tosave = str(s.__dict__[name])
+            elif numanip.is_number(attrs_dict[name]):
+                tosave = str(attrs_dict[name])
                 if tosave[-1] == '\n':
                     tosave = tosave[:-1]
                 final.append(f'{name}: {tosave}')
             else:
-                temp2 = str(s.__dict__[name]).replace('\n','\\n')
+                temp2 = str(attrs_dict[name]).replace('\n','\\n')
                 final.append(f'{name}: \"{temp2}\"')
         except:
             if verbose:
-                type_ = str(type(s.__dict__[name]))
+                type_ = str(type(attrs_dict[name]))
                 print('\nWarning: Cannot save attr of type: ' + type_ + '\nattr name: '+ name + '\nTo turn off this warning, set verbose to False.')
     return final
+
+def _str2attr(header, indentation=0, verbose=False):
+    """returns a dictionary with (names: values) given a list of strings "name: value"
+
+    Args:
+        header (list): list of strings "name: value". This should be the output
+            of the _attr2str() function.
+        indentation (int, optional): number of spaces before characters start
+        verbose (bool): if True, message is printed when name/value cannot be 
+                converted from string to a python object.
+    """
+    output = {}
+    for i, line in enumerate(header):
+        line = line[indentation:]
+        if line[0] == ' ' or line[0] == '}':
+            pass
+        elif ':' not in line:
+            pass
+        else:
+            # get name and value
+            _split = line.split(':')
+            name   = _split[0].strip()
+            value  = ':'.join(_split[1:]).strip()
+
+            # parse dictionaries
+            if value == '{':
+                for j, line2 in enumerate(header[i+1:]):
+                    line2 = line2[indentation:]
+                    if line2[0] == '}':
+                        break
+                indentation2 = indentation + 4
+                value = _str2attr(header[i+1:i+j+1], indentation=indentation2, verbose=False)
+            else:
+                try:
+                    value = eval(str(value).strip())
+                except:# Exception as e:
+                    value = str(value).strip()
+                
+            try:
+                output[name] = value
+
+            except Exception as e:
+                if verbose:
+                    print(f'cannot read attr ({name}: {value})\nAttribute not set\n{e}\n')
+    return output
 # %%
 
 # %% ====================== modified figure function ======================= %% #
@@ -817,11 +900,11 @@ class Spectrum(metaclass=_Meta):
     
     def get_attrs(self):
         """return a list of user defined attrs"""
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['Spectrum']['vars']]
 
     def get_attrs_dict(self):
         """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words}
+        return {key: self.__getattribute__(key) for key in self.get_attrs()}
 
     def get_methods(self):
         """return a list of methods available"""
@@ -1035,19 +1118,25 @@ class Spectrum(metaclass=_Meta):
     #################
     # save and load #
     #################     
-    def save(self, filepath, only_data=False, check_overwrite=False, verbose=False, **kwargs):
+    def save(self, filepath, number_of_decimal_places=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Warning:
             Attrs are saved as comments if only_data is False. Saving attrs to file
             is not always reliable because requires converting variables to string. 
-            Only attrs that are of type: string, number, and list of number,
-             list of list of number and strings have been tested. Dictionaries are not saved. 
+            Attrs that are of type: strings, numbers, arrays, lists, strings, 
+             None, dicts should work fine. More exotic types must be tested. 
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
+            number_of_decimal_places (int, optional): if not None, this argument
+                defines the number of decimal places to save the data (it does
+                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                number_of_decimal_places. Default is None. If None, the number
+                of decimal places will be such that data will be saved with the 
+                best precision necessary.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             check_overwrite (bool, optional): if True, it will check if file exists
@@ -1107,15 +1196,20 @@ class Spectrum(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'fmt' not in kwargs: # pick best format
-            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
+        if 'fmt' in kwargs: # pick best format
+            pass
+        elif number_of_decimal_places is not None:
+            kwargs['fmt'] = f'%.{number_of_decimal_places}f'
+        else:
+            if self.check_nan():
+                temp = self.copy().remove_nan()
+            else:
+                temp = self.copy()
+            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(temp.data)])
             kwargs['fmt'] = f'%.{decimal}f'
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('newline', '\n')
+        kwargs.setdefault('comments', '# ')
 
         #####################
         # header and footer #
@@ -1126,10 +1220,9 @@ class Spectrum(metaclass=_Meta):
             if 'footer' in kwargs:
                 del kwargs['footer']
         else:
-            attrs  = ['_step', '_monotonicity']
-            attrs += ['_shift', '_factor', '_calib', '_offset']
-            attrs += self.get_attrs()
-            header = '\n'.join(_attr2str(self, attrs, verbose)) + '\n'
+            attrs_dict = {_:self.__getattribute__(_) for _ in settings._reserved_words['Spectrum']['vars'] if _ not in ['_x', '_y']}
+            attrs_dict.update(self.get_attrs_dict())
+            header = '\n'.join(_attr2str(attrs_dict, verbose)) + '\n'
 
             if 'header' not in kwargs:
                 kwargs['header'] = header
@@ -1194,12 +1287,9 @@ class Spectrum(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '#'
-        if 'usecols' not in kwargs:
-            kwargs['usecols'] = (0, 1)
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('comments', '# ')
+        kwargs.setdefault('usecols', (0, 1))
 
         ########
         # read #
@@ -1237,27 +1327,49 @@ class Spectrum(metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
+            # get header
             header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-            if header:
-                for line in header:
-                    if ':' not in line:
-                        pass
-                    else:
-                        # extract name and value
-                        name = line[1:-1].split(':')[0].strip()
-                        try:
-                            value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
-                        except:
-                            value = str(':'.join(line[1:-1].split(':')[1:])).strip()
-                        try:
-                            setattr(self, name, value)
-                        except Exception as e:
-                            if verbose:
-                                print(f'cannot read attr ({name}: {value})\nAttribute not set\n{e}\n')
+            
+            # remove comment flag (#)
+            comment_flag_len = len(kwargs['comments'])
+            for i, line in enumerate(header):
+                header[i] = line[comment_flag_len:]
+
+            # attrs dict
+            attrs_dict = _str2attr(header[:-1], verbose=verbose)
+
+            # set attrs
+            for attr in attrs_dict:
+                self.__setattr__(attr, attrs_dict[attr])
+        return
 
     #########
     # check #
     #########
+    def check_nan(self):
+        """return True if x or y have non-numeric (NaN) values"""
+        if np.isnan(self.x).any():
+            return True
+        else:
+            return np.isnan(self.y).any()
+        
+    def remove_nan(self):
+        """remove data points (x, y) that contain non-numeric (NaN) values"""
+        if self.check_nan() == False:
+            return self.copy()
+        else:
+            index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
+            x = np.delete(self.x, index2remove)
+            y = np.delete(self.y, index2remove)
+
+            # copy
+            s = self.copy()
+            s._x = x
+            s._y = y
+            # reset checks
+            self._step = None
+            return s
+    
     def check_step(self, max_error=0.1):
         """Checks vector uniformity of the x-coordinates.
 
@@ -2170,7 +2282,10 @@ class Spectrum(metaclass=_Meta):
         # limits #
         ##########
         if limits is not None:
-            self = self._copy(limits=limits)
+            temp = self._copy(limits=limits)
+            if self.hasattr('label'):
+                temp.label = self.label
+            self = temp
         x = self.x
         y = self.y
 
@@ -2449,7 +2564,7 @@ class Spectra(metaclass=_Meta):
         super().__setattr__(name, value)
 
     def __getitem__(self, item):
-        if isinstance(item, int):
+        if numanip.is_integer(item, allow_float=False, allow_str=False):
             return self._data[item]
         elif isinstance(item, slice):
             ss = Spectra(self._data[item])
@@ -2502,9 +2617,13 @@ class Spectra(metaclass=_Meta):
         return settings._reserved_words['Spectra']['pseudovars']
     
     def get_attrs(self):
-        """return attrs that are user defined.""" 
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+        """return a list of user defined attrs"""
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['Spectra']['vars']]
 
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.get_attrs()}
+    
     def get_methods(self):
         """return a list of methods available"""
         return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
@@ -2556,7 +2675,7 @@ class Spectra(metaclass=_Meta):
                 name is used.
 
         Returns:
-            None
+            :py:class:`Spectra`
         """
         # assert all spectra has attr
         # check if all spectra has attr
@@ -2567,7 +2686,11 @@ class Spectra(metaclass=_Meta):
 
         # create new attr
         if name is None: name = attr
-        self.__setattr__(name, [getattr(s, attr) for s in self])
+        
+        # copy
+        ss = self.copy()
+        ss.__setattr__(name, [getattr(s, attr) for s in self])
+        return ss
 
     def reorder_by_attr(self, attr, attrs2reorder=None, decreasing=False):
         """Reorder spectra based on a Spectra attr.
@@ -3254,7 +3377,7 @@ class Spectra(metaclass=_Meta):
     #################
     # save and load #
     #################
-    def save(self, folderpath, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, only_data=False, verbose=False, **kwargs):
+    def save(self, folderpath, prefix='spectrum_', suffix='.dat', filenames=None, zfill=None, number_of_decimal_places=None, only_data=False, verbose=False, **kwargs):
         r"""Save spectra. Wrapper for `numpy.savetxt()`_.
 
         Warning:
@@ -3277,6 +3400,12 @@ class Spectra(metaclass=_Meta):
                 spectrum index. Example: 'spectrum_{i}_T{T}K.dat'
             zfill (int, optional): number of digits for file numbering. If `None`,
                 zfill will be determined.
+            number_of_decimal_places (int, optional): if not None, this argument
+                defines the number of decimal places to save the data (it does
+                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                number_of_decimal_places. Default is None. If None, the number
+                of decimal places will be such that data will be saved with the 
+                best precision necessary.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             verbose (bool, optional): turn verbose on and off. Default is `False`.
@@ -3323,7 +3452,7 @@ class Spectra(metaclass=_Meta):
         # set filenames #
         #################
         if zfill is None:
-            zfill = figmanip.n_digits(len(self)-1)
+            zfill = numanip.n_digits(len(self)-1)
 
         # saving
         # if verbose: print('saving {} files...')
@@ -3342,7 +3471,7 @@ class Spectra(metaclass=_Meta):
                 filename = f'{prefix}' + f'{i_str}' + f'{suffix}'
 
             if verbose:  print(f'{i}/{len(self)-1}: {filename}')
-            s.save(filepath=folderpath/filename, only_data=only_data, check_overwrite=False, verbose=False, **kwargs)
+            s.save(filepath=folderpath/filename, number_of_decimal_places=number_of_decimal_places, only_data=only_data, check_overwrite=False, verbose=False, **kwargs)
         # if verbose: print('Done!')
     
     def load(self, folderpath, string='*', only_data=False, verbose=False, **kwargs):
@@ -3413,13 +3542,19 @@ class Spectra(metaclass=_Meta):
         self._x            = None
         self._monotonicity = None
 
-    def save_all_single_file(self, filepath, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
+    def save_all_single_file(self, filepath, number_of_decimal_places=None, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
         r"""Save all Spectra in one single file. Wrapper for `numpy.savetxt()`_.
 
         Args:
             filepath (string or path object): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
+            number_of_decimal_places (int, optional): if not None, this argument
+                defines the number of decimal places to save the data (it does
+                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                number_of_decimal_places. Default is None. If None, the number
+                of decimal places will be such that data will be saved with the 
+                best precision necessary.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is saved to the file.
             limits (list, optional): a pair of x-coordinate values or a list of
@@ -3461,6 +3596,7 @@ class Spectra(metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        filepath = Path(filepath)
         assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
         if filepath.exists():
             assert filepath.is_file(), 'filepath must point to a file'
@@ -3490,12 +3626,9 @@ class Spectra(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('newline', '\n')
+        kwargs.setdefault('comments', '# ')
 
         ##############################
         # Prepare final data to save #
@@ -3507,12 +3640,22 @@ class Spectra(metaclass=_Meta):
             x, ys = self._gather_ys(limits=limits)
 
             # kwargs
-            if 'fmt' not in kwargs: # pick best format
-                decimal = max([numanip.n_decimal_places(x) for x in self.x])
-                temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
-                if temp_decimal > decimal:
-                    decimal = copy.deepcopy(temp_decimal)
-                kwargs['fmt'] = f'%.{decimal}f'
+            if 'fmt' in kwargs: # pick best format
+                pass
+            elif number_of_decimal_places is not None:
+                kwargs['fmt'] = f'%.{number_of_decimal_places}f'
+            else: # pick best format
+                if self.check_nan():
+                    pass
+                #     temp = self.copy().remove_nan()
+                # else:
+                #     temp = self.copy()
+                else:
+                    decimal = max([numanip.n_decimal_places(x) for x in self.x])
+                    temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
+                    if temp_decimal > decimal:
+                        decimal = copy.deepcopy(temp_decimal)
+                    kwargs['fmt'] = f'%.{decimal}f'
 
             # final data to save
             final = np.zeros((self.length, len(self)+1))
@@ -3527,11 +3670,10 @@ class Spectra(metaclass=_Meta):
                 del kwargs['header']
             if 'footer' in kwargs:
                 del kwargs['footer']
-            np.savetxt(Path(filepath), final, **kwargs)
         else:
-            attrs  = ['_step', '_monotonicity', '_x', '_length']
-            attrs += self.get_attrs()
-            header = '\n'.join(_attr2str(self, attrs, verbose)) + '\n'
+            attrs_dict = {_:self.__getattribute__(_) for _ in settings._reserved_words['Spectra']['vars'] if _ not in ['_data', ]}
+            attrs_dict.update(self.get_attrs_dict())
+            header = '\n'.join(_attr2str(attrs_dict, verbose)) + '\n'
 
             if 'header' not in kwargs:
                 kwargs['header'] = header
@@ -3540,7 +3682,6 @@ class Spectra(metaclass=_Meta):
                     kwargs['header'] = header
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
-        
         ########
         # save #
         ########
@@ -3590,13 +3731,10 @@ class Spectra(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '#'
-        if 'usecols' not in kwargs:
-            kwargs['usecols'] = None
-            # kwargs['usecols'] = [i for i in range(data.shape[1])]
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('comments', '# ')
+        kwargs.setdefault('usecols', None)
+        # kwargs['usecols'] = [i for i in range(data.shape[1])]
 
         #############
         # read data #
@@ -3625,28 +3763,47 @@ class Spectra(metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
+            # get header
             header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-            if header:
-                for line in header:
-                    if ':' not in line:
-                        pass
-                    else:
-                        # extract name and value
-                        name = line[1:-1].split(':')[0].strip()
-                        try:
-                            value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
-                        except:
-                            value = str(':'.join(line[1:-1].split(':')[1:])).strip()
-                        
-                        try:
-                            setattr(self, name, value)
-                        except Exception as e:
-                            if verbose:
-                                print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+            
+            # remove comment flag (#)
+            comment_flag_len = len(kwargs['comments'])
+            for i, line in enumerate(header):
+                header[i] = line[comment_flag_len:]
+
+            # attrs dict
+            attrs_dict = _str2attr(header[:-1], verbose=verbose)
+
+            # set attrs
+            for attr in attrs_dict:
+                self.__setattr__(attr, attrs_dict[attr])
+        return
 
     #########
     # check #
     #########
+    def check_nan(self):
+        """return True if x or y have non-numeric (NaN) values"""
+        for s in self:
+            if s.check_nan():
+                return True
+        return False
+    
+    def remove_nan(self):
+        """remove data points (x, y) that contain non-numeric (NaN) values"""
+        if self.check_nan() == False:
+            return self.copy()
+        else:
+            ss = self.copy()
+
+            for i, s in enumerate(ss):
+                ss[i] = s.remove_nan()
+            # reset checks
+            ss._step   = None
+            ss._length = None
+            ss._x      = None
+            return s    
+    
     def check_monotonicity(self):
         """Sets monotonicity attribute to 'increasing' or 'decreasing'.
 
@@ -6094,8 +6251,12 @@ class Image(metaclass=_Meta):
         return settings._reserved_words['Image']['pseudovars']
     
     def get_attrs(self):
-        """return attrs that are user defined.""" 
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+        """return a list of user defined attrs"""
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['Image']['vars']]
+
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.get_attrs()}
     
     def get_methods(self):
         """return a list of methods available"""
@@ -6728,14 +6889,12 @@ class Image(metaclass=_Meta):
         # kwargs #
         ##########
         if 'fmt' not in kwargs: # pick best format
-            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self._data)])
-            kwargs['fmt'] = f'%.{decimal}f'
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+            if self._data != [] and self._data is not None:
+                decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self._data)])
+                kwargs['fmt'] = f'%.{decimal}f'
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('newline', '\n')
+        kwargs.setdefault('comments', '# ')
 
         #####################
         # header and footer #
@@ -6746,11 +6905,9 @@ class Image(metaclass=_Meta):
             if 'footer' in kwargs:
                 del kwargs['footer']
         else:
-            attrs  = ['_x_step', '_y_step', '_x_monotonicity', '_y_monotonicity']
-            attrs += ['_factor', '_offset']
-            attrs += ['_x_centers', '_y_centers', '_x_edges', '_y_edges']
-            attrs += self.get_attrs()
-            header = '\n'.join(_attr2str(self, attrs, verbose)) + '\n'
+            attrs_dict = {_:self.__getattribute__(_) for _ in settings._reserved_words['Image']['vars'] if _ not in ['_data', ]}
+            attrs_dict.update(self.get_attrs_dict())
+            header = '\n'.join(_attr2str(attrs_dict, verbose)) + '\n'
 
             if 'header' not in kwargs:
                 kwargs['header'] = header
@@ -6759,11 +6916,12 @@ class Image(metaclass=_Meta):
                     kwargs['header'] = header
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
-        
+
         ########
         # save #
         ########
         np.savetxt(Path(filepath), self._data, **kwargs)
+        return
 
     def loadtxt(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
@@ -6814,10 +6972,8 @@ class Image(metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('comments', '# ')
 
         ########
         # read #
@@ -6833,27 +6989,37 @@ class Image(metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
+            # get header
             header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-            if header:
-                for line in header:
-                    if ':' not in line:
-                        pass
-                    else:
-                        # extract name and value
-                        name = line[1:-1].split(':')[0].strip()
-                        try:
-                            value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
-                        except:
-                            value = str(':'.join(line[1:-1].split(':')[1:])).strip()
-                        try:
-                            setattr(self, name, value)
-                        except Exception as e:
-                            if verbose:
-                                print(f'cannot read attr ({name}: {value})\nAttribute not set\n{e}\n')
+            
+            # remove comment flag (#)
+            comment_flag_len = len(kwargs['comments'])
+            for i, line in enumerate(header):
+                header[i] = line[comment_flag_len:]
 
+            # attrs dict
+            attrs_dict = _str2attr(header[:-1], verbose=verbose)
+
+            # set attrs
+            for attr in attrs_dict:
+                self.__setattr__(attr, attrs_dict[attr])
+        return
+    
     #########
     # check #
     #########
+    def check_nan(self):
+        """return True if data have non-numeric (NaN) values"""
+        if np.isnan(self.data).any():
+            return True
+        return False
+    
+    def find_nan(self):
+        """Return a list with positions where non-numeric (NaN) values were found"""
+        if self.check_nan():
+            return np.argwhere(np.isnan(self.data))
+        return []
+        
     def check_x_step(self, max_error=0.1):
         """Checks vector uniformity of the x centers.
 
@@ -8828,6 +8994,14 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         """return a list of core attrs"""
         return settings._reserved_words['PhotonEvents']['pseudovars']
 
+    def get_attrs(self):
+        """return a list of user defined attrs"""
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['PhotonEvents']['vars']]
+
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.get_attrs()}
+    
     ###########
     # support #
     ###########
@@ -9177,6 +9351,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        filepath = Path(filepath)
         assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
         if filepath.exists():
             assert filepath.is_file(), 'filepath must point to a file'
@@ -9198,14 +9373,12 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # kwargs #
         ##########
         if 'fmt' not in kwargs: # pick best format
-            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
-            kwargs['fmt'] = f'%.{decimal}f'
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'newline' not in kwargs:
-            kwargs['newline'] = '\n'
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+            if self._x != [] and self._x is not None:
+                decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
+                kwargs['fmt'] = f'%.{decimal}f'
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('newline', '\n')
+        kwargs.setdefault('comments', '# ')
 
         #####################
         # header and footer #
@@ -9216,9 +9389,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             if 'footer' in kwargs:
                 del kwargs['footer']
         else:
-            attrs = ['_xlim', '_ylim']
-            attrs += self.get_attrs()
-            header = '\n'.join(_attr2str(self, attrs, verbose)) + '\n'
+            attrs_dict = {_:self.__getattribute__(_) for _ in settings._reserved_words['PhotonEvents']['vars'] if _ not in ['_x', '_y']}
+            attrs_dict.update(self.get_attrs_dict())
+            header = '\n'.join(_attr2str(attrs_dict, verbose)) + '\n'
+
             if 'header' not in kwargs:
                 kwargs['header'] = header
             else:
@@ -9231,7 +9405,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # save #
         ########
         np.savetxt(Path(filepath), self.data, **kwargs)
-
+        return 
+    
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
@@ -9269,10 +9444,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        if 'delimiter' not in kwargs:
-            kwargs['delimiter'] = ', '
-        if 'comments' not in kwargs:
-            kwargs['comments'] = '# '
+        kwargs.setdefault('delimiter', ', ')
+        kwargs.setdefault('comments', '# ')
 
         ########
         # read #
@@ -9289,29 +9462,47 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # read header #
         ###############
         if only_data is False:
+            # get header
             header = filemanip.load_comments(Path(filepath), comment_flag=kwargs['comments'], stop_flag=kwargs['comments'])
-            if header:
-                for line in header:
-                    if ':' not in line:
-                        pass
-                    else:
-                        # extract name and value
-                        name = line[1:-1].split(':')[0].strip()
-                        try:
-                            value = eval(str(':'.join(line[1:-1].split(':')[1:])).strip())
-                        except:
-                            value = str(':'.join(line[1:-1].split(':')[1:])).strip()
-                        try:
-                            setattr(self, name, value)
-                        except Exception as e:
-                            if verbose:
-                                print(f'Error loading attribute: {name}\nvalue: {value}\nAttribute not set.\n{e}\n')
+            
+            # remove comment flag (#)
+            comment_flag_len = len(kwargs['comments'])
+            for i, line in enumerate(header):
+                header[i] = line[comment_flag_len:]
 
+            # attrs dict
+            attrs_dict = _str2attr(header[:-1], verbose=verbose)
+
+            # set attrs
+            for attr in attrs_dict:
+                self.__setattr__(attr, attrs_dict[attr])
+        return
+    
     #########
     # check #
     #########
-    pass
+    def check_nan(self):
+        """return True if x or y have non-numeric (NaN) values"""
+        if np.isnan(self.x).any():
+            return True
+        else:
+            return np.isnan(self.y).any()
+        
+    def remove_nan(self):
+        """remove data points (x, y) that contain non-numeric (NaN) values"""
+        if self.check_nan() == False:
+            return self.copy()
+        else:
+            index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
+            x = np.delete(self.x, index2remove)
+            y = np.delete(self.y, index2remove)
 
+            # copy
+            pe = self.copy()
+            pe._x = x
+            pe._y = y
+            return pe
+    
     #############
     # modifiers #
     #############
@@ -9968,9 +10159,13 @@ class Dummy():
         return settings._reserved_words['Dummy']['pseudovars']
     
     def get_attrs(self):
-        """return attrs that are user defined.""" 
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+        """return a list of user defined attrs"""
+        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in ['_data', ]]
 
+    def get_attrs_dict(self):
+        """return a dict of user defined attrs and their values"""
+        return {key: self.__getattribute__(key) for key in self.get_attrs()}
+    
     def get_methods(self):
         """return a list of methods available"""
         return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]

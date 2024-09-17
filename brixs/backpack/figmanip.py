@@ -2260,9 +2260,9 @@ def rectangle(xlim, ylim, ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    if 'linewidth' not in kwargs or 'lw' not in kwargs:
+    if 'linewidth' not in kwargs and 'lw' not in kwargs:
             kwargs['linewidth'] = 0.6
-    if 'facecolor' not in kwargs or 'fc' not in kwargs:
+    if 'facecolor' not in kwargs and 'fc' not in kwargs:
         kwargs['fc'] = 'none'
     if 'edgecolor' not in kwargs:
         kwargs['edgecolor'] = 'gray'
