@@ -142,17 +142,17 @@ h['error']            = ''
 h = _attrs['xas']['string']
 h['motors']           = 'entry/instrument/bluesky/metadata/motors'
 h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
 h['title']            = 'entry/title'
 h['entry_identifier'] = 'entry/entry_identifier'
 h['start_time']       = 'entry/start_time'
 h['end_time']         = 'entry/end_time'
-h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
-h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
 h = _attrs['xas']['raw']
 h['duration']         = 'entry/duration'
 h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
 h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
 # %% ========================== ascan metadata ============================ %% #
 _attrs['ascan'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
@@ -165,17 +165,17 @@ h['error']            = ''
 h = _attrs['ascan']['string']
 h['motors']           = 'entry/instrument/bluesky/metadata/motors'
 h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
 h['title']            = 'entry/title'
 h['entry_identifier'] = 'entry/entry_identifier'
 h['start_time']       = 'entry/start_time'
 h['end_time']         = 'entry/end_time'
-h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
-h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
 h = _attrs['ascan']['raw']
 h['duration']         = 'entry/duration'
 h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
 h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
 # %% ========================== mesh metadata ============================ %% #
 _attrs['mesh'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
@@ -192,12 +192,11 @@ h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
 h['snaking']          = 'entry/instrument/bluesky/metadata/snaking'
 h['motor_x']          = 'entry/instrument/bluesky/metadata/motor_x'
 h['motor_y']          = 'entry/instrument/bluesky/metadata/motor_y'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
 h['title']            = 'entry/title'
 h['entry_identifier'] = 'entry/entry_identifier'
 h['start_time']       = 'entry/start_time'
 h['end_time']         = 'entry/end_time'
-h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
-h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
 
 h = _attrs['mesh']['raw']
@@ -210,6 +209,7 @@ h['start_x']          = 'entry/instrument/bluesky/metadata/start_x'
 h['start_y']          = 'entry/instrument/bluesky/metadata/start_y'
 h['stop_x']           = 'entry/instrument/bluesky/metadata/stop_x'
 h['stop_y']           = 'entry/instrument/bluesky/metadata/stop_y'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
 
 
 h = _attrs['mesh']['bool']
@@ -377,7 +377,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
         
         pe1 = br.PhotonEvents(x=x1, y=y1, xlim=_pe1.xlim, ylim=_pe1.ylim)
         pe2 = br.PhotonEvents(x=x2, y=y2, xlim=_pe2.xlim, ylim=_pe2.ylim)
-        
+
         # attrs pe1
         for attr in _pe1.get_attrs():
             temp = [getattr(pe, attr) for pe in dummy1]
@@ -430,10 +430,14 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             # get scan type #
             #################
             scan_type = f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8")
+            plan_name = f['entry/instrument/bluesky/plan_name'][()].decode("utf-8")
             
             #########
             # attrs #
             #########
+            if plan_name == 'adaptive_scan' and 'num_points' in _attrs[scan_type]['raw']:
+                del _attrs[scan_type]['raw']['num_points']
+            
             metadata = h5.sort_metadata(f=f, attrs_dict=_attrs[scan_type], verbose=verbose)
             try:
                 metadata['modified_date'] = br.get_modified_date(fpath)
@@ -445,13 +449,13 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             ##############
             # get motors #
             ##############
-            metadata['motors'] = [m[2:] for m in metadata['motors'].split('\n')[1:-1]]
+            metadata['motors'] = [m.strip().lstrip('-').strip() for m in metadata['motors'].split('\n') if m.strip().startswith('-')]
             motors = metadata['motors']
 
             #################
             # get detectors #
             #################
-            metadata['detectors'] = [d[2:] for d in metadata['detectors'].split('\n')[:-1]]
+            metadata['detectors'] = [d.strip().lstrip('-').strip() for d in metadata['detectors'].split('\n') if d.strip().startswith('-')]
             detectors = metadata['detectors'] 
 
             ###################
@@ -1029,15 +1033,15 @@ def sequence(folderpath, scans, sbins, calib=True, norm=True):
     return ss
 
 # %% =========================== alignment plot =============================== %% #
-def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, start=0, stop=None, skip=[], limits=None, motor_list=None, **kwargs):
+def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, start=0, stop=None, skip=[], limits=None, external_list=None, **kwargs):
     """Plot alignment analisys
     
     Use ss.create_attr_from_spectra(attr) to substitute atype fot attr
     
     Args:
         folderpath (str or path): folderpath with rixs images.
-        scans (list): scans IDs. Ex (1, 534, 458).
-        atype (string): type of the alignment.
+        scans (list): scans IDs. Ex [1, 534, 458].
+        atype (string): select a attr from metadata or 'external' if it is external data. There are also 'r1', 'r2', 'z' and 'time' types.
         sbins (int): number of bins for converting photon events to spectrum (
             number of points in the spectrum).
         calib (number or list, optional): if not None, the x axis is multipled by calib.
@@ -1054,11 +1058,26 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     Returns:
         Spectrum
     """
-    
-    assert atype in ['r1', 'r2', 'z', 'motor'], "atype must be 'r1', 'r2', 'z' or 'motor'"
-    if atype == 'motor':
-        assert motor_list is not None, 'If atype=\'motor\' you must put a motor_list=[pos1, pos2]'
-        assert len(motor_list) == len(scans), 'motor_list and scans must have the same len'
+    attr = [None,None]
+    align_list = [list(),list()]
+    if atype == 'external':
+        assert external_list is not None, 'If atype=\'motor\' you must put a external_list=[pos1, pos2]'
+        assert len(external_list) == len(scans), 'external_list and scans must have the same len'
+    elif atype == 'r1':
+        attr[0] = 'RIXS_GZ'
+        attr[1] = 'RIXS_DZ'
+    elif atype == 'r2':
+        attr[0] = 'RIXS_DZ'
+        attr[1] = 'RIXS_DY'
+    elif atype == 'z':
+        attr[0] = 'RIXS_Z'
+        attr[1] = attr[0]
+    elif atype == 'time':
+        attr[0] = 'modified_date'
+        attr[1] = attr[0]
+    else:
+        attr[0] = atype
+        attr[1] = attr[0]
     
     basepath = Path(folderpath)
     
@@ -1074,11 +1093,6 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     
     ss1.__i = 0
     ss2.__i = 0
-    
-    rixs_z  = list()
-    rixs_gz = list()
-    rixs_dz = list()
-    rixs_dy = list()
     
     ######################
     # change keybindings #
@@ -1143,11 +1157,6 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
             limits = limits*calib  
         
     for scan in scans:
-        z  = None
-        gz = None
-        dz = None
-        dy = None
-        
         folderpath = basepath/str(scan).zfill(4)
         assert folderpath.exists(), f"Folderpath does not exist, {folderpath}"
 
@@ -1160,43 +1169,25 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
             fit, popt, R2, model = si[i].fit_peak(fixed_m=0, asymmetry=False, limits=limits)
             fiti[i].append(fit)
             popti[i].append(popt)
-            
-        
-        if hasattr(s, 'RIXS_Z'):
-            z = round(s.RIXS_Z,3)
-            rixs_z.append(z)
-        if hasattr(s, 'RIXS_GZ'):
-            gz = round(s.RIXS_GZ,3)
-            rixs_gz.append(gz)
-        if hasattr(s, 'RIXS_DZ'):
-            dz = round(s.RIXS_DZ,3)
-            rixs_dz.append(dz)
-        if hasattr(s, 'RIXS_DY'):
-            dy = round(s.RIXS_DY,3)
-            rixs_dy.append(round(s.RIXS_DY, 3))
+        if atype != 'external':
+            assert hasattr(s, attr[0]), f"\'{atype}\' is not in {s.get_attrs()}"
+            assert hasattr(s, attr[1]), f"\'{atype}\' is not in {s.get_attrs()}"
+            align_list[0].append(getattr(s, attr[0]))
+            align_list[1].append(getattr(s, attr[1]))
             
         ss.append(s)
-   
-    if atype == 'z':
-        x1 = rixs_z
-        x2 = rixs_z
-        x1_label = 'RIXS_Z'
-        x2_label = 'RIXS_Z'
-    elif atype == 'r1':
-        x1 = rixs_gz
-        x2 = rixs_dz
-        x1_label = 'RIXS_GZ'
-        x2_label = 'RIXS_DZ'
-    elif atype == 'r2':
-        x1 = rixs_dz
-        x2 = rixs_dy
-        x1_label = 'RIXS_DZ'
-        x2_label = 'RIXS_DY'
-    elif atype == 'motor':
-        x1 = motor_list
-        x2 = motor_list
-        x1_label = 'motor'
-        x2_label = 'motor'
+
+    if atype != 'external':
+        x1 = align_list[0]
+        x2 = align_list[1]
+        x1_label = attr[0]
+        x2_label = attr[1]
+
+    else:
+        x1 = external_list
+        x2 = external_list
+        x1_label = 'external'
+        x2_label = 'external'
     
     # Ordenar x, y e z juntos
     _sorted = sorted(zip(x1, x2, popti[0], popti[1]), key=lambda item: item[0])
@@ -1237,11 +1228,12 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax2.plot(x1_sorted, popt0_new[2], 'o-', label='ccd 1')
     ax2.plot(x1_sorted, popt1_new[2], 'o-', label='ccd 2')
     ax2.set_xlabel(x1_label)
-    ax22 = ax2.twiny()  # Criando um eixo secundário
-    ax22.plot(x2_sorted, popt0_new[2], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax22.plot(x2_sorted, popt1_new[2], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax22.set_xlabel(x2_label)
-    ax22.xaxis.set_label_coords(0.5, 0.90)
+    if attr[1]!=attr[0]:
+        ax22 = ax2.twiny()  # Criando um eixo secundário
+        ax22.plot(x2_sorted, popt0_new[2], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax22.plot(x2_sorted, popt1_new[2], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax22.set_xlabel(x2_label)
+        ax22.xaxis.set_label_coords(0.5, 0.90)
     ax2.legend()
     if calib is None:
         ax2.set_ylabel('pixel')
@@ -1252,11 +1244,12 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax3.plot(x1_sorted, popt0_new[1], 'o-', label='ccd 1')
     ax3.plot(x1_sorted, popt1_new[1], 'o-', label='ccd 2')
     ax3.set_xlabel(x1_label)
-    ax32 = ax3.twiny()  # Criando um eixo secundário
-    ax32.plot(x2_sorted, popt0_new[1], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax32.plot(x2_sorted, popt1_new[1], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax32.set_xlabel(x2_label)
-    ax32.xaxis.set_label_coords(0.5, 0.90)
+    if attr[1]!=attr[0]:
+        ax32 = ax3.twiny()  # Criando um eixo secundário
+        ax32.plot(x2_sorted, popt0_new[1], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax32.plot(x2_sorted, popt1_new[1], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax32.set_xlabel(x2_label)
+        ax32.xaxis.set_label_coords(0.5, 0.90)
     if calib is None:
         ax3.set_ylabel('pixel')
     else:
@@ -1267,11 +1260,12 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax4.plot(x1_sorted, popt0_new[0], 'o-', label='ccd 1')
     ax4.plot(x1_sorted, popt1_new[0], 'o-', label='ccd 2')
     ax4.set_xlabel(x1_label)
-    ax42 = ax4.twiny()  # Criando um eixo secundário
-    ax42.plot(x2_sorted, popt0_new[0], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax42.plot(x2_sorted, popt1_new[0], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax42.set_xlabel(x2_label)
-    ax42.xaxis.set_label_coords(0.5, 0.90)
+    if attr[1]!=attr[0]:
+        ax42 = ax4.twiny()  # Criando um eixo secundário
+        ax42.plot(x2_sorted, popt0_new[0], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax42.plot(x2_sorted, popt1_new[0], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax42.set_xlabel(x2_label)
+        ax42.xaxis.set_label_coords(0.5, 0.90)
     ax4.set_ylabel('counts/bin')
     ax4.legend()
     
@@ -1279,15 +1273,29 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ax5.plot(x1_sorted, popt0_new[3], 'o-', label='ccd 1')
     ax5.plot(x1_sorted, popt1_new[3], 'o-', label='ccd 2')
     ax5.set_xlabel(x1_label)
-    ax52 = ax5.twiny()  # Criando um eixo secundário
-    ax52.plot(x2_sorted, popt0_new[3], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax52.plot(x2_sorted, popt1_new[3], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
-    ax52.set_xlabel(x2_label)
-    ax52.xaxis.set_label_coords(0.5, 0.90)
+    if attr[1]!=attr[0]:
+        ax52 = ax5.twiny()  # Criando um eixo secundário
+        ax52.plot(x2_sorted, popt0_new[3], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax52.plot(x2_sorted, popt1_new[3], 'o-', color='orange', alpha=0)  # Plotando invisível para criar o eixo
+        ax52.set_xlabel(x2_label)
+        ax52.xaxis.set_label_coords(0.5, 0.90)
     ax5.set_ylabel('counts/bin')
     ax5.legend()
     
-    plt.subplots_adjust(hspace=0.5, wspace=0.4)
+    # Formatação do eixo de tempo
+    if atype == 'time':
+        import matplotlib.dates as mdates
+        # Função para formatar o eixo com datas
+        def format_date_axis(ax):
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))  # Formato de hora
+            ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))  # Intervalos de 5 minutos
+            fig.autofmt_xdate()  # Ajusta as datas
+
+        # Plotando nos outros eixos (com data)
+        for ax in [ax2, ax3, ax4, ax5]:
+            format_date_axis(ax)
+    
+    plt.subplots_adjust(hspace=0.7, wspace=0.4)
     
     ######################
     # register callbacks #
