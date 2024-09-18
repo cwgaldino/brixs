@@ -856,8 +856,8 @@ class Spectrum(metaclass=_Meta):
     def __truediv__(self, object):
         return self.__div__(object)
 
+    # this is what makes possible max(s) and min(s)
     def __iter__(self):
-        # this is what makes possible max(s) and min(s)
         for y in self.y:
             yield y
 
@@ -891,6 +891,11 @@ class Spectrum(metaclass=_Meta):
         else:
             raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
         
+    # This is what makes possible s1 > s2 ?
+    # Also makes possible max(ss)
+    def __gt__(self, object):
+        return max(self.y) > max(object.y)
+    
     #########
     # attrs #
     #########
@@ -2283,7 +2288,7 @@ class Spectrum(metaclass=_Meta):
         ##########
         if limits is not None:
             temp = self._copy(limits=limits)
-            if self.hasattr('label'):
+            if hasattr(self, 'label'):
                 temp.label = self.label
             self = temp
         x = self.x
