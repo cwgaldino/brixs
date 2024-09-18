@@ -896,6 +896,11 @@ class Spectrum(metaclass=_Meta):
     def __gt__(self, object):
         return max(self.y) > max(object.y)
     
+    # This is what makes possible s1 < s2 ?
+    # Also makes possible min(ss)
+    def __gt__(self, object):
+        return min(self.y) < min(object.y)
+    
     #########
     # attrs #
     #########
