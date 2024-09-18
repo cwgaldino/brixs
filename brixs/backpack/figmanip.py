@@ -743,6 +743,79 @@ def _onclick(event):
                 pass
 
 # subplots
+class Axes(list):
+    def __init__(self, axes, nrows, ncols):
+        super().__init__(axes)
+        self.nrows = nrows
+        self.ncols = ncols
+
+    @property
+    def cols(self):
+        final = []
+        for i in range(self.ncols):
+            final.append([self[_] for _ in np.arange(0, self.ncols*self.nrows, self.ncols) + i])
+        return final
+    @cols.setter
+    def cols(self, value):
+        raise AttributeError('Cannot set object.')
+    @cols.deleter
+    def cols(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def rows(self):
+        final = []
+        for i in range(self.nrows):
+            final.append([self[_] for _ in np.arange(0, self.ncols) + i*self.ncols])
+        return final
+    @rows.setter
+    def rows(self, value):
+        raise AttributeError('Cannot set object.')
+    @rows.deleter
+    def rows(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def first_row(self):
+        return [self[_] for _ in np.arange(0, self.ncols)]
+    @first_row.setter
+    def first_row(self, value):
+        raise AttributeError('Cannot set object.')
+    @first_row.deleter
+    def first_row(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def last_row(self):
+        return [self[_] for _ in np.arange(0, self.ncols) + (self.nrows-1)*self.ncols]
+    @last_row.setter
+    def last_row(self, value):
+        raise AttributeError('Cannot set object.')
+    @last_row.deleter
+    def last_row(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def first_col(self):
+        return [self[_] for _ in np.arange(0, self.ncols*self.nrows, self.ncols)]
+    @first_col.setter
+    def first_col(self, value):
+        raise AttributeError('Cannot set object.')
+    @first_col.deleter
+    def first_col(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def last_col(self):
+        return [self[_] for _ in np.arange(0, self.ncols*self.nrows, self.ncols) + self.ncols-1]
+    @last_col.setter
+    def last_col(self, value):
+        raise AttributeError('Cannot set object.')
+    @last_col.deleter
+    def last_col(self):
+        raise AttributeError('Cannot delete object.')
+
+
 def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, **fig_kw):
     """Create a figure and a set of subplots. Wrapper for `plt.subplots()`_.
 
@@ -841,7 +914,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
         ax.remove_xticklabels = MethodType(remove_xticklabels, ax)
         ax.remove_yticklabels = MethodType(remove_yticklabels, ax)
 
-    return fig, axes
+    return fig, Axes(axes, ncols=ncols, nrows=nrows)
 
 # grid    
 def _grid(self, visible=None):
@@ -1714,13 +1787,13 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ##########
     if pad is not None:
         if isinstance(pad, Iterable) == False:
-            assert _is_number(pad), 'pad must be a number or a tuple/list with length 2'
+            assert is_number(pad), 'pad must be a number or a tuple/list with length 2'
             pad = (pad, pad)
 
         # check
         assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
-        assert _is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
-        assert _is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
+        assert is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
+        assert is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
         # set limits
         ticks_sep = ticks[1]  - ticks[0]
@@ -1902,13 +1975,13 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     ##########
     if pad is not None:
         if isinstance(pad, Iterable) == False:
-            assert _is_number(pad), 'pad must be a number or a tuple/list with length 2'
+            assert is_number(pad), 'pad must be a number or a tuple/list with length 2'
             pad = (pad, pad)
 
         # check
         assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
-        assert _is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
-        assert _is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
+        assert is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
+        assert is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
         # set limits
         ticks_sep = ticks[1]  - ticks[0]

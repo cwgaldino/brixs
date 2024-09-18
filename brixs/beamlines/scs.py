@@ -877,7 +877,7 @@ def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=Non
     # metadata #
     ############
     if isinstance(s, br.Spectra):
-        print('multiple delays')
+        # print('multiple delays')
         for _s in s:
             # scan
             _s.scan = scan 
