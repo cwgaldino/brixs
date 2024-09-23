@@ -1176,7 +1176,7 @@ def verify_curv(scan, popt=None, ncols=None, nrows=None, deg=2, x_start=None, x_
     ################
     # process data #
     ################
-    d   = _dataset2dict(ds=ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=False, include_metadata_for_each_image=False, proposal=proposal)
+    d   = _dataset2dict(ds=ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=False, include_metadata_for_each_image=False)
     ims = d['ims']
     im  = d['im']
     s   = d['s']
@@ -1511,7 +1511,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             
         Args:
             n1 (int): number of pixels to average to detect a photon hit candidate, e.g., a photon hit candidate 
-            is selected if the average of the intensities within a n1-by-n1 square exceeds avg_threshold.
+                is selected if the average of the intensities within a n1-by-n1 square exceeds avg_threshold.
             n2 (int): For a photon hit candidates the 'center-of-mass' of the photon hit is calculated 
                 within a (n1+n2)-by-(n1+n2) square. n2 must be an even number to ensure that the 
                 `center of mass` of a photon hit is calculated in a square where the pixel with the 
@@ -1530,6 +1530,9 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             MAX_PHOTONS (number or False): if number, this function will raise an error if the number of 
                 detected photons exceed MAX_PHONTOS
         
+        Returns:
+            PhotonEvents and double PhotonEvents in terms of x_centers and y_centers
+
         Note:
             The averaging n1 prevents that noise is counted as a candidate. By averaging, we are
             requiring that, not only the `central` pixel is iluminated, but also the surrounding 
@@ -1548,8 +1551,17 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             such as one has no photon at `negative` energy loss. One can do this by slowly increasing 
             avg_threshold, and/or by visually inspecting the image using
             
+            >>> avg_threshold = <increase_value_slowly>
+            >>> n1 = 2
+            >>> n2 = 2
+            >>> pe, pe2 = scs.centroid(n1, n2, avg_threshold, double_threshold=<very_high_number>, floor=True)
+            >>>
             >>> br.figure()
             >>> im.moving_average(n1).plot()
+            >>> pe.plot()
+
+            if the photon count per image is so low that the elastic line cannot be identified and therefore
+            the `negative` energy loss region is unkown, then one have to sum many images.  
             
         Note:
             For determining a resonable double_threshold, I think the best option is to get a pixel which
@@ -1571,7 +1583,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         
             This example goes over the step-by-step algorithm for detecting a candidate and assigning a photon hit.
         
-            Given the follwoing matrix:
+            Given the following matrix:
 
                 [[14, -7,  4,  6, -4,  8],
                  [14,  4, -9, 79, 52, 10],
@@ -1587,24 +1599,23 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
                  [-2, -1, -2, -5, -7, -6],
                  [ 0,  4,  4, -2, -6,  0]]
                  
-            (note that in this example we are using a aprox rounded average to facilitate the visualization
-            of the matrix, but the script does an exact calculation).
+            note that in this example we are using a "aprox" rounded average to facilitate the visualization
+            of the matrix (instead of an "exact" average), but the script does an exact calculation.
                  
             For avg_treshold = 25, we have two spots which are candidates: (x, y) = (3, 0) and (3, 1).
             
             Between these two spots, (3, 0) will be disregarded, because the intensity of (3, 1) is 
-            brighest.
-            
-            Going back to the original matrix, the position (3, 1) yields intensity 79. We then get
-            pixels surrounding it (n1 x n1) like:
+            brighest. Going back to the original matrix, we see that position (3, 1) yields intensity 79
+            (note that the pixels pixels that yielded 42 in the averaged (n1 x n1) matrix are:
             
             [[79, 52],
              [19, 17]]
-             
-            (these are the pixels that yielded 42 in the averaged matrix).
             
-            We then add pixel rows and cols to the left/right/top/bottom so to make a square of size
-            n1+n2. For n2 = 2 we have
+            From now on, we don't need to worry about the averaged (n1 x n1) matrix. This matrix is only
+            used to find the candidates. 
+
+            In this example, the only candidate is (3, 1). We then gather pixel rows and cols to the 
+            left/right/top/bottom of the candidate so to make a square of size n1+n2. For n2 = 2 we have
             
             [[ 4,  6, -4,  8],
              [-9, 79, 52, 10],
@@ -1650,39 +1661,6 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             
             The position of a photon hit is then calculated by the 2D weighted sum of the intensities 
             (the mean x and y values within a spot).
-            
-            
-            
-            
-                
-                
-        Obsolete:
-            Note:
-                ESRF algorithm: n1=1, n2=2, mode='energy', energy=<photon-energy>
-                XFEL algorithm: n1=2, n2=2, mode='std' [note that XFEL cannot be 100% 
-                reproduced with this code because in the XFEL algorithm the brightest pixel
-                within a `spot` is detected on the averaged (moving average) image instead
-                of on the original image. Mostly, the original XFEL code leads to some candidates 
-                at the edges to be left out]
-            
-            Args:
-                mode (str): mode for calculating threshold
-                    `manual`: 'treshold' must be passed as kwargs
-
-                    `std` [XFEL]: 'treshold' must be given in terms of `number of 
-                    standard deviations`, i.e., 'treshold'=3.5 (default) will assume
-                    that pixels with intensity higher than intensity_avg+3.5*intensity_std
-                    is a candidate for photon hit.
-
-                    `energy` [ESRF]: 'threshold' is defined as (0.2) * (photon_energy/3.6/1.06)
-                    where 3.6 and 1.06 are a factor defined by the ADU of the detector. 
-                    Photon energy must be passed with the kwarg 'energy'.
-                double_factor (number, optional): the treshold factor in which to indentify double photon events, e.g.,
-                    if the summed intensity of a spot [(n1+n2)-by-(n1+n2) square] is bigger than 
-                    treshold*double_factor, then this spot is identified as a double photon event.
-        
-        Returns:
-            PhotonEvents, double PhotonEvents in terms of x_centers and y_centers
         """
         ###################
         # check n1 and n2 #

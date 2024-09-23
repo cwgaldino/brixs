@@ -2,13 +2,6 @@
 # -*- coding: utf-8 -*-
 """BRIXS settings file
 
-
-###################
-# DEVELOPERS NOTE #
-###################
-
-Internal variables:
-
 ################################
 # Reserved and forbidden words #
 ################################
@@ -82,6 +75,9 @@ FIGURE_GRID (tuple): if not False, FIGURE_GRID will spread new figures
 
 FIGURE_GRID_OFFSET (tuple): if FIGURE_GRID is not False, FIGURE_GRID_OFFSET 
     defines the spacing in px between new figures in the grid. Default is (40, 0).
+
+FIGURE_ONCLICK (tuple): change the default `onclick` function for br.figure()
+    figures. See br.figmanip._onclick() for an example.
 """
 
 # %% -------------------------- obsolete text ----------------------------- %% #
@@ -110,6 +106,7 @@ class _settings():
 
         self.FIGURE_GRID              = False  # (rows, cols) -> (1, 1) same as False 
         self.FIGURE_GRID_OFFSET       = (40, 0)
+        self.FIGURE_ONCLICK           = None 
 
         ############
         # internal #
@@ -120,8 +117,8 @@ class _settings():
                                  'Image':       {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []},
                                  'Dummy':       {'methods':[], 'vars':[], 'pseudovars': []}}
-        self._extra    = {'Spectrum':{}, 'Spectra':{}, 'Image':{}, 'PhotonEvents':{}, 'Dummy':{}}
-        self._modfiers = {'shift':[], 'offset':[], 'factor':[], 'calib':[]}
+        self._extra     = {'Spectrum':{}, 'Spectra':{}, 'Image':{}, 'PhotonEvents':{}, 'Dummy':{}}
+        self._modifiers = {'shift':[], 'offset':[], 'factor':[], 'calib':[]}
 
         #############
         # help text #
