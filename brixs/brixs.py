@@ -258,6 +258,11 @@ def _attr2str(attrs_dict, verbose):
             ########################
             elif isinstance(attrs_dict[name], Iterable):
                 final.append(f'{name}: {arraymanip.array2list(attrs_dict[name])}')
+            ##################
+            # type: filepath #
+            ##################
+            elif isinstance(attrs_dict[name], Path):
+                final.append(f'{name}: {attrs_dict[name]}')           
             ################
             # type: number #
             ################
@@ -323,37 +328,13 @@ def _str2attr(header, indentation=0, verbose=False):
 
 # %% ====================== modified figure function ======================= %% #
 def figure(*args, **kwargs):
-    """Create figure object. Wrapper for `plt.figure()`_.
-
-    The following br.settings affect figure:
+    """same as br.figmanip.figure(), but the following br.settings affect figure:
 
         br.settings.FIGURE_POSITION
         br.settings.FIGURE_FORCE_ON_TOP
         br.settings.FIGURE_DPI
         br.settings.FIGURE_SIZE
         br.settings.FIGURE_GRID
-
-
-    Mouse click behavior:
-
-        Right click:
-            x value is copied to the clipboard.
-        Left click OR (y + Right click):
-            y value is copied to the clipboard.
-        Middle click:
-            copies cursor position in terms of figure coordinates.
-    Args:
-        *args, **kwargs: args and kwargs are passed to `plt.figure()`.
-
-    Note:
-        This function overwrites the behavior of `figsize` parameters. In
-        plt.figure(figsize=(w, h)), w and h must be given in inches. However,
-        this function gets `w` and `h` in cm. 
-    
-    Returns:
-        figure object
-    
-    .. _plt.figure(): https://matplotlib.org/stable/api/figure_api.html
     """
     fig = figmanip.figure(*args, **kwargs)
 
@@ -362,6 +343,12 @@ def figure(*args, **kwargs):
     ############
     if settings.FIGURE_POSITION is not None:
         figmanip.set_window_position(settings.FIGURE_POSITION)
+
+    ###############
+    # set onclick #
+    ###############
+    if settings.FIGURE_ONCLICK is not None:
+        cid1 = fig.canvas.mpl_connect('button_press_event', settings.FIGURE_ONCLICK)
 
     # #############
     # # force top #
@@ -410,9 +397,7 @@ def figure(*args, **kwargs):
     return fig
 
 def subplots(*args, **kwargs):
-    """Create a figure and a set of subplots. Wrapper for `plt.subplots()`_.
-
-    The following br.settings affect figure:
+    """same as br.figmanip.subplots(), but the following br.settings affect figure:
 
         br.settings.FIGURE_POSITION
         br.settings.FIGURE_FORCE_ON_TOP
@@ -420,39 +405,6 @@ def subplots(*args, **kwargs):
         br.settings.FIGURE_SIZE
         br.settings.FIGURE_GRID
 
-
-    Mouse click behavior:
-
-        Right click:
-            x value is copied to the clipboard.
-        Left click OR (y + Right click):
-            y value is copied to the clipboard.
-        Middle click:
-            copies cursor position in terms of figure coordinates.
-    
-    Args:
-        nrows, ncols (int): Number of rows/columns of the subplot grid.
-        sharex, sharey (bool or str, optional): Share the x or y axis between 
-            axes. Options are: True, False, 'all', 'row', 'col'. Default is False
-        hspace, wspace (float, optional): The amount of height/width reserved for space 
-            between subplots, expressed as a fraction of the average axis 
-            height/width. Default is 0.3.
-        width_ratios, height_ratios (list, optional): Defines the relative heights/widths of the 
-            ows/columns. Each row/column gets a relative height/width of 
-            ratios[i] / sum(ratios). If not given, all rows/columns will have 
-            the same width. 
-        **fig_kw: All additional keyword arguments are passed to the plt.figure call
-
-
-    Note:
-        This function overwrites the behavior of `figsize` parameters. In
-        plt.figure(figsize=(w, h)), w and h must be given in inches. However,
-        this function gets `w` and `h` in cm. 
-    
-    Returns:
-        fig, axes
-    
-    .. _plt.subplots(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.subplots.html
     """
     fig, axes = figmanip.subplots(*args, **kwargs)
 
@@ -461,6 +413,12 @@ def subplots(*args, **kwargs):
     ############
     if settings.FIGURE_POSITION is not None:
         figmanip.set_window_position(settings.FIGURE_POSITION)
+
+    ###############
+    # set onclick #
+    ###############
+    if settings.FIGURE_ONCLICK is not None:
+        cid1 = fig.canvas.mpl_connect('button_press_event', settings.FIGURE_ONCLICK)
 
     # #############
     # # force top #
@@ -1544,7 +1502,7 @@ class Spectrum(metaclass=_Meta):
         s._shift += value
 
         # extra
-        for extra in settings._modfiers['shift']:
+        for extra in settings._modifiers['shift']:
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_shift(value)
             
@@ -1564,7 +1522,7 @@ class Spectrum(metaclass=_Meta):
         s._offset += value
 
         # extra
-        for extra in settings._modfiers['offset']:
+        for extra in settings._modifiers['offset']:
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_offset(value)
             
@@ -1590,7 +1548,7 @@ class Spectrum(metaclass=_Meta):
         s._offset *= value
 
         # extra
-        for extra in settings._modfiers['factor']:
+        for extra in settings._modifiers['factor']:
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_factor(value)
             
@@ -1616,7 +1574,7 @@ class Spectrum(metaclass=_Meta):
         s._shift *= value
 
         # extra
-        for extra in settings._modfiers['calib']:
+        for extra in settings._modifiers['calib']:
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_calib(value)
             
