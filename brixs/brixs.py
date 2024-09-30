@@ -1,31 +1,48 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Core brixs module. Defines the main objects: Spectrum, Spectra, PhotonEvents, Image, Dummy
+"""Core brixs module. Defines the main objects: 
 
-Every BRIXS object has 5 types of attributes: `Core` (stores the main 
-data of the object), `Check` (asserts data quality), `Modifiers` 
-(absolute values of 'shift', 'factor', 'offset', 'calib'), `Labels` 
-(labels for datapoints), `User`(user-defined attributes).
+    Spectrum, Spectra, PhotonEvents, Image, Dummy
+
+Every BRIXS object has 5 types of attributes: 
+
+    `Core`: 
+        stores the main data of the object
+
+    `Check`: 
+        asserts data quality
+
+    `Modifiers` (or `base modifiers`): 
+        absolute values of 'shift', 'factor', 'offset', 'calib'
+
+    `Labels`: 
+        labels for datapoints
+
+    `User`: 
+        user-defined attributes
 
 *[FOR DEVELOPERS]* Check attrs:
     
-    `check` attrs cannot be user modifiable and shall only 
+    1. `check` attrs cannot be user modifiable and shall only 
     be modified via 'check methods'
+
+    2. check attrs exist so one does not waste time running checks all the time.
+    Once a check is done, it's result is saved in a check attr.
 
 *[FOR DEVELOPERS]* Writing new methods:
     
-    Methods shall avoid changing the `core` attrs inside 
+    1. Methods shall avoid changing the `core` attrs inside 
     `self`. Instead, a copy of `self` shall be created, modified, and 
     returned to the user. If `core` attrs are modified directly on `self`, 
     this should be explicitly clear in the docstring.
 
-    Methods that return a copy of `self` must (as much as possible) copy all 
+    2. Methods that return a copy of `self` must (as much as possible) copy all 
     suitable attrs (`Modifiers`, `Labels`, and `User`). As for `Check` attrs, 
-    methods must ensure that `check` attrs are still valid after operation
+    methods must ensure that `check` attrs are still valid after operating
     on `self` or on the copy of `self`. If `check` attrs are not valid 
     anymore, reset them to None.  
 
-    Methods should take into consideration what happens in case the object is 
+    3. Methods should take into consideration what happens in case the object is 
     'empty' (object with no data).  
 
 *[FOR DEVELOPERS]* Copy() methods must copy all attrs including all 4 attrs types
@@ -497,6 +514,8 @@ class Spectrum(metaclass=_Meta):
             x, y (array): 1D arrays.
         
         *2. Check*
+            has_nan (bool): True if x or y has non-numeric values (NaN).
+                Can only be modified by s.check_nan().
             step (number): None or a number if the step between two data points 
                 is the same through out the x vector. Can only be modified by 
                 s.check_step() method.
@@ -514,7 +533,7 @@ class Spectrum(metaclass=_Meta):
         *5. User*
             anything that the user defined on the fly.        
    """
-    _read_only     = ['step', 'monotonicity']
+    _read_only     = ['step', 'monotonicity', 'has_nan']
     _non_removable = []
 
     def __init__(self, x=None, y=None, filepath=None, **kwargs):
@@ -529,6 +548,7 @@ class Spectrum(metaclass=_Meta):
         # check
         self._step         = None
         self._monotonicity = None
+        self._has_nan       = None
 
         # modifiers
         self._calib  = 1
@@ -607,6 +627,7 @@ class Spectrum(metaclass=_Meta):
         ##########################
         self._step         = None
         self._monotonicity = None
+        self._has_nan      = None
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
@@ -653,6 +674,13 @@ class Spectrum(metaclass=_Meta):
         # set attribute #
         #################
         self._y = np.array(value, dtype='float')
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        # self._step         = None
+        # self._monotonicity = None
+        self._has_nan      = None
     @y.deleter
     def y(self):
         raise AttributeError('Cannot delete object.')
@@ -1174,8 +1202,10 @@ class Spectrum(metaclass=_Meta):
             else:
                 kwargs['fmt'] = f'%.{number_of_decimal_places}f'
         else:
-            if self.check_nan():
-                temp = self.copy().remove_nan()
+            if self.has_nan() is None:
+                self.check_nan()
+            if self.has_nan:
+                temp = self.remove_nan()
             else:
                 temp = self.copy()
             number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in temp.x])
@@ -1321,15 +1351,29 @@ class Spectrum(metaclass=_Meta):
     # check #
     #########
     def check_nan(self):
-        """return True if x or y have non-numeric (NaN) values"""
-        if np.isnan(self.x).any():
-            return True
-        else:
-            return np.isnan(self.y).any()
+        """Check if x or y have non-numeric (NaN) values
         
+        Returns:
+            None
+        """
+        if np.isnan(self.x).any():
+            self._has_nan = True
+        elif np.isnan(self.y).any():
+            self._has_nan = True
+        else:
+            self._has_nan = False
+        return None
+    
     def remove_nan(self):
-        """remove data points (x, y) that contain non-numeric (NaN) values"""
-        if self.check_nan() == False:
+        """remove data points (x, y) that contain non-numeric (NaN) values
+        
+        Returns:
+            Spectrum
+        """
+        if self.has_nan is None:
+            self.check_nan()
+
+        if self.has_nan:
             return self.copy()
         else:
             index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
@@ -1341,7 +1385,8 @@ class Spectrum(metaclass=_Meta):
             s._x = x
             s._y = y
             # reset checks
-            self._step = None
+            s._step = None
+            s._has_nan = False
             return s
     
     def check_step(self, max_error=0.1):
@@ -1491,9 +1536,9 @@ class Spectrum(metaclass=_Meta):
 
         return s
 
-    #############
-    # modifiers #
-    #############
+    ##################
+    # BASE modifiers #
+    ##################
     def set_shift(self, value):
         """Add value to x-coordinates.
 
@@ -1586,9 +1631,9 @@ class Spectrum(metaclass=_Meta):
             
         return s
 
-    ###############
-    # modifiers 2 #
-    ###############
+    #############
+    # modifiers #
+    #############
     def set_x_via_polyval(self, p):
         """Set x to np.polyval(p, x).
 
@@ -1800,6 +1845,7 @@ class Spectrum(metaclass=_Meta):
         s._y    = y
         s._step = None
         s._monotonicity = None
+        s._has_nan = None
 
         return s
 
@@ -1824,6 +1870,7 @@ class Spectrum(metaclass=_Meta):
         s._y    = y
         s._step = None
         s._monotonicity = None
+        s._has_nan = None
 
         return s
     
@@ -1846,6 +1893,7 @@ class Spectrum(metaclass=_Meta):
         s._y    = y
         s._step = None
         s._monotonicity = None
+        s._has_nan = None
 
         return s
 
@@ -1884,6 +1932,7 @@ class Spectrum(metaclass=_Meta):
         s._y    = y
         s._step = None
         s._monotonicity = None
+        s._has_nan = None
         
         return s
 
@@ -1957,6 +2006,7 @@ class Spectrum(metaclass=_Meta):
         s._y    = y
         s._step = None
         s._monotonicity = None
+        s._has_nan = None
         
         return s
 
@@ -2368,6 +2418,9 @@ class Spectra(metaclass=_Meta):
                     or 'decreasing' if every spectrum has the same monotonicity.
                     Can only be modified by ss.check_monotonicity()
                     method.
+                has_nan (bool): True if at least one spectrum has non-numeric
+                    (NaN) values in either x or y axis. Can only be modified
+                    by ss.check_nan().
 
             *3. Modifiers*
                 None
@@ -2378,7 +2431,7 @@ class Spectra(metaclass=_Meta):
             *5. User*
                 anything that the user defined on the fly.        
     """
-    _read_only     = ['step', 'length', 'x', 'monotonicity']
+    _read_only     = ['step', 'length', 'x', 'monotonicity', 'has_nan']
     _non_removable = []
 
     def __init__(self, data=None, folderpath=None, filepath=None, **kwargs):
@@ -2394,6 +2447,7 @@ class Spectra(metaclass=_Meta):
         self._step         = None
         self._x            = None
         self._monotonicity = None
+        self._has_nan      = None
 
         # modifiers
         pass
@@ -2446,6 +2500,7 @@ class Spectra(metaclass=_Meta):
         self._step         = None
         self._x            = None
         self._monotonicity = None
+        self._has_nan = None
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
@@ -3525,7 +3580,9 @@ class Spectra(metaclass=_Meta):
                 compressed gzip format.
             number_of_decimal_places (int, optional): if not None, this argument
                 defines the number of decimal places to save the data (it does
-                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                not affect attrs, only x and y arrays). If list, it must have two 
+                values corresponding to the number_of_decimal_places to be used for 
+                to x and y separately. The 'fmt' argument overwrites
                 number_of_decimal_places. Default is None. If None, the number
                 of decimal places will be such that data will be saved with the 
                 best precision necessary.
@@ -3617,19 +3674,25 @@ class Spectra(metaclass=_Meta):
             if 'fmt' in kwargs: # pick best format
                 pass
             elif number_of_decimal_places is not None:
-                kwargs['fmt'] = f'%.{number_of_decimal_places}f'
-            else: # pick best format
-                if self.check_nan():
-                    pass
-                #     temp = self.copy().remove_nan()
-                # else:
-                #     temp = self.copy()
+                if isinstance(number_of_decimal_places, Iterable):
+                    kwargs['fmt'] = [f'%.{number_of_decimal_places[0]}f'] + [number_of_decimal_places[1]]*len(temp)
                 else:
-                    decimal = max([numanip.n_decimal_places(x) for x in self.x])
-                    temp_decimal = max([numanip.n_decimal_places(y) for y in arraymanip.flatten(ys)])
-                    if temp_decimal > decimal:
-                        decimal = copy.deepcopy(temp_decimal)
-                    kwargs['fmt'] = f'%.{decimal}f'
+                    kwargs['fmt'] = f'%.{number_of_decimal_places}f'
+            else: # pick best format
+                if self.has_nan() is None:
+                    self.check_nan()
+                if self.has_nan:
+                    temp = self.remove_nan()
+                else:
+                    temp = self.copy()
+
+                number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in self.x])
+                number_of_decimal_places_y = 0
+                for s in temp:
+                    t = max([numanip.n_decimal_places(y) for y in s.y])
+                    if t > number_of_decimal_places_y:
+                        number_of_decimal_places_y = t
+                kwargs['fmt'] = [f'%.{number_of_decimal_places_x}f'] + [number_of_decimal_places_y]*len(temp)
 
             # final data to save
             final = np.zeros((self.length, len(self)+1))
@@ -3757,15 +3820,30 @@ class Spectra(metaclass=_Meta):
     # check #
     #########
     def check_nan(self):
-        """return True if x or y have non-numeric (NaN) values"""
+        """Check if at least one spectrum have non-numeric (NaN) values
+        
+        Returns:
+            None
+        """
         for s in self:
-            if s.check_nan():
-                return True
-        return False
+            if self.has_nan is None: 
+                s.check_nan()
+            if self.has_nan:
+                self.has_nan = True
+                return
+        self.has_nan = True
+        return
     
     def remove_nan(self):
-        """remove data points (x, y) that contain non-numeric (NaN) values"""
-        if self.check_nan() == False:
+        """remove data points (x, y) that contain non-numeric (NaN) values
+        
+        Returns:
+            Spectra
+        """
+        if self.has_nan is None:
+            self.check_nan()
+
+        if self.has_nan == False:
             return self.copy()
         else:
             ss = self.copy()
@@ -3773,10 +3851,11 @@ class Spectra(metaclass=_Meta):
             for i, s in enumerate(ss):
                 ss[i] = s.remove_nan()
             # reset checks
-            ss._step   = None
-            ss._length = None
-            ss._x      = None
-            return s    
+            ss._step    = None
+            ss._length  = None
+            ss._x       = None
+            ss._has_nan = False
+            return ss    
     
     def check_monotonicity(self):
         """Sets monotonicity attribute to 'increasing' or 'decreasing'.
@@ -4056,9 +4135,9 @@ class Spectra(metaclass=_Meta):
         # update length
         self._length = len(self.x)
 
-    #############
-    # modifiers #
-    #############
+    ##################
+    # BASE modifiers #
+    ##################
     def set_shift(self, value):
         """Shift data recursively.
 
@@ -4223,9 +4302,9 @@ class Spectra(metaclass=_Meta):
 
         return ss
 
-    ###############
-    # modifiers 2 #
-    ###############
+    #############
+    # modifiers #
+    #############
     def set_x_via_polyval(self, p):
         """Set x to np.polyval(p, x).
 
@@ -5678,7 +5757,7 @@ class Image(metaclass=_Meta):
             anything that the user defined on the fly.        
     """
     # read only and non-removable arguments
-    _read_only     = ['x_step', 'x_monotonicity', 'y_step', 'y_monotonicity']
+    _read_only     = ['x_step', 'x_monotonicity', 'y_step', 'y_monotonicity', 'has_nan']
     _non_removable = []
     
     def __init__(self, data=None, filepath=None, x_centers=None, y_centers=None, **kwargs):
@@ -5694,6 +5773,7 @@ class Image(metaclass=_Meta):
         self._y_step = None
         self._x_monotonicity = None
         self._y_monotonicity = None
+        self._has_nan = None
 
         # modifiers
         self._factor = 1
@@ -5776,6 +5856,7 @@ class Image(metaclass=_Meta):
         self._y_step         = None
         self._x_monotonicity = None
         self._y_monotonicity = None
+        self._has_nan = None
         self._factor         = 1
         self._offset         = 0
         self.x_centers       = None
@@ -6983,14 +7064,27 @@ class Image(metaclass=_Meta):
     # check #
     #########
     def check_nan(self):
-        """return True if data have non-numeric (NaN) values"""
+        """Check if data have non-numeric (NaN) values
+        
+        Returns:
+            None
+        """
         if np.isnan(self.data).any():
-            return True
-        return False
+            self._has_nan = True
+        else:
+            self._has_nan = False
+        return
     
     def find_nan(self):
-        """Return a list with positions where non-numeric (NaN) values were found"""
-        if self.check_nan():
+        """Return a list with positions where non-numeric (NaN) values were found
+        
+        Returns:
+            list
+        """
+        if self.has_nan is None:
+            self.check_nan()
+
+        if self.has_nan:
             return np.argwhere(np.isnan(self.data))
         return []
         
@@ -8676,7 +8770,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         *5. User*
             anything that the user defined on the fly.        
     """
-    _read_only = []
+    _read_only = ['has_nan']
     _non_removable = []
     
     def __init__(self, x=None, y=None, xlim=None, ylim=None, filepath=None, **kwargs): 
@@ -8689,7 +8783,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         self._y = None
 
         # check
-        pass
+        self._has_nan = None
 
         # modifiers
         pass
@@ -8726,6 +8820,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if value is None:
             self._x = None
             self._y = None
+
+            self._has_nan = None
             return
         ###################################
         # asserting validity of the input #
@@ -8747,12 +8843,15 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # empty array
         if len(value) == 0:
             self._x = None
+            self._has_nan = None
             return
         
         #################
         # set attribute #
         #################
         self._x = np.array(value, dtype='float')
+
+        self._has_nan = None
     @x.deleter
     def x(self):
         raise AttributeError('Cannot delete object.')
@@ -8766,6 +8865,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if value is None:
             self._x = None
             self._y = None
+            self._has_nan = None
+
             return
         ###################################
         # asserting validity of the input #
@@ -8787,12 +8888,15 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # empty array
         if len(value) == 0:
             self._y = None
+            self._has_nan = None
             return
         
         #################
         # set attribute #
         #################
         self._y = np.array(value, dtype='float')
+
+        self._has_nan = None
     @y.deleter
     def y(self):
         raise AttributeError('Cannot delete object.')
@@ -9462,15 +9566,29 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     # check #
     #########
     def check_nan(self):
-        """return True if x or y have non-numeric (NaN) values"""
+        """Check if x or y have non-numeric (NaN) values
+        
+        Returns:
+            None
+        """
         if np.isnan(self.x).any():
-            return True
+            self._has_nan = True
+        elif np.isnan(self.y).any():
+            self._has_nan = True
         else:
-            return np.isnan(self.y).any()
+            self._has_nan = False
+        return None
         
     def remove_nan(self):
-        """remove data points (x, y) that contain non-numeric (NaN) values"""
-        if self.check_nan() == False:
+        """remove data points (x, y) that contain non-numeric (NaN) values
+        
+        Returns:
+            Spectrum
+        """
+        if self.has_nan is None:
+            self.check_nan()
+
+        if self.has_nan:
             return self.copy()
         else:
             index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
@@ -9481,6 +9599,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             pe = self.copy()
             pe._x = x
             pe._y = y
+            pe._has_nan = False
             return pe
     
     #############
