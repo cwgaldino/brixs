@@ -117,12 +117,13 @@ the function as they need to be included manually
 >>> # setting b
 >>> b = [1, 2, 3]
 >>>
->>> # if one run the function the first time, s will be calculated
+>>> # if you run the function the first time, s will be calculated
 >>> s = processing_function(a=0, b=b)  
 >>>
->>> # if one run the function a second time, s will also be calculated because
->>> # b changed definition, so it seems like the input parameters are the same
->>> # when in fact they are not
+>>> # if you run the function a second time, s will also be calculated because
+>>> # b changed and is now different. This creates the impression that the input
+>>> # parameters are the same, when in fact they are not, therefore, the function
+>>> # runs again
 >>> s = processing_function(a=0, b=b)
 
 ###################
