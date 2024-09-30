@@ -150,17 +150,65 @@ class _BrixsObject(object):
     #########
     # attrs #
     #########       
+    def get_core_attrs(self): 
+        """return a list of core attrs"""
+        if isinstance(self, Spectrum):
+            name = 'Spectrum'
+        elif isinstance(self, Spectra):
+            name = 'Spectra'
+        elif isinstance(self, Image):
+            name = 'Image'
+        elif isinstance(self, PhotonEvents):
+            name = 'PhotonEvents'
+        elif isinstance(self, Dummy):
+            name = 'Dummy'
+        else:
+            raise ValueError('What?')
+        return settings._reserved_words[name]['pseudovars']
+        
     def get_attrs(self):
         """return attrs that are user defined.""" 
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
-    
+        # return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]
+        if isinstance(self, Spectrum):
+            name = 'Spectrum'
+        elif isinstance(self, Spectra):
+            name = 'Spectra'
+        elif isinstance(self, Image):
+            name = 'Image'
+        elif isinstance(self, PhotonEvents):
+            name = 'PhotonEvents'
+        elif isinstance(self, Dummy):
+            name = 'Dummy'
+        else:
+            raise ValueError('What?')
+        
+        return [_ for _ in dir(self)
+                if _ not in self._get_methods() 
+                and (_.startswith('__')==False and _.endswith('__')==False)
+                and _ not in settings._reserved_words[name]['pseudovars']
+                and _ not in settings._reserved_words[name]['vars']]
+
+
     def get_attrs_dict(self):
         """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words}
+        return {key: self.__getattribute__(key) for key in self.get_attrs()}
 
+    def _get_methods(self):
+        """return a list of methods available including hidden ones"""
+        methodList = []
+        for method_name in dir(self):
+            try:
+                if callable(getattr(self, method_name)):
+                    methodList.append(str(method_name))
+            except Exception:
+                methodList.append(str(method_name))
+        return methodList
+    
     def get_methods(self):
         """return a list of methods available"""
-        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
+        return [_ for _ in self._get_methods() 
+                if _.startswith('_') == False]
+                #and _.endswith('_') == False]
     
     def remove_attrs(self):
         """Delete all user defined attrs."""
@@ -485,7 +533,7 @@ def subplots(*args, **kwargs):
 # %%
 
 # %% ============================== Spectrum ============================== %% #
-class Spectrum(metaclass=_Meta):
+class Spectrum(_BrixsObject, metaclass=_Meta):
     """Returns a ``Spectrum`` object. 
 
     Args:
@@ -890,51 +938,6 @@ class Spectrum(metaclass=_Meta):
     #########
     # attrs #
     #########
-    def get_core_attrs(self): 
-        """return a list of core attrs"""
-        return settings._reserved_words['Spectrum']['pseudovars']
-    
-    def get_attrs(self):
-        """return a list of user defined attrs"""
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['Spectrum']['vars']]
-
-    def get_attrs_dict(self):
-        """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.get_attrs()}
-
-    def get_methods(self):
-        """return a list of methods available"""
-        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
-    
-    def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words]:
-            self.__delattr__(attr)
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
-    ###########
-    # attrs 2 #
-    ###########
     pass
 
     ###########
@@ -2266,7 +2269,7 @@ class Spectrum(metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################        
-    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, verbose=True, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
@@ -2294,6 +2297,8 @@ class Spectrum(metaclass=_Meta):
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
             switch_xy (bool, optional): Switch x and y axis.
+            verbose (bool, optional): if True, prints warning if ploted data has
+                nun-numeric values (NaN). Default is True.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
 
         Returns:
@@ -2310,8 +2315,15 @@ class Spectrum(metaclass=_Meta):
             if hasattr(self, 'label'):
                 temp.label = self.label
             self = temp
+        if verbose:
+            if self.has_nan is None:
+                self.check_nan()
+            if self.has_nan:
+                print('Warning: ploting spectrum with NaN values') 
         x = self.x
         y = self.y
+
+
 
         #############
         # switch xy #
@@ -2376,7 +2388,7 @@ class Spectrum(metaclass=_Meta):
         return line[0]
 
 # %% =============================== Spectra ============================== %% #
-class Spectra(metaclass=_Meta):
+class Spectra(_BrixsObject, metaclass=_Meta):
     """Returns a ``spectra`` object.
 
     Args:
@@ -2641,51 +2653,6 @@ class Spectra(metaclass=_Meta):
     #########
     # attrs #
     #########
-    def get_core_attrs(self): 
-        """return a list of core attrs"""
-        return settings._reserved_words['Spectra']['pseudovars']
-    
-    def get_attrs(self):
-        """return a list of user defined attrs"""
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['Spectra']['vars']]
-
-    def get_attrs_dict(self):
-        """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.get_attrs()}
-    
-    def get_methods(self):
-        """return a list of methods available"""
-        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
-    
-    def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in self.get_attrs():
-            self.__delattr__(attr)
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
-    ###########
-    # attrs 2 #
-    ###########
     def create_attr_from_spectra(self, attr, name=None):
         """create new Spectra attr based on Spectrum attrs.
 
@@ -3829,9 +3796,9 @@ class Spectra(metaclass=_Meta):
             if self.has_nan is None: 
                 s.check_nan()
             if self.has_nan:
-                self.has_nan = True
+                self._has_nan = True
                 return
-        self.has_nan = True
+        self._has_nan = True
         return
     
     def remove_nan(self):
@@ -5564,7 +5531,7 @@ class Spectra(metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################  
-    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, verbose=True, **kwargs):
         """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
@@ -5602,6 +5569,8 @@ class Spectra(metaclass=_Meta):
             phi, pvi (number, optional): percentage wise horizontal and vertical 
                 increments for cascading plots (percentage of the y-range for 
                 each spectrum).
+            verbose (bool, optional): if True, prints warning if ploted data has
+                nun-numeric values (NaN). Default is True.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
 
         Returns:
@@ -5684,12 +5653,12 @@ class Spectra(metaclass=_Meta):
         ########
         temp = [0]*len(self)
         for i in range(len(self)):
-            temp[i] = self.data[i].plot(ax=ax, label=label[i], offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, **kwargs)
+            temp[i] = self.data[i].plot(ax=ax, label=label[i], offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
 
         return temp
 
 # %% ================================ Image =============================== %% #
-class Image(metaclass=_Meta):
+class Image(_BrixsObject, metaclass=_Meta):
     """Returns a ``spectra`` object.
 
     Args:
@@ -6301,51 +6270,6 @@ class Image(metaclass=_Meta):
     #########
     # attrs #
     #########
-    def get_core_attrs(self): 
-        """return a list of core attrs"""
-        return settings._reserved_words['Image']['pseudovars']
-    
-    def get_attrs(self):
-        """return a list of user defined attrs"""
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['Image']['vars']]
-
-    def get_attrs_dict(self):
-        """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.get_attrs()}
-    
-    def get_methods(self):
-        """return a list of methods available"""
-        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
-    
-    def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in self.get_attrs():
-            self.__delattr__(attr)
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
-    ###########
-    # attrs 2 #
-    ###########
     pass
 
     ###########
@@ -9074,18 +8998,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     #########
     # attrs #
     #########
-    def get_core_attrs(self): 
-        """return a list of core attrs"""
-        return settings._reserved_words['PhotonEvents']['pseudovars']
 
-    def get_attrs(self):
-        """return a list of user defined attrs"""
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in settings._reserved_words['PhotonEvents']['vars']]
-
-    def get_attrs_dict(self):
-        """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.get_attrs()}
-    
     ###########
     # support #
     ###########
@@ -10253,51 +10166,6 @@ class Dummy():
     #########
     # attrs #
     #########
-    def get_core_attrs(self): 
-        """return a list of core attrs"""
-        return settings._reserved_words['Dummy']['pseudovars']
-    
-    def get_attrs(self):
-        """return a list of user defined attrs"""
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False and key not in ['_data', ]]
-
-    def get_attrs_dict(self):
-        """return a dict of user defined attrs and their values"""
-        return {key: self.__getattribute__(key) for key in self.get_attrs()}
-    
-    def get_methods(self):
-        """return a list of methods available"""
-        return [key for key in self.__dir__() if key.startswith('_') == False and key not in self.get_attrs() + self.get_core_attrs()]
-    
-    def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in self.get_attrs():
-            self.__delattr__(attr)
-
-    def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
-
-        Args:
-            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
-                to copy user defined attributes from.
-        
-        Returns:
-            None
-        """
-        # check type
-        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
-            pass
-        else:
-            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
-
-        # transfer attrs
-        for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
-            self.__setattr__(attr, value)
-
-    ###########
-    # attrs 2 #
-    ###########
     pass
 
     ###########

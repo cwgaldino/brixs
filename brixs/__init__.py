@@ -17,8 +17,8 @@ from .brixs import subplots
 # these words will raise an error if the user try to define attrs with these words
 # this avoids errors when converting from one object to another (e.g. im -> s)
 # this also avoid that import methods or variables are overwritten
-# reserved words:  methods, vars, and pseudovars for each object
-# forbidden words: all methods from same object + methods, vars, and pseudovar from all other objects
+# reserved words of an object:  methods, vars, and pseudovars of the object
+# forbidden words of an object: (all methods of a given object) + (methods, vars, and pseudovar from all other objects)
 import types
 for object in (Spectrum, Spectra, Image, PhotonEvents, Dummy):
     name  = object.__name__
