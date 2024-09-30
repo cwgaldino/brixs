@@ -1099,9 +1099,11 @@ class Spectrum(metaclass=_Meta):
             filepath (string or path object, optional): filepath or file handle.
                 If the filename ends in .gz, the file is automatically saved in
                 compressed gzip format.
-            number_of_decimal_places (int, optional): if not None, this argument
+            number_of_decimal_places (int or list, optional): if not None, this argument
                 defines the number of decimal places to save the data (it does
-                not affect attrs, only x and y arrays). The 'fmt' argument overwrites
+                not affect attrs, only x and y arrays). If list, it must have two 
+                values corresponding to the number_of_decimal_places to be used for 
+                to x and y separately. The 'fmt' argument overwrites
                 number_of_decimal_places. Default is None. If None, the number
                 of decimal places will be such that data will be saved with the 
                 best precision necessary.
@@ -1167,14 +1169,18 @@ class Spectrum(metaclass=_Meta):
         if 'fmt' in kwargs: # pick best format
             pass
         elif number_of_decimal_places is not None:
-            kwargs['fmt'] = f'%.{number_of_decimal_places}f'
+            if isinstance(number_of_decimal_places, Iterable):
+                kwargs['fmt'] = (f'%.{number_of_decimal_places[0]}f', f'%.{number_of_decimal_places[1]}f')
+            else:
+                kwargs['fmt'] = f'%.{number_of_decimal_places}f'
         else:
             if self.check_nan():
                 temp = self.copy().remove_nan()
             else:
                 temp = self.copy()
-            decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(temp.data)])
-            kwargs['fmt'] = f'%.{decimal}f'
+            number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in temp.x])
+            number_of_decimal_places_y = max([numanip.n_decimal_places(y) for y in temp.y])
+            kwargs['fmt'] = (f'%.{number_of_decimal_places_x}f', f'%.{number_of_decimal_places_y}f')
         kwargs.setdefault('delimiter', ', ')
         kwargs.setdefault('newline', '\n')
         kwargs.setdefault('comments', '# ')
@@ -8911,8 +8917,14 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if isinstance(object, PhotonEvents):
             final = PhotonEvents(x=list(self.x) + list(object.x), y=list(self.y) + list(object.y))
             final.copy_attrs_from(self)
-            final.xlim = (min([self.xlim[0], object.xlim[0]]), max([self.xlim[1], object.xlim[1]]))
-            final.ylim = (min([self.ylim[0], object.ylim[0]]), max([self.ylim[1], object.ylim[1]]))
+            try:
+                final.xlim = (min([self.xlim[0], object.xlim[0]]), max([self.xlim[1], object.xlim[1]]))
+            except TypeError:
+                pass
+            try:
+                final.ylim = (min([self.ylim[0], object.ylim[0]]), max([self.ylim[1], object.ylim[1]]))
+            except TypeError:
+                pass
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Photon Events')
 
