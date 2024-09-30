@@ -14,10 +14,10 @@ from .model import Model
 br.settings._extra['Spectrum']['model'] = Model
 br.settings._extra['Spectra']['model']  = Model
 
-br.settings._modfiers['shift'].append('model')
-br.settings._modfiers['offset'].append('model')
-br.settings._modfiers['factor'].append('model')
-br.settings._modfiers['calib'].append('model')
+br.settings._modifiers['shift'].append('model')
+br.settings._modifiers['offset'].append('model')
+br.settings._modifiers['factor'].append('model')
+br.settings._modifiers['calib'].append('model')
 
 # %% ========================= model functions ============================ %% #
 from .model_functions import *
