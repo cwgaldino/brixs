@@ -35,6 +35,10 @@ def gaussian_area(x, A, c, sigma):
 
     .. math:: y(x) = \frac{\text{Area}}{\sqrt{2\pi} w} e^{-\frac{(x-c)^2}{2 w^2}}
 
+    where,
+
+    .. math:: \text{amp } = \frac{\text{Area }}{\sqrt{2 \pi} |\sigma| }
+
     :param x: x array
     :param A: Area
     :param c: Center
@@ -42,7 +46,6 @@ def gaussian_area(x, A, c, sigma):
     :return: :math:`y(x)`
     """
     return gaussian(x, A/(np.sqrt(2*np.pi)*sigma), c, sigma)
-    # return A/(np.sqrt(2*np.pi)*abs(w))  *np.exp(-(x-c)**2/(2*w**2))
 
 
 def gaussian_fwhm(x, amp, c, w):
@@ -61,13 +64,16 @@ def gaussian_fwhm(x, amp, c, w):
     :return: :math:`y(x)`
     """
     return gaussian(x, amp, c, w/(2*np.sqrt(2*np.log(2))))
-    # return A*np.exp((-4*np.log(2)*((x-c)**2))/(w**2))
 
 
 def gaussian_area_fwhm(x, A, c, w):
     r"""Gaussian distribution.
 
     .. math:: y(x) = \frac{2 \sqrt{\ln(2)} A}{w \sqrt{\pi}}  e^{-\frac{4 \ln(2) (x-c)^2}{w^2}}
+
+    where,
+
+    .. math:: \text{ amp }  = \frac{ \text{Area } 2 \sqrt{\ln(2)}} {\sqrt{\pi}w }
 
     :param x: x array
     :param A: Area
@@ -77,7 +83,6 @@ def gaussian_area_fwhm(x, A, c, w):
     """
     w = w/(2*np.sqrt(2*np.log(2)))
     return gaussian(x, A/(np.sqrt(2*np.pi)*w), c, w)
-    # return (A/(w*np.sqrt(np.pi/4*np.log(2))))*np.exp((-4*np.log(2)*((x-c)**2))/(w**2))
 
 
 def lorentzian(x, gamma, c):
@@ -108,11 +113,11 @@ def lorentzian(x, gamma, c):
 def lorentzian_fwhm(x, amp, c, w):
     r"""Cauchy–Lorentz distribution.
 
-    .. math:: y(x) = \text{amp } \frac{w^2}{w^2 + (x-c)^2}
+    .. math:: y(x) = \text{amp } \frac{w^2}{w^2 + 4 * (x-c)^2}
 
     where,
 
-    .. math:: \text{Area }= \text{amp } \pi w
+    .. math:: \text{Area }= \text{amp } \pi w \frac{1}{2}
 
     :param x: x array
     :param amp: Amplitude
@@ -120,8 +125,7 @@ def lorentzian_fwhm(x, amp, c, w):
     :param w: FWHM
     :return: :math:`y(x)`
     """
-    return amp*(np.pi*w) * lorentzian(x, gamma=w, c=c)
-    # return A*((w**2)/(w**2 + 4* (x-c)**2))
+    return amp*((w**2)/(w**2 + 4* (x-c)**2))
 
 
 def lorentzian_area_fwhm(x, A, c, w):
@@ -129,21 +133,30 @@ def lorentzian_area_fwhm(x, A, c, w):
 
     .. math:: y(x) = A \frac{1}{\pi w} \frac{w^2}{w^2 + (x-c)^2}
 
+    where,
+
+    .. math:: \text{amp }  = \frac{2 \text{Area }}{\pi w }
+
     :param x: x array
     :param A: Area
     :param c: Center
     :param w: FWHM
     :return: :math:`y(x)`
     """
-    return A * lorentzian(x, gamma=w, c=c)
-    # return ((2*A)/(np.pi))*((w)/(w**2 + 4*(x-c)**2))
+    amp = 2*A/(np.pi*w)
+    return lorentzian_fwhm(x, amp, c, w)
 
 
 def voigt_fwhm(x, amp, c, w, m):
     r"""Pseudo-voigt curve.
 
-    .. math:: y(x) = A \left[ m  \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
+    .. math:: y(x) = \text{amp } \left[ m  \frac{w^2}{w^2 + 4*(x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
 
+    where,
+
+    .. math:: \text{Area } = \frac{\text{amp } w}{2}     \left[ m \pi +   (1-m)      \frac{\sqrt{\pi}}{\sqrt{\ln(2)} }  \right]  
+
+    
     :param x: x array
     :param amp: Amplitude
     :param c: Center
@@ -164,7 +177,7 @@ def voigt_area_fwhm(x, A, c, w, m):
 
     where,
 
-    .. math:: \text{amp }= \frac{A}{w} \left[ m\frac{1}{\pi} + (1-m)\frac{2\sqrt{\ln(2)}}{\sqrt{\pi}} \right]
+    .. math:: \text{amp }= \frac{2}{w}  \frac{\text{Area }}{m \pi + (1-m) \frac{\sqrt{\pi}}{\sqrt{\ln(2)} } } 
 
     :param x: x array
     :param A: is the Area
@@ -173,10 +186,12 @@ def voigt_area_fwhm(x, A, c, w, m):
     :param m: Factor from 1 to 0 of the lorentzian amount
     :return: :math:`y(x)`
     """
-    lorentz = lorentzian_area_fwhm(x, 1, c, w)
-    gauss = gaussian_area_fwhm(x, 1, c, w)
+    lorentz = lorentzian_fwhm(x, 1, c, w)
+    gauss   = gaussian_fwhm(x, 1, c, w)
 
-    return A*(m*lorentz + (1-m)*gauss)
+    amp = 2/w * A/(m*np.pi + ((1-m)*np.sqrt(np.pi))/(np.sqrt(np.log(2))))
+
+    return amp*(m*lorentz + (1-m)*gauss)
 
 
 def arctan_fwhm(x, amp, c, w):

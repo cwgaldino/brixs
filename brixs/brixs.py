@@ -1338,7 +1338,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ########
         data = np.genfromtxt(Path(filepath), **kwargs)
 
-        if data:
+        if len(data) != 0:
             ##############
             # check data #
             ##############

@@ -1669,7 +1669,190 @@ class Peaks(_ComponentTemplate):
             pass
 # %%
 
-# linear polynomial
+# %% peaks
+class AsymmetricPeaks(_ComponentTemplate):
+    def __init__(self, parent):
+        super().__init__()
+
+        # parameter names
+        # name = name used by the user
+        # tag  = name used by lmfit (cannot contain '_')
+        # name: tag
+        nametags = {'amp':'ampasy', 'c':'casy', 'w1':'w1asy', 'w2':'w2asy', 'm1':'m1asy', 'm2':'m2asy'}
+
+        # functions
+        def function(i1, i2):
+            """function that returns f(x)"""
+            return f"br.model.voigt_fwhm(x, amp1_{i1}_{i2}, c1_{i1}_{i2}, w1_{i1}_{i2}, m1_{i1}_{i2})"
+        
+        def _min_suitable_x_str(i1, i2):
+            """return min x value (as string) to be used for quickly plotting this component"""
+            return f'casy_{i1}_{i2} - w1asy_{i1}_{i2}*10'
+        
+        def _max_suitable_x_str(i1, i2):
+            """return max x value (as string) to be used for quickly plotting this component"""
+            return f'casy_{i1}_{i2} + w2asy_{i1}_{i2}*10'
+        
+        def _suitable_x_step_str(i1, i2):
+            """return x step value (as string) to be used for quickly plotting this component"""
+            return f'(w1asy_{i1}_{i2} + w2asy_{i1}_{i2})/(2*20)'
+    
+        # initialization 
+        self._initialize(parent=parent, nametags=nametags, function=function, _min=_min_suitable_x_str, _max=_max_suitable_x_str, _step=_suitable_x_step_str)
+
+    #################
+    # add parameter #
+    #################
+    def add(self, amp=None, c=None, w=None, m=0, i1=None, i2='all'):  
+        """add parameters
+        
+        Args:
+            i1 (int or str, optional): i1 index. If None, i1 will be defined as
+                the max(i1)+1. Default is None.
+            i2 (int, list, None, optional): i2 index. If None, i2 is assumed to be 
+                unique. Default is None. Use 'all' to add component to all i2 
+                available.
+        
+        Return:
+            None
+        """        
+        ###################
+        # check i1 and i2 #
+        ###################
+        i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
+
+        #######################################
+        # assert validity of parameter values #
+        #######################################
+        assert amp >= 0,          'amp cannot be negative'
+        assert w >= 0,            'w cannot be negative'
+        assert m >= 0 and m <= 1, 'm must be between 0 and 1'
+
+        ##################
+        # add parameters #
+        ##################
+        for _i2 in i2:
+            tag = self.nametags['amp']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            
+            tag = self.nametags['c']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=c,   vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            
+            tag = self.nametags['w']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+            
+            tag = self.nametags['m']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+        return
+
+    ##################
+    # base modifiers #
+    ##################
+    def set_shift(self, value):
+        # super().set_shift(value)
+        
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'c1':
+                self.parent[_name].value += value
+        return 
+    
+    def set_offset(self, value):
+        # super().set_offset(value)
+        return 
+    
+    def set_factor(self, value):
+        # super().set_factor(value)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'amp1':
+                self.parent[_name].value *= value
+        return 
+    
+    def set_calib(self, value):
+        # super().set_calib(value)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'c1':
+                self.parent[_name].value *= value
+            elif name == 'w1':
+                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value)
+        return 
+
+    #########
+    # EXTRA #
+    #########
+    def find(self, prominence=5, width=4, moving_average_window=8):
+        """uses scipy function find_peaks() to estimate number of peaks and positions
+
+        Peak parameters are saved inside model.peaks()
+
+        Args:
+            prominence (number, optional): difference between baseline and 
+                amplitude of the peaks
+            width (int, optional): width of the peaks in terms of number of datapoints
+            moving_average_window (int, optional): moving average before searching for peaks
+
+        Returns:
+            None
+        """
+        if isinstance(self.parent.parent, br.Spectra):
+            raise NotImplementedError('find peaks is not implemented for br.Spectra.model.peaks yet. Only for br.Spectrum.model.peaks')
+
+        # check width and moving_average_window
+        if width < 1:
+            raise ValueError('width must be 1 or higher.')
+        if isinstance(width, int) == False:
+            if width.is_integer() == False:
+                raise ValueError('width must be an integer.')
+        if moving_average_window < 1:
+            raise ValueError('moving_average_window must be 1 or higher.')
+        if isinstance(moving_average_window, int) == False:
+            if moving_average_window.is_integer() == False:
+                raise ValueError('moving_average_window must be an integer.')
+            
+        # data smoothing
+        if moving_average_window > 1:
+            y2 = br.arraymanip.moving_average(self.parent.parent.y, moving_average_window)
+            x2 = br.arraymanip.moving_average(self.parent.parent.x, moving_average_window)
+        else:
+            x2 = self.parent.parent.x
+            y2 = self.parent.parent.y
+
+        # parameters
+        if prominence is None:
+            prominence = (max(y2)-min(y2))*0.1
+        else:
+            prominence = (max(y2)-min(y2))*prominence/100
+
+        try:
+            peaks, d = find_peaks(y2, prominence=prominence, width=width)
+            assert len(peaks) > 0, 'No peaks found.'
+            self.clear()
+            for i in range(len(peaks)):
+                amp = d['prominences'][i] + max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
+                c   = x2[peaks[i]]
+                w   = abs(d['widths'][i]*np.mean(np.diff(self.parent.parent.x)))
+                try:
+                    self.add(amp=amp, c=c, w=w)
+                except AssertionError:
+                    pass
+        except IndexError:
+            pass
+# %%
+
+# %% linear polynomial
 class Linear(_ComponentTemplate):
     def __init__(self, parent):
         super().__init__()
