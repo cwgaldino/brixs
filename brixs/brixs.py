@@ -21,7 +21,17 @@ Every BRIXS object has 5 types of attributes:
     `User`: 
         user-defined attributes
 
-*[FOR DEVELOPERS]* Check attrs:
+########################        
+# NOTES FOR DEVELOPERS #  
+########################       
+
+Initializing objects and empty objects:
+    Empty objects should have their core attrs set to None, e.g., Spectrum 
+    has x and y data. Initially, s.x and s.y should be None. If the user sets
+    s.x or s.y to an empty state, i.e., s.x = [], then s.x should be set to None
+    (initial state).
+
+Check attrs:
     
     1. `check` attrs cannot be user modifiable and shall only 
     be modified via 'check methods'
@@ -29,7 +39,12 @@ Every BRIXS object has 5 types of attributes:
     2. check attrs exist so one does not waste time running checks all the time.
     Once a check is done, it's result is saved in a check attr.
 
-*[FOR DEVELOPERS]* Writing new methods:
+    3. one should avoid using `check` methods inside functions/methods. It's
+    preferable to raise an error and let the user deal with it or at least check 
+    if check attrs are defined already before calling the check methods. 
+
+
+Writing new methods:
     
     1. Methods shall avoid changing the `core` attrs inside 
     `self`. Instead, a copy of `self` shall be created, modified, and 
@@ -45,13 +60,11 @@ Every BRIXS object has 5 types of attributes:
     3. Methods should take into consideration what happens in case the object is 
     'empty' (object with no data).  
 
-*[FOR DEVELOPERS]* Copy() methods must copy all attrs including all 4 attrs types
+Copy methods:
+    copy() must copy all attrs including all 4 attrs types
     (data, check, modifiers, labels) within _copy() and user attrs included in copy().
 
-*[FOR DEVELOPERS]* one should avoid using `check` methods inside functions/methods. It's
-    preferable to raise an error and let the user deal with it or at least check 
-    if check attrs are defined already before calling the check methods. 
-
+    
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
@@ -181,13 +194,12 @@ class _BrixsObject(object):
             name = 'Dummy'
         else:
             raise ValueError('What?')
-        
+
         return [_ for _ in dir(self)
                 if _ not in self._get_methods() 
                 and (_.startswith('__')==False and _.endswith('__')==False)
                 and _ not in settings._reserved_words[name]['pseudovars']
                 and _ not in settings._reserved_words[name]['vars']]
-
 
     def get_attrs_dict(self):
         """return a dict of user defined attrs and their values"""
@@ -195,13 +207,31 @@ class _BrixsObject(object):
 
     def _get_methods(self):
         """return a list of methods available including hidden ones"""
+        if isinstance(self, Spectrum):
+            name = 'Spectrum'
+        elif isinstance(self, Spectra):
+            name = 'Spectra'
+        elif isinstance(self, Image):
+            name = 'Image'
+        elif isinstance(self, PhotonEvents):
+            name = 'PhotonEvents'
+        elif isinstance(self, Dummy):
+            name = 'Dummy'
+        else:
+            raise ValueError('What?')
+        
         methodList = []
         for method_name in dir(self):
-            try:
-                if callable(getattr(self, method_name)):
+            if method_name in settings._reserved_words[name]['pseudovars'] + settings._reserved_words[name]['vars']:
+                pass
+            elif method_name in settings._reserved_words[name]['methods']:
                     methodList.append(str(method_name))
-            except Exception:
-                methodList.append(str(method_name))
+            else:
+                try:
+                    if callable(getattr(self, method_name)):
+                        methodList.append(str(method_name))
+                except Exception:
+                    methodList.append(str(method_name))
         return methodList
     
     def get_methods(self):
@@ -1205,15 +1235,16 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             else:
                 kwargs['fmt'] = f'%.{number_of_decimal_places}f'
         else:
-            if self.has_nan() is None:
+            if self.has_nan is None:
                 self.check_nan()
             if self.has_nan:
                 temp = self.remove_nan()
             else:
                 temp = self.copy()
-            number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in temp.x])
-            number_of_decimal_places_y = max([numanip.n_decimal_places(y) for y in temp.y])
-            kwargs['fmt'] = (f'%.{number_of_decimal_places_x}f', f'%.{number_of_decimal_places_y}f')
+            if self.x is not None:
+                number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in temp.x])
+                number_of_decimal_places_y = max([numanip.n_decimal_places(y) for y in temp.y])
+                kwargs['fmt'] = (f'%.{number_of_decimal_places_x}f', f'%.{number_of_decimal_places_y}f')
         kwargs.setdefault('delimiter', ', ')
         kwargs.setdefault('newline', '\n')
         kwargs.setdefault('comments', '# ')
@@ -1242,7 +1273,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ########
         # save #
         ########
-        np.savetxt(Path(filepath), self.data, **kwargs)
+        if self.x is None:
+            np.savetxt(Path(filepath), [], **kwargs)
+        else:
+            np.savetxt(Path(filepath), self.data, **kwargs)
+        return
 
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
@@ -1302,19 +1337,23 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         # read #
         ########
         data = np.genfromtxt(Path(filepath), **kwargs)
-        
-        ##############
-        # check data #
-        ##############
-        x = data[:, 0]
-        y = data[:, 1]
-        assert len(x) == len(y), f'Length of x array (len={len(x)}) is not compatible with y array (len={len(y)}).'
-        
-        ##########
-        # assign #
-        ##########
-        self._x = x
-        self._y = y
+
+        if data:
+            ##############
+            # check data #
+            ##############
+            x = data[:, 0]
+            y = data[:, 1]
+            assert len(x) == len(y), f'Length of x array (len={len(x)}) is not compatible with y array (len={len(y)}).'
+            
+            ##########
+            # assign #
+            ##########
+            self._x = x
+            self._y = y
+        else:
+            self._x = None
+            self._y = None
 
         ##########################
         # reset check attributes #
@@ -1359,6 +1398,16 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             None
         """
+        ################
+        # empty object #
+        ################
+        if self.x is None:
+            self._has_nan = False
+            return
+        
+        #############
+        # check nan #
+        #############
         if np.isnan(self.x).any():
             self._has_nan = True
         elif np.isnan(self.y).any():
@@ -3792,6 +3841,16 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             None
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            self._has_nan = False
+            return
+        
+        #############
+        # check nan #
+        #############
         for s in self:
             if self.has_nan is None: 
                 s.check_nan()
@@ -5981,13 +6040,9 @@ class Image(_BrixsObject, metaclass=_Meta):
 
     @property
     def columns(self):
-        if self.data is None:
-            return None
-        ss = Spectra()
-        for i in range(self.shape[1]):
-            ss.append(Spectrum(x=self.y_centers, y=self.data[:, i]))
-        ss.copy_attrs_from(self)
-        return ss
+        if self.shape[1] > 100:
+            raise ValueError('cannot return image columns with more than 100 columns. Please, use im.get_columns()')
+        return self.get_columns()
     @columns.setter
     def columns(self, value):
         raise AttributeError('Attribute is "read only". Cannot set attribute.')
@@ -5997,13 +6052,9 @@ class Image(_BrixsObject, metaclass=_Meta):
 
     @property
     def rows(self):
-        if self.data is None:
-            return None
-        ss = Spectra()
-        for i in range(self.shape[0]):
-            ss.append(Spectrum(x=self.x_centers, y=self.data[i, :]))
-        ss.copy_attrs_from(self)
-        return ss
+        if self.shape[0] > 100:
+            raise ValueError('cannot return image rows with more than 100 rows. Please, use im.get_rows()')
+        return self.get_rows()
     @rows.setter
     def rows(self, value):
         raise AttributeError('Attribute is "read only". Cannot set attribute.')
@@ -6455,6 +6506,68 @@ class Image(_BrixsObject, metaclass=_Meta):
         
         return im
 
+    def get_rows(self, max_number_of_rows=100):
+        """Returns pixel rows in a spectra object.
+
+        Args:
+            max_number_of_rows (int, optional): raises error if number of pixel 
+                rows is higher than `max_number_of_rows`.
+
+        Returns:
+            Spectra
+        """
+        ####################################
+        # raise error if object is too big #
+        ####################################
+        if self.shape[0] > max_number_of_rows:
+            raise ValueError(f'cannot return image rows with more than {max_number_of_rows} rows. Please, increase `max_number_of_rows`')
+        
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            return None
+
+        ############
+        # get data #
+        ############
+        ss = Spectra()
+        for i in range(self.shape[0]):
+            ss.append(Spectrum(x=self.x_centers, y=self.data[i, :]))
+        ss.copy_attrs_from(self)
+        return ss
+    
+    def get_columns(self, max_number_of_columns=100):
+        """Returns pixel columns in a spectra object.
+
+        Args:
+            max_number_of_columns (int, optional): raises error if number of pixel 
+                columns is higher than `max_number_of_columns`.
+
+        Returns:
+            Spectra
+        """
+        ####################################
+        # raise error if object is too big #
+        ####################################
+        if self.shape[0] > max_number_of_columns:
+            raise ValueError(f'cannot return image columns with more than {max_number_of_columns} rows. Please, increase `max_number_of_columns`')
+
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            return None
+        
+        ############
+        # get data #
+        ############
+        ss = Spectra()
+        for i in range(self.shape[1]):
+            ss.append(Spectrum(x=self.y_centers, y=self.data[:, i]))
+        ss.copy_attrs_from(self)
+        return ss
+    
     ########
     # copy #
     ########
@@ -6993,6 +7106,16 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             None
         """
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            self._has_nan = False
+            return
+        
+        #############
+        # check nan #
+        #############
         if np.isnan(self.data).any():
             self._has_nan = True
         else:
@@ -8550,12 +8673,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##########
         assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{origin}`'
         kwargs['origin'] = origin
-        if 'cmap' not in kwargs:
-            kwargs['cmap'] = 'jet'
-        if 'aspect' not in kwargs:
-            kwargs['aspect'] = 'auto'
-        if 'interpolation' not in kwargs:
-            kwargs['interpolation'] = 'none'
+        kwargs.setdefault('cmap', 'jet')
+        kwargs.setdefault('aspect', 'auto')
+        kwargs.setdefault('interpolation', 'none')
         if 'vmin' not in kwargs or 'vmax' not in kwargs:
             vmin, vmax = self._calculated_vmin_vmax()
             if 'vmin' not in kwargs:
@@ -9484,6 +9604,16 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         Returns:
             None
         """
+        ################
+        # empty object #
+        ################
+        if self.x is None:
+            self._has_nan = False
+            return
+        
+        #############
+        # check nan #
+        #############
         if np.isnan(self.x).any():
             self._has_nan = True
         elif np.isnan(self.y).any():
@@ -10102,7 +10232,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         return pos
 
 # %% ============================= Dummy ================================== %% #
-class Dummy():
+class Dummy(_BrixsObject, metaclass=_Meta):
     
     def __init__(self, data=None):
         self._data  = []
