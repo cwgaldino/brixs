@@ -78,6 +78,7 @@ import copy
 # %% -------------------------- Special Imports --------------------------- %% #
 from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from numpy.lib.stride_tricks import sliding_window_view
 
 # %% ----------------------------- backpack ------------------------------- %% #
 from .backpack import filemanip, arraymanip, figmanip, numanip, query
@@ -7902,14 +7903,19 @@ class Image(_BrixsObject, metaclass=_Meta):
         if self.data is None:
             raise ValueError('cannot operate on empty image') 
         
+        ###########
+        # has nan #
+        ###########
+        if self.has_nan is None:
+            self.check_nan()
+        if self.has_nan:
+            raise ValueError('Image has non-numeric values (NaN). Please, use im.find_nan() and remove nan values')
+        
         ##################
         # moving average #
         ##################
-        final = Image(data=(np.zeros((self.shape[0], self.shape[1]-n+1))))
-        for i, row in enumerate(self.rows):
-            final._data[i, :] = row.moving_average(n)
-            if i == final.shape[0]:
-                break
+        _data = sliding_window_view(self.data, window_shape=(1, n)).mean(axis=2).mean(axis=2)
+        final = Image(data=_data)
 
         ##################
         # transfer attrs #
@@ -7945,14 +7951,19 @@ class Image(_BrixsObject, metaclass=_Meta):
         if self.data is None:
             raise ValueError('cannot operate on empty image') 
         
+        ###########
+        # has nan #
+        ###########
+        if self.has_nan is None:
+            self.check_nan()
+        if self.has_nan:
+            raise ValueError('Image has non-numeric values (NaN). Please, use im.find_nan() and remove nan values')
+        
         ##################
         # moving average #
         ##################
-        final = Image(data=(np.zeros((self.shape[0]-n+1, self.shape[1]))))
-        for j, column in enumerate(self.columns):
-            final._data[:, j] = column.moving_average(n)
-            if j == final.shape[1]:
-                break
+        _data = sliding_window_view(self.data, window_shape=(n, 1)).mean(axis=2).mean(axis=2)
+        final = Image(data=_data)
                    
         ##################
         # transfer attrs #
@@ -7983,8 +7994,42 @@ class Image(_BrixsObject, metaclass=_Meta):
                 :py:class:`Image` with number of rows given by (number_of_rows - n + 1) 
                 and columns given by (number_of_columns - n + 1)
         """
-        return self.rows_moving_average(n).columns_moving_average(n)
+        ################
+        # empty object #
+        ################
+        if self.data is None:
+            raise ValueError('cannot operate on empty image') 
+        
+        ###########
+        # has nan #
+        ###########
+        if self.has_nan is None:
+            self.check_nan()
+        if self.has_nan:
+            raise ValueError('Image has non-numeric values (NaN). Please, use im.find_nan() and remove nan values')
+        
+        ##################
+        # moving average #
+        ##################
+        _data = sliding_window_view(self.data, window_shape=(n, n)).mean(axis=2).mean(axis=2)
+        final = Image(data=_data)
 
+        ##################
+        # transfer attrs #
+        ##################
+        final.copy_attrs_from(self)
+        final._x_step         = None
+        final._y_step         = None
+        final._x_monotonicity = self.x_monotonicity
+        final._y_monotonicity = self.y_monotonicity
+        final._factor         = self.factor
+        final._offset         = self.offset
+        final._x_centers      = Spectrum(y=self.x_centers).moving_average(n).y
+        final._y_centers      = Spectrum(y=self.y_centers).moving_average(n).y
+        final._x_edges        = None
+        final._y_edges        = None
+        return final
+        
     ########################
     # calculation and info #
     ########################

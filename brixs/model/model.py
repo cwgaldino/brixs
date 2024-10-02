@@ -608,7 +608,7 @@ class Model(lmfit.Parameters):
                     x = self.get_suitable_x(i2=i2)
                 ss.append(self.calculate_spectrum(i2=i2, x=x))
         return ss
-    
+
     ##########################        
     # plot and visualization #
     ##########################
@@ -1347,13 +1347,14 @@ class _ComponentTemplate(object):
         """
         # check i1, i2
         i1, i2 = self._check_i2_i1(i2=i2, i1='all')
+        _x = x
 
         # calculate spectra
         ss = br.Spectra()
         for _i1 in i1:
             if x is None:
-                x = self.get_suitable_x(i2=i2, i1=_i1)
-            ss.append(self.calculate_spectrum(i2=i2, i1=_i1, x=x))
+                _x = self.get_suitable_x(i2=i2, i1=_i1)
+            ss.append(self.calculate_spectrum(i2=i2, i1=_i1, x=_x))
         return ss
 
     def calculate_spectra(self, x=None):
@@ -1701,7 +1702,7 @@ class AsymmetricPeaks(_ComponentTemplate):
         def function(i1, i2):
             """function that returns f(x)"""
             # return f"br.model.voigt_fwhm(x, amp1_{i1}_{i2}, c1_{i1}_{i2}, w1_{i1}_{i2}, m1_{i1}_{i2})"
-            return f"np.heaviside(casy_{i1}_{i2}-x, 0)*br.voigt_fwhm(x, ampasy_{i1}_{i2}, casy_{i1}_{i2}, w1asy_{i1}_{i2},  m1asy_{i1}_{i2}) + np.heaviside(x-casy_{i1}_{i2}, 0)*br.voigt_fwhm(x, ampasy_{i1}_{i2}, casy_{i1}_{i2},  w2asy_{i1}_{i2},  m2asy_{i1}_{i2}) + br.dirac_delta(x, ampasy_{i1}_{i2}, casy_{i1}_{i2})" 
+            return f"np.heaviside(casy_{i1}_{i2}-x, 0)*br.model.voigt_fwhm(x, ampasy_{i1}_{i2}, casy_{i1}_{i2}, w1asy_{i1}_{i2},  m1asy_{i1}_{i2}) + np.heaviside(x-casy_{i1}_{i2}, 0)*br.model.voigt_fwhm(x, ampasy_{i1}_{i2}, casy_{i1}_{i2},  w2asy_{i1}_{i2},  m2asy_{i1}_{i2}) + br.model.dirac_delta(x, ampasy_{i1}_{i2}, casy_{i1}_{i2})" 
         
         def _min_suitable_x_str(i1, i2):
             """return min x value (as string) to be used for quickly plotting this component"""
@@ -1721,7 +1722,14 @@ class AsymmetricPeaks(_ComponentTemplate):
     #################
     # add parameter #
     #################
-    def add(self, amp=None, c=None, w1=None, w2=None, m1=0, m2=0, i1=None, i2='all'):  
+    def add(self, amp=None, c=None, w1=None, w2=None, m1=0, m2=0, 
+            amp_min=-np.inf, amp_max=np.inf, amp_vary=True, amp_expr=None,
+            c_min=-np.inf, c_max=np.inf, c_vary=True, c_expr=None,
+            w1_min=0, w1_max=np.inf, w1_vary=True, w1_expr=None,
+            w2_min=0, w2_max=np.inf, w2_vary=True, w2_expr=None,
+            m1_min=0, m1_max=1, m1_vary=False, m1_expr=None,
+            m2_min=0, m2_max=1, m2_vary=False, m2_expr=None,
+            i1=None, i2='all'):  
         """add parameters
         
         Args:
@@ -1743,32 +1751,40 @@ class AsymmetricPeaks(_ComponentTemplate):
         # assert validity of parameter values #
         #######################################
         assert amp >= 0,          'amp cannot be negative'
+
         assert w1 >= 0,            'w1 cannot be negative'
         assert w2 >= 0,            'w2 cannot be negative'
+        assert w1_min >= 0,        'w1_min cannot be negative'
+        assert w2_min >= 0,        'w2_min cannot be negative'
+
         assert m1 >= 0 and m1 <= 1, 'm1 must be between 0 and 1'
         assert m2 >= 0 and m2 <= 1, 'm2 must be between 0 and 1'
+        assert m1_min >= 0 and m1_min <= 1, 'm1_min must be between 0 and 1'
+        assert m1_max >= 0 and m1_max <= 1, 'm1_max must be between 0 and 1'
+        assert m2_min >= 0 and m2_min <= 1, 'm2_min must be between 0 and 1'
+        assert m2_max >= 0 and m2_max <= 1, 'm2_max must be between 0 and 1'
 
         ##################
         # add parameters #
         ##################
         for _i2 in i2:
             tag = self.nametags['amp']
-            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=amp_vary,  min=amp_min, max=amp_max, expr=amp_expr, brute_step=None)
             
             tag = self.nametags['c']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=c,   vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=c, vary=c_vary,  min=c_min, max=c_max, expr=c_expr, brute_step=None)
             
             tag = self.nametags['w1']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w1,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w1, vary=w1_vary,  min=w1_min, max=w1_max, expr=w1_expr, brute_step=None)
             
             tag = self.nametags['w2']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w2,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w2, vary=w2_vary,  min=w2_min, max=w2_max, expr=w2_expr, brute_step=None)
             
             tag = self.nametags['m1']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m1,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m1, vary=m1_vary, min=m1_min, max=m1_max, expr=m1_expr, brute_step=None)
             
             tag = self.nametags['m2']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m2,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m2, vary=m2_vary, min=m2_min, max=m2_max, expr=m2_expr, brute_step=None)
         return
 
     ##################
