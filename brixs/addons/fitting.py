@@ -68,7 +68,6 @@ def _gaussian_fwhm(x, amp, c, w):
     :return: :math:`y(x)`
     """
     return _gaussian(x, amp, c, w/(2*np.sqrt(2*np.log(2))))
-    # return A*np.exp((-4*np.log(2)*((x-c)**2))/(w**2))
 
 
 def _lorentzian(x, gamma, c):
@@ -98,11 +97,11 @@ def _lorentzian(x, gamma, c):
 def _lorentzian_fwhm(x, amp, c, w):
     r"""Cauchy–Lorentz distribution.
 
-    .. math:: y(x) = \text{amp } \frac{w^2}{w^2 + (x-c)^2}
+    .. math:: y(x) = \text{amp } \frac{w^2}{w^2 + 4 * (x-c)^2}
 
     where,
 
-    .. math:: \text{Area }= \text{amp } \pi w
+    .. math:: \text{Area }= \text{amp } \pi w \frac{1}{2}
 
     :param x: x array
     :param amp: Amplitude
@@ -110,14 +109,18 @@ def _lorentzian_fwhm(x, amp, c, w):
     :param w: FWHM
     :return: :math:`y(x)`
     """
-    return amp*(np.pi*w) * _lorentzian(x, gamma=w, c=c)
-    # return A*((w**2)/(w**2 + 4* (x-c)**2))
+    return amp*((w**2)/(w**2 + 4* (x-c)**2))
 
 def _voigt_fwhm(x, amp, c, w, m):
     r"""Pseudo-voigt curve.
 
-    .. math:: y(x) = A \left[ m  \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
+    .. math:: y(x) = \text{amp } \left[ m  \frac{w^2}{w^2 + 4*(x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
 
+    where,
+
+    .. math:: \text{Area } = \frac{\text{amp } w}{2}     \left[ m \pi +   (1-m)      \frac{\sqrt{\pi}}{\sqrt{\ln(2)} }  \right]  
+
+    
     :param x: x array
     :param amp: Amplitude
     :param c: Center
@@ -125,11 +128,8 @@ def _voigt_fwhm(x, amp, c, w, m):
     :param m: Factor from 1 to 0 of the lorentzian amount
     :return: :math:`y(x)`
     """
-
-
-
     lorentz = _lorentzian_fwhm(x, 1, c, w)
-    gauss   = _gaussian_fwhm(x, 1, c, w)
+    gauss = _gaussian_fwhm(x, 1, c, w)
 
     return amp*(m*lorentz + (1-m)*gauss)
 

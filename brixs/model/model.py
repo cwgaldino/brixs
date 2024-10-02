@@ -57,10 +57,11 @@ setting the arguments of a function/method:
 # Creating a new Component #
 ############################
 
-Every time a new component is created. It needs to be include inside Model.components.
+1. Every time a new component is created. It needs to be include inside Model.components.
 
-A new component must have _ComponentTemplate as a parent class (i.e. every `Component`
- must have at least the methods and attributes defined in this template class.
+2. A new component must have _ComponentTemplate as a parent class 
+(i.e. every `Component` must have at least the methods and attributes defined 
+in this template class.
 
 #### setting up the __init__ function ####
 
@@ -153,7 +154,8 @@ class Model(lmfit.Parameters):
         # components #
         ##############
         self.components = {'peaks':  Peaks,
-                           'linear': Linear}
+                           'linear': Linear,
+                           'asymmetricpeaks': AsymmetricPeaks,}
 
         # check repeated tags
         unique_tags = []
@@ -210,6 +212,10 @@ class Model(lmfit.Parameters):
         for name in self:
             if name.split('_')[2] == str(i2):
                 del self[name]
+
+    def get_available_components(self):
+        """returns list of available components"""
+        return list(self.components.keys())
 
     ###########
     # support #
@@ -1520,7 +1526,12 @@ class Peaks(_ComponentTemplate):
     #################
     # add parameter #
     #################
-    def add(self, amp=None, c=None, w=None, m=0, i1=None, i2='all'):  
+    def add(self, amp=None, c=None, w=None, m=0, 
+            amp_min=-np.inf, amp_max=np.inf, amp_vary=True, amp_expr=None,
+            c_min=-np.inf, c_max=np.inf, c_vary=True, c_expr=None,
+            w_min=0, w_max=np.inf, w_vary=True, w_expr=None,
+            m_min=0, m_max=1, m_vary=False, m_expr=None,
+            i1=None, i2='all'):  
         """add parameters
         
         Args:
@@ -1542,24 +1553,30 @@ class Peaks(_ComponentTemplate):
         # assert validity of parameter values #
         #######################################
         assert amp >= 0,          'amp cannot be negative'
+
         assert w >= 0,            'w cannot be negative'
+        assert w_min >= 0,        'w_min cannot be negative'
+
         assert m >= 0 and m <= 1, 'm must be between 0 and 1'
+        assert m_min >= 0 and m_min <= 1, 'm_min must be between 0 and 1'
+        assert m_max >= 0 and m_max <= 1, 'm_max must be between 0 and 1'
+
 
         ##################
         # add parameters #
         ##################
         for _i2 in i2:
             tag = self.nametags['amp']
-            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=amp_vary,  min=amp_min, max=amp_max, expr=amp_expr, brute_step=None)
             
             tag = self.nametags['c']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=c,   vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=c, vary=c_vary,  min=c_min, max=c_max, expr=c_expr, brute_step=None)
             
             tag = self.nametags['w']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w, vary=w_vary,  min=w_min, max=w_max, expr=w_expr, brute_step=None)
             
             tag = self.nametags['m']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m, vary=m_vary, min=m_min, max=m_max, expr=m_expr, brute_step=None)
         return
 
     ##################
@@ -1683,7 +1700,8 @@ class AsymmetricPeaks(_ComponentTemplate):
         # functions
         def function(i1, i2):
             """function that returns f(x)"""
-            return f"br.model.voigt_fwhm(x, amp1_{i1}_{i2}, c1_{i1}_{i2}, w1_{i1}_{i2}, m1_{i1}_{i2})"
+            # return f"br.model.voigt_fwhm(x, amp1_{i1}_{i2}, c1_{i1}_{i2}, w1_{i1}_{i2}, m1_{i1}_{i2})"
+            return f"np.heaviside(casy_{i1}_{i2}-x, 0)*br.voigt_fwhm(x, ampasy_{i1}_{i2}, casy_{i1}_{i2}, w1asy_{i1}_{i2},  m1asy_{i1}_{i2}) + np.heaviside(x-casy_{i1}_{i2}, 0)*br.voigt_fwhm(x, ampasy_{i1}_{i2}, casy_{i1}_{i2},  w2asy_{i1}_{i2},  m2asy_{i1}_{i2}) + br.dirac_delta(x, ampasy_{i1}_{i2}, casy_{i1}_{i2})" 
         
         def _min_suitable_x_str(i1, i2):
             """return min x value (as string) to be used for quickly plotting this component"""
@@ -1703,7 +1721,7 @@ class AsymmetricPeaks(_ComponentTemplate):
     #################
     # add parameter #
     #################
-    def add(self, amp=None, c=None, w=None, m=0, i1=None, i2='all'):  
+    def add(self, amp=None, c=None, w1=None, w2=None, m1=0, m2=0, i1=None, i2='all'):  
         """add parameters
         
         Args:
@@ -1725,8 +1743,10 @@ class AsymmetricPeaks(_ComponentTemplate):
         # assert validity of parameter values #
         #######################################
         assert amp >= 0,          'amp cannot be negative'
-        assert w >= 0,            'w cannot be negative'
-        assert m >= 0 and m <= 1, 'm must be between 0 and 1'
+        assert w1 >= 0,            'w1 cannot be negative'
+        assert w2 >= 0,            'w2 cannot be negative'
+        assert m1 >= 0 and m1 <= 1, 'm1 must be between 0 and 1'
+        assert m2 >= 0 and m2 <= 1, 'm2 must be between 0 and 1'
 
         ##################
         # add parameters #
@@ -1738,11 +1758,17 @@ class AsymmetricPeaks(_ComponentTemplate):
             tag = self.nametags['c']
             self.parent.add(f'{tag}_{i1}_{_i2}',   value=c,   vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
             
-            tag = self.nametags['w']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+            tag = self.nametags['w1']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w1,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
             
-            tag = self.nametags['m']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            tag = self.nametags['w2']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=w2,   vary=True,  min=0,       max=np.inf, expr=None, brute_step=None)
+            
+            tag = self.nametags['m1']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m1,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
+            
+            tag = self.nametags['m2']
+            self.parent.add(f'{tag}_{i1}_{_i2}',   value=m2,   vary=False, min=0,       max=1,      expr=None, brute_step=None)
         return
 
     ##################
@@ -1756,7 +1782,7 @@ class AsymmetricPeaks(_ComponentTemplate):
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
-            if name == 'c1':
+            if name == 'casy':
                 self.parent[_name].value += value
         return 
     
@@ -1772,7 +1798,7 @@ class AsymmetricPeaks(_ComponentTemplate):
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
-            if name == 'amp1':
+            if name == 'ampasy':
                 self.parent[_name].value *= value
         return 
     
@@ -1784,72 +1810,18 @@ class AsymmetricPeaks(_ComponentTemplate):
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
-            if name == 'c1':
+            if name == 'casy':
                 self.parent[_name].value *= value
-            elif name == 'w1':
-                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value)
+            elif name == 'w1asy':
+                self.parent[_name].value = abs(self.parent[f'w1asy_{i1}_{i2}'].value*value)
+            elif name == 'w2asy':
+                self.parent[_name].value = abs(self.parent[f'w2asy_{i1}_{i2}'].value*value)
         return 
 
     #########
     # EXTRA #
     #########
-    def find(self, prominence=5, width=4, moving_average_window=8):
-        """uses scipy function find_peaks() to estimate number of peaks and positions
-
-        Peak parameters are saved inside model.peaks()
-
-        Args:
-            prominence (number, optional): difference between baseline and 
-                amplitude of the peaks
-            width (int, optional): width of the peaks in terms of number of datapoints
-            moving_average_window (int, optional): moving average before searching for peaks
-
-        Returns:
-            None
-        """
-        if isinstance(self.parent.parent, br.Spectra):
-            raise NotImplementedError('find peaks is not implemented for br.Spectra.model.peaks yet. Only for br.Spectrum.model.peaks')
-
-        # check width and moving_average_window
-        if width < 1:
-            raise ValueError('width must be 1 or higher.')
-        if isinstance(width, int) == False:
-            if width.is_integer() == False:
-                raise ValueError('width must be an integer.')
-        if moving_average_window < 1:
-            raise ValueError('moving_average_window must be 1 or higher.')
-        if isinstance(moving_average_window, int) == False:
-            if moving_average_window.is_integer() == False:
-                raise ValueError('moving_average_window must be an integer.')
-            
-        # data smoothing
-        if moving_average_window > 1:
-            y2 = br.arraymanip.moving_average(self.parent.parent.y, moving_average_window)
-            x2 = br.arraymanip.moving_average(self.parent.parent.x, moving_average_window)
-        else:
-            x2 = self.parent.parent.x
-            y2 = self.parent.parent.y
-
-        # parameters
-        if prominence is None:
-            prominence = (max(y2)-min(y2))*0.1
-        else:
-            prominence = (max(y2)-min(y2))*prominence/100
-
-        try:
-            peaks, d = find_peaks(y2, prominence=prominence, width=width)
-            assert len(peaks) > 0, 'No peaks found.'
-            self.clear()
-            for i in range(len(peaks)):
-                amp = d['prominences'][i] + max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
-                c   = x2[peaks[i]]
-                w   = abs(d['widths'][i]*np.mean(np.diff(self.parent.parent.x)))
-                try:
-                    self.add(amp=amp, c=c, w=w)
-                except AssertionError:
-                    pass
-        except IndexError:
-            pass
+    pass
 # %%
 
 # %% linear polynomial
