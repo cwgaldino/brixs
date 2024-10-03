@@ -5831,7 +5831,7 @@ class Image(_BrixsObject, metaclass=_Meta):
     ###################
     @property
     def data(self):
-        return copy.deepcopy(self._data)
+        return self._data
     @data.setter
     def data(self, value):
         ###########
@@ -7553,16 +7553,28 @@ class Image(_BrixsObject, metaclass=_Meta):
         #####################
         # everything to int #
         #####################
-        value = [int(round(k)) for k in value]
+        value = np.array([int(round(k)) for k in value])
         
         ########
         # roll #
         ########
-        im = self.copy()
-        for i, v in enumerate(value):
-            if v != 0:
-                s = Spectrum(y=im._data[i, :]).set_roll(v)
-                im._data[i, :] = s.y
+        # I copyied this part from stackoverflow. 
+        # Honestly, I don't 100% understand it, but it runs two order of magnetude
+        # faster than the old implementation
+        im = self.copy()   
+        rows, column_indices = np.ogrid[:im.data.shape[0], :im.data.shape[1]]
+        value[value < 0] += im.data.shape[1]
+        column_indices = column_indices - value[:, np.newaxis]
+        im._data = im.data[rows, column_indices]
+
+        ####################################
+        # OLD IMPLEMENTATION (MUCH SLOWER) #
+        ####################################
+        # im = self.copy()
+        # for i, v in enumerate(value):
+        #     if v != 0:
+        #         s = Spectrum(y=im._data[i, :]).set_roll(v)
+        #         im._data[i, :] = s.y
         return im
     
     def set_vertical_roll(self, value):
@@ -7599,16 +7611,28 @@ class Image(_BrixsObject, metaclass=_Meta):
         #####################
         # everything to int #
         #####################
-        value = [int(round(k)) for k in value]
+        value = np.array([int(round(k)) for k in value])
         
         ########
         # roll #
         ########
-        im = self.copy()
-        for i, v in enumerate(value):
-            if v != 0:
-                s = Spectrum(y=im._data[:, i]).set_roll(v)
-                im._data[:, i] = s.y
+        # I copyied this part from stackoverflow. 
+        # Honestly, I don't 100% understand it, but it runs two order of magnetude
+        # faster than the old implementation
+        im = self.copy()    
+        row_indices, cols = np.ogrid[:im.data.shape[0], :im.data.shape[1]]
+        value[value < 0] += im.data.shape[0]
+        row_indices = row_indices - value[np.newaxis, :]
+        im._data = im.data[row_indices, cols]
+
+        ####################################
+        # OLD IMPLEMENTATION (MUCH SLOWER) #
+        ####################################
+        # im = self.copy()    
+        # for i, v in enumerate(value):
+        #     if v != 0:
+        #         s = Spectrum(y=im._data[:, i]).set_roll(v)
+        #         im._data[:, i] = s.y
         return im
 
     ###############
