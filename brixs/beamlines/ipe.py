@@ -560,7 +560,10 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             for s in [_ for _ in ss] + [ss]:
                 s.EPOCH = f['entry/data/EPOCH'][()]
                 for motor in motors:
-                    s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
+                    try:
+                        s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
+                    except:
+                        pass
 
                 for attr in metadata:
                     setattr(s, attr, metadata[attr])
