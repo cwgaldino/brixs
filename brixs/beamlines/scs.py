@@ -1512,10 +1512,14 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         Args:
             n1 (int): number of pixels to average to detect a photon hit candidate, e.g., a photon hit candidate 
                 is selected if the average of the intensities within a n1-by-n1 square exceeds avg_threshold.
-            n2 (int): For a photon hit candidates the 'center-of-mass' of the photon hit is calculated 
+            n2 (int): For a photon hit candidate, n2 sets a 
+                (n1+n2)-by-(n1+n2) square where the brightest pixel will be then
+                considered. Candidates that yield the same brightest pixel won't
+                be accounted for. Finally, for each `brightest pixel`, the 
+                'center-of-mass' of the photon hit is calculated 
                 within a (n1+n2)-by-(n1+n2) square. n2 must be an even number to ensure that the 
                 `center of mass` of a photon hit is calculated in a square where the pixel with the 
-                photon hit is the central pixel.
+                photon hit is close to the center.
             avg_threshold (number): any pixel with intensity higher than avg_threshold in the n1-by-n1 
                 averaged image will be selected as a photon-hit-candidate position.
             double_threshold (number): any a photon-hit-candidate position where the sum of the surounding
@@ -1603,30 +1607,50 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             of the matrix (instead of an "exact" average), but the script does an exact calculation.
                  
             For avg_treshold = 25, we have two spots which are candidates: (x, y) = (3, 0) and (3, 1).
-            
-            Between these two spots, (3, 0) will be disregarded, because the intensity of (3, 1) is 
-            brighest. Going back to the original matrix, we see that position (3, 1) yields intensity 79
+
+            Going back to the original matrix, we run over all candidates, i.e., 
+            (3, 0) and (3, 1). For each candidate we get their `spots`. 
+            A spot is a (n1+n2 x n1+n2) matrix surrounding the candidate. For example, 
+
+            we see that position (3, 1) yields intensity 79
             (note that the pixels pixels that yielded 42 in the averaged (n1 x n1) matrix are:
             
             [[79, 52],
              [19, 17]]
-            
-            From now on, we don't need to worry about the averaged (n1 x n1) matrix. This matrix is only
-            used to find the candidates. 
 
-            In this example, the only candidate is (3, 1). We then gather pixel rows and cols to the 
-            left/right/top/bottom of the candidate so to make a square of size n1+n2. For n2 = 2 we have
+            We gather pixel rows and cols to the 
+            left/right/top/bottom of the candidate so to make a square of size n1+n2. 
+            The n2 factor expands this matrix on all sides equally (that's why 
+            n2 must be even). For n2 = 2 we have
             
             [[ 4,  6, -4,  8],
              [-9, 79, 52, 10],
              [-2, 19, 17, -2],
              [-6, -9,  2, -8]]
-            
-            this is what we call a `spot`. Now we only have to determine if this spot is a double or
-            single hit. 
-            
-            the sum of the spot is 157. Let's say that double_threshold = 255, therefore, this spot is
-            a single hit.
+             
+            we than find the index of the brightest pixel within each spot. In this
+            case, the brightest spot the one yielding 79. This pixel is the (3, 1).
+
+            The larger n2, the larger is the `search area` for the brightest pixel.
+
+            In this example, both candidates [(x, y) = (3, 0) and (3, 1)] yield 
+            the same brightest pixel. The brightest pixels are only counted once.
+
+            Now, each `brightest pixel` is considerend a HIT, we only have to 
+            determine if this HIT is a double or single hit. 
+
+            For that we get the `spot` of each HIT and compare it against double_threshold.
+            For the HIT at (3, 1), we now that the spot is 
+
+            [[ 4,  6, -4,  8],
+             [-9, 79, 52, 10],
+             [-2, 19, 17, -2],
+             [-6, -9,  2, -8]]
+
+            Remember that the spot is defined as the (n1+n2 x n1+n2) matrix 
+             surrounding a pixel. The sum of this spot is 157. Let's say that 
+             double_threshold = 255, therefore, this spot is
+            a single hit, because it is below double_threshold.
             
             Here is an example with a double hit
             
@@ -1654,7 +1678,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
              [37, 81, 50, 12],
              [-3, 46, 16, -6]]
              
-            For this example, we know that a photon hit threshold should be around 200. Therefore, a 
+            For this example, we the photon hit threshold should be around 200. Therefore, a 
             suitable double hit treshold would be 1.5 * 200 = 300.
              
             This sum is 413, so it will be regarded as a double photon hit.
@@ -1789,7 +1813,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         # centroid algorithm 2 #
         ########################
         # an improved version of algorithm 1
-        flag = []
+        hit  = []
         res  = []
         dres = []
         for i, (y, x) in enumerate(cp):       
@@ -1802,9 +1826,9 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             bx = x + (_x - n2//2)
             by = y + (_y - n2//2)
                              
-            if (bx, by) not in flag:
-                # flag that this point has been accounted for
-                flag.append((bx, by))
+            if (bx, by) not in hit:
+                # flag that this point has been accounted for (this point is a hit)
+                hit.append((bx, by))
                 
                 # calculate x center of mass
                 mx = np.average(np.arange(x-n2//2, x+n1+n2//2), weights=spot.sum(axis=0))
