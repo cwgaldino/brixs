@@ -11,13 +11,15 @@ from .model import Model
 # %%
 
 # %% ======================= add model to brixs =========================== %% #
-br.settings._extra['Spectrum']['model'] = Model
-br.settings._extra['Spectra']['model']  = Model
+br.settings._init['Spectrum']['model'] = Model
+br.settings._init['Spectra']['model']  = Model
 
-br.settings._modifiers['shift'].append('model')
-br.settings._modifiers['offset'].append('model')
-br.settings._modifiers['factor'].append('model')
-br.settings._modifiers['calib'].append('model')
+for object in ('Spectrum', 'Spectra'):
+    br.settings._copy[object].append('model')
+    br.settings._shift[object].append('model')
+    br.settings._offset[object].append('model')
+    br.settings._factor[object].append('model')
+    br.settings._calib[object].append('model')
 
 # %% ========================= model functions ============================ %% #
 from .model_functions import *

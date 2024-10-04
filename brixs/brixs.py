@@ -638,8 +638,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         pass
 
         # extra
-        for extra in settings._extra['Spectrum']:
-            self.__setattr__(extra, settings._extra['Spectrum'][extra](self))
+        for extra in settings._init['Spectrum']:
+            self.__setattr__(extra, settings._init['Spectrum'][extra](self))
 
         ################
         # loading data #
@@ -1142,6 +1142,12 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         s = self._copy(limits=limits)
         s.copy_attrs_from(self)
+
+        # extra
+        for extra in settings._copy['Spectrum']:
+            if hasattr(s, extra):
+                s.__setattr__(extra, self.__getattribute__(extra).copy(s))
+
         return s
 
     #################
@@ -1605,7 +1611,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         s._shift += value
 
         # extra
-        for extra in settings._modifiers['shift']:
+        for extra in settings._shift['Spectrum']:
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_shift(value)
             
@@ -1625,7 +1631,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         s._offset += value
 
         # extra
-        for extra in settings._modifiers['offset']:
+        for extra in settings._offset['Spectrum']:            
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_offset(value)
             
@@ -1651,7 +1657,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         s._offset *= value
 
         # extra
-        for extra in settings._modifiers['factor']:
+        for extra in settings._factor['Spectrum']:            
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_factor(value)
             
@@ -1677,7 +1683,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         s._shift *= value
 
         # extra
-        for extra in settings._modifiers['calib']:
+        for extra in settings._calib['Spectrum']:            
             if hasattr(s, extra):
                 s.__getattribute__(extra).set_calib(value)
             
@@ -2517,8 +2523,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         pass
 
         # extra
-        for extra in settings._extra['Spectra']:
-            self.__setattr__(extra, settings._extra['Spectra'][extra](self))
+        for extra in settings._init['Spectra']:
+            self.__setattr__(extra, settings._init['Spectra'][extra](self))
 
         ################
         # loading data #
@@ -3375,7 +3381,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             except ValueError:
                 ss = Spectra()
                 for i, s in enumerate(self):
-                    ss.append(s._copy(limits=limits))
+                    ss.append(s.copy(limits=limits))
                 # ss._length       = self.length
                 # ss._step         = self.step
                 # ss._monotonicity = self.monotonicity
@@ -3417,6 +3423,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         ss = self._copy(limits=limits)
         ss.copy_attrs_from(self)
+
+        # extra
+        for extra in settings._copy['Spectra']:
+            if hasattr(ss, extra):
+                ss.__setattr__(extra, self.__getattribute__(extra).copy(ss))
+
         return ss
     
     #################
@@ -3691,11 +3703,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 pass
             elif number_of_decimal_places is not None:
                 if isinstance(number_of_decimal_places, Iterable):
-                    kwargs['fmt'] = [f'%.{number_of_decimal_places[0]}f'] + [number_of_decimal_places[1]]*len(temp)
+                    kwargs['fmt'] = [f'%.{number_of_decimal_places[0]}f'] + [f'%.{number_of_decimal_places[1]}f']*len(temp)
                 else:
                     kwargs['fmt'] = f'%.{number_of_decimal_places}f'
             else: # pick best format
-                if self.has_nan() is None:
+                if self.has_nan is None:
                     self.check_nan()
                 if self.has_nan:
                     temp = self.remove_nan()
@@ -3708,7 +3720,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                     t = max([numanip.n_decimal_places(y) for y in s.y])
                     if t > number_of_decimal_places_y:
                         number_of_decimal_places_y = t
-                kwargs['fmt'] = [f'%.{number_of_decimal_places_x}f'] + [number_of_decimal_places_y]*len(temp)
+                kwargs['fmt'] = [f'%.{number_of_decimal_places_x}f'] + [f'%.{number_of_decimal_places_y}f']*len(temp)
 
             # final data to save
             final = np.zeros((self.length, len(self)+1))
@@ -4203,6 +4215,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ss._x            = None
         # ss._monotonicity = None
 
+        # extra
+        for extra in settings._shift['Spectra']:
+            if hasattr(s, extra):
+                ss.__getattribute__(extra).set_shift(value)
+
         return ss
 
     def set_calib(self, value):
@@ -4243,6 +4260,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ss._step         = None
         ss._x            = None
         ss._monotonicity = None
+
+        # extra
+        for extra in settings._calib['Spectra']:
+            if hasattr(s, extra):
+                ss.__getattribute__(extra).set_shift(value)
         
         return ss
 
@@ -4285,6 +4307,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # ss._x            = None
         # ss._monotonicity = None
 
+        # extra
+        for extra in settings._factor['Spectra']:
+            if hasattr(s, extra):
+                ss.__getattribute__(extra).set_shift(value)
+
         return ss
 
     def set_offset(self, value):
@@ -4325,6 +4352,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # ss._step         = None
         # ss._x            = None
         # ss._monotonicity = None
+
+        # extra
+        for extra in settings._factor['Spectra']:
+            if hasattr(s, extra):
+                ss.__getattribute__(extra).set_shift(value)
 
         return ss
 
@@ -5813,6 +5845,10 @@ class Image(_BrixsObject, metaclass=_Meta):
         self._x_edges   = None
         self._y_edges   = None
 
+        # extra
+        for extra in settings._init['Image']:
+            self.__setattr__(extra, settings._init['Image'][extra](self))
+
         ################
         # loading data #
         ################
@@ -6747,6 +6783,12 @@ class Image(_BrixsObject, metaclass=_Meta):
         """
         im = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
         im.copy_attrs_from(self)
+
+        # extra
+        for extra in settings._copy['Image']:
+            if hasattr(im, extra):
+                im.__setattr__(extra, self.__getattribute__(extra).copy(im))
+
         return im
     
     #################
@@ -7401,6 +7443,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         im._data   += float(value)
         im._offset += float(value)
 
+        # extra
+        for extra in settings._offset['Image']:
+            if hasattr(im, extra):
+                im.__getattribute__(extra).set_shift(value)
+
         return im
 
     def set_factor(self, value):
@@ -7421,6 +7468,12 @@ class Image(_BrixsObject, metaclass=_Meta):
         im._data   *= float(value)
         im._factor *= float(value)
         im._offset *= float(value)
+
+        # extra
+        for extra in settings._factor['Image']:
+            if hasattr(im, extra):
+                im.__getattribute__(extra).set_shift(value)
+
         return im
 
     def set_horizontal_shift(self, value):
@@ -8111,6 +8164,8 @@ class Image(_BrixsObject, metaclass=_Meta):
                 if nbins < 50:
                     break
         elif numanip.is_integer(nbins):
+            _flat  = arraymanip.flatten(self._data)
+            flat = _flat[~np.isnan(_flat)]
             hist, bin_edges = np.histogram(flat, bins=int(nbins))
         else:
             raise TypeError('nbins must be a integer')
@@ -8904,6 +8959,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         self._xlim = None
         self._ylim = None
 
+        # extra
+        for extra in settings._init['PhotonEvents']:
+            self.__setattr__(extra, settings._init['PhotonEvents'][extra](self))
+
         ################
         # loading data #
         ################
@@ -9395,6 +9454,12 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if attrs2crop is not None:
             for attr in attrs2crop:
                 pe.__setattr__(attr, _attr2crop[attr])
+
+        # extra
+        for extra in settings._copy['PhotonEvents']:
+            if hasattr(pe, extra):
+                pe.__setattr__(extra, self.__getattribute__(extra).copy(pe))
+
         return pe
 
     def clip(self, mask, attrs2clip=None):
@@ -10307,6 +10372,11 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         if data is not None:
             self.data = data
 
+        # extra
+        for extra in settings._init['Dummy']:
+            self.__setattr__(extra, settings._init['Dummy'][extra](self))
+
+
     ###################
     # core attributes #
     ###################
@@ -10412,6 +10482,12 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         """
         dummy = self._copy()
         dummy.copy_attrs_from(self)
+
+        # extra
+        for extra in settings._copy['Dummy']:
+            if hasattr(dummy, extra):
+                dummy.__setattr__(extra, self.__getattribute__(extra).copy(dummy))
+
         return dummy
     
 

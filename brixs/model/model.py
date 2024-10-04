@@ -135,7 +135,7 @@ import lmfit
 import brixs as br
 # %%
 
-# %% ------------------------- support functions --------------------\------ %% #
+# %% ------------------------- support functions -------------------------- %% #
 def _name_parser(name):
     temp = name.split('_')
     name = temp[0]
@@ -413,6 +413,14 @@ class Model(lmfit.Parameters):
                 self[name] = out.params[name]
         return lmfit.fit_report(out), out
     
+    ########
+    # copy #
+    ########
+    def copy(self, parent=None):
+        model = copy.deepcopy(self)
+        model.parent = parent
+        return model
+
     #################
     # save and load #
     #################

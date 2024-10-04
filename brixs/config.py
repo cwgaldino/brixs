@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """BRIXS settings file
 
-################################
-# Reserved and forbidden words #
-################################
+################################################################################
+######################### Reserved and forbidden words #########################
+################################################################################
 1) These words will raise an error if the user try to define attrs with these words
 
 2) This avoids errors when converting from one object to another (e.g. im -> s)
@@ -20,28 +20,45 @@ the forbidden words of a Spectrum object are all methods defined for a spectrum
 object plus all methods and pseudovars of all other objects (as long the pseudovars
 from other objects are not equal to pseudovars in Spectrum).
 
-#########
-# extra #
-#########
-`extra` allows for posterior addition of new methods and attrs after brixs has 
-been imported. For example, the `model` module requires
- the `model` attr to be initialized inside Spectrum.__init__(). However, the
-module `model` only exist if we import it, see below
+################################################################################
+############################ brixs expansion modules ###########################
+################################################################################
+brixs expansion modules allows for posterior addition of new methods and attrs 
+after brixs has been imported. 
+
+For example, the `model` module requires the `model` attr to be initialized 
+inside Spectrum.__init__(). However, the module `model` only exist if we import 
+it, i.e., when we do
 
 import brixs as br
+
+From now on, the definition of Spectrum is well defined.
+
+However, Spectrum.model does not exist, because Spectrum.model isn't defined at
+brixs.py.
+
+Then we import the `model module`
+
 import brixs.model
 
-to make the attr brixs.model.model() to be added inside Spectrum.__init__() we
-add the model class to extra. See below.
+Once this is imported, model will be included in the __init__ of Spectrum by
+including model in br.settings._init['Spectrum'] 
 
-br.settings._extra['Spectrum']['model'] = Model
+print(br.settings._init['Spectrum']) ---> {'model': Model]
+
+From now on, every new Spectrum object will come equipped with s.model -> Model()
+
+############
+# __init__ #
+############
 
 Note that `self` is passed to Model.
 
 #############
 # Modifiers #
 #############
-settings._modifiers allow for adding new objects that respond accordingly when
+settings._shift, settings._offset, ...  allow for expanding brixs  that 
+respond accordingly when
 set_shift, set_calib, ... are called. For example, when one calls s.set_shift(10)
 them the spectrum s is shifted by 10, and also everything else inside 
 settings._modifiers['shift']. If 'model' is in settings._modifiers['shift'], then
@@ -117,8 +134,16 @@ class _settings():
                                  'Image':       {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []},
                                  'Dummy':       {'methods':[], 'vars':[], 'pseudovars': []}}
-        self._extra     = {'Spectrum':{}, 'Spectra':{}, 'Image':{}, 'PhotonEvents':{}, 'Dummy':{}}
-        self._modifiers = {'shift':[], 'offset':[], 'factor':[], 'calib':[]}
+        
+        ###########################
+        # brixs expansion modules #
+        ###########################
+        self._init   = {'Spectrum':{}, 'Spectra':{}, 'Image':{}, 'PhotonEvents':{}, 'Dummy':{}}
+        self._copy   = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
+        self._shift  = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
+        self._offset = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
+        self._factor = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
+        self._calib  = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
 
         #############
         # help text #
