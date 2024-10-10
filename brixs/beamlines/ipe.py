@@ -560,7 +560,10 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             for s in [_ for _ in ss] + [ss]:
                 s.EPOCH = f['entry/data/EPOCH'][()]
                 for motor in motors:
-                    s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
+                    try:
+                        s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
+                    except:
+                        pass
 
                 for attr in metadata:
                     setattr(s, attr, metadata[attr])
@@ -1059,7 +1062,20 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
         motor_list (list): list of motor positions if the atype is \'motor\'.
         
     Returns:
-        Spectrum
+        dict {
+            'ss1':    {'ss1':ss_ccd1,'ss2':ss_ccd2, 'fit1':fit_ccd1, 'fit2':fit_ccd2},
+            'fwhm':   {'x1':x1,'x2':x2, 'y1':y_ccd1, 'y2':y_ccd2},
+            'amp':    {'x1':x1,'x2':x2, 'y1':y_ccd1, 'y2':y_ccd2},
+            'center': {'x1':x1,'x2':x2, 'y1':y_ccd1, 'y2':y_ccd2},
+            'offset': {'x1':x1,'x2':x2, 'y1':y_ccd1, 'y2':y_ccd2},
+            'popt1':  popt_ccd1,
+            'popt2':  popt_ccd2,
+            'x1':     x1,
+            'x2':     x2
+        }
+        
+        x1 is the attr
+        x2 exists in special casesof atype = r1 or r2
     """
     attr = [None,None]
     align_list = [list(),list()]
@@ -1305,7 +1321,18 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ######################
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ssi=ssi, fiti=fiti, popti=popti, ax=ax1, x=x1))
     
-    return [x1_sorted, x2_sorted], [popt0_new, popt1_new]
+    output = {}
+    output['ssi']    = {'ss1':ssi[0],'ss2':ssi[1], 'fit1':fiti[0], 'fit2':fiti[1]}
+    output['amp']    = {'x1':x1_sorted,'x2':x2_sorted, 'y1':popt0_new[0], 'y2':popt1_new[0]}
+    output['center'] = {'x1':x1_sorted,'x2':x2_sorted, 'y1':popt0_new[1], 'y2':popt1_new[1]}
+    output['fwhm']   = {'x1':x1_sorted,'x2':x2_sorted, 'y1':popt0_new[2], 'y2':popt1_new[2]}
+    output['oddset'] = {'x1':x1_sorted,'x2':x2_sorted, 'y1':popt0_new[3], 'y2':popt1_new[3]}
+    output['popt1']  = popt0_new
+    output['popt2']  = popt1_new
+    output['x1']     = x1_sorted
+    output['x2']     = x2_sorted
+    
+    return output
 
 # %% =========================== curvature parameters =============================== %% #
 def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimits=None, popt=None, offset=None, figsize=(50, 10)):
@@ -1331,7 +1358,7 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     # initialize figure #
     #####################
     fig, axes = br.subplots(1, 5, sharey='row', figsize=figsize)
-    # fig.subplots_adjust(top=0.99, bottom=0.05, left=0.05, right=0.99)
+    fig.subplots_adjust(top=0.99, bottom=0.05, left=0.05, right=0.99)
 
     #############
     # read file #
@@ -1361,7 +1388,8 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     ####################
     if popt is None:
         s, fit, popt, R2, model = pe.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode='cc', ylimits=ylimits, limit_size=1000)
-        fit = fit.crop(xlimits[0], xlimits[1])
+        if xlimits is not None:
+            fit = fit.crop(xlimits[0], xlimits[1])
         
     ########
     # plot #
@@ -1411,6 +1439,35 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     return popt
 
 # %%
+
+# %% =========================== find calib =============================== %% #
+def find_calib(folderpath, scans, sbins=2000, limits=None):
+    from lmfit.models import LinearModel
+    var = alignment(folderpath, scans, atype='Energy', sbins=sbins, calib=None, limits=limits)['center']
+    model = LinearModel()
+    params = {}
+    result = {}
+    x = {}
+    y = {}
+    _calib = {}
+    _pixel = {}
+    
+    for i in ('1','2'):
+        x[i] = np.array(var[f'x{i}'])
+        y[i] = np.array(var[f'y{i}'])
+        params[i] = model.make_params(slope=1, intercept=0)
+        result[i] = model.fit(y[i], params[i], x=x[i])
+
+        slope = result[i].params['slope'].value
+        intercept = result[i].params['intercept'].value
+
+        _calib[i] = 1 / slope
+        _pixel[i] = -intercept / slope
+    
+    _calib = [np.average(list(_calib.values())), np.average(list(_pixel.values()))]
+    print(f'calib = {_calib}')
+    return _calib
+
 
 # %% EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL EXPERIMENTAL 
 
