@@ -106,7 +106,7 @@ def _digitize_via_binning(arr, bins, xmin=None, xmax=None):
             If bins is a list, it is assumed to be the bins edges. 
             
             Bins in inclusive at the bin_edge with smaller value, 
-            and excusive at the bin_edge with higher value.
+            and exclusive at the bin_edge with higher value.
         
             (from np.histogram_bin_edges):
             If bins is an int, it defines the number of equal-width 
@@ -156,7 +156,7 @@ def _digitize_via_binning(arr, bins, xmin=None, xmax=None):
             indexes (dict), bin_edges (list)
     """
     if isinstance(bins, Iterable)==False or isinstance(bins, str):
-        bin_edges = np.histogram_bin_edges(arr, bins=20, range=None, weights=None)
+        bin_edges = np.histogram_bin_edges(arr, bins=bins, range=None, weights=None)
     else:
         bin_edges = bins
     temp = np.digitize(arr, bins=bin_edges, right=False)
