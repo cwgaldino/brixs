@@ -26,23 +26,47 @@ from other objects are not equal to pseudovars in Spectrum).
 brixs expansion modules allows for posterior addition of new methods and attrs 
 after brixs has been imported. 
 
-For example, the `model` module requires the `model` attr to be initialized 
-inside Spectrum.__init__(). However, the module `model` only exist if we import 
-it, i.e., when we do
+For a module to be considered a `expansion module` it must satisfie two conditions:
+
+1. brixs must not depend on it
+2. the module must create objects that are attributes of brixs objects, where 
+    objects are required to be initialized with __init__(), or objects are 
+    required to react when s.copy(), s.set_shift() (and other modifiers) are 
+    called.*
+     
+* The reason for an object to be initialized with __init__() is that the object
+can have access to the data inside the brixs object. For example,
+
+We have an expansion module that creates a object type Model() for each 
+instance of Spectrum, i.e.,
+
+s1.model = Model(s1)
+s2.model = Model(s2)
+
+note that s1 and s2 are an argument for initializing Model(). This way, 
+model from s1 is different from model from s2. s1.model has access to data
+from s1 and s2.model has access to data from s2.
+
+In this example, we are manually initializing s.model. If we want to 
+programmatically initialize s.model, we have to do it during s.__init__()
+so `self` can be passed to Model(). 
+
+To do that, we must include Model() in `br.settings._init['Spectrum']`.
+
+Note that, when we do
 
 import brixs as br
 
-From now on, the definition of Spectrum is well defined.
-
-However, Spectrum.model does not exist, because Spectrum.model isn't defined at
+From now on, the definition of Spectrum is well defined. However, 
+Spectrum.model does not exist, because Spectrum.model isn't defined at
 brixs.py.
 
 Then we import the `model module`
 
 import brixs.model
 
-Once this is imported, model will be included in the __init__ of Spectrum by
-including model in br.settings._init['Spectrum'] 
+Once this is imported, model will be included in the Spectrum.__init__() of 
+Spectrum via br.settings._init['Spectrum'] 
 
 print(br.settings._init['Spectrum']) ---> {'model': Model]
 
@@ -52,7 +76,7 @@ From now on, every new Spectrum object will come equipped with s.model -> Model(
 # __init__ #
 ############
 
-Note that `self` is passed to Model.
+For the `self` is passed to Model.
 
 #############
 # Modifiers #
