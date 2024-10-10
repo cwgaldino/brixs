@@ -441,15 +441,20 @@ class Model(lmfit.Parameters):
         ###################################
         # asserting validity of the input #
         ###################################
-        if value == 0:
-            return
+        # if isinstance(value, Iterable) == False:
+        #     value = [value]*len(self)
+
+        ##################################
+        # value must be the right length #
+        ##################################
+        # assert len(value) == len(self._get_list_of_indexes_i2()), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self._get_list_of_indexes_i2())}'
 
         ##################
         # applying value #
         ##################
         for component in self.components:
             obj = self.__getattribute__(component)
-            if len(obj._get_all_tags()) > 0:
+            if len(obj._get_all_tags()) > 0:  # checking if there are any components 
                 obj.set_shift(value)
 
     def set_calib(self, value):
@@ -616,6 +621,32 @@ class Model(lmfit.Parameters):
                     x = self.get_suitable_x(i2=i2)
                 ss.append(self.calculate_spectrum(i2=i2, x=x))
         return ss
+
+    def check_values_close_to_bounds(self, max_error=0.1):
+        """Return dict with parameter values close (or equal to boundaries)
+        
+            Args:
+                max_error (number, optional): percentage value 
+                    of the max distance allowed between parameters value and 
+                    boundary conditions. Default is 0.01 %
+            
+            Returns:
+                Dict
+        """
+        final = {}
+        for parameter in self:
+            if self[parameter].vary:
+                value = self[parameter].value
+                _min  = self[parameter].min
+                _max  = self[parameter].max
+                if value + value*max_error/100 >= _max:
+                    final[parameter] = 'max'
+                    if value - value*max_error/100 <= _min:
+                        final[parameter] = 'narrow'
+                elif value - value*max_error/100 <= _min:
+                    final[parameter] = 'min'
+
+        return final
 
     ##########################        
     # plot and visualization #
@@ -1592,23 +1623,40 @@ class Peaks(_ComponentTemplate):
     # base modifiers #
     ##################
     def set_shift(self, value):
-        # super().set_shift(value)
-        
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
         ##################
         # applying value #
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'c1':
-                self.parent[_name].value += value
+                self.parent[_name].value += value[i2]
+
         return 
     
     def set_offset(self, value):
-        # super().set_offset(value)
+        pass
         return 
     
     def set_factor(self, value):
-        # super().set_factor(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
 
         ##################
         # applying value #
@@ -1616,11 +1664,19 @@ class Peaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'amp1':
-                self.parent[_name].value *= value
+                self.parent[_name].value *= value[i2]
         return 
     
     def set_calib(self, value):
-        # super().set_calib(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
 
         ##################
         # applying value #
@@ -1628,9 +1684,9 @@ class Peaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'c1':
-                self.parent[_name].value *= value
+                self.parent[_name].value *= value[i2]
             elif name == 'w1':
-                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value)
+                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value[i2])
         return 
 
     #########
@@ -1799,7 +1855,15 @@ class AsymmetricPeaks(_ComponentTemplate):
     # base modifiers #
     ##################
     def set_shift(self, value):
-        # super().set_shift(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
         
         ##################
         # applying value #
@@ -1807,7 +1871,7 @@ class AsymmetricPeaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'casy':
-                self.parent[_name].value += value
+                self.parent[_name].value += value[i2]
         return 
     
     def set_offset(self, value):
@@ -1815,7 +1879,15 @@ class AsymmetricPeaks(_ComponentTemplate):
         return 
     
     def set_factor(self, value):
-        # super().set_factor(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
 
         ##################
         # applying value #
@@ -1823,11 +1895,19 @@ class AsymmetricPeaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'ampasy':
-                self.parent[_name].value *= value
+                self.parent[_name].value *= value[i2]
         return 
     
     def set_calib(self, value):
-        # super().set_calib(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
 
         ##################
         # applying value #
@@ -1835,11 +1915,11 @@ class AsymmetricPeaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'casy':
-                self.parent[_name].value *= value
+                self.parent[_name].value *= value[i2]
             elif name == 'w1asy':
-                self.parent[_name].value = abs(self.parent[f'w1asy_{i1}_{i2}'].value*value)
+                self.parent[_name].value = abs(self.parent[f'w1asy_{i1}_{i2}'].value*value[i2])
             elif name == 'w2asy':
-                self.parent[_name].value = abs(self.parent[f'w2asy_{i1}_{i2}'].value*value)
+                self.parent[_name].value = abs(self.parent[f'w2asy_{i1}_{i2}'].value*value[i2])
         return 
 
     #########
@@ -1918,7 +1998,15 @@ class Linear(_ComponentTemplate):
     # base modifiers #
     ##################
     def set_shift(self, value):
-        # super().set_shift(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
         
         ##################
         # applying value #
@@ -1926,11 +2014,19 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a0':
-                self.parent[_name].value -= self.parent[f'a1_{i1}_{i2}'].value*value
+                self.parent[_name].value -= self.parent[f'a1_{i1}_{i2}'].value*value[i2]
         return 
     
     def set_offset(self, value):
-        # super().set_offset(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
         
         ##################
         # applying value #
@@ -1938,11 +2034,19 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a0':
-                self.parent[_name].value += value
+                self.parent[_name].value += value[i2]
         return 
     
     def set_factor(self, value):
-        # super().set_factor(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
 
         ##################
         # applying value #
@@ -1950,13 +2054,21 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a1':
-                self.parent[_name].value *= value
+                self.parent[_name].value *= value[i2]
             if name == 'a0':
-                self.parent[_name].value *= value
+                self.parent[_name].value *= value[i2]
         return 
     
     def set_calib(self, value):
-        # super().set_calib(value)
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
 
         ##################
         # applying value #
@@ -1964,7 +2076,7 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a1':
-                self.parent[_name].value *= 1/value
+                self.parent[_name].value *= 1/value[i2]
         return 
 # %%
 
