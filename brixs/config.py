@@ -68,29 +68,80 @@ import brixs.model
 Once this is imported, model will be included in the Spectrum.__init__() of 
 Spectrum via br.settings._init['Spectrum'] 
 
-print(br.settings._init['Spectrum']) ---> {'model': Model]
+print(br.settings._init['Spectrum']) ---> {'model': Model}
 
 From now on, every new Spectrum object will come equipped with s.model -> Model()
 
-############
-# __init__ #
-############
+##################
+# settings._init #
+##################
 
-For the `self` is passed to Model.
+br.settings._init['brixs_object']  --->  {'attr_name': Object, }
 
-#############
-# Modifiers #
-#############
-settings._shift, settings._offset, ...  allow for expanding brixs  that 
-respond accordingly when
-set_shift, set_calib, ... are called. For example, when one calls s.set_shift(10)
-them the spectrum s is shifted by 10, and also everything else inside 
-settings._modifiers['shift']. If 'model' is in settings._modifiers['shift'], then
-s.set_shift() also calls s.model.set_shift().
+for every entry inside settings._init, a attr will be created with name 
+'attr_name' and it will be linked to an Object. The parent brixs object (`self`)
+ is passed to the object. Example,
 
-For now, settings._modifiers is only implemented for Spectrum and Spectra. But 
-it should be trivial to expand it to Image and PhotonEvents. I just did not do 
-it yet, because I see no need.
+br.settings._init['Spectrum'] = {'model': Model, }
+
+When a Spectrum s1 is initialized, s1 will have an attr 'model'
+
+s1 = br.Spectrum()
+print(s1.model) ---> Model()
+
+Where Model was created by calling 
+
+br.model.Model(parent=s1)
+
+##################
+# settings._copy #
+##################
+
+br.settings._copy['brixs_object']  --->  ['attr_name', ]
+
+for every entry in settings._copy, the attr_name.copy() will be called together with
+brixs_object.copy(). Example.
+
+br.settings._copy['Spectrum'] = ['model', ]
+
+When we call copy() for Spectrum s1 like, 
+
+s2 = s1.copy()
+
+we have that s1.model.copy() is also called. Internally, this is happening:
+
+s2.model = s1.model.copy()
+
+Therefore, s2 is a complete copy of s1, including s1.model.
+
+
+####################################
+# _shift, _offset, _factor, _calib #
+####################################
+
+br.settings._shift['brixs_object']  --->  ['attr_name', ]
+br.settings._offset['brixs_object']  --->  ['attr_name', ]
+br.settings._factor['brixs_object']  --->  ['attr_name', ]
+br.settings._calib['brixs_object']  --->  ['attr_name', ]
+
+for every entry in settings._shift, the attr_name.set_shift() will be called together with
+brixs_object.set_shift(). Example.
+
+let's say 
+
+br.settings._shift['Spectrum'] = ['model', ]
+
+then,
+
+s1 = br.Spectrum()
+
+s2 = s1.set_shift(10)  ---> this will also call s1.model.set_shift(10)
+
+therefore, s2 will be a shifted copy of s1 where model is also shifted.
+
+WARNING: For now, [_shift, _offset, _factor, _calib] is only implemented for 
+Spectrum and Spectra. But it should be trivial to expand it to Image and 
+PhotonEvents. I just did not do it yet, because I see no need.
 
 """
 
