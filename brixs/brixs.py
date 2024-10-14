@@ -3428,7 +3428,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for extra in settings._copy['Spectra']:
             if hasattr(ss, extra):
                 ss.__setattr__(extra, self.__getattribute__(extra).copy(ss))
-
+        for extra in settings._copy['Spectrum']:
+            for s in ss:
+                if hasattr(s, extra):
+                    s.__setattr__(extra, self.__getattribute__(extra).copy(s))   
         return ss
     
     #################

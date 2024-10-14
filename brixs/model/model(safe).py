@@ -144,572 +144,6 @@ def _name_parser(name):
     return name, i1, i2
 
 # %% -------------------------------- Model ------------------------------- %% #
-class Model_(lmfit.Parameters):
-    
-    def __init__(self, parent=None):  # talk about why parent has to be None (only from within the fit - minimizer - function)
-        super().__init__()
-        self.parent = parent
-
-        ##############
-        # components #
-        ##############
-        self.components = {'peaks':  Peaks,
-                           'linear': Linear,
-                           'asymmetricpeaks': AsymmetricPeaks,}
-
-        # check repeated tags
-        unique_tags = []
-        for component in self.components:
-            for tag in list(self.components[component](None).nametags.values()):
-                if tag in unique_tags:
-                    raise KeyError(f'tag `{tag}` in `{component}` already exist. Tags must be unique. Please, change this tag')
-                else:
-                    unique_tags.append(tag)
-        del unique_tags
-
-        # start components
-        for name, obj in self.components.items():
-            self.__setattr__(name, obj(self))
-
-    #################
-    # magic methods #
-    #################
-    def __setitem__(self, value, _value):
-        super().__setitem__(value, _value)
-    
-    def __getitem__(self, value):
-        #######
-        # int #
-        #######
-        # if isinstance(value, int):
-        #     return self._get_parameters_for_given_i2(i2=value) 
-        ##########
-        # string #
-        ##########
-        if isinstance(value, str):
-            return super().__getitem__(value)
-        ##########
-        # error #
-        ##########
-        else:
-            raise ValueError('key must be str')# or int')
-        
-    def __delitem__(self, value):
-        """delete"""
-        super().__delitem__(value)
-        # self.remove(i2=value)
-
-    #########
-    # basic #
-    #########
-    def remove_parameters_for_given_i2(self, i2):
-        """remove all components with index i2"""
-        # valid i2
-        i2s = self._get_list_of_indexes_i2()
-        assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
-
-        # remove
-        for name in self:
-            if name.split('_')[2] == str(i2):
-                del self[name]
-
-    def get_available_components(self):
-        """returns list of available components"""
-        return list(self.components.keys())
-
-    ###########
-    # support #
-    ###########
-    def _check_if_model_have_only_one_i2(self):
-        """return True if model has only one i2, i.e., parameters for only one spectrum"""
-        if len(self._get_list_of_indexes_i2()) < 2: return True
-        else: return False
-    
-    def _get_list_of_indexes_i2(self):
-        """return list of all secondary (spectrum number) indexes i2
-        
-        Returns:
-            list
-        """
-        return list(np.unique([int(name.split('_')[2]) for name in self]))
-
-    # _get_indexes_i1_for_each_component_and_each_i2
-    def _get_indexes_dict(self):
-        """get indexes
-
-        Returns:
-            dict of dicts of list
-                {component name: {i2: [i1]}}
-        """
-        return {name: self.__getattribute__(name)._get_indexes_dict() for name in self.components}
-    
-    # def _get_parameters_for_given_i2(self, i2):
-    #     """returns parameters for a given i2
-
-    #     Args:
-    #         i2 (int or None, optional): i2 index
-
-    #     Returns:
-    #         model object
-    #     """
-    #     # valid i2
-    #     i2s = self._get_list_of_indexes_i2()
-    #     assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
-        
-    #     # get item
-    #     final = Model(self.parent)
-    #     for tag in self:
-    #         if tag.split('_')[2] == str(i2):
-    #             final[tag] = self[tag]
-    #     return final 
-    
-    #########
-    # model #
-    #########
-    def check_feasibility(self):
-        """Check if start values are within boundaries."""
-        final = []
-        for name in self:
-            value = self[name].value
-            vmax  = self[name].max
-            vmin  = self[name].min
-
-            if value > vmax or value < vmin:
-                final.append(f'parameter `{name}`\n    bound max = {vmax}\n    start value = {value}\n    bound min = {vmin}\n')
-        if final != []:
-            raise ValueError(f'Feasibility error. Start values outside boundaries:\n\n' + '\n'.join(final))
-    
-    def get_model_str(self, i2=None):
-        """Returns string for building model.
-
-        Args:
-            i2 (int, optional): secondary (spectrum) index i2. If None, i2 must 
-                be unique. Default is None.
-
-        Returns:
-            two strings: variables and function f(x) as string
-        """
-        # check i2
-        if i2 is None:
-            if self._check_if_model_have_only_one_i2():
-                i2 = self._get_list_of_indexes_i2()[0]
-            else:
-                raise ValueError('i2 not defined')
-        else:
-            assert i2 in self._get_list_of_indexes_i2(), f'i2={i2} not found'
-        
-        # Initialization
-        indexes   = self._get_indexes_dict()
-        final     = ''
-        variables = ''
-
-        # model
-        for component in indexes:
-            if i2 in indexes[component]:
-                for _i1 in indexes[component][i2]:
-                    _variables, _final = self.__getattribute__(component).get_model_str(i1=_i1, i2=i2)
-                    final     += _final     + ' + '
-                    variables += _variables + ', '
-        variables = variables.replace('self.parent[', 'self[')
-        return variables[:-2], final[:-3]
-
-    def get_model(self, i2=None):
-        """Returns a function f(x) for the peak.
-        
-        Args:
-            i2 (int, optional): secondary (spectrum) index i2. If None, i2 must 
-                be unique. Default is None.
-
-        Returns:
-            function f(x)
-        """
-        variables, _model = self.get_model_str(i2=i2)
-        model = f'lambda x, {variables}: {_model}'
-        return eval(model)
-
-    def fit(self, method='least_squares', limits=None, update=True):
-        """fit spectrum with model function and return lmfit.minimizer output
-
-        Warning: 
-
-        Warning:
-            I am unsure if the data to be fitted (x, y) needs to be monotonic. 
-            After some testing, it does not seem to be a requirement for lmfit.
-            However, I would keep an eye on it since this is a requirement for
-            scipy.curve_fit().
-
-        Args:
-            method (str, optional): Name of the fitting method to use. See methods
-                available on `lmfit.minimize()`_ documentation.
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Limits are
-                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
-                the minimum or maximum x value of the data, respectively. If 
-                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-            update (bool, optional): if True, Model will be updated with 
-                fitted values.
-        
-        Returns:
-            `lmfit.minimize()`_ output object  
-
-        .. _lmfit.minimize(): https://lmfit.github.io/lmfit-py/fitting.html      
-        """
-        ###############
-        # feasibility #
-        ###############
-        self.check_feasibility()
-
-        ##########
-        # ranges #
-        ##########
-        temp = self.parent.copy(limits=limits)
-
-        ################
-        # x and y data #
-        ################
-        if isinstance(temp, br.Spectrum):
-            xs = [temp.x, ]
-            ys = [temp.y, ]
-        elif isinstance(temp, br.Spectra):
-            xs = [s.x for s in temp]
-            ys = [s.y for s in temp]
-        else:
-            raise('there is no parent (br.Spectrum/br.Spectra) object associated with this fitting model')
-
-        #####################
-        # residual function #
-        #####################
-        def residual(params, xs, ys):
-            """residual function for lmfit.minimize function
-
-            Args:
-                params (lmfit.parameters)
-                xs, ys (list): list with x and y arrays
-
-            Returns:
-                residual
-            """
-            residual = []
-
-            # make residual per data set
-            for i2, x in enumerate(xs):
-                residual.append(ys[i2] - params.get_model(i2=i2)(x))
-
-            residual = np.concatenate(residual).ravel()
-            return residual
-        
-        ##################
-        # lmfit minimize #
-        ##################
-        out = lmfit.minimize(residual, method=method, params=self, kws={'xs':xs, 'ys':ys})        
-        
-        #####################
-        # update parameters #
-        #####################
-        if update:
-            for name in self:
-                self[name] = out.params[name]
-        return lmfit.fit_report(out), out
-    
-    ########
-    # copy #
-    ########
-    def copy(self, parent=None):
-        model = copy.deepcopy(self)
-        model.parent = parent
-        return model
-
-    #################
-    # save and load #
-    #################
-    # TODO
-
-    ##################
-    # base modifiers #
-    ##################
-    def set_shift(self, value):
-        """Shift peaks to components
-
-        Args:
-            value (float or int): shift value (value will be added to center c).
-
-        Returns:
-            None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        # if isinstance(value, Iterable) == False:
-        #     value = [value]*len(self)
-
-        ##################################
-        # value must be the right length #
-        ##################################
-        # assert len(value) == len(self._get_list_of_indexes_i2()), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self._get_list_of_indexes_i2())}'
-
-        ##################
-        # applying value #
-        ##################
-        for component in self.components:
-            obj = self.__getattribute__(component)
-            if len(obj._get_all_tags()) > 0:  # checking if there are any components 
-                obj.set_shift(value)
-
-    def set_calib(self, value):
-        """Set calibration value to components
-
-        Args:
-            value (number): calibration value (centers and widths will be multiplied
-                by this value).
-
-        Returns:
-            None
-        """      
-        ###################################
-        # asserting validity of the input #
-        ################################### 
-        if value == 0:  # calib cannot be zero
-            raise ValueError('cannot set calib = 0')
-        elif value == 1:   # if calib is 1, do nothing
-            return
-        
-        ##################
-        # applying value #
-        ##################
-        for component in self.components:
-            obj = self.__getattribute__(component)
-            if len(obj._get_all_tags()) > 0:
-                obj.set_calib(value)
-                
-    def set_offset(self, value):
-        """Set offset value to component
-
-        Args:
-            value (value): offset value.
-
-        Returns:
-            None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        if value == 0:
-            return
-
-        ##################
-        # applying value #
-        ##################
-        for component in self.components:
-            obj = self.__getattribute__(component)
-            if len(obj._get_all_tags()) > 0:           
-                obj.set_offset(value)
-
-    def set_factor(self, value):
-        """Set multiplicative factor to component.
-
-        Args:
-            value (number): multiplicative factor (amplitudes and areas will be
-                multiplied by this value).
-
-        Returns:
-            None
-        """
-        ###################################
-        # asserting validity of the input #
-        ###################################
-        if value == 0:
-            raise ValueError('cannot set factor = 0.')
-        elif value == 1:
-            return
-
-        ##################
-        # applying value #
-        ##################
-        for component in self.components:
-            obj = self.__getattribute__(component)
-            if len(obj._get_all_tags()) > 0:                      
-                obj.set_factor(value)
-
-    ######################
-    # calculate spectrum #
-    ######################
-    def get_suitable_x(self, i2=None, i1='all'):
-        """estimates a suitable array with x values for plotting.
-
-        Args:
-            i1 (int or str, optional): i1 index. Use `all` to get data from all
-                valid i1 indexes. Default is `all`.
-            i2 (int or None, optional): i2 index. If None, i2 is assumed to be 
-                unique. Default is None.
-
-        Returns:
-            array
-        """
-        # empty model
-        assert len(self) > 0, 'cannot estimate suitable x in a empty model'
-
-        vmin = None
-        vmax = None
-        step = None
-
-        for component in self.components:
-            obj = self.__getattribute__(component)
-            if len(obj._get_all_tags()) > 0:
-                x = obj.get_suitable_x(i2=i2, i1=i1, verbose=False)
-                if vmin is None or vmin > min(x):
-                    vmin = min(x)
-                if vmax is None or vmax < max(x):
-                    vmax = max(x)
-                if step is None or step > x[1]-x[0]:
-                    step = x[1]-x[0]
-
-            # _vmin, _vmax, _step = obj._get_min_max_step(i2=i2, i1=i1)
-            # _vmin = _vmin
-            # _vmax = _vmax
-            # _step = _step
-            # if vmin is None or vmin > _vmin:
-            #     vmin = _vmin
-            # if vmax is None or vmax < _vmax:
-            #     vmax = _vmax
-            # if step is None or step < _step:
-            #     step = _step
-
-        return np.arange(vmin, vmax, step)
-    
-    def calculate_spectrum(self, i2=None, x=None):
-        """Return spectrum
-
-        Args:
-            i2 (int or None, optional): i2 index. If None, i2 is assumed to be 
-                unique. Default is None.
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x will be calculated
-
-        Returns:
-            :py:class:`Spectrum`.
-        """        
-        # get model
-        model = self.get_model(i2=i2)
-
-        # get x
-        if x is None:
-            x = self.get_suitable_x(i2=i2)
-
-        return br.Spectrum(x=x, y=model(x))
-
-    def calculate_spectra(self, x=None):
-        """Return a Spectra object with spectra for each i2 index 
-
-        Note:
-            If model is absent for a certain i2, this will return an empty spectrum
-        
-        Args:
-            x (list, optional): x values to which the curve will be calculated.
-                If None, a suitable x will be constructed.
-
-        Returns:
-            :py:class:`Spectra`
-        """
-        ss = br.Spectra()
-        for i2 in range(len(self.parent)):
-            if i2 not in self._get_list_of_indexes_i2():
-                ss.append(br.Spectrum())
-            else:
-                if x is None:
-                    x = self.get_suitable_x(i2=i2)
-                ss.append(self.calculate_spectrum(i2=i2, x=x))
-        return ss
-
-    def check_values_close_to_bounds(self, max_error=0.1):
-        """Return dict with parameter values close (or equal to boundaries)
-        
-            Args:
-                max_error (number, optional): percentage value 
-                    of the max distance allowed between parameters value and 
-                    boundary conditions. Default is 0.01 %
-            
-            Returns:
-                Dict
-        """
-        final = {}
-        for parameter in self:
-            if self[parameter].vary:
-                value = self[parameter].value
-                _min  = self[parameter].min
-                _max  = self[parameter].max
-                if value + value*max_error/100 >= _max:
-                    final[parameter] = 'max'
-                    if value - value*max_error/100 <= _min:
-                        final[parameter] = 'narrow'
-                elif value - value*max_error/100 <= _min:
-                    final[parameter] = 'min'
-
-        return final
-
-    ##########################        
-    # plot and visualization #
-    ##########################
-    def pretty_print(self, *args, **kwargs):
-        """Wrapper for `lmfit.parameter.Parameters.pretty_print()`_.
-
-        .. _lmfit.parameter.Parameters.pretty_print(): https://lmfit.github.io/lmfit-py/parameters.html#lmfit.parameter.Parameters.pretty_print
-        """
-        if len(self) == 0:
-            return None
-        return super().pretty_print(*args, **kwargs)
-
-    def plot(self, i2=None, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, **kwargs):
-        """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
-
-        Note:
-            If `label` is `None` and if spectrum have attr 
-            `label`, this attr will be used as label, e.g., 
-            `plt.plot(s.x, s.y, label=s.label)`.  
-
-        Args:
-            ax (matplotlib.axes, optional): axes for plotting on.
-            calib, shift (number, optional): multiplicative and additive factor
-                 on the x-coordinates. calib is applied first.
-            factor, offset (number, optional): multiplicative and additive factor
-                 on the y-coordinates. Factor is applied first.
-            roll (int, optional): Roll value of array elements of the x-coordinates
-            smooth (int, optional): number of points to average data. Default is 1.
-            label (str, number, optional): if str or number, this label will be 
-                applied. If None and if spectrum have attr `label`, 
-                this attr will be used as label, e.g., `plt.plot(s.x, s.y, label=s.label)`.
-                Default is None. 
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Limits are
-                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
-                the minimum or maximum x value of the data, respectively. If 
-                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-            switch_xy (bool, optional): Switch x and y axis.
-            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
-
-        Returns:
-            `Line2D`_
-
-        .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
-        .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
-        """
-        ################
-        # get spectrum #
-        ################
-        x = self.get_suitable_x(i2=i2)
-        f = self.get_model(i2=i2)
-        y = f(x)
-        s = br.Spectrum(x=x, y=y)
-
-        ########
-        # plot #
-        ########
-        return s.plot(ax=ax, offset=offset, shift=shift, roll=roll, factor=factor, calib=calib, smooth=smooth, label=label, limits=limits, switch_xy=switch_xy, **kwargs)
-
-
 class Model(lmfit.Parameters):
 
     def __init__(self, parent=None):  # talk about why parent has to be None (only from within the fit - minimizer - function)
@@ -748,7 +182,7 @@ class Model(lmfit.Parameters):
         # int #
         #######
         if isinstance(value, int):
-            return self._get_dict_for_given_i2(i2=value) 
+            return self._get_parameters_for_given_i2(i2=value) 
         ##########
         # string #
         ##########
@@ -783,35 +217,14 @@ class Model(lmfit.Parameters):
         """returns list of available components"""
         return list(self.components.keys())
 
-    def copy_from_spectra(self):
-        assert isinstance(self.parent, br.Spectra), 'parent object must be of type br.Spectra'
-        print('still not sure this works 100%')
+    def copy_parameters_from_spectra(self):
+        assert isinstance(self.parent, br.spectra), 'parent object must be of type br.Spectra'
 
-        for i2, _s in enumerate(self.parent):
-            for name in self.parent[i2].model:
-                attr = self.parent[i2].model[name]
-                new_name = '_'.join(name.split('_')[:2]) + '_' + str(i2)
-                self[new_name] = attr
-                self[new_name].name = new_name
-                self[new_name].expr = ''
-        return
+        for i, _s in enumerate(self.parent):
+            for name in self.parent[i].model:
 
-    def split_parameters_per_spectra(self):
-        assert isinstance(self.parent, br.Spectra), 'parent object must be of type br.Spectra'
-        print('still not sure this works 100%')
+                self.[name]
 
-        # remove expr from all parameters
-        temp = copy.deepcopy(self)
-        for attr in temp:
-            temp[attr].expr = ''
-
-        for i2, _s in enumerate(self.parent):
-            for name in temp:
-                _name, _i1, _i2 = _name_parser(name)
-                if _i2 == i2:
-                    new_name = _name + '_' + str(_i1) + '_0'
-                    _s.model[new_name] = temp[name]
-        return
 
     ###########
     # support #
@@ -839,36 +252,25 @@ class Model(lmfit.Parameters):
         """
         return {name: self.__getattribute__(name)._get_indexes_dict() for name in self.components}
     
-    def _get_dict_for_given_i2(self, i2):
+    def _get_parameters_for_given_i2(self, i2):
+        """returns parameters for a given i2
+
+        Args:
+            i2 (int or None, optional): i2 index
+
+        Returns:
+            model object
+        """
+        # valid i2
         i2s = self._get_list_of_indexes_i2()
         assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
-        final = {}
+        
+        # get item
+        final = Model(self.parent)
         for tag in self:
             if tag.split('_')[2] == str(i2):
-                final[tag] = self[tag].value
-        return final
-    
-    # def _get_parameters_for_given_i2(self, i2):
-    #     """returns parameters for a given i2
-
-    #     Args:
-    #         i2 (int or None, optional): i2 index
-
-    #     Returns:
-    #         model object
-    #     """
-    #     # valid i2
-    #     i2s = self._get_list_of_indexes_i2()
-    #     assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
-        
-    #     # get item
-    #     final = Model(self.parent)
-    #     for tag in self:
-    #         if tag.split('_')[2] == str(i2):
-    #             temp = self[tag]
-    #             temp.expr = ''
-    #             final[tag] = temp
-    #     return final
+                final[tag] = self[tag]
+        return final 
     
     #########
     # model #
@@ -1026,9 +428,6 @@ class Model(lmfit.Parameters):
     def copy(self, parent=None):
         model = copy.deepcopy(self)
         model.parent = parent
-        # if isinstance(parent, br.Spectra):
-        #     for _s in parent:
-        #         _s.model
         return model
 
     #################
@@ -1418,8 +817,7 @@ class _ComponentTemplate(object):
         # int #
         #######
         if isinstance(value, int):
-            # return self._get_parameters_for_given_i2_i1(i1=value, i2=None) 
-            return self._get_dict_for_given_i2_i1(i1=value, i2=None) 
+            return self._get_parameters_for_given_i2_i1(i1=value, i2=None) 
         ##########
         # string #
         ##########
@@ -1470,7 +868,7 @@ class _ComponentTemplate(object):
         elif len(split) != 1 and len(split) != 3:
             raise KeyError(f'`{name}` is not a recognizable attr for component of type `{type(self)}`')
         else:
-            raise KeyError('key must be str')# or int')
+            raise KeyError('key must be str or int')
         
     def __delitem__(self, value):
         """cannot be used"""
@@ -1623,8 +1021,8 @@ class _ComponentTemplate(object):
         _i2  = self._get_list_of_indexes_i2()
         return {i2:list(np.unique([int(tag.split('_')[1]) for tag in tags if int(tag.split('_')[2]) == i2])) for i2 in _i2}
       
-    def _get_dict_for_given_i2_i1(self, i2=None, i1='all'):
-        """returns dict with parameters name and value for a given i1 and i2
+    def _get_parameters_for_given_i2_i1(self, i2=None, i1='all'):
+        """returns parameters for a given i1 and i2
 
         Args:
             i1 (int or str, optional): i1 index. Use `all` to get data from all
@@ -1633,41 +1031,19 @@ class _ComponentTemplate(object):
                 unique. Default is None.
 
         Returns:
-            dict
+            a component type object
         """
         # get tags
         tags = self._get_tags_dict_for_given_i2_i1(i2=i2, i1=i1)
 
         # get parameters
-        final = {}
+        parent = {}
         for _i1 in tags:
-            final.update({tag: self.parent[tag].value for tag in tags[_i1]})
+            parent.update({tag: self.parent[tag] for tag in tags[_i1]})
         
+        # final
+        final = self.__class__(parent)
         return final 
-
-    # def _get_parameters_for_given_i2_i1(self, i2=None, i1='all'):
-    #     """returns parameters for a given i1 and i2
-
-    #     Args:
-    #         i1 (int or str, optional): i1 index. Use `all` to get data from all
-    #             valid i1 indexes. Default is `all`.
-    #         i2 (int or None, optional): i2 index. If None, i2 is assumed to be 
-    #             unique. Default is None.
-
-    #     Returns:
-    #         a component type object
-    #     """
-    #     # get tags
-    #     tags = self._get_tags_dict_for_given_i2_i1(i2=i2, i1=i1)
-
-    #     # get parameters
-    #     parent = {}
-    #     for _i1 in tags:
-    #         parent.update({tag: self.parent[tag] for tag in tags[_i1]})
-        
-    #     # final
-    #     final = self.__class__(parent)
-    #     return final 
 
     def _get_all_tags(self):
         """returns a list of all tags associated with this component"""
@@ -2054,57 +1430,57 @@ class _ComponentTemplate(object):
     ##############
     # get values #
     ##############
-    # def get_values_for_each_i2(self, name, i1=None):
-    #     """Returns a list with values of a component parameter for each i2.
+    def get_values_for_each_i2(self, name, i1=None):
+        """Returns a list with values of a component parameter for each i2.
 
-    #     Args:
-    #         name (str): parameter name.
-    #         i1   (int): i1 index (component number). If i1 is None, i1 is assumed
-    #             to be unique for all i2. Default is None.
+        Args:
+            name (str): parameter name.
+            i1   (int): i1 index (component number). If i1 is None, i1 is assumed
+                to be unique for all i2. Default is None.
         
-    #     Returns:
-    #         list of values
-    #     """
-    #     # check if name is a valid attribute
-    #     assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
+        Returns:
+            list of values
+        """
+        # check if name is a valid attribute
+        assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
 
-    #     # check i1 is valid
-    #     indexes = self._get_indexes_dict()
-    #     if i1 is None:
-    #         check = {i2: len(indexes[i2]) for i2 in indexes}
-    #         assert sum(list(check.values())) == len(indexes), f'i1 is not unique for all i2\ni1 must be defined\nindexes = {indexes}'
-    #     else:
-    #         check = {i2: i1 in indexes[i2] for i2 in indexes}
-    #         assert False not in list(check.values()), f'some i2 indexes do not have i1 component\ni2 error = {check}\nindexes = {indexes}'
+        # check i1 is valid
+        indexes = self._get_indexes_dict()
+        if i1 is None:
+            check = {i2: len(indexes[i2]) for i2 in indexes}
+            assert sum(list(check.values())) == len(indexes), f'i1 is not unique for all i2\ni1 must be defined\nindexes = {indexes}'
+        else:
+            check = {i2: i1 in indexes[i2] for i2 in indexes}
+            assert False not in list(check.values()), f'some i2 indexes do not have i1 component\ni2 error = {check}\nindexes = {indexes}'
 
-    #     # get values
-    #     return [self._get_parameters_for_given_i2_i1(i2=i2, i1=i1)[name].value for i2 in indexes]
+        # get values
+        return [self._get_parameters_for_given_i2_i1(i2=i2, i1=i1)[name].value for i2 in indexes]
 
-    # def get_errors_for_each_i2(self, name, i1=None):
-    #     """Returns a list with errors of a component parameter for each i2.
+    def get_errors_for_each_i2(self, name, i1=None):
+        """Returns a list with errors of a component parameter for each i2.
 
-    #     Args:
-    #         name (str): parameter name.
-    #         i1   (int): i1 index (component number). If i1 is None, i1 is assumed
-    #             to be unique for all i2. Default is None.
+        Args:
+            name (str): parameter name.
+            i1   (int): i1 index (component number). If i1 is None, i1 is assumed
+                to be unique for all i2. Default is None.
         
-    #     Returns:
-    #         list of values
-    #     """
-    #     # check if name is a valid attribute
-    #     assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
+        Returns:
+            list of values
+        """
+        # check if name is a valid attribute
+        assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
 
-    #     # check i1 is valid
-    #     indexes = self._get_indexes_dict()
-    #     if i1 is None:
-    #         check = {i2: len(indexes[i2]) for i2 in indexes}
-    #         assert sum(list(check.values())) == len(indexes), f'i1 is not unique for all i2\ni1 must be defined\nindexes = {indexes}'
-    #     else:
-    #         check = {i2: i1 in indexes[i2] for i2 in indexes}
-    #         assert False not in list(check.values()), f'some i2 indexes do not have i1 component\ni2 error = {check}\nindexes = {indexes}'
+        # check i1 is valid
+        indexes = self._get_indexes_dict()
+        if i1 is None:
+            check = {i2: len(indexes[i2]) for i2 in indexes}
+            assert sum(list(check.values())) == len(indexes), f'i1 is not unique for all i2\ni1 must be defined\nindexes = {indexes}'
+        else:
+            check = {i2: i1 in indexes[i2] for i2 in indexes}
+            assert False not in list(check.values()), f'some i2 indexes do not have i1 component\ni2 error = {check}\nindexes = {indexes}'
 
-    #     # get values
-    #     return [self._get_parameters_for_given_i2_i1(i2=i2, i1=i1)[name].err for i2 in indexes]
+        # get values
+        return [self._get_parameters_for_given_i2_i1(i2=i2, i1=i1)[name].err for i2 in indexes]
 
     ##########################        
     # plot and visualization #
