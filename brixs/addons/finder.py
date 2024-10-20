@@ -173,6 +173,14 @@ def reset(folderpath=None):
     ######################
     f = open(folderpath/'finder.txt', 'w')
     f.close()
+
+    ##################
+    # create counter #
+    ##################
+    f = open(folderpath/'_counter.txt', 'w')
+    f.write('-1')
+    f.close()
+
     return
 # %%
 
@@ -275,16 +283,29 @@ def search(kwargs=None, folderpath=None):
         if verbose:
             print(f'Loading data already processed: {search_result.name}')
 
-        _s = br.Spectrum(filepath=search_result)
-        if hasattr(_s, 'brixs__finder__spectra__list__'):
+        if 'Spectrum' in search_result.name:
+            return br.Spectrum(filepath=search_result)
+        elif 'PhotonEvents' in search_result.name:
+            return br.PhotonEvents(filepath=search_result)
+        elif 'Spectra' in search_result.name:
+            split = search_result.name.split('_')
+            start = int(split[2])
+            stop  = int(split[3])
             ss = br.Spectra()
-            for filepath in _s.brixs__finder__spectra__list__:
-                ss.append(br.Spectrum(filepath=filepath))
-            del ss[0].brixs__finder__spectra__list__
-
+            for i in range(start, stop+1):
+                folderpath = search_result.parent
+                filename = f'finderfile_Spectra_{i}_{stop}'
+                ss.append(br.Spectrum(filepath=folderpath/filename))
             return ss
+        # elif hasattr(_s, 'brixs__finder__spectra__list__'):
+        #     ss = br.Spectra()
+        #     for filepath in _s.brixs__finder__spectra__list__:
+        #         ss.append(br.Spectrum(filepath=filepath))
+        #     del ss[0].brixs__finder__spectra__list__
+
+        #     return ss
         else:
-            return _s
+            pass
     else:
         return False
 
@@ -316,34 +337,74 @@ def save(obj, folderpath=None):
         f = open(folderpath/'finder.txt', 'w')
         f.close()
 
-    #############################
-    # get filename to save file #
-    #############################
-    index_of_saved_files = [int(filename.name.split('.')[0].split('_')[1]) for filename in br.filelist(folderpath, string='finderfile*.dat')]
-    if len(index_of_saved_files) == 0: 
-        next_file_number = 0
-    else:
-        next_file_number = int(max(index_of_saved_files) + 1)
-    filename = f'finderfile_{next_file_number}.dat'
+    #################
+    # check counter #
+    #################
+    if (folderpath/'_counter.txt').exists() == False:
+        f = open(folderpath/'_counter.txt', 'w')
+        f.write('-1')
+        f.close()
+
+    ###################
+    # get next number #
+    ###################
+    f = open(folderpath/'_counter.txt', 'r')
+    next_file_number = f.read()
+    f.close() 
+    next_file_number = int(next_file_number) + 1
+
+    # with (folderpath/'_counter.txt')
+    # next_file_number = 
+    # index_of_saved_files = [int(filename.name.split('.')[0].split('_')[1]) for filename in br.filelist(folderpath, string='finderfile*.dat')]
+    # if len(index_of_saved_files) == 0: 
+    #     next_file_number = 0
+    # else:
+    #     next_file_number = int(max(index_of_saved_files) + 1)
+    # filename = f'finderfile_{next_file_number}.dat'
 
     ###############
     # save object #
     ###############
+    # if isinstance(obj, br.Spectrum) or isinstance(obj, br.PhotonEvents):# or isinstance(obj, br.Image):
+    #     obj.save(folderpath/filename)
+    # elif isinstance(obj, br.Spectra):
+    #     brixs__finder__spectra__list__ = [str(folderpath/f'finderfile_{next_file_number + i}.dat') for i in range(len(obj))]
+    #     obj[0].brixs__finder__spectra__list__ = brixs__finder__spectra__list__
+    #     obj[0].save(filepath=folderpath/filename)
+
+    #     for i, _s in enumerate(obj[1:]):
+    #         obj[0].save(filepath=brixs__finder__spectra__list__[i+1])
     if isinstance(obj, br.Spectrum):
+        filename = f'finderfile_Spectrum_{next_file_number}'
+        obj.save(folderpath/filename)
+    if isinstance(obj, br.PhotonEvents):
+        filename = f'finderfile_PhotonEvents_{next_file_number}'
         obj.save(folderpath/filename)
     elif isinstance(obj, br.Spectra):
-        brixs__finder__spectra__list__ = [str(folderpath/f'finderfile_{next_file_number + i}.dat') for i in range(len(obj))]
-        obj[0].brixs__finder__spectra__list__ = brixs__finder__spectra__list__
+        filename = f'finderfile_Spectra_{next_file_number}_{next_file_number+len(obj)-1}'
+        # brixs__finder__spectra__list__ = [str(folderpath/f'finderfile_{next_file_number + i}.dat') for i in range(len(obj))]
+        # obj[0].brixs__finder__spectra__list__ = brixs__finder__spectra__list__
         obj[0].save(filepath=folderpath/filename)
 
+        start = next_file_number
         for i, _s in enumerate(obj[1:]):
-            obj[0].save(filepath=brixs__finder__spectra__list__[i+1])
+            next_file_number += 1
+            _filename = f'finderfile_Spectra_{next_file_number}_{start+len(obj)-1}'
+            _s.save(filepath=folderpath/_filename)
+
 
     ###########################################
     # save string and filepath to finder file #
     ###########################################
     f = open(folderpath/'finder.txt', 'a')
     f.write(br.finder._search_string + '\n' + str(folderpath/filename) + '\n')
+    f.close() 
+
+    ################
+    # tick counter #
+    ################
+    f = open(folderpath/'_counter.txt', 'w')
+    f.write(str(next_file_number))
     f.close() 
 
     #######################

@@ -2736,6 +2736,8 @@ def axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels=''
         colors (color or list, optional): line colors. Default is black
         linestyles (string or list, optional): linestyles. Default is '--'.
         labels (string or list, optional): labels. Default is ''.
+            If labels is str, only first line gets labeled. If labels is a list
+            each line is labeled independtly.
         ax (axes, optional): axes. If None, the current axes will be used. Default is None
         **kwargs: kwargs are passed to `plt.vlines()`_ or `plt.axvline()`_
 
@@ -2761,19 +2763,29 @@ def axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels=''
         assert len(x) == len(linestyles), 'linestyles must be the same length as x'
     else:
         linestyles = [linestyles]*len(x)
-    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
-        assert len(x) == len(labels), 'labels must be the same length as x'
-    else:
-        labels = [labels]*len(x)
+    # if isinstance(labels, Iterable) and isinstance(labels, str) == False:
+    #     assert len(x) == len(labels), 'labels must be the same length as x'
         
     # plot
     final = []
     if ymin is None and ymax is None:
         for i, _x in enumerate(x):
-            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
+            if i == 0 and isinstance(labels, str):
+                _label = labels
+            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
+                _label = labels[i]
+            else:
+                _label = ''
+            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=_label, **kwargs))
     else:
         for i, _x in enumerate(x):
-            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
+            if i == 0 and isinstance(labels, str):
+                _label = labels
+            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
+                _label = labels[i]
+            else:
+                _label = ''
+            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], label=_label, **kwargs))
     return final
 
 def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
@@ -2785,7 +2797,8 @@ def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels=''
             each line. If None, infinite lines are plotted. Default is None.
         colors (color or list, optional): line colors. Default is black
         linestyles (string or list, optional): linestyles. Default is '--'.
-        labels (string or list, optional): labels. Default is ''.
+        If labels is str, only first line gets labeled. If labels is a list
+            each line is labeled independtly.
         ax (axes, optional): axes. If None, the current axes will be used. Default is None
         **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
 
@@ -2820,10 +2833,22 @@ def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels=''
     final = []
     if xmin is None and xmax is None:
         for i, _y in enumerate(y):
-            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=labels[i], **kwargs))
+            if i == 0 and isinstance(labels, str):
+                _label = labels
+            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
+                _label = labels[i]
+            else:
+                _label = ''
+            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=_label, **kwargs))
     else:
         for i, _y in enumerate(y):
-            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], labels=labels[i], **kwargs))
+            if i == 0 and isinstance(labels, str):
+                _label = labels
+            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
+                _label = labels[i]
+            else:
+                _label = ''
+            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], label=_label, **kwargs))
     return final
 
 def _axvlines(self, x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', **kwargs):

@@ -38,6 +38,7 @@ for name in settings._forbidden_words:
         settings._forbidden_words[name] += settings._reserved_words[name2]['methods']
         if name != name2:
             settings._forbidden_words[name] += [pseudovar for pseudovar in settings._reserved_words[name2]['pseudovars'] if pseudovar not in settings._reserved_words[name]['pseudovars']]
+            settings._forbidden_words[name] += [var for var in settings._reserved_words[name2]['vars'] if var not in settings._reserved_words[name]['vars']]
     settings._forbidden_words[name] = remove_duplicates(settings._forbidden_words[name])
 
 # addons

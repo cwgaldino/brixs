@@ -6589,7 +6589,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ####################################
         # raise error if object is too big #
         ####################################
-        if self.shape[0] > max_number_of_columns:
+        if self.shape[1] > max_number_of_columns:
             raise ValueError(f'cannot return image columns with more than {max_number_of_columns} rows. Please, increase `max_number_of_columns`')
 
         ################
@@ -9338,7 +9338,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     # copy #
     ########
     def _copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None, attrs2crop=None):
-        """Same as copy(), but attributes are not copied to the new object."""
+        """Same as copy(), but attributes are not copied to the new object.
+        
+        xlim and ylim only change if boundaries are smaller then the original xlim and ylim"""
         #############
         # copy data #
         #############
@@ -9421,7 +9423,20 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                     for attr in _attrs2crop:
                         _attrs2crop[attr].append(self.__getattribute__(attr)[i])
             # _pe = PhotonEvents(x=x, y=y, xlim=(x_start, x_stop), ylim=(y_start, y_stop))
-            _pe = PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+            # _pe = PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+            
+            # fix limits
+            xlim = [self.xlim[0], self.xlim[1]]
+            ylim = [self.ylim[0], self.ylim[1]]
+            if x_start > self.xlim[0]:
+                xlim[0] = x_start
+            if x_stop < self.xlim[1]:
+                xlim[1] = x_stop
+            if y_start > self.ylim[0]:
+                ylim[1] = y_start
+            if y_stop < self.ylim[1]:
+                ylim[1] = y_stop
+            _pe = PhotonEvents(x=x, y=y, xlim=xlim, ylim=ylim)
             for attr in _attrs2crop:
                 _pe.__setattr__(attr, _attrs2crop[attr])
             return _pe
@@ -9431,13 +9446,33 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 
             temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
             
+            # fix limits
+            xlim = [self.xlim[0], self.xlim[1]]
+            ylim = [self.ylim[0], self.ylim[1]]
+            if x_start > self.xlim[0]:
+                xlim[0] = x_start
+            if x_stop < self.xlim[1]:
+                xlim[1] = x_stop
+            if y_start > self.ylim[0]:
+                ylim[1] = y_start
+            if y_stop < self.ylim[1]:
+                ylim[1] = y_stop
+
             if len(temp) == 0: # no photons inside limits
-                return PhotonEvents(xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+                # return PhotonEvents(xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+                return PhotonEvents(xlim=xlim, ylim=ylim)
             else:
-                return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+                # return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
+                return PhotonEvents(x=list(temp[:, 0]), y=list(temp[:, 1]), xlim=xlim, ylim=ylim)
         
     def copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None, attrs2crop=None):
         """Return a copy of the object.
+
+        Note:
+            pe.xlim[0] only changes if x_start is bigger than pe.xlim[0] and
+            pe.xlim[1] only changes if x_stop is smaller than pe.xlim[1]. Otherwise
+            pe.xlim is kept. Same for pe.ylim.
+
 
         Args:
             x_start, x_stop, y_start, y_stop (int): pixel range in terms of
@@ -9626,9 +9661,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # kwargs #
         ##########
         if 'fmt' not in kwargs: # pick best format
-            if self._x != [] and self._x is not None:
-                decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
-                kwargs['fmt'] = f'%.{decimal}f'
+            if self._x is not None:
+                if len(self._x) > 0:
+                    decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
+                    kwargs['fmt'] = f'%.{decimal}f'
         kwargs.setdefault('delimiter', ', ')
         kwargs.setdefault('newline', '\n')
         kwargs.setdefault('comments', '# ')

@@ -51,6 +51,13 @@ def time_trace(title=None, grid=True, ax=None):
     return _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
 mpl.axes.Axes.labels_time_trace = lambda self, title=None, grid=True: time_trace(ax=self, title=title, grid=grid)
 
+def detector(title=None, grid=False, ax=None):
+    """Quickly set x and y labels and title in photon events plots."""
+    xlabel = 'x (pixels)'
+    ylabel = 'y (pixels)'
+    return _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid)
+mpl.axes.Axes.detector = lambda self, title=None, grid=True: detector(ax=self, title=title, grid=grid)
+
 def rixs_emission(title=None, grid=True, ax=None):
     """Quickly set x and y labels and title in emission rixs plots."""
     xlabel = 'Emission energy (eV)'
