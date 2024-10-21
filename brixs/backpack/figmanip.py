@@ -545,7 +545,7 @@ def figure(*args, **kwargs):
     """   
     # figsize in cm
     if 'figsize' in kwargs:
-        kwargs['figsize'] = (cm2inch(kwargs['figsize'][0]), cm2inch(kwargs['figsize'][1]))
+        kwargs['figsize'] = (cm2inch(kwargs['figsize'][0])[0], cm2inch(kwargs['figsize'][1])[0])
 
     # initialize figure
     fig = plt.figure(*args, **kwargs)
