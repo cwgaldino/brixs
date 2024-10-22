@@ -45,7 +45,7 @@ There are two ways to user the finder functionality:
 >>>
 >>>     br.finder.kwargs = vars()
 >>>     s = br.finder.search()
->>>     if s:
+>>>     if s != False:
 >>>         return s
 >>>
 >>>    s = <does something with a, b and c and returns s>
@@ -61,7 +61,7 @@ modified manually:
 >>> def processing_function(a, b, c):
 >>>
 >>>     s = br.finder.search(kwargs=<kwargs>, folderpath=<folderpath>)
->>>     if s:
+>>>     if s != False:
 >>>         return s
 >>>
 >>>    s = <does something with a, b and c and returns s>
@@ -86,7 +86,7 @@ the function as they need to be included manually
 >>>     br.finder.kwargs = vars()
 >>>     br.finder.kwargs.update({'c': c})
 >>>     s = br.finder.search()
->>>     if s:
+>>>     if s != False:
 >>>         return s
 >>>
 >>>    s = <uses a, b and c, but c which is defined outside of the function>
@@ -102,7 +102,7 @@ the function as they need to be included manually
 >>>
 >>>     br.finder.kwargs = vars()
 >>>     s = br.finder.search()
->>>     if s:
+>>>     if s != False:
 >>>         return s
 >>>
 >>>    s = <uses a, b and c>
@@ -453,7 +453,7 @@ def track(func):
         # try and find if spectrum has already been calculated #
         ########################################################
         s = search()
-        if s:
+        if s != False:
             return s
 
         ###############
