@@ -626,7 +626,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         # check
         self._step         = None
         self._monotonicity = None
-        self._has_nan       = None
+        self._has_nan      = None
 
         # modifiers
         self._calib  = 1
@@ -668,6 +668,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 self._x = None
             self._step         = None
             self._monotonicity = None
+            self._has_nan      = None
             return
         
         ###################################
@@ -691,6 +692,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 self._x = None
                 self._step         = None
                 self._monotonicity = None
+                self._has_nan      = None
                 return
             else:
                 self._y = np.arange(0, len(value))
@@ -952,6 +954,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             ##########################
             self._step         = None
             self._monotonicity = None
+            # self._has_nan      = None
         else:
             raise TypeError('Index must be int or a slice, not {}'.format(type(item).__name__))
         
@@ -1366,6 +1369,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ##########################
         self._step         = None
         self._monotonicity = None
+        self._has_nan      = None
 
         ###################
         # reset modifiers #
@@ -2698,6 +2702,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         self._step         = None
         self._x            = None
         self._monotonicity = None
+        self._has_nan      = None
 
     def __len__(self):
         return len(self.data)
@@ -3277,6 +3282,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         self._step         = None
         self._x            = None
         self._monotonicity = None
+        self._has_nan      = None
 
     def remove(self, idx):
         """Remove spectrum.
@@ -3601,6 +3607,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         self._step         = None
         self._x            = None
         self._monotonicity = None
+        self._has_nan      = None
 
     def save_all_single_file(self, filepath, number_of_decimal_places=None, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
         r"""Save all Spectra in one single file. Wrapper for `numpy.savetxt()`_.
@@ -3826,6 +3833,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         self._monotonicity = None
         self._x            = None
         self._length       = None
+        self._has_nan      = None
 
         ###############
         # read header #
@@ -9693,7 +9701,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ########
         # save #
         ########
-        np.savetxt(Path(filepath), self.data, **kwargs)
+        if self.x is None:
+            np.savetxt(Path(filepath), [], **kwargs)
+        else:
+            np.savetxt(Path(filepath), self.data, **kwargs)
         return 
     
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
@@ -9744,8 +9755,17 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ##########
         # assign #
         ##########
-        self._x = data[:, 0]
-        self._y = data[:, 1]
+        if len(data) != 0:
+            self._x = data[:, 0]
+            self._y = data[:, 1]
+        else:
+            self._x = None
+            self._x = None
+        
+        ##########################
+        # reset check attributes #
+        ##########################
+        self._has_nan      = None
 
         ###############
         # read header #
