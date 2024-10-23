@@ -202,11 +202,11 @@ def arctan_fwhm(x, amp, c, w):
     :param x: x array
     :param amp: Amplitude
     :param c: Center
-    :param w: FWHM (it will take fwhm units to go from amp/4 to (3amp)/4)
+    :param w: FWHM
     :return: :math:`y(x)`
     """
 
-    return amp * (np.arctan((w**-1)*(x - c)) + (np.pi/2))/np.pi
+    return amp * (np.arctan((x - c)/w*2) + (np.pi/2))/np.pi
 
 
 def square_pulse(x, amp, c, w):
@@ -275,15 +275,15 @@ def dirac_delta(x, amp, c):
         return final
         
 
-def err_fwhm(x, amp, c, w):
-    r"""Error function. Integal of gaussian function calculated by ``scipy.special.erf()``.
-
-    .. math:: y(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2} dt
+def erf_fwhm(x, amp, c, w):
+    r"""Error function. Integral of gaussian function calculated by ``scipy.special.erf()``.
 
     :param x: x array
     :param amp: Amplitude
     :param c: Center
-    :param w: FWHM (it will take roughly fwhm units to go from amp/4 to (3amp)/4)
+    :param w: FWHM
     :return: :math:`y(x)`
     """
-    return amp/2 * (erf((w**-1)/2*(x - c))+1)
+    #     .. math:: y(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2} dt
+    # return amp/2 * (erf((w**-1)/2*(x - c))+1)
+    return amp/2 * (erf((2*np.sqrt(2*np.log(2))+1)/w/2*(x - c)) + 1)

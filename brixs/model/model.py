@@ -155,7 +155,9 @@ class Model_(lmfit.Parameters):
         ##############
         self.components = {'peaks':  Peaks,
                            'linear': Linear,
-                           'asymmetricpeaks': AsymmetricPeaks,}
+                           'asymmetricpeaks': AsymmetricPeaks,
+                           'arctan': Arctan,
+                           }
 
         # check repeated tags
         unique_tags = []
@@ -721,7 +723,10 @@ class Model(lmfit.Parameters):
         ##############
         self.components = {'peaks':  Peaks,
                            'linear': Linear,
-                           'asymmetricpeaks': AsymmetricPeaks,}
+                           'asymmetricpeaks': AsymmetricPeaks,
+                           'arctan': Arctan,
+                           'erf': Erf,
+                           }
 
         # check repeated tags
         unique_tags = []
@@ -2710,6 +2715,300 @@ class Linear(_ComponentTemplate):
             name, i1, i2 = _name_parser(_name)
             if name == 'a1':
                 self.parent[_name].value *= 1/value[i2]
+        return 
+
+# %% Arctangent
+class Arctan(_ComponentTemplate):
+    def __init__(self, parent):
+        super().__init__()
+
+        # parameter names
+        # name = name used by the user
+        # tag  = name used by lmfit
+        # name: tag
+        nametags = {'amp':'amparc', 'c':'carc', 'w':'warc'}  # make it immutable
+
+        def function(i1, i2):
+            """function that returns f(x)"""
+            return f"br.model.arctan_fwhm(x, amparc_{i1}_{i2}, carc_{i1}_{i2}, warc_{i1}_{i2})"
+        
+        def _min_suitable_x_str(i1, i2):
+            """return min x value (as string) to be used for quickly plotting this component"""
+            return f'carc_{i1}_{i2} - warc_{i1}_{i2}*10'
+        
+        def _max_suitable_x_str(i1, i2):
+            """return max x value (as string) to be used for quickly plotting this component"""
+            return f'carc_{i1}_{i2} + warc_{i1}_{i2}*10'
+        
+        def _suitable_x_step_str(i1, i2):
+            """return x step value (as string) to be used for quickly plotting this component"""
+            return f'warc_{i1}_{i2}/20'
+    
+        # initialization 
+        self._initialize(parent=parent, nametags=nametags, function=function, _min=_min_suitable_x_str, _max=_max_suitable_x_str, _step=_suitable_x_step_str)
+
+    #################
+    # add parameter #
+    #################
+    def add(self, amp=None, c=None, w=None,
+            amp_min=-np.inf, amp_max=np.inf, amp_vary=True, amp_expr=None,
+            c_min=-np.inf, c_max=np.inf, c_vary=True, c_expr=None,
+            w_min=0, w_max=np.inf, w_vary=True, w_expr=None,
+            i1=None, i2='all'):  
+        """add parameters
+        
+        Args:
+            i1 (int or str, optional): i1 index. If None, i1 will be defined as
+                the max(i1)+1. Default is None.
+            i2 (int, list, None, optional): i2 index. If None, i2 is assumed to be 
+                unique. Default is None. Use 'all' to add component to all i2 
+                available.
+        
+        Return:
+            None
+        """        
+        ###################
+        # check i1 and i2 #
+        ###################
+        i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
+
+        #######################################
+        # assert validity of parameter values #
+        #######################################
+        assert amp >= 0,          'amp cannot be negative'
+
+        assert w >= 0,            'w cannot be negative'
+        assert w_min >= 0,        'w_min cannot be negative'
+
+        ##################
+        # add parameters #
+        ##################
+        for _i2 in i2:
+            tag = self.nametags['amp']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=amp_vary,  min=amp_min, max=amp_max, expr=amp_expr, brute_step=None)
+            
+            tag = self.nametags['c']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=c, vary=c_vary,  min=c_min, max=c_max, expr=c_expr, brute_step=None)
+            
+            tag = self.nametags['w']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=w, vary=w_vary,  min=w_min, max=w_max, expr=w_expr, brute_step=None)
+        return
+
+    ##################
+    # base modifiers #
+    ##################
+    def set_shift(self, value):
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'carc':
+                self.parent[_name].value += value[i2]
+
+        return 
+    
+    def set_offset(self, value):
+        pass
+        return 
+    
+    def set_factor(self, value):
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'amparc':
+                self.parent[_name].value *= value[i2]
+        return 
+    
+    def set_calib(self, value):
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'carc':
+                self.parent[_name].value *= value[i2]
+            elif name == 'warc':
+                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value[i2])
+        return 
+
+# %% Arctangent
+class Erf(_ComponentTemplate):
+    def __init__(self, parent):
+        super().__init__()
+
+        # parameter names
+        # name = name used by the user
+        # tag  = name used by lmfit
+        # name: tag
+        nametags = {'amp':'amperf', 'c':'cerf', 'w':'werf'}  # make it immutable
+
+        def function(i1, i2):
+            """function that returns f(x)"""
+            return f"br.model.erf_fwhm(x, amperf_{i1}_{i2}, cerf_{i1}_{i2}, werf_{i1}_{i2})"
+        
+        def _min_suitable_x_str(i1, i2):
+            """return min x value (as string) to be used for quickly plotting this component"""
+            return f'cerf_{i1}_{i2} - werf_{i1}_{i2}*10'
+        
+        def _max_suitable_x_str(i1, i2):
+            """return max x value (as string) to be used for quickly plotting this component"""
+            return f'cerf_{i1}_{i2} + werf_{i1}_{i2}*10'
+        
+        def _suitable_x_step_str(i1, i2):
+            """return x step value (as string) to be used for quickly plotting this component"""
+            return f'werf_{i1}_{i2}/20'
+    
+        # initialization 
+        self._initialize(parent=parent, nametags=nametags, function=function, _min=_min_suitable_x_str, _max=_max_suitable_x_str, _step=_suitable_x_step_str)
+
+    #################
+    # add parameter #
+    #################
+    def add(self, amp=None, c=None, w=None,
+            amp_min=-np.inf, amp_max=np.inf, amp_vary=True, amp_expr=None,
+            c_min=-np.inf, c_max=np.inf, c_vary=True, c_expr=None,
+            w_min=0, w_max=np.inf, w_vary=True, w_expr=None,
+            i1=None, i2='all'):  
+        """add parameters
+        
+        Args:
+            i1 (int or str, optional): i1 index. If None, i1 will be defined as
+                the max(i1)+1. Default is None.
+            i2 (int, list, None, optional): i2 index. If None, i2 is assumed to be 
+                unique. Default is None. Use 'all' to add component to all i2 
+                available.
+        
+        Return:
+            None
+        """        
+        ###################
+        # check i1 and i2 #
+        ###################
+        i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
+
+        #######################################
+        # assert validity of parameter values #
+        #######################################
+        assert amp >= 0,          'amp cannot be negative'
+
+        assert w >= 0,            'w cannot be negative'
+        assert w_min >= 0,        'w_min cannot be negative'
+
+        ##################
+        # add parameters #
+        ##################
+        for _i2 in i2:
+            tag = self.nametags['amp']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=amp, vary=amp_vary,  min=amp_min, max=amp_max, expr=amp_expr, brute_step=None)
+            
+            tag = self.nametags['c']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=c, vary=c_vary,  min=c_min, max=c_max, expr=c_expr, brute_step=None)
+            
+            tag = self.nametags['w']
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=w, vary=w_vary,  min=w_min, max=w_max, expr=w_expr, brute_step=None)
+        return
+
+    ##################
+    # base modifiers #
+    ##################
+    def set_shift(self, value):
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'carc':
+                self.parent[_name].value += value[i2]
+
+        return 
+    
+    def set_offset(self, value):
+        pass
+        return 
+    
+    def set_factor(self, value):
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'amparc':
+                self.parent[_name].value *= value[i2]
+        return 
+    
+    def set_calib(self, value):
+        ##############################
+        # check if value is a number #
+        ##############################
+        if self.parent is not None: 
+            if isinstance(self.parent, br.Spectrum):
+                value = [value, ]
+            else:
+                if isinstance(value, Iterable) == False:
+                    value = [value]*len(self.parent)
+
+        ##################
+        # applying value #
+        ##################
+        for _name in self._get_all_tags():
+            name, i1, i2 = _name_parser(_name)
+            if name == 'carc':
+                self.parent[_name].value *= value[i2]
+            elif name == 'warc':
+                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value[i2])
         return 
 # %%
 
