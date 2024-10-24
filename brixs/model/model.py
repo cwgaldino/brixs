@@ -2881,11 +2881,11 @@ class Erf(_ComponentTemplate):
         
         def _min_suitable_x_str(i1, i2):
             """return min x value (as string) to be used for quickly plotting this component"""
-            return f'cerf_{i1}_{i2} - werf_{i1}_{i2}*10'
+            return f'cerf_{i1}_{i2} - werf_{i1}_{i2}*5'
         
         def _max_suitable_x_str(i1, i2):
             """return max x value (as string) to be used for quickly plotting this component"""
-            return f'cerf_{i1}_{i2} + werf_{i1}_{i2}*10'
+            return f'cerf_{i1}_{i2} + werf_{i1}_{i2}*5'
         
         def _suitable_x_step_str(i1, i2):
             """return x step value (as string) to be used for quickly plotting this component"""

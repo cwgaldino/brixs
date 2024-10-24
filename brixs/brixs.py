@@ -9455,16 +9455,22 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             temp = np.array([(x, y) for x, y in zip(self.x, self.y) if ((x > x_start and x < x_stop) and (y > y_start and y < y_stop))])
             
             # fix limits
-            xlim = [self.xlim[0], self.xlim[1]]
-            ylim = [self.ylim[0], self.ylim[1]]
-            if x_start > self.xlim[0]:
-                xlim[0] = x_start
-            if x_stop < self.xlim[1]:
-                xlim[1] = x_stop
-            if y_start > self.ylim[0]:
-                ylim[1] = y_start
-            if y_stop < self.ylim[1]:
-                ylim[1] = y_stop
+            if self.xlim is not None:
+                xlim = [self.xlim[0], self.xlim[1]]
+                if x_start > self.xlim[0]:
+                    xlim[0] = x_start
+                if x_stop < self.xlim[1]:
+                    xlim[1] = x_stop
+            else:
+                xlim = None#[x_start, x_stop]
+            if self.ylim is not None:
+                ylim = [self.ylim[0], self.ylim[1]]
+                if y_start > self.ylim[0]:
+                    ylim[1] = y_start
+                if y_stop < self.ylim[1]:
+                    ylim[1] = y_stop
+            else:
+                ylim = None#[y_start, y_stop]
 
             if len(temp) == 0: # no photons inside limits
                 # return PhotonEvents(xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
