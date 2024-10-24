@@ -33,7 +33,8 @@ There are two ways to user the finder functionality:
 >>>    s = <does something with a, b and c and returns s>
 >>>    return s
 
-
+Using finder via decorator will work in most simple cases. For more complex implementations
+one needs to use method 2. See below.
     
 2) manually setting up the finder function
 
@@ -71,9 +72,9 @@ modified manually:
 >>>    return s
 
 
-###########
-# Warning #
-###########
+############
+# Warnings #
+############
 
 1. Watch out for functions that use variables defined outside of the scope of 
 the function as they need to be included manually
@@ -105,7 +106,7 @@ the function as they need to be included manually
 >>>     if s != False:
 >>>         return s
 >>>
->>>    s = <uses a, b and c>
+>>>    s = <do something using a, b>
 >>>
 >>>    # changes b
 >>>    b[2] = 300  # b is now [1, 2, 300]
@@ -120,11 +121,67 @@ the function as they need to be included manually
 >>> # if you run the function the first time, s will be calculated
 >>> s = processing_function(a=0, b=b)  
 >>>
->>> # if you run the function a second time, s will also be calculated because
->>> # b changed and is now different. This creates the impression that the input
->>> # parameters are the same, when in fact they are not, therefore, the function
->>> # runs again
+>>> # if you run the function a second time, 
 >>> s = processing_function(a=0, b=b)
+>>>
+>>> s will also be calculated because b changed and is now different. 
+>>> This creates the impression that the input parameters are the same, when in 
+>>> fact they are not, therefore, the function runs again.
+
+
+3. watch out for function that calls finder multiple times
+
+>>> def process1(a, b):
+>>>  
+>>>     br.finder.kwargs = vars()
+>>>     s = br.finder.search()
+>>>     if s != False:
+>>>         return s
+>>>
+>>>     s = <uses a, b>
+>>>    
+>>>     br.finder.save(s)
+>>>    
+>>>     return s
+>>>
+>>> def process2(a, b, c, d):
+>>>
+>>>     br.finder.kwargs = vars()
+>>>     s = br.finder.search()
+>>>     if s != False:
+>>>         return s
+>>>
+>>>     s = process1(a, b)
+>>>     s = <do something else with s, c, and d>
+>>> 
+>>>     br.finder.save(s)
+>>>     
+>>>     return s
+
+So when you run process2(), the function br.finder.search() will set up the 
+variable br.finder._search_string. However, when you run process1(), _search_string 
+will be modified by the br.finder.search() inside process1(). This way, the finder
+will work well for process1(), but at the end of process1() it will save the file
+and set br.finder._search_string back to None. There will be an error when you 
+try to run br.finder.save() in process2() because the search_string is not existing
+anymore. To fix this, you have to manually save the search string obtained in 
+process2() and again manually feed it to br.finder.save() in process2(). See below
+
+>>> def process2(a, b, c, d):
+>>>
+>>>     br.finder.kwargs = vars()
+>>>     s = br.finder.search()
+>>>     _search_string = br.finder._search_string
+>>>     if s != False:
+>>>         return s
+>>>
+>>>     s = process1(a, b)
+>>>     s = <do something else with s, c, and d>
+>>>
+>>>     br.finder._search_string = _search_string
+>>>     br.finder.save(s)
+>>>    
+>>>     return s
 
 ###################
 # Developers note #
