@@ -65,28 +65,28 @@ def rixs_emission(title=None, grid=True, ax=None, **kwargs):
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid, **kwargs)
 mpl.axes.Axes.labels_rixs_emission = lambda self, title=None, grid=True: rixs_emission(ax=self, title=title, grid=grid)
 
-def energy_map(title=None, grid=True, ax=None, **kwargs):
+def energy_map(title=None, grid=False, ax=None, **kwargs):
     """Quickly set x and y labels and title in energy map plots."""
     xlabel = 'Photon energy (eV)'
     ylabel = 'Energy loss (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid, **kwargs)
 mpl.axes.Axes.labels_energy_map = lambda self, title=None, grid=True: energy_map(ax=self, title=title, grid=grid)
 
-def emission_map(title=None, grid=True, ax=None, **kwargs):
+def emission_map(title=None, grid=False, ax=None, **kwargs):
     """Quickly set x and y labels and title in energy map plots."""
     xlabel = 'Emission energy (eV)'
     ylabel = 'Photon energy (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid, **kwargs)
 mpl.axes.Axes.labels_emission_map = lambda self, title=None, grid=True: emission_map(ax=self, title=title, grid=grid)
     
-def th_map(title=None, grid=True, ax=None, **kwargs):
+def th_map(title=None, grid=False, ax=None, **kwargs):
     """Quickly set x and y labels and title in energy map plots."""
     xlabel = r'$\Theta$ ($^\circ$)'
     ylabel = 'Energy loss (eV)'
     _xylabels(title=title, ax=ax, xlabel=xlabel, ylabel=ylabel, grid=grid, **kwargs)
 mpl.axes.Axes.labels_th_map = lambda self, title=None, grid=True: th_map(ax=self, title=title, grid=grid)
 
-def qmap_rlu(title=None, grid=True, ax=None, **kwargs):
+def qmap_rlu(title=None, grid=False, ax=None, **kwargs):
     """Quickly set x and y labels and title in momentum map plots."""
     xlabel = 'Momentum transfer (RLU)'
     ylabel = 'Energy loss (eV)'
