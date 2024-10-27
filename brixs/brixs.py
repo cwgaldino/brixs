@@ -1048,8 +1048,31 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     ################
     # core methods #
     ################
-    pass
+    def append(self, x, y):
+        """add new data points"""
+        assert isinstance(x, Iterable) == False, 'x must be a number'
+        try:
+            x + 3, 
+        except:
+            raise ValueError('x must be a number')
+        assert isinstance(y, Iterable) == False, 'y must be a number'
+        try:
+            y + 3, 
+        except:
+            raise ValueError('y must be a number')
 
+        # append
+        self._x = np.append(self._x, x)
+        self._y = np.append(self._y, y)
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        self._step         = None
+        self._monotonicity = None
+        self._has_nan      = None
+        return
+    
     ########
     # copy #
     ########
