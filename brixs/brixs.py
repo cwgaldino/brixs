@@ -9224,8 +9224,15 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
     def __add__(self, object):
         if isinstance(object, PhotonEvents):
-            final = PhotonEvents(x=list(self.x) + list(object.x), y=list(self.y) + list(object.y))
+            if self.x is None:
+                final = PhotonEvents(x=object.x, y=object.y)
+            elif object.x is None:
+                final = PhotonEvents(x=self.x, y=self.y)
+            else:
+                final = PhotonEvents(x=list(self.x) + list(object.x), y=list(self.y) + list(object.y))
             final.copy_attrs_from(self)
+
+            # fix limits
             try:
                 final.xlim = (min([self.xlim[0], object.xlim[0]]), max([self.xlim[1], object.xlim[1]]))
             except TypeError:
