@@ -124,6 +124,7 @@ save and load
 # %% ------------------------- Standard Imports --------------------------- %% #
 from collections.abc import Iterable
 import matplotlib.pyplot as plt
+from pathlib import Path
 import numpy as np
 import copy
 
@@ -1039,8 +1040,20 @@ class Model(lmfit.Parameters):
     #################
     # save and load #
     #################
-    # TODO
+    def save(self, filepath):
+        """Writes JSON representation of Parameters to a file"""
+        filepath = Path(filepath)
+        with filepath.open('w') as f:
+            final = self.dump(f, indent=4)
+        return final
 
+    def load(self, filepath):
+        """Loads JSON representation of Parameters from a file"""
+        filepath = Path(filepath)
+        with filepath.open('r') as f:
+            _ = super().load(f)
+        return
+    
     ##################
     # base modifiers #
     ##################

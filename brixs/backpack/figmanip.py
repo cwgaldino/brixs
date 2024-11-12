@@ -767,8 +767,8 @@ def _grid(self, visible=None):
         self._grid = self.add_axes([0, 0, 1, 1], alpha=0.5)
         self._grid.patch.set_alpha(0.5)
 
-        set_xticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
-        set_yticks(ax=self._grid, start=0, stop=1, ticks_sep=0.1, pad=(0, 0), n_minor_ticks=1)
+        set_xticks(ax=self._grid, start=0, stop=1, step=0.1, pad=(0, 0), n_minor_ticks=1)
+        set_yticks(ax=self._grid, start=0, stop=1, step=0.1, pad=(0, 0), n_minor_ticks=1)
         
         self._grid.grid(which='major', color='red', lw=0.5)
         self._grid.grid(which='minor', color='black', ls=':', lw=0.5)
@@ -1689,7 +1689,7 @@ def get_yticks_showing(ax):
     return [y for y in ax.get_yticks() if y >= ax.get_ylim()[0] and y <= ax.get_ylim()[1]]
 
 # set ticks
-def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
+def set_xticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_step=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set x ticks of a plot.
 
     Major and minor ticks position, location, and direction changes are applied to all
@@ -1700,17 +1700,17 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     Usage:
         For setting up major ticks:
 
-            set_ticks(start, stop, n_ticks)
-            set_ticks(start, stop, ticks_sep)
-            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
-            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(start, stop, nticks)
+            set_ticks(start, stop, step)
+            set_ticks(start, nticks, step)  # `stop` is calculated
+            set_ticks(nticks)                    # `start` and `stop` are kept from the plot
             set_ticks(ticks)                      # manually define each tick position
             set_ticks(ticks, labels)              # manually define each tick position and label
 
         For setting up minor ticks:
 
             set_ticks(n_minor_ticks)             # equally spaced minor ticks
-            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_step)           # equally spaced minor ticks
             set_ticks(minor_ticks)               # manually define each minor tick position
 
     Args:
@@ -1719,10 +1719,10 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
         *Major ticks*
         start, stop (number, optional): major ticks start/stop value. Use None
             to not keep current start/stop value. Default is None.
-        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
-            n_ticks overwrites ticks_sep. Default is None.
+        nticks, step (int/number, optional): Number of major ticks or separation between ticks. 
+            nticks overwrites step. Default is None.
         ticks, labels (Iterable, optional): Iterable with tick positions and labels.
-        Overwrites start, stop, n_ticks, ticks_sep.
+        Overwrites start, stop, nticks, step.
         
         *Padding (plotting limits)*
         pad (number or tuple, optional): padding between plot edge and 
@@ -1733,11 +1733,11 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
             start/stop are defined, pad is set to (0, 0). Default is None.
 
         *Minor ticks*
-        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        n_minor_ticks, minor_step (int/number, optional): Number of minor 
         ticks between two major ticks or minor tick separation. n_minor_ticks
-        overwrites minor_ticks_sep. Default is None.
+        overwrites minor_step. Default is None.
         minor_ticks (Iterable, optional): Iterable with minor tick positions.
-        Overwrites n_minor_ticks and minor_ticks_sep.
+        Overwrites n_minor_ticks and minor_step.
 
         *font*
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
@@ -1784,21 +1784,21 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     # major ticks setup #
     #####################
     if ticks is None:
-        if n_ticks is not None:
-            assert n_ticks > 1, 'n_ticks needs to be > 1.'
-        if start is not None or stop is not None or n_ticks is not None or ticks_sep is not None:
-            if start is not None and stop is not None and n_ticks is not None:
-                ticks = np.linspace(start, stop, n_ticks)
-            elif start is not None and stop is not None and ticks_sep is not None:
-                ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
-            elif start is not None and n_ticks is not None and ticks_sep is not None:
-                stop = start + n_ticks*ticks_sep
-                ticks = np.linspace(start, stop, n_ticks)
-            elif n_ticks is not None:
+        if nticks is not None:
+            assert nticks > 1, 'nticks needs to be > 1.'
+        if start is not None or stop is not None or nticks is not None or step is not None:
+            if start is not None and stop is not None and nticks is not None:
+                ticks = np.linspace(start, stop, nticks)
+            elif start is not None and stop is not None and step is not None:
+                ticks   = np.arange(start, stop + step*0.1, step) 
+            elif start is not None and nticks is not None and step is not None:
+                stop = start + nticks*step
+                ticks = np.linspace(start, stop, nticks)
+            elif nticks is not None:
                 ticks_showing = get_xticks_showing(ax=ax)
                 start = ticks_showing[0]
                 stop  = ticks_showing[-1]
-                ticks = np.linspace(start, stop, n_ticks)
+                ticks = np.linspace(start, stop, nticks)
             else:
                 raise ValueError('Invalid input. See help(set_xticks) for help.')
             
@@ -1843,9 +1843,9 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
         assert is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
         # set limits
-        ticks_sep = ticks[1]  - ticks[0]
-        min_lim   = ticks[0]  - ticks_sep*pad[0]
-        max_lim   = ticks[-1] + ticks_sep*pad[1]
+        step = ticks[1]  - ticks[0]
+        min_lim   = ticks[0]  - step*pad[0]
+        max_lim   = ticks[-1] + step*pad[1]
         ax.set_xlim((min_lim, max_lim))#, auto=False)
 
     ###############
@@ -1854,9 +1854,9 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     if minor_ticks is None:
         if n_minor_ticks is not None:
             ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
-        elif minor_ticks_sep is not None:
-            ticks_sep     = ticks[1] - ticks[0]
-            n_minor_ticks = int(round(ticks_sep/minor_ticks_sep))
+        elif minor_step is not None:
+            step     = ticks[1] - ticks[0]
+            n_minor_ticks = int(round(step/minor_step))
             ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
     else:
         assert isinstance(ticks, Iterable), 'minor_ticks must be iterable'
@@ -1876,7 +1876,7 @@ def set_xticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
 
     return
 
-def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
+def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_step=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
 
     Major and minor ticks position, location, and direction changes are applied to all
@@ -1888,17 +1888,17 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     Usage:
         For setting up major ticks:
 
-            set_ticks(start, stop, n_ticks)
-            set_ticks(start, stop, ticks_sep)
-            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
-            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(start, stop, nticks)
+            set_ticks(start, stop, step)
+            set_ticks(start, nticks, step)  # `stop` is calculated
+            set_ticks(nticks)                    # `start` and `stop` are kept from the plot
             set_ticks(ticks)                      # manually define each tick position
             set_ticks(ticks, labels)              # manually define each tick position and label
 
         For setting up minor ticks:
 
             set_ticks(n_minor_ticks)             # equally spaced minor ticks
-            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_step)           # equally spaced minor ticks
             set_ticks(minor_ticks)               # manually define each minor tick position
 
     Args:
@@ -1907,10 +1907,10 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
         *Major ticks*
         start, stop (number, optional): major ticks start/stop value. Use None
             to not keep current start/stop value. Default is None.
-        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
-            n_ticks overwrites ticks_sep. Default is None.
+        nticks, step (int/number, optional): Number of major ticks or separation between ticks. 
+            nticks overwrites step. Default is None.
         ticks, labels (Iterable, optional): Iterable with tick positions and labels.
-        Overwrites start, stop, n_ticks, ticks_sep.
+        Overwrites start, stop, nticks, step.
         
         *Padding (plotting limits)*
         pad (number or tuple, optional): padding between plot edge and 
@@ -1921,11 +1921,11 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
             start/stop are defined, pad is set to (0, 0). Default is None.
 
         *Minor ticks*
-        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        n_minor_ticks, minor_step (int/number, optional): Number of minor 
         ticks between two major ticks or minor tick separation. n_minor_ticks
-        overwrites minor_ticks_sep. Default is None.
+        overwrites minor_step. Default is None.
         minor_ticks (Iterable, optional): Iterable with minor tick positions.
-        Overwrites n_minor_ticks and minor_ticks_sep.
+        Overwrites n_minor_ticks and minor_step.
 
         *font*
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
@@ -1972,21 +1972,21 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     # major ticks setup #
     #####################
     if ticks is None:
-        if n_ticks is not None:
-            assert n_ticks > 1, 'n_ticks needs to be > 1.'
-        if start is not None or stop is not None or n_ticks is not None or ticks_sep is not None:
-            if start is not None and stop is not None and n_ticks is not None:
-                ticks = np.linspace(start, stop, n_ticks)
-            elif start is not None and stop is not None and ticks_sep is not None:
-                ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
-            elif start is not None and n_ticks is not None and ticks_sep is not None:
-                stop = start + n_ticks*ticks_sep
-                ticks = np.linspace(start, stop, n_ticks)
-            elif n_ticks is not None:
+        if nticks is not None:
+            assert nticks > 1, 'nticks needs to be > 1.'
+        if start is not None or stop is not None or nticks is not None or step is not None:
+            if start is not None and stop is not None and nticks is not None:
+                ticks = np.linspace(start, stop, nticks)
+            elif start is not None and stop is not None and step is not None:
+                ticks   = np.arange(start, stop + step*0.1, step) 
+            elif start is not None and nticks is not None and step is not None:
+                stop = start + nticks*step
+                ticks = np.linspace(start, stop, nticks)
+            elif nticks is not None:
                 ticks_showing = get_yticks_showing(ax=ax)
                 start = ticks_showing[0]
                 stop  = ticks_showing[-1]
-                ticks = np.linspace(start, stop, n_ticks)
+                ticks = np.linspace(start, stop, nticks)
             else:
                 raise ValueError('Invalid input. See help(set_yticks) for help.')
             
@@ -2031,9 +2031,9 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
         assert is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
 
         # set limits
-        ticks_sep = ticks[1]  - ticks[0]
-        min_lim   = ticks[0]  - ticks_sep*pad[0]
-        max_lim   = ticks[-1] + ticks_sep*pad[1]
+        step = ticks[1]  - ticks[0]
+        min_lim   = ticks[0]  - step*pad[0]
+        max_lim   = ticks[-1] + step*pad[1]
         ax.set_ylim((min_lim, max_lim), auto=False)
 
     ###############
@@ -2042,9 +2042,9 @@ def set_yticks(ax=None, start=None, stop=None, n_ticks=None, ticks_sep=None, tic
     if minor_ticks is None:
         if n_minor_ticks is not None:
             ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
-        elif minor_ticks_sep is not None:
-            ticks_sep     = ticks[1] - ticks[0]
-            n_minor_ticks = int(round(ticks_sep/minor_ticks_sep))
+        elif minor_step is not None:
+            step     = ticks[1] - ticks[0]
+            n_minor_ticks = int(round(step/minor_step))
             ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
     else:
         assert isinstance(ticks, Iterable), 'minor_ticks must be iterable'
@@ -2126,33 +2126,33 @@ def _remove_yticklabels(self):
     return remove_yticklabels(self)
 mpl.axes.Axes.remove_yticklabels = _remove_yticklabels
 
-def _set_xticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
+def _set_xticks(self, start=None, stop=None, nticks=None, step=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_step=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set x ticks of a plot.
 
     Usage:
         For setting up major ticks:
 
-            set_ticks(start, stop, n_ticks)
-            set_ticks(start, stop, ticks_sep)
-            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
-            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(start, stop, nticks)
+            set_ticks(start, stop, step)
+            set_ticks(start, nticks, step)  # `stop` is calculated
+            set_ticks(nticks)                    # `start` and `stop` are kept from the plot
             set_ticks(ticks)                      # manually define each tick position
             set_ticks(ticks, labels)              # manually define each tick position and label
 
         For setting up minor ticks:
 
             set_ticks(n_minor_ticks)             # equally spaced minor ticks
-            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_step)           # equally spaced minor ticks
             set_ticks(minor_ticks)               # manually define each minor tick position
 
     Args:
         *Major ticks*
         start, stop (number, optional): major ticks start/stop value. Use None
             to not keep current start/stop value. Default is None.
-        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
-            n_ticks overwrites ticks_sep. Default is None.
+        nticks, step (int/number, optional): Number of major ticks or separation between ticks. 
+            nticks overwrites step. Default is None.
         ticks, labels (Iterable, optional): Iterable with tick positions and labels.
-        Overwrites start, stop, n_ticks, ticks_sep.
+        Overwrites start, stop, nticks, step.
         
         *Padding (plotting limits)*
         pad (number or tuple, optional): padding between plot edge and 
@@ -2163,11 +2163,11 @@ def _set_xticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks
             start/stop are defined, pad is set to (0, 0). Default is None.
 
         *Minor ticks*
-        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        n_minor_ticks, minor_step (int/number, optional): Number of minor 
         ticks between two major ticks or minor tick separation. n_minor_ticks
-        overwrites minor_ticks_sep. Default is None.
+        overwrites minor_step. Default is None.
         minor_ticks (Iterable, optional): Iterable with minor tick positions.
-        Overwrites n_minor_ticks and minor_ticks_sep.
+        Overwrites n_minor_ticks and minor_step.
 
         *font*
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
@@ -2190,36 +2190,36 @@ def _set_xticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks
     
     .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
     """
-    return set_xticks(ax=self, start=start, stop=stop, n_ticks=n_ticks, ticks_sep=ticks_sep, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_ticks_sep=minor_ticks_sep, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
+    return set_xticks(ax=self, start=start, stop=stop, nticks=nticks, step=step, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_step=minor_step, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
 mpl.axes.Axes.xticks = _set_xticks
 
-def _set_yticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_ticks_sep=None, minor_ticks=None, fontproperties=None, **kwargs):
+def _set_yticks(self, start=None, stop=None, nticks=None, step=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_step=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
 
     Usage:
         For setting up major ticks:
 
-            set_ticks(start, stop, n_ticks)
-            set_ticks(start, stop, ticks_sep)
-            set_ticks(start, n_ticks, ticks_sep)  # `stop` is calculated
-            set_ticks(n_ticks)                    # `start` and `stop` are kept from the plot
+            set_ticks(start, stop, nticks)
+            set_ticks(start, stop, step)
+            set_ticks(start, nticks, step)  # `stop` is calculated
+            set_ticks(nticks)                    # `start` and `stop` are kept from the plot
             set_ticks(ticks)                      # manually define each tick position
             set_ticks(ticks, labels)              # manually define each tick position and label
 
         For setting up minor ticks:
 
             set_ticks(n_minor_ticks)             # equally spaced minor ticks
-            set_ticks(minor_ticks_sep)           # equally spaced minor ticks
+            set_ticks(minor_step)           # equally spaced minor ticks
             set_ticks(minor_ticks)               # manually define each minor tick position
 
     Args:
         *Major ticks*
         start, stop (number, optional): major ticks start/stop value. Use None
             to not keep current start/stop value. Default is None.
-        n_ticks, ticks_sep (int/number, optional): Number of major ticks or separation between ticks. 
-            n_ticks overwrites ticks_sep. Default is None.
+        nticks, step (int/number, optional): Number of major ticks or separation between ticks. 
+            nticks overwrites step. Default is None.
         ticks, labels (Iterable, optional): Iterable with tick positions and labels.
-        Overwrites start, stop, n_ticks, ticks_sep.
+        Overwrites start, stop, nticks, step.
         
         *Padding (plotting limits)*
         pad (number or tuple, optional): padding between plot edge and 
@@ -2230,11 +2230,11 @@ def _set_yticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks
             start/stop are defined, pad is set to (0, 0). Default is None.
 
         *Minor ticks*
-        n_minor_ticks, minor_ticks_sep (int/number, optional): Number of minor 
+        n_minor_ticks, minor_step (int/number, optional): Number of minor 
         ticks between two major ticks or minor tick separation. n_minor_ticks
-        overwrites minor_ticks_sep. Default is None.
+        overwrites minor_step. Default is None.
         minor_ticks (Iterable, optional): Iterable with minor tick positions.
-        Overwrites n_minor_ticks and minor_ticks_sep.
+        Overwrites n_minor_ticks and minor_step.
 
         *font*
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
@@ -2257,7 +2257,7 @@ def _set_yticks(self, start=None, stop=None, n_ticks=None, ticks_sep=None, ticks
     
     .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
     """
-    return set_yticks(ax=self, start=start, stop=stop, n_ticks=n_ticks, ticks_sep=ticks_sep, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_ticks_sep=minor_ticks_sep, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
+    return set_yticks(ax=self, start=start, stop=stop, nticks=nticks, step=step, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_step=minor_step, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
 mpl.axes.Axes.yticks = _set_yticks
 # %%
 
@@ -3135,8 +3135,8 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
         axis (string, optional): possible values are 'x' or 'y'.
         start (float or int): start value for ticks (not the plot edge --- see ``pad``)
         stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
-        n_ticks (int): Number of ticks. Ticks separation is calculated accordingly and this parameter overwrites ticks_sep.
-        ticks_sep (float or int): Ticks separation.
+        nticks (int): Number of ticks. Ticks separation is calculated accordingly and this parameter overwrites step.
+        step (float or int): Ticks separation.
         n_minor_ticks (int): Number of minor ticks between two major ticks.
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
         pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
@@ -3211,26 +3211,26 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
                     stop = max(line.get_ydata())
         # stop = ticks_showing[-1]
 
-    if 'n_ticks' in kwargs:
-        n_ticks = kwargs.pop('n_ticks')
-        if n_ticks is None:
-            if 'ticks_sep' in kwargs:
-                ticks_sep = kwargs.pop('ticks_sep')
-                if ticks_sep is None:
-                    n_ticks = len(ticks_showing)
+    if 'nticks' in kwargs:
+        nticks = kwargs.pop('nticks')
+        if nticks is None:
+            if 'step' in kwargs:
+                step = kwargs.pop('step')
+                if step is None:
+                    nticks = len(ticks_showing)
                 else:
                     use_sep = True
             else:
-                n_ticks = len(ticks_showing)
-    elif 'ticks_sep' in kwargs:
-        ticks_sep = kwargs.pop('ticks_sep')
-        if ticks_sep is not None:
+                nticks = len(ticks_showing)
+    elif 'step' in kwargs:
+        step = kwargs.pop('step')
+        if step is not None:
             use_sep = True
         else:
-            n_ticks = len(ticks_showing)
+            nticks = len(ticks_showing)
     else:
         use_sep = True
-        ticks_sep = np.mean(np.diff(ticks_showing))
+        step = np.mean(np.diff(ticks_showing))
 
     if 'n_minor_ticks' in kwargs:
         n_minor_ticks = kwargs.pop('n_minor_ticks')
@@ -3254,13 +3254,13 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
     # ticks
     if use_sep:
         # print('hh')
-        ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep)
-        # print(ticks_sep)
+        ticks   = np.arange(start, stop + step*0.1, step)
+        # print(step)
         # print(ticks)
     else:
-        if n_ticks < 2:
-            raise ValueError('n_ticks needs to be bigger or equal than 2.')
-        ticks   = np.linspace(start, stop, n_ticks)
+        if nticks < 2:
+            raise ValueError('nticks needs to be bigger or equal than 2.')
+        ticks   = np.linspace(start, stop, nticks)
     # ticks shift to get better values (include zero)
     if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
         ticks = ticks-ticks[_index(ticks, 0)]
@@ -3278,7 +3278,7 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
 
     # limits
     if len(ticks) < 2:
-        raise ValueError(f'ticks = {ticks} has only one tick, please, reduce ticks_sep.')
+        raise ValueError(f'ticks = {ticks} has only one tick, please, reduce step.')
     try:
         if len(pad) == 2:
             min_lim = ticks[0] - (ticks[1]-ticks[0])*pad[0]
@@ -3370,12 +3370,12 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
     #         string +='def on_xlim_changed(ax):\n'
     #             # xlim = ax.get_xlim()
     #         string +='    min_value, max_value = ax.get_xlim()\n'
-    #         string +=f'    n_ticks = {len(ticks)}\n'
+    #         string +=f'    nticks = {len(ticks)}\n'
     #
     #             # # ticks
-    #             # ticks   = np.linspace(min_value, max_value, n_ticks)
+    #             # ticks   = np.linspace(min_value, max_value, nticks)
     #
-    #         string +='    print(n_ticks)\n'
+    #         string +='    print(nticks)\n'
     #
     #             # # ticks shift to get better values
     #             # if any(x<0 for x in ticks) and any(x>0 for x in ticks) and 0 not in ticks:
@@ -3401,26 +3401,26 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
     #             # # minor ticks
     #             # ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
     #
-    #             # if 'n_ticks' in kwargs:
-    #             #     n_ticks = kwargs['n_ticks']
-    #             #     if n_ticks is None:
-    #             #         if 'ticks_sep' in kwargs:
-    #             #             ticks_sep = kwargs['ticks_sep']
-    #             #             if ticks_sep is None:
-    #             #                 n_ticks = len(ticks_showing)
+    #             # if 'nticks' in kwargs:
+    #             #     nticks = kwargs['nticks']
+    #             #     if nticks is None:
+    #             #         if 'step' in kwargs:
+    #             #             step = kwargs['step']
+    #             #             if step is None:
+    #             #                 nticks = len(ticks_showing)
     #             #             else:
     #             #                 use_sep = True
     #             #         else:
-    #             #             n_ticks = len(ticks_showing)
-    #             # elif 'ticks_sep' in kwargs:
-    #             #     ticks_sep = kwargs['ticks_sep']
-    #             #     if ticks_sep is not None:
+    #             #             nticks = len(ticks_showing)
+    #             # elif 'step' in kwargs:
+    #             #     step = kwargs['step']
+    #             #     if step is not None:
     #             #         use_sep = True
     #             #     else:
-    #             #         n_ticks = len(ticks_showing)
+    #             #         nticks = len(ticks_showing)
     #             # else:
     #             #     use_sep = True
-    #             #     ticks_sep = np.mean(np.diff(ticks_showing))
+    #             #     step = np.mean(np.diff(ticks_showing))
     #
     #             # for a in ax.figure.axes:
     #             #     # shortcuts: last avoids n**2 behavior when each axis fires event
@@ -3455,7 +3455,7 @@ def _set_ticks_old(ax=None, axis='x', autoscale=True, **kwargs):
     #                 # on_xlim_changed()
     #                 ax.callbacks.connect('xlim_changed', on_xlim_changed)
 
-def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, ticks_sep=None, n_minor_ticks=None, fontproperties=None, **kwargs):
+def _set_xticks_old(ax=None, start=None, stop=None, pad=None, nticks=None, step=None, n_minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
 
     Args:
@@ -3463,9 +3463,9 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
             last ax will be used.
         start (float or int): start value for ticks (not the plot edge --- see ``pad``)
         stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
-        n_ticks (int): Number of ticks. Ticks separation is calculated 
-            accordingly. Overwrites ticks_sep.
-        ticks_sep (float or int): Ticks separation.
+        nticks (int): Number of ticks. Ticks separation is calculated 
+            accordingly. Overwrites step.
+        step (float or int): Ticks separation.
         n_minor_ticks (int): Number of minor ticks between two major ticks.
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
         pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
@@ -3489,8 +3489,8 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
     # ticks_showing = get_xticks_showing(ax=ax)
 
     ## collecting kwargs
-    # n_ticks   = None
-    # ticks_sep = None
+    # nticks   = None
+    # step = None
     # n_minor_ticks  = None
     # fontproperties = None
     # pad            = None
@@ -3546,20 +3546,20 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
     #     n_decimal_places = kwargs.pop('n_decimal_places')
 
     
-    # # % n_ticks and tick_sep
-    # if 'n_ticks' in kwargs:
-    #     n_ticks = kwargs.pop('n_ticks')
-    # if 'ticks_sep' in kwargs:
-    #     ticks_sep = kwargs.pop('ticks_sep')
+    # # % nticks and tick_sep
+    # if 'nticks' in kwargs:
+    #     nticks = kwargs.pop('nticks')
+    # if 'step' in kwargs:
+    #     step = kwargs.pop('step')
 
-    if n_ticks is not None:
-        if n_ticks < 2:
-            raise ValueError('n_ticks needs to be bigger or equal than 2.')
-    if n_ticks is None and ticks_sep is None:
-        # n_ticks = len(ticks_showing)
+    if nticks is not None:
+        if nticks < 2:
+            raise ValueError('nticks needs to be bigger or equal than 2.')
+    if nticks is None and step is None:
+        # nticks = len(ticks_showing)
         ticks_showing = get_xticks_showing(ax=ax)
         # print(ticks_showing)
-        ticks_sep     = np.mean(np.diff(ticks_showing))
+        step     = np.mean(np.diff(ticks_showing))
 
     
     # # raise error for non recognized args
@@ -3575,10 +3575,10 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
         pass
     else:
         # initial
-        if n_ticks is not None:
-            ticks   = np.linspace(start, stop, n_ticks)
+        if nticks is not None:
+            ticks   = np.linspace(start, stop, nticks)
         else:
-            ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+            ticks   = np.arange(start, stop + step*0.1, step) 
 
         assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
 
@@ -3638,7 +3638,7 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
     
     return
 
-def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, ticks_sep=None, n_minor_ticks=None, fontproperties=None, **kwargs):
+def _set_yticks_old(ax=None, start=None, stop=None, pad=None, nticks=None, step=None, n_minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
 
     Args:
@@ -3646,9 +3646,9 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
             last ax will be used.
         start (float or int): start value for ticks (not the plot edge --- see ``pad``)
         stop (float or int): stop value for ticks (not the plot edge --- see ``pad``)
-        n_ticks (int): Number of ticks. Ticks separation is calculated 
-            accordingly. Overwrites ticks_sep.
-        ticks_sep (float or int): Ticks separation.
+        nticks (int): Number of ticks. Ticks separation is calculated 
+            accordingly. Overwrites step.
+        step (float or int): Ticks separation.
         n_minor_ticks (int): Number of minor ticks between two major ticks.
         fontproperties: Label ticks font. Use ``matplotlib.font_manager.FontProperties``.
         pad (float or int): Distance between plot edge and the first tick in terms of tick separation. Typically, must be something between 0 and 1.
@@ -3672,8 +3672,8 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
     # ticks_showing = get_xticks_showing(ax=ax)
 
     ## collecting kwargs
-    # n_ticks   = None
-    # ticks_sep = None
+    # nticks   = None
+    # step = None
     # n_minor_ticks  = None
     # fontproperties = None
     # pad            = None
@@ -3729,20 +3729,20 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
     #     n_decimal_places = kwargs.pop('n_decimal_places')
 
     
-    # # % n_ticks and tick_sep
-    # if 'n_ticks' in kwargs:
-    #     n_ticks = kwargs.pop('n_ticks')
-    # if 'ticks_sep' in kwargs:
-    #     ticks_sep = kwargs.pop('ticks_sep')
+    # # % nticks and tick_sep
+    # if 'nticks' in kwargs:
+    #     nticks = kwargs.pop('nticks')
+    # if 'step' in kwargs:
+    #     step = kwargs.pop('step')
 
-    if n_ticks is not None:
-        if n_ticks < 2:
-            raise ValueError('n_ticks needs to be bigger or equal than 2.')
-    if n_ticks is None and ticks_sep is None:
-        # n_ticks = len(ticks_showing)
+    if nticks is not None:
+        if nticks < 2:
+            raise ValueError('nticks needs to be bigger or equal than 2.')
+    if nticks is None and step is None:
+        # nticks = len(ticks_showing)
         ticks_showing = get_yticks_showing(ax=ax)
         # print(ticks_showing)
-        ticks_sep     = np.mean(np.diff(ticks_showing))
+        step     = np.mean(np.diff(ticks_showing))
 
     
     # # raise error for non recognized args
@@ -3758,10 +3758,10 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, n_ticks=None, tick
         pass
     else:
         # initial
-        if n_ticks is not None:
-            ticks   = np.linspace(start, stop, n_ticks)
+        if nticks is not None:
+            ticks   = np.linspace(start, stop, nticks)
         else:
-            ticks   = np.arange(start, stop + ticks_sep*0.1, ticks_sep) 
+            ticks   = np.arange(start, stop + step*0.1, step) 
 
         assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
 
