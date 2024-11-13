@@ -193,6 +193,26 @@ def voigt_area_fwhm(x, A, c, w, m):
 
     return amp*(m*lorentz + (1-m)*gauss)
 
+def asymmetric_voigt_fwhm(x, amp, c, w1, w2, m1, m2):
+    """Asymmetric pseudo-voigt curve 
+    
+    The first half to the bell curve (lowest x) has a different FWHM as the second
+    half the bell curve (highest x).
+
+    The total FHWM of given by
+
+    .. math:: w = \frac{w1 + w2}{2}
+
+    :param x: x array
+    :param amp: peak amplitude
+    :param c: Center
+    :param w1: FWHM of the first half of the bell curve (lowest x)
+    :param w2: FWHM of the second half of the bell curve (highest x)
+    :param m1: Factor from 1 to 0 of the lorentzian amount of the first half of the bell curve (lowest x)
+    :param m2: Factor from 1 to 0 of the lorentzian amount of the second half of the bell curve (highest x)
+    :return: :math:`y(x)`
+    """
+    return np.heaviside(c-x, 0)*voigt_fwhm(x, amp, c, w1, m1) + np.heaviside(x-c, 0)*voigt_fwhm(x, amp, c,  w2,  m2) + dirac_delta(x, amp, c)
 
 def arctan_fwhm(x, amp, c, w):
     r"""Arctangent function.
