@@ -9286,6 +9286,23 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     #########
     # attrs #
     #########
+    def append(self, x, y):
+        """append new photon event
+        
+        Args:
+            x, y (number): x, y positions of the new photon event 
+            
+        Returns:
+            None
+        """
+        if self._x is None:
+            self._x = np.array([x, ])    
+            self._y = np.array([y, ])    
+        else:
+            self._x = np.append(self._x, x)
+            self._y = np.append(self._y, y)
+        self._has_nan = None
+        return
 
     ###########
     # support #
