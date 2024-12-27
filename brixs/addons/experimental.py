@@ -289,7 +289,7 @@ def sequential_plot2(self, xlim=None, ylim=None, keep=None, update_function=None
         pass
 
     # plotting
-    fig = figmanip.figure()
+    fig = br.figure()
 
     # register callbacks
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
@@ -389,7 +389,7 @@ def shift_plot(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, up
             ss[self.__i].plot(shift=self._calculated_shift[self.__i], **kwargs)
             
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
 
             if self.__xlim is not None:
                 plt.xlim(self.__xlim)
@@ -406,7 +406,7 @@ def shift_plot(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, up
             update_function(ss, __i=self.__i)
 
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
             
             if xlim is not None:
                 plt.xlim(xlim)
@@ -579,7 +579,7 @@ def shift_plot2(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, u
             ss[self.__i].plot(shift=self._calculated_shift[self.__i], **kwargs)
             
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
 
             if xlim is not None:
                 plt.xlim(xlim)
@@ -596,7 +596,7 @@ def shift_plot2(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, u
             update_function(ss, __i=self.__i)
 
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
             
             if xlim is not None:
                 plt.xlim(xlim)
@@ -642,7 +642,7 @@ def shift_plot2(self, xlim=None, ylim=None, step=None, vlines=None, keep=None, u
         pass
 
     # plotting
-    fig = figmanip.figure()
+    fig = br.figure()
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
     fig.canvas.mpl_connect('button_press_event', lambda event: mouse(event))
     _update(self)
@@ -757,7 +757,7 @@ def roll_plot(self, xlim=None, ylim=None, vlines=None, keep=None, update_functio
             ss[self.__i].plot(shift=self._calculated_roll[self.__i]*ss[self.__i].step, **kwargs)
             
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axlines(vlines, colors='red', ls='--', lw=1)
 
             if self.__xlim is not None:
                 plt.xlim(self.__xlim)
@@ -774,7 +774,7 @@ def roll_plot(self, xlim=None, ylim=None, vlines=None, keep=None, update_functio
             update_function(ss, __i=self.__i)
 
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
             
             if self.__xlim is not None:
                 plt.xlim(self.__xlim)
@@ -925,7 +925,7 @@ def roll_plot2(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
             ss[self.__i].plot(shift=self._calculated_roll[self.__i]*ss[self.__i].step, **kwargs)
             
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
 
             if xlim is not None:
                 plt.xlim(xlim)
@@ -942,7 +942,7 @@ def roll_plot2(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
             update_function(ss, __i=self.__i)
 
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
             
             if xlim is not None:
                 plt.xlim(xlim)
@@ -981,7 +981,7 @@ def roll_plot2(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
 
 
     # plotting
-    fig = figmanip.figure()
+    fig = br.figure()
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
 
     _update(self)
@@ -1077,7 +1077,7 @@ def roll_plot3(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
             ss[self.__i].plot(shift=self._calculated_roll[self.__i]*ss[self.__i].step, **kwargs)
             
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
 
             if xlim is not None:
                 plt.xlim(xlim)
@@ -1094,7 +1094,7 @@ def roll_plot3(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
             update_function(ss, __i=self.__i)
 
             if vlines is not None:
-                figmanip.vlines(vlines, color='red', ls='--', lw=1)
+                br.axvlines(vlines, colors='red', ls='--', lw=1)
             
             if xlim is not None:
                 plt.xlim(xlim)
@@ -1148,7 +1148,7 @@ def roll_plot3(self, xlim=None, ylim=None, vlines=None, keep=None, update_functi
                 plt.draw()
 
     # plotting
-    fig = figmanip.figure()
+    fig = br.figure()
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=self))
     fig.canvas.mpl_connect('button_press_event', lambda event: mouse_press(event))
     fig.canvas.mpl_connect('button_release_event', lambda event: mouse_release(event, ss=self))
@@ -1275,10 +1275,10 @@ def linecuts(self, axis=0, xlim=None, ylim=None, ilim=None, keep=None, **kwargs)
                     ax.plot([self.x_centers[keep], self.x_centers[keep]], [self.__ylim[0], self.__ylim[1]], color='red', alpha=0.5)
             ax.plot([self.x_centers[self.__i], self.x_centers[self.__i]], [self.__ylim[0], self.__ylim[1]], color='white')
             # E = self.x_centers[self.__i]
-            # figmanip.vlines(E, ax=ax, color='red', lw=1)
+            # br.axvlines(E, ax=ax, color='red', lw=1)
         else:
             E = self.y_centers[self.__i]
-            figmanip.hlines(E, ax=ax, color='red', lw=1)
+            br.axhlines(E, ax=ax, colors='red', lw=1)
 
         
 
@@ -1330,7 +1330,7 @@ def linecuts(self, axis=0, xlim=None, ylim=None, ilim=None, keep=None, **kwargs)
         self.__ilim = event_ax.get_ylim()
 
     # figure
-    fig, self.__axes = figmanip.subplots(nrows=2, ncols=1)
+    fig, self.__axes = br.subplots(nrows=2, ncols=1)
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
     _update(ss)
 
@@ -1391,10 +1391,10 @@ def linecuts2(self, axis=0, xlim=None, ylim=None):
         # vline
         if axis == 0:
             E = self.x_centers[ss.__i]
-            figmanip.vlines(E, ax=ax, color='red', lw=1)
+            br.axvlines(E, ax=ax, colors='red', lw=1)
         else:
             E = self.y_centers[ss.__i]
-            figmanip.hlines(E, ax=ax, color='red', lw=1)
+            br.axhlines(E, ax=ax, colors='red', lw=1)
 
         # title
         axes[0].set_title(f'{ss.__i}: {E} eV')
@@ -1430,7 +1430,7 @@ def linecuts2(self, axis=0, xlim=None, ylim=None):
             plt.draw()
 
     # figure
-    fig, axes = figmanip.subplots(nrows=2, ncols=1)
+    fig, axes = br.subplots(nrows=2, ncols=1)
     fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ss=ss))
     _update(ss)
 # br.Image.linecuts2 = linecuts2
