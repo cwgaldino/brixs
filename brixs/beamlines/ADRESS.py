@@ -70,7 +70,7 @@ def _read_xas(filepath):
     #################
     # load metadata #
     #################
-    header = br.load_Comments(filepath)[1:-7]
+    header = br.load_comments(filepath)[1:-7]
     nd = {}
     for line in header:
         if line.startswith('# Start-time'):
@@ -464,9 +464,8 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
         curvature (list, optional): list with length 3. Each item should be the
             polynomial coeff. for curvature correction of the corresponding ccd.
             Default is None. Required if nbins is not None.
-        calib (number or list, optional): If not None, calibration factor is
-            applied. Can be a multiplicative factor (number) or a list with
-            polynomial coeff. with highest power first. Default is None.
+        calib (number, optional): If not None, calibration factor is
+            applied (multiplicative factor). Default is None.
         offset (number, optional): calibration offset. If calib are polynomial
             coeff., offset is added to the const. term. If calib is a number 
             (multiplicative factor), offset is a hard shift on the x-coord. This
@@ -492,13 +491,13 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
         ss = br.Spectra()
         for j, s in enumerate(scan):
             if nbins is not None:
-                ss1 = br.Spectra(3)
+                ss1 = br.Spectra()
                 if curvature is None:
                     raise ValueError('bining requires curvature')
                 pes = raw(folderpath=folderpath, prefix=prefix, scan=s, type_='pe')
                 for i, pe in enumerate(pes):
-                    pe.set_shift(p=curvature[i])
-                    ss1[i] = pe.calculate_spectrum(nbins=nbins)
+                    pe = pe.set_vertical_shift_via_polyval(curvature[i])
+                    ss1.append(pe.calculate_spectrum(nbins=nbins))
 
                 # #####################################
                 # # transfer attrs from the first ccd #
@@ -520,10 +519,10 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
             # transfer attrs from first ccd to the Spectra object #
             #######################################################
             if j == 0:
-                for attr in ss1[0]._get_user_attrs():
+                for attr in ss1[0].get_attrs():
                     ss.__setattr__(attr, [ss1[0].__getattribute__(attr), ])
             else:
-                for attr in ss1[0]._get_user_attrs():
+                for attr in ss1[0].get_attrs():
                     ss.__setattr__(attr, ss.__getattribute__(attr) + [ss1[0].__getattribute__(attr), ])
         del ss.ccd
 
@@ -536,7 +535,7 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
         #####################################
         # transfer attrs to summed spectrum #
         #####################################
-        for attr in ss._get_user_attrs():
+        for attr in ss.get_attrs():
             s.__setattr__(attr, ss.__getattribute__(attr))
         # print(s.E)
         s.scan = scan
@@ -546,26 +545,25 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
     ############
     else:
         if nbins is not None:
-            ss = br.Spectra(3)
+            ss = br.Spectra()
             if curvature is None:
                 raise ValueError('new bining requires curvature')
             pes = raw(folderpath=folderpath, prefix=prefix, scan=scan, type_='pe')
             for i, pe in enumerate(pes):
-                pe.set_shift(p=curvature[i])
-                ss[i] = pe.calculate_spectrum(nbins=nbins)
+                pe = pe.set_vertical_shift_via_polyval(curvature[i])
+                ss.append(pe.calculate_spectrum(nbins=nbins))
         else:
             ss = raw(folderpath=folderpath, prefix=prefix, scan=scan)
 
         ##########################
         # align and sum each ccd #
         ##########################
-        ss.align()
-        s = ss.calculate_sum()
+        s = ss.interp().align().calculate_sum()
 
         #######################################################
         # transfer attrs from the first ccd to final spectrum #
         #######################################################
-        for attr in ss[0]._get_user_attrs():
+        for attr in ss[0].get_attrs():
             s.__setattr__(attr, ss[0].__dict__[attr])
         del s.ccd
         s.scan = scan
@@ -574,19 +572,20 @@ def read(folderpath, prefix, scan, nbins=None, curvature=None, calib=None, offse
     # calibrate and zero #
     ######################
     if calib is not None:
-        calib = copy.deepcopy(calib)
-        if isinstance(calib, Iterable):
-            if offset is not None:
-                calib[-1] += offset
-            s.set_calib(calib)
-            if isinstance(scan, Iterable):
-                s.set_shift(-np.mean(s.E))
-            else:
-                s.set_shift(-s.E)
-        else:
-            s.set_calib(calib)
-            if offset is not None:
-                s.set_shift(offset)
+        s = s.set_calib(calib)
+        # calib = copy.deepcopy(calib)
+        # if isinstance(calib, Iterable):
+        #     if offset is not None:
+        #         calib[-1] += offset
+        #     s.set_calib(calib)
+        #     if isinstance(scan, Iterable):
+        #         s.set_shift(-np.mean(s.E))
+        #     else:
+        #         s.set_shift(-s.E)
+        # else:
+        #     s.set_calib(calib)
+        #     if offset is not None:
+        #         s.set_shift(offset)
     
     #########
     # label #
