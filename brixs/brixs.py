@@ -1449,6 +1449,21 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             self._has_nan = False
         return None
     
+    def find_nan(self):
+        """Return a list with indexes where non-numeric (NaN) values were found
+        
+        Returns:
+            list
+        """
+        if self.has_nan is None:
+            self.check_nan()
+
+        if self.has_nan:
+            xi = list(np.argwhere(np.isnan([0, 1, np.nan, 2, 3]))[:, 0])
+            yi = list(np.argwhere(np.isnan([0, 1, np.nan, np.nan, 3]))[:, 0])
+            return np.unique(np.concatenate((xi, yi), 0))
+        return []
+    
     def remove_nan(self):
         """remove data points (x, y) that contain non-numeric (NaN) values
         
@@ -2525,7 +2540,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             *5. User*
                 anything that the user defined on the fly.        
     """
-    _read_only     = ['step', 'length', 'x', 'monotonicity', 'has_nan']
+    _read_only     = []#['step', 'length', 'x', 'monotonicity', 'has_nan']
     _non_removable = []
 
     def __init__(self, data=None, folderpath=None, filepath=None, **kwargs):
@@ -2537,11 +2552,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         self._data = []
 
         # check
-        self._length       = None
-        self._step         = None
-        self._x            = None
-        self._monotonicity = None
-        self._has_nan      = None
+        pass
+        # self.length       = None
+        # self.step         = None
+        # self.x            = None
+        # self.monotonicity = None
+        # self.has_nan      = None
 
         # modifiers
         pass
@@ -2562,7 +2578,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             self.load(folderpath=folderpath, **kwargs)
         elif filepath is not None:
             self.load_from_single_file(filepath=filepath, **kwargs)
-        return
+        return 
 
     ###################
     # core attributes #
@@ -2586,15 +2602,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 self._data = list(value)
             else:
                 raise ValueError('data must be a list.')
-        
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._length       = None
-        self._step         = None
-        self._x            = None
-        self._monotonicity = None
-        self._has_nan = None
     @data.deleter
     def data(self):
         raise AttributeError('Cannot delete object.')
@@ -2623,6 +2630,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.shift = -s.shift
             s.shift = value[i]
+
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
@@ -2638,6 +2646,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.calib = 1/s.calib
             s.calib = value[i]
+
     @calib.deleter
     def calib(self):
         raise AttributeError('Cannot delete object.')
@@ -2653,6 +2662,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.factor = 1/s.factor
             s.factor = value[i]
+
     @factor.deleter
     def factor(self):
         raise AttributeError('Cannot delete object.')
@@ -2668,6 +2678,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.offset = -s.offset
             s.offset = value[i]
+
     @offset.deleter
     def offset(self):
         raise AttributeError('Cannot delete object.')
@@ -2717,15 +2728,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if isinstance(value, Spectrum) == False:
             raise ValueError(f'value must be of type brixs.spectrum, not {type(value)}')
         self._data[item] = value
-        
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._length       = None
-        self._step         = None
-        self._x            = None
-        self._monotonicity = None
-        self._has_nan      = None
+
 
     def __len__(self):
         return len(self.data)
@@ -2993,11 +2996,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         #######################
         # check x is the same #
         #######################
-        if self.x is None:
-            try:
-                self.check_same_x()
-            except ValueError:
-                raise ValueError('Cannot create new spectra. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp())')
+        try:
+            _ = self.check_same_x()
+        except ValueError:
+            raise ValueError('Cannot create new spectra. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp())')
         
         #############################
         # check attrs2interp format #
@@ -3133,12 +3135,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ################################
         # get min and max range values #
         ################################
-        if self.x is not None:
-            vmin = min(self.x)
-            vmax = max(self.x)
-        else:
-            vmin = min(min(s.x) for s in self)
-            vmax = max(max(s.x) for s in self)
+        vmin = min(min(s.x) for s in self)
+        vmax = max(max(s.x) for s in self)
 
         ################
         # empty limits #
@@ -3193,9 +3191,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ###########
         # check x #
         ###########
-        if self.x is None:
-            self.check_same_x()
-        x = self.x
+        x = self.check_same_x()
 
         ######################
         # if object is empty #
@@ -3206,7 +3202,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         #############
         # gather ys #
         #############
-        ys = np.zeros((self.length, len(self)))
+        length = len(x)
+        ys = np.zeros((length, len(self)))
         for i in range(len(self)):
             ys[:, i] = self[i].y
 
@@ -3220,12 +3217,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ################################
         # get min and max range values #
         ################################
-        if self.x is not None:
-            vmin = min(self.x)
-            vmax = max(self.x)
-        else:
-            vmin = min(min(s.x) for s in self)
-            vmax = max(max(s.x) for s in self)
+        vmin = min(min(s.x) for s in self)
+        vmax = max(max(s.x) for s in self)
         
         ########################################
         # check if extract is really necessary #
@@ -3297,15 +3290,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 self._data += [s]
         else:
             raise AttributeError(error_message)
-        
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._length       = None
-        self._step         = None
-        self._x            = None
-        self._monotonicity = None
-        self._has_nan      = None
 
     def remove(self, idx):
         """Remove spectrum.
@@ -3361,10 +3345,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         limits = self._check_limits(limits=limits)
         if limits is None:
             ss = Spectra(data=data)
-            ss._length       = self.length
-            ss._step         = self.step
-            ss._monotonicity = self.monotonicity
-            ss._x            = self.x
             return ss
         
         ##########################
@@ -3372,21 +3352,13 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         if len(self) == 0:
             ss = Spectra(data=data)
-            ss._length       = self.length
-            ss._step         = self.step
-            ss._monotonicity = self.monotonicity
-            ss._x            = self.x
             return ss
         
         ################################
         # get min and max range values #
         ################################
-        if self.x is not None:
-            vmin = min(self.x)
-            vmax = max(self.x)
-        else:
-            vmin = min(min(s.x) for s in self)
-            vmax = max(max(s.x) for s in self)
+        vmin = min(min(s.x) for s in self)
+        vmax = max(max(s.x) for s in self)
 
         ########################################
         # check if extract is really necessary #
@@ -3394,39 +3366,22 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if len(limits) == 1:
             if limits[0][0] <= vmin and limits[0][1] >= vmax:
                 ss = Spectra(data=data)
-                ss._length       = self.length
-                ss._step         = self.step
-                ss._monotonicity = self.monotonicity
-                ss._x            = self.x
                 return ss
 
         ###########
         # extract #
         ###########
         # if x is the same for all spectra, this operation is much faster
-        if self.x is None:
-            try:
-                self.check_same_x()
-            except ValueError:
-                ss = Spectra()
-                for i, s in enumerate(self):
-                    ss.append(s.copy(limits=limits))
-                # ss._length       = self.length
-                # ss._step         = self.step
-                # ss._monotonicity = self.monotonicity
-                # ss._x            = self.x
-                return ss
-            
         ss = Spectra()
-        x, ys = self._gather_ys(limits=limits)
-
-        for i in range(len(self)):
-            ss.append(Spectrum(x=x, y=ys[:, i]))
-        # ss._length       = self.length
-        # ss._step         = self.step
-        # ss._monotonicity = self.monotonicity
-        # ss._x            = self.x
+        try:
+            x, ys = self._gather_ys(limits=limits)
+            for i in range(len(self)):
+                ss.append(Spectrum(x=x, y=ys[:, i]))
+        except ValueError:
+            for i, s in enumerate(self):
+                ss.append(s.copy(limits=limits))
         return ss
+
 
     def copy(self, limits=None):
         """Return a copy of the object with data contained in a range.
@@ -3623,15 +3578,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             self.append(s)
         # if verbose: print('Done!')
 
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._length       = None
-        self._step         = None
-        self._x            = None
-        self._monotonicity = None
-        self._has_nan      = None
-
     def save_all_single_file(self, filepath, number_of_decimal_places=None, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
         r"""Save all Spectra in one single file. Wrapper for `numpy.savetxt()`_.
 
@@ -3694,13 +3640,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             assert filepath.is_file(), 'filepath must point to a file'
 
         #######################
-        # check x is the same #
+        # check x is the same # # x is being checked inside _gather_ys()
         #######################
-        if self.x is None:
-            try:
-                self.check_same_x()
-            except ValueError:
-                raise ValueError('Cannot save spectra in one file. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp()) or use Spectra.save() to save spectra in multiple files.')
+        try:
+            _x = self.check_same_x()
+        except ValueError:
+            raise ValueError('Cannot save spectra in one file. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp()) or use Spectra.save() to save spectra in multiple files.')
         
         ###################
         # check overwrite #
@@ -3740,14 +3685,13 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 else:
                     kwargs['fmt'] = f'%.{number_of_decimal_places}f'
             else: # pick best format
-                if self.has_nan is None:
-                    self.check_nan()
-                if self.has_nan:
-                    temp = self.remove_nan()
+                has_nan = self.check_nan()
+                if has_nan:
+                    raise ValueError('Cannot save spectra with NaN values. Please, use ss.remove_nan() to remove NaN values.')
                 else:
                     temp = self.copy()
 
-                number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in self.x])
+                number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in _x])
                 number_of_decimal_places_y = 0
                 for s in temp:
                     t = max([numanip.n_decimal_places(y) for y in s.y])
@@ -3756,7 +3700,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 kwargs['fmt'] = [f'%.{number_of_decimal_places_x}f'] + [f'%.{number_of_decimal_places_y}f']*len(temp)
 
             # final data to save
-            final = np.zeros((self.length, len(self)+1))
+            final = np.zeros((len(_x), len(self)+1))
             final[:, 0]  = x
             final[:, 1:] = ys
             
@@ -3849,15 +3793,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             s = Spectrum(x=x, y=ys[:, i])
             self.append(s)
 
-        ##########################
-        # reset check attributes #
-        ##########################
-        self._step         = None
-        self._monotonicity = None
-        self._x            = None
-        self._length       = None
-        self._has_nan      = None
-
         ###############
         # read header #
         ###############
@@ -3885,26 +3820,33 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """Check if at least one spectrum have non-numeric (NaN) values
         
         Returns:
-            None
+            bool (True if has nan)
         """
         ################
         # empty object #
         ################
         if self.data is None:
-            self._has_nan = False
-            return
+            return False
         
         #############
         # check nan #
         #############
         for s in self:
-            if self.has_nan is None: 
+            if s.has_nan is None: 
                 s.check_nan()
-            if self.has_nan:
-                self._has_nan = True
-                return
-        self._has_nan = True
-        return
+            if s.has_nan:
+                return True
+        return False
+    
+    def find_nan(self):
+        """Return a dict with spectra indexes and index where non-numeric (NaN) values were found
+        
+        Returns:
+            dict
+        """
+        nan_places = {}
+        for i, s in self:
+            nan_places[i] = s.find_nan()
     
     def remove_nan(self):
         """remove data points (x, y) that contain non-numeric (NaN) values
@@ -3912,21 +3854,16 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             Spectra
         """
-        if self.has_nan is None:
-            self.check_nan()
+        has_nan = self.check_nan()
 
-        if self.has_nan == False:
+        if has_nan == False:
             return self.copy()
         else:
             ss = self.copy()
 
             for i, s in enumerate(ss):
                 ss[i] = s.remove_nan()
-            # reset checks
-            ss._step    = None
-            ss._length  = None
-            ss._x       = None
-            ss._has_nan = False
+
             return ss    
     
     def check_monotonicity(self):
@@ -3936,7 +3873,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             ValueError if data is not monotonic.
 
         Returns:
-            None
+            string ('increasing' or 'decreasing')
         """
         ########################
         # check empty spectrum #
@@ -3952,9 +3889,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             except ValueError:
                 pass
         if all(x == 'increasing' for x in monotonicity):
-            self._monotonicity = 'increasing'
+            return 'increasing'
         elif all(x == 'decreasing' for x in monotonicity):
-            self._monotonicity = 'decreasing'
+            return 'decreasing'
         else:
             text = ''
             for i in range(len(self)):
@@ -3968,18 +3905,18 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             mode (str, optional): increasing or decreasing.
 
         Returns:
-            None
+            Spectra
         """
         ########################
         # check empty spectrum #
         ########################
         if len(self) == 0:
             raise ValueError('cannot operate on empty spectra')
-        
-
-        for s in self.data:
+    
+        ss = self.copy()
+        for s in ss:
             s.fix_monotonicity(mode=mode)
-        self.check_monotonicity()
+        return ss
 
     def check_length(self):
         """Checks if all spectra has the same length.
@@ -3989,7 +3926,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Otherwise, it raises an error.
 
         Returns:
-            None
+            number (length)
 
         Raises:
             ValueError: spectra does not have the same length.
@@ -4005,8 +3942,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         
         # if only one spectra exists, then length is immediately defined
         if len(self) == 1:
-            self._length = len(self.x)
-            return
+            return len(self[0].x)
         
         # collect
         length = [None]*len(self)
@@ -4018,7 +3954,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         # apply or raise error
         if all(x == length[0] for x in length):
-            self._length = length[0]
+            return length[0]
         else:
             text = ''
             for i in range(len(self)):
@@ -4050,7 +3986,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                     (step[i]-step[i+1])/avg(step) * 100 < max_error
 
             Returns:
-                None
+                step
 
             Raises:
                 ValueError: If condition 1, or 2 are not satisfied.
@@ -4064,23 +4000,16 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if len(self) == 0:
             raise ValueError('cannot check step for empty spectra')
 
-        if self.x is None:
-            # # try and see if spectra have the same x
-            # try:
-            #     self.check_same_x(max_error=max_error)
-
-            #     # check step uniformity
-            #     temp = Spectrum(x=self.x, y=self.x)
-            #     try:
-            #         temp.check_step(max_error=max_error)
-            #     except ValueError:
-            #         raise ValueError(f"Spectra have the same x-coordinates, but it is not uniform.")
-            #     self._step = temp.step
-            #     return
-
-            # # if spectra have different x-coordinates
-            # except ValueError:
-
+        # if all spectra have the same x, check step becames easier
+        try: 
+            _x = self.check_same_x(max_error=max_error)
+            temp = Spectrum(x=_x)
+            try:
+                temp.check_step(max_error=max_error)
+            except ValueError:
+                raise ValueError(f"Spectra have the same x-coordinates, but it is not uniform.")
+            return temp.step
+        except ValueError:
             # 1) check step uniformity
             steps = ['not uniform']*len(self)
             for idx, s in enumerate(self.data):
@@ -4104,21 +4033,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             # 2) check step between spectra
             avg_step = np.mean(steps)
             if sum([abs(steps[i]-steps[i+1]) > abs(avg_step*max_error/100) for i in range(len(self)-1)]) > 0:
-                self._step = None
                 raise ValueError(f"Spectra seems to have different step size. Calculated step sizes: \n{text}")
-            self._step = avg_step
-            return
-        
-        # if all spectra have the same x, check step becames easier
-        else:
-            # check step uniformity
-            temp = Spectrum(x=self.x)
-            try:
-                temp.check_step(max_error=max_error)
-            except ValueError:
-                raise ValueError(f"Spectra have the same x-coordinates, but it is not uniform.")
-            self._step = temp.step
-            return
+            return avg_step
 
     def check_same_x(self, max_error=0.1):
         """Check if spectra have same x-coordinates.
@@ -4134,7 +4050,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 max(s[i].x - s[i+1].x)/avg(step) * 100 < max_error
 
         Returns:
-            None
+            x values
 
         Raises:
             ValueError: If any x-coodinate of any two spectrum is different.
@@ -4150,9 +4066,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         # if only one spectra exists, then x is immediately defined
         if len(self) == 1:
-            self._x      = self[0].x
-            self._length = len(self.x)
-            return
+            return self[0].x
 
         # if empty spectrum exist
         text  = ''
@@ -4166,8 +4080,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if empty:
             raise ValueError(f'some spectra are empty\n{text}')
         
-        # check length
-        self.check_length()
+        # check length (will raise an error if different length)
+        length = self.check_length()
 
         # average step
         step = []
@@ -4197,15 +4111,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         # apply or raise error
         if 'different' not in x:
-            self._x = self[0].x
+            return self[0].x
         else:
             text = ''
             for i in range(len(self)):
                 text += f'spectrum: {i}: {x[i]}\n'
             raise ValueError(f'some spectra have different x: \n{text}\n\nUse brixs.Spectra.interp() to interpolate the data and make the x axis for different spectra match.')
-
-        # update length
-        self._length = len(self.x)
 
     ##################
     # BASE modifiers #
@@ -4246,7 +4157,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # ss._length       = None
         # ss._step         = None
-        ss._x            = None
+        # ss._x            = None
         # ss._monotonicity = None
 
         # extra
@@ -4291,9 +4202,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # reset check attributes #
         ##########################
         # ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         # extra
         for extra in settings._calib['Spectra']:
@@ -4431,9 +4342,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # reset check attributes #
         ##########################
         # ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         return ss
 
@@ -4469,9 +4380,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # reset check attributes #
         ##########################
         # ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         return ss
 
@@ -4511,8 +4422,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # ss._length       = None
         # ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         return ss
 
@@ -4643,23 +4554,24 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         # sort x
         if x is None:
-            if self.x is None:
+            try:
+                _x = self.check_same_x()
+                if start is not None or stop is not None or num is not None or step is not None:
+                    if start is None:
+                        start = max(_x)
+                    if stop is None:
+                        stop = min(_x)
+                    if num is None:
+                        num = len(_x)
+                else:
+                    return self
+            except ValueError:
                 if start is None:
                     start = min([min(s.x) for s in self.data])
                 if stop is None:
                     stop = max([max(s.x) for s in self.data])
                 if num is None:
-                    num = max([len(s.x) for s in self.data])
-            else:
-                if start is not None or stop is not None or num is not None or step is not None:
-                    if start is None:
-                        start = max(self.x)
-                    if stop is None:
-                        stop = min(self.x)
-                    if num is None:
-                        num = len(self.x)
-                else:
-                    return self
+                    num = max([len(s.x) for s in self.data])              
 
         # new spectra object
         ss = self.copy()
@@ -4667,14 +4579,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # interpolate
         for i, s in enumerate(self):
             ss[i] = s.interp(x=x, start=start, stop=stop, num=num, step=step)
-
-        ##########################
-        # reset check attributes #
-        ##########################
-        ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
 
         return ss
     
@@ -4691,19 +4595,18 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             None
         """
         # sort start stop
-        if self.x is None:
-            if start is None:
-                start = min(self.data[0].x)
-                for s in self.data:
-                    temp = min(s.x)
-                    if temp > start:
-                        start = temp
-            if stop is None:
-                stop = max(self.data[0].x)
-                for s in self.data:
-                    temp = max(s.x)
-                    if temp < stop:
-                        stop = temp
+        if start is None:
+            start = min(self.data[0].x)
+            for s in self.data:
+                temp = min(s.x)
+                if temp > start:
+                    start = temp
+        if stop is None:
+            stop = max(self.data[0].x)
+            for s in self.data:
+                temp = max(s.x)
+                if temp < stop:
+                    stop = temp
 
         # new spectra object
         ss = self.copy()
@@ -4715,9 +4618,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        ss._length       = None
+        # ss._length       = None
         # ss._step         = None
-        ss._x            = None
+        # ss._x            = None
         # ss._monotonicity = None  
 
         return ss
@@ -4735,9 +4638,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # reset check attributes #
         ##########################
         # ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         return ss
 
@@ -4794,10 +4697,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._length       = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         return ss
 
@@ -4829,10 +4732,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        ss._length       = None
-        ss._step         = None
-        ss._x            = None
-        ss._monotonicity = None
+        # ss._length       = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
 
         return ss
 
@@ -5272,8 +5175,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ######################
         # x must be the same #
         ######################
-        if self.x is None:
-            self.check_same_x()
+        _x = self.check_same_x()
 
         #########################################################
         # x must be uniform (same step between each data point) #
@@ -7204,10 +7106,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             list
         """
-        if self.has_nan is None:
-            self.check_nan()
+        has_nan = self.check_nan()
 
-        if self.has_nan:
+        if has_nan:
             return np.argwhere(np.isnan(self.data))
         return []
         
