@@ -1767,10 +1767,14 @@ class _ComponentTemplate(object):
         i2s     = self._get_list_of_all_available_i2()
         indexes = self._get_indexes_dict()
 
-        # empty object (Spectrum)
+        # empty Spectrum().model
         if isinstance(self.parent.parent, br.Spectrum):
             if len(indexes) == 0:
-                return 0, [0, ]
+                if i1 is None:
+                    i1 = 0
+                else:
+                    assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
+                return i1, [0, ]
 
         # check i2
         if i2 == 'all':
@@ -1786,7 +1790,7 @@ class _ComponentTemplate(object):
                 i2 = [i2, ]
 
         # check i1
-        if i1 == None:
+        if i1 is None:
             i1 = -1
             for _i2 in i2:
                 if _i2 in indexes:
