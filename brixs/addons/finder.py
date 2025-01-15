@@ -16,6 +16,17 @@ return the already calculated spectrum.
 
 
 #########
+# NOTES #
+#########
+As for right now, finder does not work with br.Image() type, but implementation 
+should be straight-forward.
+
+Spectra is saved in multiple files (one for each spectrum). Therefore, metadata
+from the spectra object itself is not saved (only metadata for each spectrum).
+
+
+
+#########
 # Usage #
 #########
 
@@ -370,7 +381,8 @@ def save(obj, folderpath=None):
     """saves processed/calculated spectrum so one does not have to process it again
 
     Args:
-        s (Spectrum or Spectra): object to be saved
+        obj (Spectrum, Spectra, or PhotonEvents): object to be saved. Does not 
+            work with Image() yet.
         folderpath (string or Path, optional): folderpath to save spectra. 
             If None, filepath will be taken from `br.finder.folderpath`. 
             This folderpath must contain a file named 'finder.txt'. 
