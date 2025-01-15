@@ -264,7 +264,7 @@ class _BrixsObject(object):
 
         # transfer attrs
         for attr in s.get_attrs():
-            value = copy.deepcopy(s.__dict__[attr])
+            value = copy.deepcopy(s.__getattribute__(attr))
             self.__setattr__(attr, value)
 # %%
 
