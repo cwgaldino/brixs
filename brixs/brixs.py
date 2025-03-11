@@ -409,6 +409,9 @@ def _str2attr(header, indentation=0, verbose=False):
             else:
                 try:
                     value = eval(str(value).strip())
+                except NameError:
+                    if value.startswith('Spectrum'):
+                        value = eval(str(value).replace('nan', 'np.nan').strip())
                 except:# Exception as e:
                     value = str(value).strip()
                 
@@ -1459,8 +1462,10 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             self.check_nan()
 
         if self.has_nan:
-            xi = list(np.argwhere(np.isnan([0, 1, np.nan, 2, 3]))[:, 0])
-            yi = list(np.argwhere(np.isnan([0, 1, np.nan, np.nan, 3]))[:, 0])
+            # xi = list(np.argwhere(np.isnan([0, 1, np.nan, 2, 3]))[:, 0])
+            # yi = list(np.argwhere(np.isnan([0, 1, np.nan, np.nan, 3]))[:, 0])
+            xi = list(np.argwhere(np.isnan(self.x))[:, 0])
+            yi = list(np.argwhere(np.isnan(self.y))[:, 0])
             return np.unique(np.concatenate((xi, yi), 0))
         return []
     
@@ -1473,7 +1478,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         if self.has_nan is None:
             self.check_nan()
 
-        if self.has_nan:
+        if self.has_nan == False:
             return self.copy()
         else:
             index2remove = list(np.argwhere(np.isnan(self.x))) + list(np.argwhere(np.isnan(self.y)))
@@ -2035,6 +2040,27 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         s._has_nan = None
         
         return s
+
+    def smooth_with_multiple_n(self, intervals):
+        """Returns Spectrum which is the average over n elements where n can be vary over different data ranges.
+
+        Args:
+            intervals (list of 3-element lists): a list of the type 
+            [[xstart_0, xstop_0, n_0], ..., [xstart_m, xstop_m, n_m]]
+
+        Returns:
+            smoothed out spectrum    
+
+        See Also:
+            :py:func:`Spectrum.smooth`
+        """
+        ss_smooth_intervals  = Spectra()
+        for xstart, xstop, n in intervals:
+            _s = self._copy(limits=(xstart, xstop))
+            ss_smooth_intervals.append(_s.smooth(n))
+        s_smooth = ss_smooth_intervals.concatenate()
+        s_smooth.copy_attrs_from(self)
+        return s_smooth
 
     def crop(self, start=None, stop=None):
         """Crop edges of the dataset.
@@ -5106,12 +5132,14 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # cross-corelation #
         ####################
         if mode == 'cc':
-            values = list(np.array(self.calculate_roll(mode='cc', limits=limits))*self.step)
+            step = self.check_step()
+            values = list(np.array(self.calculate_roll(mode='cc', limits=limits))*step)
         ###############################
         # sequential cross-corelation #
         ###############################
         elif mode == 'seq':
-            values = list(np.array(self.calculate_roll(mode='seq', limits=limits))*self.step)
+            step = self.check_step()
+            values = list(np.array(self.calculate_roll(mode='seq', limits=limits))*step)
         #######
         # max #
         #######
@@ -5203,14 +5231,16 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # max #
         #######
         elif mode == 'max':
+            step = self.check_step()
             values = np.array(self.calculate_shift(mode='max', limits=limits, **kwargs))
-            values = list(int(round(values/self.step)))
+            values = list(int(round(values/step)))
         #########
         # peaks #
         #########
         elif mode == 'peak':
+            step = self.check_step()
             values = np.array(self.calculate_shift(mode='peak', limits=limits, **kwargs))
-            values = list(int(round(self.calculated_shift/self.step)))
+            values = list(int(round(self.calculated_shift/step)))
         else:
             raise ValueError(f'mode={mode} not valid. Valid modes: `cc`, `max`, `peak`')
         return values

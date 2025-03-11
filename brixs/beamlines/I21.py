@@ -64,6 +64,16 @@ def _str2datetime(string):
     ############
     return datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=seconds)
 
+# temp = r'C:\Users\galdin_c\Documents\current\2024_10_01-CuSbO6\apollo\2022_07_I21_MM30806-1\raw\mm30806-1'
+# temp = r'C:\Users\galdin_c\Documents\current\2025_01_29_DLS_Zhijia\fixtures'
+# diff1, TEY, TFY, I0 = i21.read_xas(filepath = Path(temp)/'i21-243868.nxs')
+
+# try:
+#     I0 = i21.read(filepath = Path(temp)/'i21-243890.nxs')
+def scanlist(folderpath):
+    # return [int(_.name.split('.')[0].split('-')[1]) for _ in br.parsed_filelist(folderpath, string='*.nxs', ref=1)]
+    return br.parsed_filelist(folderpath, string='*.nxs', ref=1, return_type='dict')
+
 # %% ================================ read ================================ %% #
 def read(filepath, verbose=False):
     """Read rixs scan file from I21 beamline at Diamond light source.
@@ -181,13 +191,15 @@ def read(filepath, verbose=False):
                     _im.__setattr__(name, None)
                 else:
                     _im.__setattr__(name, attrs2[_type][name][i])
+
+    im.type = 'RIXS'
     return im, ind
 
 def read_xas(filepath, verbose=False):
     """Read xas scan file from I21 beamline at Diamond light source.
     
     Usage:
-        im, ims = read(<filepath>)
+        diff1, TEY, TFY, I0 = read_xas(<filepath>)
 
     Args:
         filepath (str or path): path to .nxs file
@@ -195,8 +207,7 @@ def read_xas(filepath, verbose=False):
             cannot be retrieved. Default is False.
 
     Returns
-        im, ims
-        summed up final br.Image object and list with individual images 
+        diff1, TEY, TFY, I0
     """
     #################
     # metadata list #
@@ -233,7 +244,10 @@ def read_xas(filepath, verbose=False):
         # data #
         ########
         try: 
-            diff1 = br.Spectrum(x=f['entry/diff1_c/energy'][()], y=f['entry/diff1_c/data'][()])
+            # name = list(f['entry/diff1_c'].keys())
+            # name.remove('diff1_c')
+            # name = name[0]
+            diff1 = br.Spectrum(x=f[f'entry/diff1_c/energy'][()], y=f['entry/diff1_c/data'][()])
             diff1.ok = True
         except Exception as e:
             if verbose: print(e)
@@ -241,6 +255,9 @@ def read_xas(filepath, verbose=False):
             diff1.ok = False
         diff1.mode = 'diff1'
         try: 
+            # name = list(f['entry/fy2_c'].keys())
+            # name.remove('fy2_i')
+            # name = name[0]
             TFY   = br.Spectrum(x=f['entry/fy2_c/energy'][()], y=f['entry/fy2_c/data'][()])
             TFY.ok = True
         except Exception as e:
@@ -248,7 +265,10 @@ def read_xas(filepath, verbose=False):
             TFY = br.Spectrum()
             TFY.ok = False
         TFY.mode = 'TFY'
-        try:             
+        try:            
+            # name = list(f['entry/draincurrent_c'].keys())
+            # name.remove('draincurrent_c')
+            # name = name[0] 
             TEY   = br.Spectrum(x=f['entry/draincurrent_c/energy'][()], y=f['entry/draincurrent_c/data'][()])
             TEY.ok = True
         except Exception as e:
@@ -323,6 +343,7 @@ def read_xas(filepath, verbose=False):
                 s.__setattr__(name, attrs[_type][name])
     for s in (diff1, TEY, TFY, I0):
         s.__setattr__('exposure_time', attrs2['split']['exposure_time'])
+        s.type = 'XAS'
     # for _type in attrs2:
     #     for name in attrs2[_type]:
     #         for s in (diff1, TEY, TFY, I0):
@@ -331,6 +352,7 @@ def read_xas(filepath, verbose=False):
     #             else:
     #                 s.__setattr__(name, attrs2[_type][name][i])
     #         # s.__setattr__(name, attrs2[_type][name])
+
 
     return diff1, TEY, TFY, I0
 
@@ -384,37 +406,49 @@ def read_line(filepath, verbose=False):
         # data #
         ########
         try: 
-            diff1 = br.Spectrum(x=f['entry/diff1_i/y'][()], y=f['entry/diff1_i/diff1_i'][()])
+            name = list(f['entry/diff1_i'].keys())
+            name.remove('diff1_i')
+            name = name[0]
+            diff1 = br.Spectrum(x=f[f'entry/diff1_i/{name}'][()], y=f['entry/diff1_i/diff1_i'][()])
             diff1.ok = True
         except Exception as e:
             if verbose: print(e)
             diff1 = br.Spectrum()
             diff1.ok = False
         diff1.mode = 'diff1'
-        # try: 
-        #     TFY   = br.Spectrum(x=f['entry/fy2_c/energy'][()], y=f['entry/fy2_c/data'][()])
-        #     TFY.ok = True
-        # except Exception as e:
-        #     if verbose: print(e)
-        #     TFY = br.Spectrum()
-        #     TFY.ok = False
-        # TFY.mode = 'TFY'
-        try:             
-            TEY   = br.Spectrum(x=f['entry/draincurrent_i/y'][()], y=f['entry/draincurrent_i/draincurrent_i'][()])
+        try: 
+            name = list(f['entry/fy2_i'].keys())
+            name.remove('fy2_i')
+            name = name[0]
+            TFY   = br.Spectrum(x=f[f'entry/fy2_i/{name}'][()], y=f['entry/fy2_i/fy2_i'][()])
+            TFY.ok = True
+        except Exception as e:
+            if verbose: print(e)
+            TFY = br.Spectrum()
+            TFY.ok = False
+        TFY.mode = 'TFY'
+        try:           
+            name = list(f['entry/draincurrent_i'].keys())
+            name.remove('draincurrent_i')
+            name = name[0]  
+            TEY   = br.Spectrum(x=f[f'entry/draincurrent_i/{name}'][()], y=f['entry/draincurrent_i/draincurrent_i'][()])
             TEY.ok = True
         except Exception as e:
             if verbose: print(e)
             TEY = br.Spectrum()
             TEY.ok = False
         TEY.mode = 'TEY'
-        # try: 
-        #     I0 = br.Spectrum(x=f['entry/m4c1_c/energy'][()], y=f['entry/m4c1_c/data'][()])
-        #     I0.ok = True
-        # except Exception as e:
-        #     if verbose: print(e)
-        #     I0 = br.Spectrum()
-        #     I0.ok = False
-        # I0.mode = 'I0'
+        try: 
+            name = list(f['entry/m4c1_c'].keys())
+            name.remove('m4c1_c')
+            name = name[0]  
+            I0 = br.Spectrum(x=f[f'entry/m4c1_c/{name}'][()], y=f['entry/m4c1_c/m4c1_c'][()])
+            I0.ok = True
+        except Exception as e:
+            if verbose: print(e)
+            I0 = br.Spectrum()
+            I0.ok = False
+        I0.mode = 'I0'
 
         ###################
         # common metadata #
@@ -470,7 +504,7 @@ def read_line(filepath, verbose=False):
     # print(attrs)
     for _type in attrs:
         for name in attrs[_type]:
-            for s in (diff1, TEY):
+            for s in (diff1, TEY, TFY, I0):
                 s.__setattr__(name, attrs[_type][name])
     for s in (diff1, TEY):
         s.__setattr__('exposure_time', attrs2['split']['exposure_time'])
@@ -483,7 +517,7 @@ def read_line(filepath, verbose=False):
     #                 s.__setattr__(name, attrs2[_type][name][i])
     #         # s.__setattr__(name, attrs2[_type][name])
 
-    return diff1, TEY#, TFY, I0
+    return diff1, TEY, TFY, I0
 
 # %% ============================== obsolete =============================== %% #
 def _h52dict(f):
