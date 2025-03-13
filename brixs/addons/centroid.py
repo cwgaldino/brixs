@@ -260,9 +260,15 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
     # select pixels with intensity between low_threshold and high_threshold
     if avg_threshold_max is not None:
         assert avg_threshold_max > avg_threshold, 'avg_threshold must be smaller than avg_threshold_max'
-        cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold)*(image.data[n2//2 : -n2//2, n2//2 : -n2//2] < avg_threshold_max))
+        if n2 > 0:
+            cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold)*(image.data[n2//2 : -n2//2, n2//2 : -n2//2] < avg_threshold_max))
+        else:
+            cp = np.argwhere((image.data > avg_threshold)*(image.data < avg_threshold_max))
     else:
-        cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold))
+        if n2 > 0:
+            cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold))
+        else:
+            cp = np.argwhere((image.data > avg_threshold))
         
     #############################################################
     # shift photon position because we removed the edges before # 
