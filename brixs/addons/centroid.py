@@ -70,17 +70,15 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         n1 (int): number of pixels to average to detect a photon hit candidate, e.g., a photon hit candidate 
             is selected if the average of the intensities within a n1-by-n1 square exceeds avg_threshold.
         n2 (int): For a photon hit candidates the 'center-of-mass' of the photon hit is calculated 
-            within a (n1+n2)-by-(n1+n2) square. n2 must be an even number to ensure that the 
-            `center of mass` of a photon hit is calculated in a square where the pixel with the 
-            photon hit is the central pixel.
+            within a n2-by-n2 square.
         avg_threshold (number): any pixel with intensity higher than avg_threshold in the n1-by-n1 
             averaged spot surrounding said pixel will be selected as a photon-hit-candidate position.
         double_threshold (number): any a photon-hit-candidate position where the sum of the surrounding
-            n1+n2 -by- n1+n2 square is higher than double_threshold is considered a double hit.
+            n2-by-n2 square is higher than double_threshold is considered a double hit.
         floor (bool, optional): if True, an intensity offset is added to the image such as the average
             intensity of the whole image is zero. Default is False.
         avg_threshold_max (number or None, optional): any pixel with intensity higher than avg_threshold_max
-            in the n1xn1 averaged spot surrounding said pixel will removed from the photon-hit-candidate list. If None,
+            in the n1-by-n1 averaged spot surrounding said pixel will removed from the photon-hit-candidate list. If None,
             this functionality is disabled and only the lower limit avg_threshold is used. Default is None.
         include_doubles (bool, optional): if False, double photon events will be removed from the
             final result
@@ -96,12 +94,12 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         pixels. n1=2 seems like a good averaging for most cases.
     
     Note:
-        n1+n2 must be roughly the same number of pixel which a photon can excite. For example,
-        if n1+n2 = 4, we are expecting that a photon will excite at most a 4x4 array of pixels.
+        n2 must be roughly the same number of pixel which a photon can excite. For example,
+        if n2 = 4, we are expecting that a photon will excite at most a 4x4 array of pixels.
     
     Note:
-        if n1+n2 is too large, than the algorithm might mistakenly assign double photon hits as
-        it will think that multiple photons will be falling within the n1+n2 squares.
+        if n2 is too large, than the algorithm might mistakenly assign double photon hits as
+        it will think that multiple photons will be falling within the n2 squares.
         
     Note:
         I think a good metric for setting up the avg_threshold is to choose the highest threshold possible
@@ -122,17 +120,17 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         
     Note:
         For determining a reasonable double_threshold, I think the best option is to get a pixel which
-        for sure is a single hit, then draw a n1+n2 square around it, and sum the intensities inside 
+        for sure is a single hit, then draw a n2 square around it, and sum the intensities inside 
         this square and multiply by 1.5. For example, given the following matrix with a single photon
         hit in the center (note that the center is slightly shifted to the left and top because the 
         length of the square is a even number):
         
             [[ 4,  6, -4,  8],
-                [-9, 79, 52, 10],
-                [-2, 19, 17, -2],
-                [-6, -9,  2, -8]]
+             [-9, 79, 52, 10],
+             [-2, 19, 17, -2],
+             [-6, -9,  2, -8]]
         
-        we see that the photon hit is on 79, then for n1+n2=4 we have that the sum is 157 (see also example
+        we see that the photon hit is on 79, then for n2=4 we have that the sum is 157 (see also example
         below). A suitable double hit threshold would be 1.5 * 157 = 235.
         
         
@@ -143,41 +141,42 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         Given the following matrix:
 
             [[14, -7,  4,  6, -4,  8],
-                [14,  4, -9, 79, 52, 10],
-                [ 1, 17, -2, 19, 17, -2],
-                [-1, -4, -6, -9,  2, -8],
-                [-4,  3,  2,  7, -9, -3]]
+             [14,  4, -9, 79, 52, 10],
+             [ 1, 17, -2, 19, 17, -2],
+             [-1, -4, -6, -9,  2, -8],
+             [-4,  3,  2,  7, -9, -3]]
 
         Its approx. rounded averaged counterpart for n1=2 is:
 
             [[ 6, -4, 18, 33, 16,  1],
-                [ 9,  1, 20, 42, 19,  0],
-                [ 3,  1,  0,  6,  2, -5],
-                [-2, -1, -2, -5, -7, -6],
-                [ 0,  4,  4, -2, -6,  0]]
+             [ 9,  1, 20, 42, 19,  0],
+             [ 3,  1,  0,  6,  2, -5],
+             [-2, -1, -2, -5, -7, -6],
+             [ 0,  4,  4, -2, -6,  0]]
                 
         note that in this example we are using a "approx" rounded average to facilitate the visualization
         of the matrix (instead of an "exact" average), but the script does an exact calculation.
                 
-        For avg_threshold = 25, we have two spots which are candidates: (x, y) = (3, 0) and (3, 1).
+        For avg_threshold = 25, we have two spots which are candidates: (x, y) = (3, 0) and (3, 1), with
+        intensity values 33 and 42, respectively.
         
         Between these two spots, (3, 0) will be disregarded, because the intensity of (3, 1) is 
         brightest. Going back to the original matrix, we see that position (3, 1) yields intensity 79
         (note that the pixels pixels that yielded 42 in the averaged (n1 x n1) matrix are:
         
         [[79, 52],
-            [19, 17]]
+         [19, 17]]
         
         From now on, we don't need to worry about the averaged (n1 x n1) matrix. This matrix is only
         used to find the candidates. 
 
         In this example, the only candidate is (3, 1). We then gather pixel rows and cols to the 
-        left/right/top/bottom of the candidate so to make a square of size n1+n2. For n2 = 2 we have
+        left/right/top/bottom of the candidate so to make a square of size n2. For n2 = 4 we have
         
         [[ 4,  6, -4,  8],
-            [-9, 79, 52, 10],
-            [-2, 19, 17, -2],
-            [-6, -9,  2, -8]]
+         [-9, 79, 52, 10],
+         [-2, 19, 17, -2],
+         [-6, -9,  2, -8]]
         
         this is what we call a `spot`. Now we only have to determine if this spot is a double or
         single hit. 
@@ -185,31 +184,31 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         the sum of the spot is 157. Let's say that double_threshold = 255, therefore, this spot is
         a single hit.
         
-        Here is an example with a double hit
+        Here is an example where it is known to be a double hit
         
         Original:
         [[-6, -1,  8, -4,  6,  0],
-            [ 4, -9, 14, 23,  0,  7],
-            [ 4,  4, 99, 41, -9, -9],
-            [37, 81, 50, 12, 13, -9],
-            [-3, 46, 16, -6,  5, -9]]
+         [ 4, -9, 14, 23,  0,  7],
+         [ 4,  4, 99, 41, -9, -9],
+         [37, 81, 50, 12, 13, -9],
+         [-3, 46, 16, -6,  5, -9]]
         
-        approx. rounded averaged n1=2
+        approx. rounded averaged for n1=2
         [[-4,  2, 10,  6,  3,  1],
-            [ 0, 27, 45, 14, -4, -1],
-            [31, 59, 51, 14, -6, -3],
-            [40, 48, 18,  6, -1, -1],
-            [12, 17,  3, -1,  0, -2]]
+         [ 0, 27, 45, 14, -4, -1],
+         [31, 59, 51, 14, -6, -3],
+         [40, 48, 18,  6, -1, -1],
+         [12, 17,  3, -1,  0, -2]]
             
         From the averaged matrix we have many candidates (intensity > avg_threshold = 25). Taking the
         brightest one, we have x, y = (1, 2), which has intensity 59
         
-        the spot for this pixel is (given n2=2)
+        the spot for this pixel is (given n2=4)
         
         [[ 4, -9, 14, 23],
-            [ 4,  4, 99, 41],
-            [37, 81, 50, 12],
-            [-3, 46, 16, -6]]
+         [ 4,  4, 99, 41],
+         [37, 81, 50, 12],
+         [-3, 46, 16, -6]]
             
         For this example, we know that a photon hit threshold should be around 200. Therefore, a 
         suitable double hit threshold would be 1.5 * 200 = 300.
@@ -223,8 +222,8 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
     # check n1 and n2 #
     ###################
     assert n1 > 0,  f'n1 must be an positive integer'
-    assert n2 >= 0,  f'n2 must be an positive even integer'
-    assert n2%2 == 0, f'n2 must be an even number to ensure that the `center of mass` of a photon hit is calculated in a square where the pixel with the photon hit is the central one'
+    assert n2 > 0,  f'n2 must be an positive even integer'
+    # assert n2%2 == 0, f'n2 must be an even number to ensure that the `center of mass` of a photon hit is calculated in a square where the pixel with the photon hit is the central one'
     
     #################################
     # check x_centers and y_centers #
@@ -269,7 +268,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold))
         else:
             cp = np.argwhere((image.data > avg_threshold))
-        
+
     #############################################################
     # shift photon position because we removed the edges before # 
     #############################################################
@@ -327,8 +326,11 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
     for i, (y, x) in enumerate(cp):       
         
         # isolate the spot where photon hit is in the center
-        spot = self.data[y-n2//2:y+n1+n2//2, x-n2//2:x+n1+n2//2]
-
+        if n2%2 == 0:
+            spot = self.data[y-n2//2+1:y+n2//2+1, x-n2//2+1:x+n2//2+1]
+        else:
+            spot = self.data[y-n2//2:y+1+n2//2, x-n2//2:x+1+n2//2]
+            
         # offset the spot to force all pixel values to be positive
         # this is a requirement for the weighted sum (center of mass) to work fine
         # if one mixes negative and positive weights, than the sum of the weights may
@@ -348,11 +350,16 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             # flag that this point has been accounted for
             flag.append((bx, by))
             
-            # calculate x center of mass
-            mx = np.average(np.arange(x-n2//2, x+n1+n2//2), weights=spot.sum(axis=0))
-            
-            # calculate y center of mass
-            my = np.average(np.arange(y-n2//2, y+n1+n2//2), weights=spot.sum(axis=1))
+            # calculate center of mass
+            if n2%2 == 0:
+                mx = np.average(np.arange(x-n2//2+1, x+n2//2+1), weights=spot.sum(axis=0))
+                my = np.average(np.arange(y-n2//2+1, y+n2//2+1), weights=spot.sum(axis=1))
+            else:
+                mx = np.average(np.arange(x-n2//2, x+1+n2//2), weights=spot.sum(axis=0))
+                my = np.average(np.arange(y-n2//2, y+1+n2//2), weights=spot.sum(axis=1))
+            # print(x+500, y)
+            # print(list(spot))
+            # print(mx+500)
 
             # OBSOLETE CODE FOR AVOIDING SUM OF THE WEIGHTS CLOSE TO ZERO
             # allow_hit_outside_of_spot=False
@@ -400,5 +407,6 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         bad = br.PhotonEvents(x=data[:, 0], y=data[:, 1])
     bad.copy_attrs_from(self)
 
+    # return res, bad
     return pe, bad
 br.Image.centroid = _centroid  
