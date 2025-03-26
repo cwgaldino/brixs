@@ -3940,8 +3940,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             raise ValueError('cannot operate on empty spectra')
     
         ss = self.copy()
-        for s in ss:
-            s.fix_monotonicity(mode=mode)
+        for i, s in enumerate(ss):
+            ss[i] = s.fix_monotonicity(mode=mode)
         return ss
 
     def check_length(self):
