@@ -153,6 +153,7 @@ h['duration']         = 'entry/duration'
 h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
 h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
 h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+h['exposure']         = 'entry/instrument/bluesky/metadata/exposure'
 
 # %% ========================== ascan metadata ============================ %% #
 _attrs['ascan'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
@@ -176,6 +177,7 @@ h['duration']         = 'entry/duration'
 h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
 h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
 h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+h['exposure']         = 'entry/instrument/bluesky/metadata/exposure'
 
 # %% ========================== mesh metadata ============================ %% #
 _attrs['mesh'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
@@ -210,6 +212,7 @@ h['start_y']          = 'entry/instrument/bluesky/metadata/start_y'
 h['stop_x']           = 'entry/instrument/bluesky/metadata/stop_x'
 h['stop_y']           = 'entry/instrument/bluesky/metadata/stop_y'
 h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+h['exposure']         = 'entry/instrument/bluesky/metadata/exposure'
 
 
 h = _attrs['mesh']['bool']
@@ -274,6 +277,9 @@ def _read_rixs(filepath, curv=True, verbose=True):
         # filename
         setattr(pe1, 'filename', filepath.name)
         setattr(pe2, 'filename', filepath.name)
+        
+        setattr(pe1, 'scan_type', 'rixs')
+        setattr(pe2, 'scan_type', 'rixs')
 
         # scan (this must be romoved when scan number and image number are included as metadata)
         name = str(filepath.name)
@@ -351,7 +357,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
 
         # check skip
         for i in skip:
-            assert i < start or i > stop, f'skip index ({i}) outside of start ({start}) stop ({start}) image indexes'
+            assert i >= start or i <= stop, f'skip index ({i}) outside of start ({start}) stop ({stop}) image indexes'
 
         # filter filelist
         filelist = filelist[start:stop + 1]
@@ -557,13 +563,18 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                     ss.append(_s)
 
             metadata.update(metadata_)
+                    
+            data_group = f['entry/data']
             for s in [_ for _ in ss] + [ss]:
-                s.EPOCH = f['entry/data/EPOCH'][()]
+                s.EPOCH = data_group['EPOCH'][()]
                 for motor in motors:
-                    try:
-                        s.__setattr__('SETPOINT' + '_' + motor, f['entry/data/' + (motor+'_user_setpoint')][()])
-                    except:
-                        pass
+                    key = motor + '_user_setpoint'
+                    if key in data_group:
+                        s.__setattr__('SETPOINT_' + motor, data_group[key][()])
+                        
+                    key = motor + '_setpoint'
+                    if key in data_group:
+                        s.__setattr__('SETPOINT_' + motor, data_group[key][()])
 
                 for attr in metadata:
                     setattr(s, attr, metadata[attr])
@@ -601,7 +612,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             TFY = br.Spectrum(x=data[:, 0], y=data[:, 3])
             I0  = br.Spectrum(x=data[:, 0], y=data[:, 4])
             PD  = br.Spectrum(x=data[:, 0], y=data[:, 5])
-            ss  = br.Spectra([TEY, TFY, I0, PD])
+            ss  = br.Spectra([TEY, TFY, PD, I0])
             for s in [_ for _ in ss] + [ss]:
                 s.PHASE        = data[:, 1]
                 s.DVF          = data[:, 6]
@@ -661,7 +672,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             TFY = br.Spectrum(x=data[:, 0], y=data[:, 3])
             I0  = br.Spectrum(x=data[:, 0], y=data[:, 4])
             PD  = br.Spectrum(x=data[:, 0], y=data[:, 5])
-            ss  = br.Spectra([TEY, TFY, I0, PD])
+            ss  = br.Spectra([TEY, TFY, PD, I0])
             for s in [_ for _ in ss] + [ss]:
                 s.PHASE        = data[:, 1]
                 s.DVF          = data[:, 6]
@@ -748,6 +759,7 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     #########
     s.copy_attrs_from(pe1)
     del s.ccd
+    setattr(s, 'scan_type', 'rixs')
     
     #################
     # normalization #
@@ -838,8 +850,8 @@ def verify(folderpath, sbins, calib=None, norm=True, **kwargs):
         axes[0].set_title('Use left/right keyboard keys to flip through images: ' + str(pes1.__i) + '/' + str(len(pes1)-1), fontsize='small')
 
         # plot axes 0
-        pes1[pes1.__i].plot(ax=axes[0], show_limits=True, **kwargs)
-        pes2[pes1.__i].plot(ax=axes[0], show_limits=True, **kwargs)
+        pes1[pes1.__i].plot(ax=axes[0], show_limits=True, s=0.5, **kwargs)
+        pes2[pes1.__i].plot(ax=axes[0], show_limits=True, s=0.5, **kwargs)
 
         # plot axes 1
         pes1[pes1.__i].integrated_rows_vs_y_centers(nrows=sbins).switch_xy().plot(ax=axes[1])
@@ -881,16 +893,21 @@ def verify(folderpath, sbins, calib=None, norm=True, **kwargs):
     # plot #
     ########
     # plot initial photon events (axes 0)
-    pes1[0].plot(ax=axes[0], show_limits=True, **kwargs)
-    pes2[0].plot(ax=axes[0], show_limits=True, **kwargs)
+    pes1[0].plot(ax=axes[0], show_limits=True, s=0.5, **kwargs)
+    pes2[0].plot(ax=axes[0], show_limits=True, s=0.5, **kwargs)
+    
+    # Inverter o eixo Y no axes[0]
+    axes[0].invert_yaxis()
+    axes[2].invert_yaxis()
+    axes[4].invert_yaxis()
 
     # plot initial spectra (axes 1)
     pes1[0].integrated_rows_vs_y_centers(nrows=sbins).switch_xy().plot(ax=axes[1])
     pes2[0].integrated_rows_vs_y_centers(nrows=sbins).switch_xy().plot(ax=axes[1])
 
     # plot photon events summed (axes 2)
-    pe1.plot(ax=axes[2], show_limits=True, **kwargs)
-    pe2.plot(ax=axes[2], show_limits=True, **kwargs)
+    pe1.plot(ax=axes[2], show_limits=True, s=0.2, **kwargs)
+    pe2.plot(ax=axes[2], show_limits=True, s=0.2, **kwargs)
 
     # plot spectra summed (axes 3)
     pe1.integrated_rows_vs_y_centers(nrows=sbins).switch_xy().plot(ax=axes[3])
@@ -1047,7 +1064,8 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     Args:
         folderpath (str or path): folderpath with rixs images.
         scans (list): scans IDs. Ex [1, 534, 458].
-        atype (string): select a attr from metadata or 'external' if it is external data. There are also 'r1', 'r2', 'z' and 'time' types.
+        atype (string): select a alignment type attribute from metadata or 'external' if it 
+            is external data. There are also nicknames for some  alignemnt types as 'r1', 'r2', 'z' and 'time'.
         sbins (int): number of bins for converting photon events to spectrum (
             number of points in the spectrum).
         calib (number or list, optional): if not None, the x axis is multipled by calib.
@@ -1059,7 +1077,8 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
             Default start is 0 and the default for stop is the None, which
             will get up to the last image available. skip should be a list with
             image number indexes to not read (skip). Default is an empty list [].
-        motor_list (list): list of motor positions if the atype is \'motor\'.
+        limits (list, optional): start and stop to set the limits of the x axis of the plot.
+        external_list (list): list of values to user if the atype is \'external\'. 
         
     Returns:
         dict {
@@ -1089,7 +1108,7 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
         attr[0] = 'RIXS_DZ'
         attr[1] = 'RIXS_DY'
     elif atype == 'z':
-        attr[0] = 'RIXS_Z'
+        attr[0] = 'RIXS_MZ'
         attr[1] = attr[0]
     elif atype == 'time':
         attr[0] = 'modified_date'
@@ -1125,7 +1144,7 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ###################
     # keyboard events #
     ###################
-    def keyboard(event, ssi, fiti, popti, ax, x):
+    def keyboard(event, ssi, fiti, popti, ax, x, limits=None):
         for i in range(2):
             if event.key == 'right':
                 # increase i
@@ -1163,12 +1182,15 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
         fiti[1][ssi[i].__i].plot(ax=ax1, linestyle='--', color='red')
         
         c = 7.5*max([popti[0][ssi[i].__i][2], popti[1][ssi[i].__i][2]])
-        ax.set_xlim(min([popti[0][ssi[i].__i][1], popti[1][ssi[i].__i][1]])-c, max([popti[0][ssi[i].__i][1], popti[1][ssi[i].__i][1]])+c)
+        if limits is None or limits == []:
+            ax.set_xlim(min([popti[0][ssi[i].__i][1], popti[1][ssi[i].__i][1]])-c, max([popti[0][ssi[i].__i][1], popti[1][ssi[i].__i][1]])+c)
+        else:
+            ax.set_xlim(limits[0], limits[1])
         ax.legend()
         
         plt.draw()
     
-    if not limits:
+    if limits is None or limits == []:
         limits=np.array([500, 1300])
         if isinstance(calib, Iterable):
             limits = (limits-calib[1])*calib[0]
@@ -1236,7 +1258,10 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     fiti[1][0].plot(ax=ax1, linestyle='--', color='red')
     ax1.legend()
     c = 7.5*max([popti[0][0][2], popti[1][0][2]])
-    ax1.set_xlim(min([popti[0][0][1], popti[1][0][1]])-c, max([popti[0][0][1], popti[1][0][1]])+c)
+    if limits is None or limits == []:
+        ax1.set_xlim(min([popti[0][0][1], popti[1][0][1]])-c, max([popti[0][0][1], popti[1][0][1]])+c)
+    else:
+        ax1.set_xlim(limits[0], limits[1])
     ax1.set_ylabel('counts/bin')
     if calib is None:
         ax1.set_xlabel('pixel')
@@ -1319,7 +1344,7 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
     ######################
     # register callbacks #
     ######################
-    fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ssi=ssi, fiti=fiti, popti=popti, ax=ax1, x=x1))
+    fig.canvas.mpl_connect('key_press_event', lambda event: keyboard(event, ssi=ssi, fiti=fiti, popti=popti, ax=ax1, x=x1, limits=limits))
     
     output = {}
     output['ssi']    = {'ss1':ssi[0],'ss2':ssi[1], 'fit1':fiti[0], 'fit2':fiti[1]}

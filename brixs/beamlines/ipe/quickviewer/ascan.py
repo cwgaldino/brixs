@@ -8,7 +8,7 @@ TODO:
 """
 
 # %% ============================= USER PROPOSAL ========================== %% #
-proposal = '20232839'
+proposal = '20221532'
 # %%
 
 # %% ==========================  STANDARDS IMPORTS ======================== %% #
@@ -36,25 +36,15 @@ USER  = IBIRA/'proposals'/str(proposal)
 PROC  = USER/'proc'
 DATA  = PROC/'DATA'
 
-RIXS  = USER/'data/RIXS/SPE'
-TIF   = USER/'data/RIXS/TIF'
-XAS   = DATA/'XAS'
-ASCAN = DATA/'ASCAN'
-MESH  = DATA/'MESH'
-
 BRIXS  = PROC/'brixs'
-
-OUT    = PROC/'out'   # output
-TMP    = PROC/'tmp'   # temporary files (can be deleted)
-STORE  = PROC/'store' # storage (not output file, cannot be deleted)
 # %%
 
 # %% =========================== BRIXS IMPORT ============================= %% #
-sys.path.insert(0, '../scripts/brixs')
+sys.path.insert(0, '/usr/local/scripts/apps/brixs')
 import brixs as br
 
 # from brixs.beamlines import IPE as _ipe
-import brixs.beamlines.IPE2 as ipe
+import brixs.beamlines.ipe as ipe
 import brixs.addons.fitting
 # %%
 
@@ -114,7 +104,7 @@ name                = "Quick viewer"   # app name doesn't matter
 window_title        = 'BRIXS: quick viewer'
 initial_window_size = (1000, 500)
 # default_folderpath  = Path('./').absolute()
-default_folderpath  = ASCAN
+default_folderpath  = str(IBIRA)+'/proposals/'
 width = 2
 vars = {'folderpath': default_folderpath,
         'selected':[],
@@ -122,7 +112,7 @@ vars = {'folderpath': default_folderpath,
         'worker': None,
         'floor': ['', ''],
         'norm':  ['', '']
-       }
+        }
 # %%
 
 # %% Initialization
@@ -217,9 +207,6 @@ def get_normalization():
     vars['floor'] = floor
     vars['norm']  = norm
     
-    
-
-    
 # %% update
 def update_folderpath(folderpath):
     """puts folderpath in vars, update text, call update filelist"""
@@ -274,7 +261,21 @@ def update_plot():
     for i, item in enumerate(vars['selected']):
         # get data
         filename = item[1]
-        TEY, TFY, I0, PD = ipe.read(fpath=vars['folderpath']/filename)
+        ss = ipe.read(fpath=vars['folderpath']/filename)
+
+        detectors = ['_tey', '_fy', '_pd', '_i0']
+        xps_detectors = ['XPS' + suffix for suffix in detectors]
+        rixs_detectors = ['RIXS' + suffix for suffix in detectors]
+        if all(element in ss.detectors for element in xps_detectors):
+            detectors=xps_detectors
+
+        elif all(element in ss.detectors for element in rixs_detectors):
+            detectors=rixs_detectors   
+
+        out = list()
+        for detector in detectors:
+            out.append(ss.get_by_attr('detector', detector, closest=False, verbose=False))
+        TEY, TFY, I0, PD = out
 
         #################
         # plot complete #
@@ -289,6 +290,23 @@ def update_plot():
         axes[3].plot((TEY/I0).x, (TEY/I0).y, pen={'color':cycler[i%len(cycler)], 'width':width})
         axes[4].plot((TFY/I0).x, (TFY/I0).y, pen={'color':cycler[i%len(cycler)], 'width':width})
         axes[5].plot((I0/I0).x, (I0/I0).y,   pen={'color':cycler[i%len(cycler)], 'width':width})
+
+        # third row
+        try:
+            s = (TEY/I0).floor(limits=vars['floor']).normalize(value=1, limits=vars['norm'])
+        except Exception as e:
+            print(e)
+            s = TEY/I0
+        axes[6].plot(s.x, s.y, pen={'color':cycler[i%len(cycler)], 'width':width})
+        
+        try:
+            s = (TFY/I0).floor(limits=vars['floor']).normalize(value=1, limits=vars['norm'])
+        except Exception as e:
+            print(e)
+            s = TEY/I0
+        axes[7].plot(s.x, s.y, pen={'color':cycler[i%len(cycler)], 'width':width})
+        # axes[8].plot((TEY/I0).x, (TEY/I0).y, pen={'color':cycler[i%len(cycler)], 'width':width})
+        # axes[8].plot((TFY/I0).x, (TFY/I0).y, pen={'color':cycler[i%len(cycler)], 'width':width})
 
         # plot single
         w3.plot(TEY.x, TEY.y, pen={'color':cycler[i%len(cycler)], 'width':width})
@@ -364,10 +382,10 @@ def mouse_moved(event):
         ax = axes[4]
     elif axes[5].sceneBoundingRect().contains(pos):
         ax = axes[5]
-    # elif axes[6].sceneBoundingRect().contains(pos):
-    #     ax = axes[6]
-    # elif axes[7].sceneBoundingRect().contains(pos):
-    #     ax = axes[7]
+    elif axes[6].sceneBoundingRect().contains(pos):
+        ax = axes[6]
+    elif axes[7].sceneBoundingRect().contains(pos):
+        ax = axes[7]
     
     if ax:
         if hasattr(ax, 'vb'):
@@ -439,34 +457,35 @@ area.addDock(d1, 'left')
 ###########
 # widgets #
 ###########
-b3 = QtWidgets.QPushButton()
-b3.setIcon(QtGui.QIcon('update.png'))
-b3.clicked.connect(update_filelist)
-w1.addWidget(b3, row=0, col=3)
-
-b2 = QtWidgets.QPushButton()
-b2.setIcon(QtGui.QIcon('folder.png'))
-b2.clicked.connect(select_folderpath)
-w1.addWidget(b2, row=0, col=2)
-
-b1 = QtWidgets.QPushButton()
-b1.setIcon(QtGui.QIcon('back.png'))
-b1.clicked.connect(go_back_directory)
-w1.addWidget(b1, row=0, col=1)
-
+ICON = os.path.dirname(brixs.__file__)+'/beamlines/ipe/quickviewer/'
 e1 = QtWidgets.QLineEdit()
 e1.textChanged.connect(get_folderpath)
-w1.addWidget(e1, row=0, col=0)
+w1.addWidget(e1, row=0, col=0, colspan=3)
+
+b1 = QtWidgets.QPushButton()
+b1.setIcon(QtGui.QIcon(ICON+'back.png'))
+b1.clicked.connect(go_back_directory)
+w1.addWidget(b1, row=1, col=0)
+
+b2 = QtWidgets.QPushButton()
+b2.setIcon(QtGui.QIcon(ICON+'folder.png'))
+b2.clicked.connect(select_folderpath)
+w1.addWidget(b2, row=1, col=1)
+
+b3 = QtWidgets.QPushButton()
+b3.setIcon(QtGui.QIcon(ICON+'update.png'))
+b3.clicked.connect(update_filelist)
+w1.addWidget(b3, row=1, col=2)
 
 l1 = QtWidgets.QListWidget()
 l1.setSelectionMode(QtWidgets.QListWidget.ExtendedSelection)
 l1.itemSelectionChanged.connect(get_selection)
-w1.addWidget(l1, row=2, col=0, colspan=4)
+w1.addWidget(l1, row=2, col=0, colspan=3)
 
 r1 = QtWidgets.QRadioButton()
-r1.setIcon(QtGui.QIcon('update.png'))
+r1.setIcon(QtGui.QIcon(ICON+'update.png'))
 r1.clicked.connect(auto_update)
-w1.addWidget(r1, row=3, col=0, colspan=4)
+w1.addWidget(r1, row=3, col=0, colspan=3)
 
 # # normalization
 # e2 = QtWidgets.QLineEdit()
@@ -503,10 +522,9 @@ axes.append(w2.addPlot())
 axes.append(w2.addPlot())
 axes.append(w2.addPlot())
 
-# w2.nextRow()
-# axes.append(w2.addPlot())
-# axes.append(w2.addPlot())
-# # axes.append(w2.addPlot())
+w2.nextRow()
+axes.append(w2.addPlot())
+axes.append(w2.addPlot())
 
 d2.addWidget(w2)
 
@@ -527,6 +545,10 @@ axes[2].setLabel('left', 'I0')
 axes[3].setLabel('left', 'TEY/I0')
 axes[4].setLabel('left', 'TFY/I0')
 axes[5].setLabel('left', 'I0/I0')
+
+axes[6].setLabel('left', 'TEY/I0 norm.')
+axes[7].setLabel('left', 'TFY/I0 norm.')
+# axes[8].setLabel('left', 'set normalization')
 
 # connect cursor moved
 for ax in axes:
@@ -608,8 +630,50 @@ legend = w8.addLegend()
 d8.addWidget(w8)
 # %%
 
-# %% dock 9 is only for the xas viewer
-pass
+# %% ============================== dock 9 ================================ %% #
+################
+# initializing #
+################
+d9 = Dock('Normalization', size=(100, 0.2))    
+w9 = pg.LayoutWidget()
+d9.addWidget(w9)
+area.addDock(d9, 'bottom', d8)
+
+###########
+# widgets #
+###########
+e2 = QtWidgets.QLineEdit()
+e2.textChanged.connect(get_normalization)
+w9.addWidget(e2, row=0, col=1)
+
+e3 = QtWidgets.QLineEdit()
+e3.textChanged.connect(get_normalization)
+w9.addWidget(e3, row=1, col=1)
+
+e4 = QtWidgets.QLineEdit()
+e4.textChanged.connect(get_normalization)
+w9.addWidget(e4, row=2, col=1)
+
+e5 = QtWidgets.QLineEdit()
+e5.textChanged.connect(get_normalization)
+w9.addWidget(e5, row=3, col=1)
+
+t0 = QtWidgets.QLabel()
+t0.setText('pre start')
+w9.addWidget(t0, row=0, col=0)
+
+t1 = QtWidgets.QLabel()
+t1.setText('pre stop')
+w9.addWidget(t1, row=1, col=0)
+
+t2 = QtWidgets.QLabel()
+t2.setText('post start')
+w9.addWidget(t2, row=2, col=0)
+
+t3 = QtWidgets.QLabel()
+t3.setText('post stop')
+w9.addWidget(t3, row=3, col=0)
+
 # %%
 
 # %% ============================== dock 10 ================================ %% #
@@ -631,6 +695,8 @@ w10.addWidget(t4, row=0, col=0)
 t5 = QtWidgets.QLabel()
 t5.setText('y: -')
 w10.addWidget(t5, row=1, col=0)
+
+# %%
 
 # %% ================================ run ================================= %% #
 if __name__ == '__main__':
