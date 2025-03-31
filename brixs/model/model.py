@@ -1036,6 +1036,16 @@ class Model(lmfit.Parameters):
         #     for _s in parent:
         #         _s.model
         return model
+    
+    def copy_from(self, object):
+        # assert isinstance(self, object), 'cannot copy model from an'
+        if isinstance(object, br.Spectrum) or isinstance(object, br.Spectra):
+            model = object.model
+        elif isinstance(object, Model):
+            model = object
+        parent = self.parent 
+        self = copy.deepcopy(model)
+        self.parent = parent
 
     #################
     # save and load #

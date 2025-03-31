@@ -2172,6 +2172,18 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
         .. _numpy.trapz(): https://numpy.org/doc/stable/reference/generated/numpy.trapz.html
         """
+        ################################
+        # assert spectrum is not empty #
+        ################################
+        assert len(self) > 0, 'Cannot operate on an empty Spectrum'
+
+        ##############################################
+        # np.interp requires that array is monotonic #
+        ##############################################
+        self.check_monotonicity()
+        if self.monotonicity != 'increasing':
+            raise ValueError('monotonicity of data must be strictly increasing. Use Spectrum.fix_monotonicity().')
+
         s = self._copy(limits=limits)
         return np.trapz(y=s.y, x=s.x)
 
