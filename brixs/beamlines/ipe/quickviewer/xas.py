@@ -270,7 +270,7 @@ def update_plot():
     for i, item in enumerate(vars['selected']):
         # get data
         filename = item[1]
-        TEY, TFY, I0, PD = ipe.read(fpath=vars['folderpath']/filename)
+        TEY, TFY, PD, I0 = ipe.read(fpath=vars['folderpath']/filename)
 
         #################
         # plot complete #

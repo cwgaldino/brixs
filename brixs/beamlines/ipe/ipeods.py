@@ -165,7 +165,7 @@ import sys
 path2brixs = Path(r'/usr/local/scripts/apps/brixs/')
 sys.path.append(str(path2brixs))
 import brixs as br
-import brixs.beamlines.IPE2 as ipe
+import brixs.beamlines.ipe as ipe
 
 # common
 from brixs.sheets.common import letter2num, str2num
@@ -192,6 +192,9 @@ from brixs.sheets.ods import get_protection, lock_cells, unlock_cells
 
 import brixs.addons.fitting
 
+# %% ------------------------------- paths -------------------------------- %% #
+IBIRA = Path('/ibira/lnls/beamlines/ipe/proposals')
+
 # %% -------------------------- uno definitions --------------------------- %% #
 def get_current_document():
     """Return document object"""
@@ -204,12 +207,11 @@ def get_current_selection():
 # %%
 
 # %% --------------------------- test functions --------------------------- %% #
-def test1(*args, **kwargs):
+def test(*args, **kwargs):
     msgbox('test 1')
 
-def test2(*args, **kwargs):
-    doc = get_current_document()
-    msgbox(get_sheet_count(doc))
+def test_brixs(*args, **kwargs):
+    msgbox(brixs.__file__)
 # %%
 
 # %% ------------------------ support functions --------------------------- %% #
@@ -229,8 +231,8 @@ def _input(sheet, text, text_position, input_position, input_default='', editabl
             If merged, width is applied to each column. Default is 'False
 
     Usage:
-        _input(sheet=settings, text='RIXS folderpath', text_position='A1', 
-               input_position='B1:F1', input_default='', 
+        _input(sheet=settings, text='Proposal', text_position='A2', 
+               input_position='B2:F2', input_default='', 
                editable=True, 
                input_width=4000)
 
@@ -360,10 +362,10 @@ def _check_document():
     settings = get_sheet_by_name(doc, 'settings')
     rixs     = get_sheet_by_name(doc, 'RIXS')
     xas      = get_sheet_by_name(doc, 'XAS')
-    # _1D      = get_sheet_by_name(doc, 'ASCAN')
-    # _2D      = get_sheet_by_name(doc, 'MESH')
+    ascan    = get_sheet_by_name(doc, 'ASCAN')
+    mesh     = get_sheet_by_name(doc, 'MESH')
 
-    return doc, settings, rixs, xas#, _1D, _2D
+    return doc, settings, rixs, xas, ascan, mesh
 
 def _check_settings(settings):
     """Check if options in the settings sheet are sound
@@ -374,15 +376,18 @@ def _check_settings(settings):
     Returns:
         dictionary
     """
-    address = {'RIXS folderpath':         'B1',
-               'XAS folderpath':          'B2',
-               'Save after update':     'B4',
-               'Intercalate bkg color': 'B5',
-               'Reset data':            'E4',
-               'RIXS: number of scans': 'J1',
-               'RIXS: next row':        'J2',
-               'XAS: number of scans':  'J3',
-               'XAS: next row':         'J4'}
+    address = {'Proposal':               'B2',
+               'Reset data':             'B3',
+               'Save after update':      'B4',
+               'Intercalate bkg color':  'B5',
+               'RIXS: number of scans':  'J1',
+               'RIXS: next row':         'J2',
+               'XAS: number of scans':   'J3',
+               'XAS: next row':          'J4',
+               'ASCAN: number of scans': 'J5',
+               'ASCAN: next row':        'J6',
+               'MESH: number of scans':  'J7',
+               'MESH: next row':         'J8'}
 
     ################
     # get settings #
@@ -394,17 +399,16 @@ def _check_settings(settings):
     ###########################
     # validate INPUT settings #
     ###########################
-    value = values['RIXS folderpath']
+    value = values['Proposal']
     if value != '':
-        if Path(value).exists() == False or Path(value).is_dir() == False:
-            msgbox(f'`RIXS folderpath` in settings does not exist or do not point to a folder', type_msg='errorbox')
+        if Path(IBIRA/value).exists() == False or Path(IBIRA/value).is_dir() == False:
+            msgbox(f'Proposal folder does not exist', type_msg='errorbox')
             return
-        
-    value = values['XAS folderpath']
-    if value != '':
-        if Path(value).exists() == False or Path(value).is_dir() == False:
-            msgbox(f'`XAS folderpath` in settings does not exist or do not point to a folder', type_msg='errorbox')
-            return
+
+    value = values['Reset data']
+    if value not in ('yes', 'no'):
+        msgbox(f"`Reset data` in settings cannot be {value}\n\navailable options = ('yes', 'no')", type_msg='errorbox')
+        return 
 
     value = values['Save after update']
     if value not in ('yes', 'no'):
@@ -416,11 +420,6 @@ def _check_settings(settings):
         msgbox(f"`Intercalate bkg color` in settings cannot be {value}\n\navailable options = ('yes', 'no')", type_msg='errorbox')
         return 
     
-    value = values['Reset data']
-    if value not in ('yes', 'no'):
-        msgbox(f"`Reset data` in settings cannot be {value}\n\navailable options = ('yes', 'no')", type_msg='errorbox')
-        return 
-
     return values
 # %%
 
@@ -429,32 +428,43 @@ def _check_settings(settings):
 # %% ====================================================================== %% #
 
 # %% rixs metadata list
-rixs_attrs = []
-for key in ipe.rixs_attrs:
-    for attr in ipe.rixs_attrs[key]:
-        rixs_attrs.append(attr)
-rixs_attrs = list(np.sort(rixs_attrs))
+# rixs_attrs = []
+# for key in ipe._attrs['rixs']:
+#     for attr in ipe._attrs['rixs'][key]:
+#         rixs_attrs.append(attr)
+rixs_attrs = ['scan', 'modified_date']
 
 # %% xas metadata list
 # xas_attrs = ['scan', 'start_time', 'command', 'energy', 'ring_current', 'cff', 'GR', 'MR', 'GR_offset', 'MR_offset', 'GT', 'MT', 'line_density', 'und_phaseMon', 'FOE_right', 'FOE_left', 'FOE_top', 'FOE_bottom', 'FOE_Vgap', 'FOE_Voffset', 'FOE_Hgap', 'FOE_Hoffset', 'WBS_right', 'WBS_left', 'WBS_top', 'WBS_bottom', 'WBS_Vgap', 'WBS_Voffset', 'WBS_Hgap', 'WBS_Hoffset', 'MPS1A_Vgap', 'MPS1A_Hgap', 'MPS2B_Vgap', 'MPS2B_Hgap', 'WBS_MKS', 'M1_MKS', 'PGM_MKS', 'M4_MKS', 'M5_MKS', 'MPS1A_MKS', 'MPS2B_MKS', 'M7_MKS', 'WBS_pump', 'M1_pump', 'PVS_pump', 'PGM_pump', 'MVS1_pump', 'M4_pump', 'MVS2_pump', 'M5_pump', 'PGshutter_pump', 'TPA_1A_pump', 'TPA_1B_pump', 'TPB_1A_pump', 'TPB_1B_pump', 'MPS1A_pump', 'MPS2B_pump', 'TPA_2A_pump', 'TPA_2B_pump', 'TPB_2A_pump', 'TPB_2B_pump', 'MVS3A_pump', 'MVS4B_pump', 'M7_pump', 'M1_X', 'M1_Y', 'M1_Z', 'M1_Rx', 'M1_Ry', 'M1_Rz', 'M4_X', 'M4_Y', 'M4_Z', 'M4_Rx', 'M4_Ry', 'M4_Rz', 'M4_Uy', 'M4_Ry_piezo', 'M5_X', 'M5_Y', 'M5_Z', 'M5_Rx', 'M5_Ry', 'M5_Rz', 'M5_Uy', 'M5_Ry_piezo', 'M6_X', 'M6_Y', 'M6_Z', 'M6_Rx', 'M6_Ry', 'M6_Rz', 'M6_Uy', 'M6_Rx_piezo', 'M6_Ry_piezo', 'M7_X', 'M7_Y', 'M7_Z', 'M7_Rx', 'M7_Ry', 'M7_Rz', 'M7_Uy', 'M7_Rx_piezo', 'M7_Ry_piezo', 'M1_collector', 'M1_collector_rng', 'MVS1', 'MVS1_rng', 'MVS2', 'MVS2_rng', 'MVS3A', 'MVS3A_rng', 'MVS4B', 'MVS4B_rng', 'MPS1A_HDSL', 'MPS1A_HDSL_rng', 'MPS1A_HDSR', 'MPS1A_HDSR_rng', 'MPS2B_HDSL', 'MPS2B_HDSL_rng', 'MPS2B_HDSR', 'MPS2B_HDSR_rng', 'MBS3A_topC', 'MBS3A_bottomC', 'MBS3A_leftC', 'MBS3A_rightC', 'MBS4B_topC', 'MBS4B_bottomC', 'MBS4B_leftC', 'MBS4B_rightC', 'MVS5A', 'MVS5A_rng', 'MVS6B', 'MVS6B_rng', 'XPS_i0', 'XPS_i0_rngN', 'XPS_tey', 'XPS_tey_rngN', 'XPS_fy', 'XPS_fy_rngN', 'RIXS_i0', 'RIXS_i0_rngN', 'RIXS_tey', 'RIXS_tey_rngN', 'RIXS_fy', 'RIXS_fy_rngN', 'RIXS_pd', 'RIXS_pd_rng', 'RIO_P_AvgTime', 'RIO_R_AvgTime', 'RIXS_X', 'RIXS_Y', 'RIXS_Z', 'RIXS_Ry', 'RIXS_SAMPLE_X', 'RIXS_SAMPLE_Z', 'RIXS_GRAS_Rx1', 'RIXS_GRAS_Rz1', 'RIXS_GRAS_X', 'RIXS_GRAS_Y', 'RIXS_GRAS_Z', 'RIXS_DETS_Y', 'RIXS_DETS_Z', 'XPS_X', 'XPS_Y', 'XPS_Z', 'XPS_Ry']
-xas_attrs = ['scan', 'start_time', 'scan_type', 'exposure', 'temperatureA', 'temperatureB', 'samplex', 'sampley', 'samplez', 'th']
+xas_attrs = ['scan', 'scan_type', 'detectors', 'start_time', 'end_time']
+
 
 # %% new empty file 
-def new_empty(*args, **kwargs):
+def empty_sheet(*args, **kwargs):
     """Create new template spreadsheet"""
-    # open new spreadsheet (Calc)
-    doc = new_calc()
-
+    # Get the current document
+    doc = XSCRIPTCONTEXT.getDocument()
+    
     # lock undo
     lock_undo(doc)
+    
+    sheets_name = [sheet.Name for sheet in doc.Sheets]
+    
+    if 'dummy' not in sheets_name:
+        new_sheet(doc, 'dummy', i=0)
+    
+    # Clening doc
+    for name in sheets_name:
+        if 'dummy'!= name:
+            remove_sheet_by_name(doc, name)
 
     # add new sheets
     settings = new_sheet(doc, 'settings', i=0)
     rixs     = new_sheet(doc, 'RIXS',     i=1)
     xas      = new_sheet(doc, 'XAS',      i=2)
-    # _1D      = new_sheet(doc, 'ASCAN',    i=3)
-    # _2D      = new_sheet(doc, 'MESH',     i=4)
-    remove_sheet_by_name(doc, 'Sheet1')
+    ascan    = new_sheet(doc, 'ASCAN',    i=3)
+    mesh     = new_sheet(doc, 'MESH',     i=4)
+    remove_sheet_by_name(doc, 'dummy')
     select_active_sheet(doc, settings)
 
     # unprotect
@@ -479,46 +489,57 @@ def new_empty(*args, **kwargs):
         text  = 'This sheet is password protected to avoid mistakes\n\n'
         text += 'The password is: 123456\n\n'
         text += 'To unlock it:\nTools > Protect Sheet > Type in password'
-        _instruct(settings, text, 'I8:J18')
+        _instruct(settings, text, 'I10:J18')
 
         text  = 'INSTRUCTIONS:\n\n'
-        text += '1) Edit setting:\n\n'
-        text += '    RIXS folderpath:\n     path to folder with RIXS folder-scans\n\n'
-        text += '    XAS folderpath:\n        path to folder with XAS scans\n\n'
-        text += "    Save after update:\n        if `yes`, spreadsheet will saved after running the `update` macro\n\n" 
+        text += '1) Create sheet:\n'
+        text += '    Load IPECalcTemplate\n'
+        text += '    At the toolsbar > IPE > Empty sheet\n\n'
+        text += '2) Edit setting:\n'
+        text += '    Proposal:\n        proposal number at ibira\n'
+        text += "    Reset data:\n        if `yes`, all data (rows) is deleted and re-read again upon update\n" 
+        text += "    Save after update:\n        if `yes`, spreadsheet will saved after running the `update` macro\n" 
         text += "    Intercalate bkg color:\n        if `yes`, lines will have alternating bkg color\n\n" 
-        text += "    Reset data:\n        if `yes`, all data (rows) is deleted and re-read again upon update\n\n" 
-        text += '2) Run update macro:\n'
-        text += '    Tools > Macros > Run Macro > `Application Macros`:`mymacro`:`update` > Run'
-        _instruct(settings, text, 'A8:F26')
+        text += '3) Run Load data:\n'
+        text += '    At the toolsbar > IPE > Load data\n'
+        text += '    Or the blue downward-pointing arrow icon\n\n'
+        text += '4) Run update macro:\n'
+        text += '    At the toolsbar > IPE > Update data\n'
+        text += '    Or Purple circle icon\n\n'
+        _instruct(settings, text, 'A8:F30')
 
         text  = 'REMINDERS:\n\n'
-        text += '    - Add `update` macro to toolbar:\n        Right click on the toolbar > Customize Toolbar... > Search: `update`\n\n'
         text += '    - Turn grid for colored cells:\n        Tools > Options > LibreOffice Calc > View > Visual Aids > Grid Lines > select: `Show on colored cells`\n\n'
         text += "    - Freeze First rows/cols:\n        View > Freeze Cells > Freeze First column/Row\n\n"
         text += "    - Freeze multiple rows/cols:\n        Select the cell which left/above that cell should freeze > View > Freeze Rows and Columns\n\n"
         text += "    - Move columns:\n        Select a column by clicking the column header > hold down Alt and drag the column by one of its cells (it you try to drag from the header it will not work)\n\n"
-        _instruct(settings, text, 'A28:F45')
+        _instruct(settings, text, 'A32:F46')
 
     ##########
     # Inputs #
     ##########
     if True:
-        _input(settings, 'RIXS folderpath',       'A1', 'B1:F1', '', True, input_width=4000)
-        _input(settings, 'XAS folderpath',        'A2', 'B2:F2', '', True)
+        #_input(settings, 'RIXS folderpath',       'A1', 'B1:F1', '', True, input_width=4000)
+        _input(settings, 'Proposal',              'A2', 'B2', '20221532', True)
+        _input(settings, 'Reset data',            'A3', 'B3', 'yes', True)
         _input(settings, 'Save after update',     'A4', 'B4', 'yes', True)
         _input(settings, 'Intercalate bkg color', 'A5', 'B5', 'yes', True)
-        _input(settings, 'Reset data',            'D4', 'E4', 'no', True)
 
     ############
     # Internal #
     ############
     if True:
-        _output(settings, 'RIXS: number of scans', 'I1', 'J1', 0)
-        _output(settings, 'RIXS: current row',     'I2', 'J2', 2)
+        _output(settings, 'RIXS: number of scans',  'I1', 'J1', 0)
+        _output(settings, 'RIXS: current row',      'I2', 'J2', 2)
 
-        _output(settings, 'XAS: number of scans', 'I3', 'J3', 0)
-        _output(settings, 'XAS: current row',     'I4', 'J4', 2)
+        _output(settings, 'XAS: number of scans',   'I3', 'J3', 0)
+        _output(settings, 'XAS: current row',       'I4', 'J4', 2)
+        
+        _output(settings, 'ASCAN: number of scans', 'I5', 'J5', 0)
+        _output(settings, 'ASCAN: current row',     'I6', 'J6', 2)
+        
+        _output(settings, 'MESH: number of scans',  'I7', 'J7', 0)
+        _output(settings, 'MESH: current row',      'I8', 'J8', 2)
 
     ###########
     # protect #
@@ -532,7 +553,7 @@ def new_empty(*args, **kwargs):
         # rixs
         final = ['comments', 'error'] + rixs_attrs + ['']
         set_row_data(rixs, 0, final)
-        set_row_data(rixs, 1, final[2:-1], start_col=2)
+        set_row_data(rixs, 1, final[1:-1], start_col=1)
 
         cells = get_cells(rixs, position=(0, 0, len(final)+2, 0))
         set_property_value(cells, 'CharWeight', 200)
@@ -548,24 +569,25 @@ def new_empty(*args, **kwargs):
         for col in row.Columns:
             set_width(col, get_width(col)*1.1)
 
-        # XAS
-        final = ['comments', 'error'] + xas_attrs + ['']
-        set_row_data(xas, 0, final)
-        set_row_data(xas, 1, final[2:-1], start_col=2)
+        # scans
+        for sheet in [xas, ascan, mesh]:
+            final = ['comments', 'error'] + xas_attrs + ['']
+            set_row_data(sheet, 0, final)
+            set_row_data(sheet, 1, final[2:-1], start_col=2)
 
-        cells = get_cells(xas, position=(0, 0, len(final)+2, 0))
-        set_property_value(cells, 'CharWeight', 200)
-        set_property_value(cells, 'CharHeight', 12)
-        set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+            cells = get_cells(sheet, position=(0, 0, len(final)+2, 0))
+            set_property_value(cells, 'CharWeight', 200)
+            set_property_value(cells, 'CharHeight', 12)
+            set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
 
-        cells = get_cells(xas, position=(0, 1, len(final)+2, 1))
-        set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
-        set_border(cells, 'bottom', OuterLineWidth=40, LineWidth=40)
+            cells = get_cells(sheet, position=(0, 1, len(final)+2, 1))
+            set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+            set_border(cells, 'bottom', OuterLineWidth=40, LineWidth=40)
 
-        row = get_row(xas, 0)
-        set_width(row, 'optimal')
-        for col in row.Columns:
-            set_width(col, get_width(col)*1.1)
+            row = get_row(sheet, 0)
+            set_width(row, 'optimal')
+            for col in row.Columns:
+                set_width(col, get_width(col)*1.1)
 
     ###############
     # unlock undo #
@@ -577,8 +599,7 @@ def new_empty(*args, **kwargs):
 def update(*args, **kwargs):
     """update macro for datafiles"""
     # get document object
-    doc, settings, rixs, xas = _check_document()
-    
+    doc, settings, rixs, xas, ascan, mesh = _check_document()
     # get settings from settings sheet
     values = _check_settings(settings)
 
@@ -591,37 +612,57 @@ def update(*args, **kwargs):
             delete_rows(sheet=rixs, start=2, stop=get_last_used_row(rixs))
         if get_last_used_row(xas) >= 2:
             delete_rows(sheet=xas,  start=2, stop=get_last_used_row(xas))
+        if get_last_used_row(ascan) >= 2:
+            delete_rows(sheet=ascan,  start=2, stop=get_last_used_row(ascan))
+        if get_last_used_row(mesh) >= 2:
+            delete_rows(sheet=mesh,  start=2, stop=get_last_used_row(mesh))
         settings.unprotect('123456')
         set_cells_data(settings, 'J1', 0)
         set_cells_data(settings, 'J2', 2)
         set_cells_data(settings, 'J3', 0)
         set_cells_data(settings, 'J4', 2)
+        set_cells_data(settings, 'J5', 0)
+        set_cells_data(settings, 'J6', 2)
+        set_cells_data(settings, 'J7', 0)
+        set_cells_data(settings, 'J8', 2)
         settings.protect('123456')
-        set_cells_data(settings, 'E4', 'no')
         unlock_undo(doc)
         values = _check_settings(settings)
 
     ############
     # METADATA #
     ############
-    for i, folderpath in enumerate((values['RIXS folderpath'], values['XAS folderpath'])):
+    folders = [
+        IBIRA/values['Proposal']/f'data/RIXS/SPE',
+        IBIRA/values['Proposal']/f'proc/DATA/XAS',
+        IBIRA/values['Proposal']/f'proc/DATA/ASCAN',
+        IBIRA/values['Proposal']/f'proc/DATA/MESH'
+    ]
+
+    for i, folderpath in enumerate(folders):
         if folderpath != '':
             # scanlist
+            folderpath = str(folderpath)
             scanlist = ipe.scanlist(folderpath=folderpath)
 
             # get sheet and next_row
             if i == 0:
                 sheet    = rixs
                 next_row = int(values['RIXS: next row'])
-            else:
+            if i == 1:
                 sheet    = xas
                 next_row = int(values['XAS: next row'])
+            if i == 2:
+                sheet    = ascan
+                next_row = int(values['ASCAN: next row'])
+            if i == 3:
+                sheet    = mesh
+                next_row = int(values['MESH: next row'])
 
             # heaser and last col
             header   = get_row_data(sheet, 1)
             last_col = get_last_used_col(sheet)
 
-            # loop each scan and load metadata
             for _row, scan in enumerate(list(scanlist)[int(next_row - 2):]):
                 row = next_row
 
@@ -637,19 +678,25 @@ def update(*args, **kwargs):
 
                 # paste on spreadsheet
                 try:
-                    if i == 0:
-                        pe1, pe2, pes1, pes2 = ipe.read(scanlist[scan], verbose=False)
-                    elif i == 1:
-                        pe1, TFY, I0, PD     = ipe.read(scanlist[scan], verbose=False)
-
-
+                    pe1 = ipe.read(scanlist[scan], verbose=False)[0]
                     # sort attrs
-                    for col, attr in enumerate(header):
-                        if attr != '':
+                    for col, attr in enumerate(header):                        
+                        if attr != '' and attr != 'comments':
                             if hasattr(pe1, attr):
                                 value = getattr(pe1, attr)
+                                # if i==2 and attr=='EPOCH': msgbox(str(type(getattr(pe1, attr))))
                                 if isinstance(value, datetime.datetime):
                                     value = str(value) 
+                                elif isinstance(value, np.ndarray) and i > 0:
+                                    if len(value) == 2:
+                                        if isinstance(value[-1], (int, float, np.float64)):
+                                            value = np.median(value)
+                                        elif isinstance(value[-1], (bytes, np.byte, str)):
+                                            value = value[0].decode('utf-8')
+                                    elif len(value) > 2:
+                                        value = value[-1]
+                                    else:
+                                        value = str(value)
                                 elif isinstance(value, list) or isinstance(value, tuple):
                                     value = str(value)
                                 elif br.is_number(value):
@@ -694,6 +741,12 @@ def update(*args, **kwargs):
             elif i == 1:
                 set_cells_data(settings, 'J3', len(scanlist))
                 set_cells_data(settings, 'J4', next_row)
+            elif i == 2:
+                set_cells_data(settings, 'J5', len(scanlist))
+                set_cells_data(settings, 'J6', next_row)
+            elif i == 3:
+                set_cells_data(settings, 'J7', len(scanlist))
+                set_cells_data(settings, 'J8', next_row)
             settings.protect('123456')
             unlock_undo(doc)
 
@@ -705,7 +758,100 @@ def update(*args, **kwargs):
 
     return
 
+def load(*args, **kwargs):
+    """update macro for datafiles"""
+    # get document object
+    doc, settings, rixs, xas, ascan, mesh = _check_document()
+    # get settings from settings sheet
+    values = _check_settings(settings)
+    
+    # SCANS
+    folders = [
+        IBIRA/values['Proposal']/f'proc/DATA/XAS/',
+        IBIRA/values['Proposal']/f'proc/DATA/ASCAN/',
+        IBIRA/values['Proposal']/f'proc/DATA/MESH/'
+        ]
+    
+    sheets = [xas, ascan, mesh]
+    for sheet, fpath in zip(sheets, folders):
+        try:
+            scanlist = ipe.scanlist(folderpath=fpath)
+            file = scanlist[list(scanlist)[-1]]
+            
+            i=-1
+            while not file.exists():
+                file = scanlist[list(scanlist)[i]]
+                i-=1
+                if len(scanlist)+i == 1:
+                    pass
+                
+            pe1 = ipe.read(file, verbose=False)
+            pe1 = pe1[0]
+            
+            full_attrs = pe1.get_attrs()
+            header = ['comments', 'error'] + xas_attrs
+            new_attrs = [item for item in full_attrs if item not in header and '_user_setpoint' not in item]
+
+            final = header + new_attrs
+            set_row_data(sheet, 0, final)
+            set_row_data(sheet, 1, final[2:-1], start_col=2)
+            
+            cells = get_cells(sheet, position=(0, 0, len(final)+2, 0))
+            set_property_value(cells, 'CharWeight', 200)
+            set_property_value(cells, 'CharHeight', 12)
+            set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+
+            cells = get_cells(sheet, position=(0, 1, len(final)+2, 1))
+            set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+            set_border(cells, 'bottom', OuterLineWidth=40, LineWidth=40)
+
+            row = get_row(sheet, 0)
+            set_width(row, 'optimal')
+            for col in row.Columns:
+                set_width(col, get_width(col)*1.1)
+        except:
+            pass
+    
+    # RIXS
+    fpath = IBIRA/values['Proposal']/f'data/RIXS/SPE/'
+    scan = str(list(ipe.scanlist(folderpath=fpath))[-1]).zfill(4)
+    pe1 = ipe.read(fpath/f'{scan}/', verbose=False)[0]
+    
+    full_attrs = pe1.get_attrs()
+    header = ['comments', 'error', 'scan']
+    new_attrs = [item for item in full_attrs if not any(item.endswith(suffix) for suffix in ('_min', '_max', '_sigma')) and item not in header]
+    
+    final = header + new_attrs + ['modified_date']
+    set_row_data(rixs, 0, final)
+    set_row_data(rixs, 1, final[1:-1], start_col=1)
+    
+    cells = get_cells(rixs, position=(0, 0, len(final)+2, 0))
+    set_property_value(cells, 'CharWeight', 200)
+    set_property_value(cells, 'CharHeight', 12)
+    set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+
+    cells = get_cells(rixs, position=(0, 1, len(final)+2, 1))
+    set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+    set_border(cells, 'bottom', OuterLineWidth=40, LineWidth=40)
+
+    row = get_row(rixs, 0)
+    set_width(row, 'optimal')
+    for col in row.Columns:
+        set_width(col, get_width(col)*1.1)
+    
+    # Update
+    # set_cells_data(settings, 'B3', 'yes')
+    _ = update()
+    set_cells_data(settings, 'B3', 'no')
+    
+    return
+
 # %% ---------------------- Import function as Macro ---------------------- %% #
 # Only the specified functions will show in the Tools > Macro > Organize Macro dialog
-g_exportedScripts = (update, new_empty, test1, test2)
+update.macroName = 'Update data'
+empty_sheet.macroName = 'New empty sheet'
+load.macroName = 'Load data and metadata'
+test.macroName = 'Test'
+test_brixs.macroName = 'Where is Brixs'
+g_exportedScripts = (update, empty_sheet, load, test, test_brixs)
 # %%
