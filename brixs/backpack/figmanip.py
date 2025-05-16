@@ -879,7 +879,7 @@ class Axes(list):
     def last_col(self):
         raise AttributeError('Cannot delete object.')
 
-def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, **fig_kw):
+def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, layout=None, **fig_kw):
     """Create a figure and a set of subplots in a grid. Wrapper for `plt.subplots()`_.
 
     The difference between this function and plt.subplots is that this function 
@@ -911,6 +911,11 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
             ows/columns. Each row/column gets a relative height/width of 
             ratios[i] / sum(ratios). If not given, all rows/columns will have 
             the same width. 
+        layout (str or None, optional): use 'constrained' to automatically adjusts 
+            subplots so that decorations like tick labels, legends, and 
+            colorbars do not overlap, while still preserving the logical layout.
+            Default is None. Layout='constrained' overwrites hspace, wspace, 
+            width_ratios, height_ratios
         **fig_kw: All additional keyword arguments are passed to the plt.figure call
     
     Returns:
@@ -934,11 +939,14 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
         height_ratios=[1]*nrows
 
     # final
-    gridspec_kw = {}
-    gridspec_kw['wspace']        = wspace 
-    gridspec_kw['hspace']        = hspace 
-    gridspec_kw['width_ratios']  = width_ratios 
-    gridspec_kw['height_ratios'] = height_ratios 
+    if layout is None:
+        gridspec_kw = {}
+        gridspec_kw['wspace']        = wspace 
+        gridspec_kw['hspace']        = hspace 
+        gridspec_kw['width_ratios']  = width_ratios 
+        gridspec_kw['height_ratios'] = height_ratios 
+    else:
+        gridspec_kw = None
 
     ##########
     # fig_kw #
@@ -952,6 +960,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
     fig, _axes = plt.subplots(nrows, ncols, 
                               sharex=sharex,
                               sharey=sharey,
+                              layout=layout,
                               gridspec_kw=gridspec_kw, **fig_kw)
     fig = _set_figure_methods(fig)
 
@@ -1252,7 +1261,7 @@ def note(s, loc='upper left', x=None, y=None, ax=None, coord='axes', **kwargs):
     # return ax.text(x, y, s, transform=fig.transFigure, **kwargs)
     # return ax.text(x, y, s, **kwargs)
 
-def label_axes(axes, loc='upper left'):
+def label_axes(axes, loc='upper left', color=None, start_letter='a', start_n=0):
     """put letters from `(a)` to `(z)` in axes.
 
     Args:
@@ -1263,6 +1272,13 @@ def label_axes(axes, loc='upper left'):
             'upper left', 'upper right', 'lower left', 'lower right', 
             'upper center', 'lower center', 'center left', 'center right'. 
             Default is 'best'.
+        color (str, list, or None, optional): color to be used. If None, the
+            default color is used. If list, list must be the same lenght as 
+            number of axes. Default is None.
+        start_letter (string, optional): letter of the first panel. Default is `a`
+        start_n (int, optional): number of the first panel. This number is used 
+            only if n>0. Default is 0. This is used for figures where the number
+            number of axes exceed the number of letters in the alphabet. 
 
     Returns:
         list with text object
@@ -1274,22 +1290,29 @@ def label_axes(axes, loc='upper left'):
     # fix locs
     if isinstance(loc, str):
         loc = [loc]*len(axes)
-    
-    assert len(axes) == len(loc), 'number of axes must be the same as locs'
 
-    n = 0
-    j = 0
+    # fix colors
+    if isinstance(color, str) or color is None:
+        color = [color]*len(axes)
+    
+    assert len(axes) == len(loc),   'number of axes must be the same as number of locs'
+    assert len(axes) == len(color), 'number of axes must be the same as number of colors'
+
+    n = start_n
+    j = ascii_lowercase.index(start_letter)
+    jstart = j
     final = []
     for i, ax in enumerate(axes):
-        if i % 26 == 0 and i != 0:
+        if (i+jstart) % 26 == 0 and i != 0:
             j = 0
+            jstart = 0
             n += 1
 
         if n > 0:
             letter = ascii_lowercase[j] + str(n)
         else:
             letter = ascii_lowercase[j]
-        final.append(note(s='(' + letter + ')', ax=ax, loc=loc[i]))
+        final.append(note(s='(' + letter + ')', ax=ax, loc=loc[i], color=color[i]))
         j += 1
     return final
 
@@ -1663,7 +1686,6 @@ mpl.axes.Axes.ymove = _ymove
 # %%
 
 # %% ================================= ticks ============================== %% #
-
 # get ticks showing
 def get_xticks_showing(ax):
     """get x ticks that are sowing in a plot
@@ -1810,8 +1832,8 @@ def set_xticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
                 _ = ax.set_xticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
             
             # if start/stop is defined, select pad to (0, 0)
-            if pad is None:
-                pad = (0, 0)
+            # if pad is None:
+            #     pad = (0, 0)
     else:
         assert isinstance(ticks, Iterable), 'ticks must be iterable'
         assert len(ticks) > 1, 'ticks must have length > 1'
@@ -1998,8 +2020,8 @@ def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
                 _ = ax.set_yticklabels([str(i) for i in ticks], fontproperties=fontproperties, visible=True)
             
             # if start/stop is defined, select pad to (0, 0)
-            if pad is None:
-                pad = (0, 0)
+            # if pad is None:
+            #     pad = (0, 0)
     else:
         assert isinstance(ticks, Iterable), 'ticks must be iterable'
         assert len(ticks) > 1, 'ticks must have length > 1'
@@ -2065,8 +2087,8 @@ def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
     return
 
 # remove tick labels
-def remove_xticklabels(ax):
-    """remove x tick labels from axes
+def remove_xticklabels(ax=None):
+    """remove/hide x tick labels from axes
     
     Args:
         ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
@@ -2074,11 +2096,20 @@ def remove_xticklabels(ax):
 
     Returns:
         None
+
+    See Also:
+        :py:func:`remove_yticklabels`
+        :py:func:`hide_xticklabels`
+        :py:func:`hide_yticklabels`
+        :py:func:`show_ticklabels`
     """
+    if ax is None:
+        ax = plt
+
     return ax.tick_params(labelbottom=False, labeltop=False)  
 
-def remove_yticklabels(ax):
-    """remove y tick labels from axes
+def remove_yticklabels(ax=None):
+    """remove/hide y tick labels from axes
     
     Args:
         ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
@@ -2086,10 +2117,86 @@ def remove_yticklabels(ax):
 
     Returns:
         None
+    
+    See Also:
+        :py:func:`remove_xticklabels`
+        :py:func:`hide_xticklabels`
+        :py:func:`hide_yticklabels`
+        :py:func:`show_ticklabels`
     """
+    if ax is None:
+        ax = plt
+
     return ax.tick_params(labelleft=False, labelright=False)  
 
-# %% add to axes
+def hide_xticklabels(ax=None):
+    """remove/hide x tick labels from axes
+    
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+
+    Returns:
+        None
+    
+    See Also:
+        :py:func:`remove_xticklabels`
+        :py:func:`remove_yticklabels`
+        :py:func:`hide_yticklabels`
+        :py:func:`show_ticklabels`
+    """
+    return remove_xticklabels(ax=ax)
+
+def hide_yticklabels(ax=None):
+    """remove/hide y tick labels from axes
+    
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+
+    Returns:
+        None
+
+    See Also:
+        :py:func:`remove_xticklabels`
+        :py:func:`remove_yticklabels`
+        :py:func:`hide_xticklabels`
+        :py:func:`show_ticklabels`
+    """
+    return remove_yticklabels(ax=ax)
+
+def show_ticklabels(ax=None, left=None, right=None, bottom=None, top=None):
+    """show tick labels in axes
+    
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+        left, right, bottom, top (bool or None, optional): if True (False), tick
+          labels will be shown (hidden). If None, status won't change. Default is None.
+
+    Returns:
+        None
+    
+    See Also:
+        :py:func:`remove_xticklabels`
+        :py:func:`remove_yticklabels`
+        :py:func:`hide_xticklabels`
+        :py:func:`hide_yticklabels`
+    """
+    if ax is None:
+        ax = plt
+
+    _kwargs = {'left':left, 'right':right, 'bottom':bottom, 'top':top}
+    kwargs  = {}
+    for name in _kwargs:
+        if _kwargs[name] is not None:
+            kwargs[name] = _kwargs[name]
+
+    return ax.tick_params(**kwargs)  
+ 
+
+
+# %% add to axe
 def _get_xticks_showing(self):
     """get x ticks that are sowing in a plot
 
@@ -2108,8 +2215,10 @@ def _get_yticks_showing(self):
     return get_yticks_showing(self)
 mpl.axes.Axes.get_yticks_showing = _get_yticks_showing
 
+
+
 def _remove_xticklabels(self):
-    """remove x tick labels from axes
+    """remove/hide x tick labels from axes
     
     Returns:
         None
@@ -2118,13 +2227,48 @@ def _remove_xticklabels(self):
 mpl.axes.Axes.remove_xticklabels = _remove_xticklabels
 
 def _remove_yticklabels(self):
-    """remove y tick labels from axes
+    """remove/hide y tick labels from axes
     
     Returns:
         None
     """
     return remove_yticklabels(self)
 mpl.axes.Axes.remove_yticklabels = _remove_yticklabels
+
+def _hide_xticklabels(self):
+    """remove/hide x tick labels from axes
+    
+    Returns:
+        None
+    """
+    return hide_xticklabels(self)
+mpl.axes.Axes.hide_xticklabels = _hide_xticklabels
+
+def _hide_yticklabels(self):
+    """remove/hide y tick labels from axes
+    
+    Returns:
+        None
+    """
+    return hide_yticklabels(self)
+mpl.axes.Axes.hide_yticklabels = _hide_yticklabels
+
+def _show_ticklabels(self, left=None, right=None, bottom=None, top=None):
+    """show tick labels in axes
+    
+    Args:
+        ax (matplotlib.axes.Axes): The axes of the subplot to set ticks. If None,
+            last ax will be used.
+        left, right, bottom, top (bool or None, optional): if True (False), tick
+          labels will be shown (hidden). If None, status won't change. Default is None.    
+
+    Returns:
+        None
+    """
+    return show_ticklabels(ax=self, left=left, right=right, bottom=bottom, top=top)
+mpl.axes.Axes.show_ticklabels = _show_ticklabels
+
+
 
 def _set_xticks(self, start=None, stop=None, nticks=None, step=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_step=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set x ticks of a plot.
