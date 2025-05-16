@@ -268,6 +268,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold))
         else:
             cp = np.argwhere((image.data > avg_threshold))
+    
 
     #############################################################
     # shift photon position because we removed the edges before # 
@@ -327,19 +328,23 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         
         # isolate the spot where photon hit is in the center
         if n2%2 == 0:
-            spot = self.data[y-n2//2+1:y+n2//2+1, x-n2//2+1:x+n2//2+1]
+            spot = self.data[y-n2//2+1:y+n2//2+1, x-(n2//2+1):x+n2//2+1]
         else:
-            spot = self.data[y-n2//2:y+1+n2//2, x-n2//2:x+1+n2//2]
+            spot = self.data[y-(n2//2):y+1+n2//2, x-(n2//2):x+1+n2//2]
             
         # offset the spot to force all pixel values to be positive
         # this is a requirement for the weighted sum (center of mass) to work fine
         # if one mixes negative and positive weights, than the sum of the weights may
         # be zero (or close to zero) and the weighted average x and/or y positions 
         # are wrong
-        vmin = np.min(spot)
-        vmax = np.max(spot)
-        if vmin < 0 and vmax > 0:
-            spot = spot - vmin
+        # vmin = np.min(spot)
+        # vmax = np.max(spot)
+        # if vmin < 0 and vmax > 0:
+        #     spot = spot - vmin
+        spot[spot < 0] = 0
+        # I still don't like this, if we are putting an offset in the spot, I think the 
+        # threshold should also be offset. I don't know.
+        # to be honest, It does not make much sense that we have negative pixel values
         
         # get brightest pixel
         _y, _x = np.unravel_index(np.argmax(spot), np.array(spot).shape)
