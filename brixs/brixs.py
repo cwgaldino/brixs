@@ -1414,15 +1414,16 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             
             # remove comment flag (#)
             comment_flag_len = len(kwargs['comments'])
-            for i, line in enumerate(header):
-                header[i] = line[comment_flag_len:]
+            if header:
+                for i, line in enumerate(header):
+                    header[i] = line[comment_flag_len:]
 
-            # attrs dict
-            attrs_dict = _str2attr(header[:-1], verbose=verbose)
+                # attrs dict
+                attrs_dict = _str2attr(header[:-1], verbose=verbose)
 
-            # set attrs
-            for attr in attrs_dict:
-                self.__setattr__(attr, attrs_dict[attr])
+                # set attrs
+                for attr in attrs_dict:
+                    self.__setattr__(attr, attrs_dict[attr])
         return
 
     #########
@@ -3840,15 +3841,16 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             
             # remove comment flag (#)
             comment_flag_len = len(kwargs['comments'])
-            for i, line in enumerate(header):
-                header[i] = line[comment_flag_len:]
+            if header:
+                for i, line in enumerate(header):
+                    header[i] = line[comment_flag_len:]
 
-            # attrs dict
-            attrs_dict = _str2attr(header[:-1], verbose=verbose)
+                # attrs dict
+                attrs_dict = _str2attr(header[:-1], verbose=verbose)
 
-            # set attrs
-            for attr in attrs_dict:
-                self.__setattr__(attr, attrs_dict[attr])
+                # set attrs
+                for attr in attrs_dict:
+                    self.__setattr__(attr, attrs_dict[attr])
         return
 
     #########
@@ -5454,6 +5456,13 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
             this behavior might change in the future.
 
+        Warning:
+            numpy trapz does not require regular spacing between data points,
+            however, a different number o points between spectra can lead to 
+            area values that cannot be compared between spectra reliabily.
+            To avoid this, this function will raise a error if x axis is not
+            the same for all spectra.
+
         Args:
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
@@ -5468,6 +5477,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         .. _numpy.trapz(): https://numpy.org/doc/stable/reference/generated/numpy.trapz.html
         """
+        _ = self.check_same_x(max_error=0.1)
         return [s.calculate_area(limits=limits) for s in self]
 
     def calculate_y_sum(self, limits=None):
@@ -5528,23 +5538,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             list
         """
         return [s.calculate_x_average(limits=limits) for s in self]
-
-    def calculate_y_average_per_spectrum(self, limits=None):
-        """returs a list of the average y value within range for each spectrum
-
-        Args:
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Limits are
-                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
-                the minimum or maximum x value of the data, respectively. If 
-                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-         
-        Returns:
-            list
-        """
-        return [s.calculate_y_average(limits=limits) for s in self]
 
     def polyfit(self, deg, limits=None):
         """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
