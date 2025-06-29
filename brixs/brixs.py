@@ -5049,6 +5049,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if x_centers is not None:
             assert len(x_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
 
+        # check if array is monotonic
+        # This is necessary because the way images are plotted
+        # The 'lower' value of the y-axis will be to the top
+        if self.check_monotonicity() != 'increasing':
+            raise ValueError('monotonicity of data must be strictly increasing. Use Spectra.fix_monotonicity().')
+
         # gather ys
         y, ys = self._gather_ys(limits=limits)
         im = Image(data=ys)
@@ -5087,6 +5093,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # check centers
         if y_centers is not None:
             assert len(y_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
+
+        # check if array is monotonic
+        # This is necessary because the way images are plotted
+        # The 'lower' value of the x-axis will be to the left
+        if self.check_monotonicity() != 'increasing':
+            raise ValueError('monotonicity of data must be strictly increasing. Use Spectra.fix_monotonicity().')
 
         # gather ys
         y, ys = self._gather_ys(limits=limits)
