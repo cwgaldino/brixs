@@ -1518,7 +1518,7 @@ class _ComponentTemplate(object):
         Returns:
             None
         """
-        print(f'Warning: Cannot shift Component `{type(self).__name__}` as it does not have set_shift() implemented')
+        #print(f'Warning: Cannot shift Component `{type(self).__name__}` as it does not have set_shift() implemented')
         ###################################
         # asserting validity of the input #
         ###################################
@@ -2304,7 +2304,13 @@ class Peaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'c1':
+                # bounds
+                self.parent[_name].min   += value[i2]
+                self.parent[_name].max   += value[i2]
+                # value
                 self.parent[_name].value += value[i2]
+                # error
+                # self.parent[_name].stderr += abs(value[i2])
 
         return 
     
@@ -2329,7 +2335,19 @@ class Peaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'amp1':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
         return 
     
     def set_calib(self, value):
@@ -2349,9 +2367,29 @@ class Peaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'c1':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
+                
             elif name == 'w1':
-                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value[i2])
+                # bounds
+                self.parent[_name].min   *= abs(value[i2])
+                self.parent[_name].max   *= abs(value[i2])
+                # value
+                self.parent[_name].value = abs(self.parent[_name].value*value[i2])
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr   *= abs(value[i2])
         return 
 
     #########
@@ -2536,7 +2574,13 @@ class AsymmetricPeaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'casy':
+                # bounds
+                self.parent[_name].min   += value[i2]
+                self.parent[_name].max   += value[i2]
+                # value
                 self.parent[_name].value += value[i2]
+                # error
+                # self.parent[_name].stderr += abs(value[i2])
         return 
     
     def set_offset(self, value):
@@ -2560,7 +2604,20 @@ class AsymmetricPeaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'ampasy':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
+
         return 
     
     def set_calib(self, value):
@@ -2580,11 +2637,43 @@ class AsymmetricPeaks(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'casy':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
+
             elif name == 'w1asy':
+                # swap w1 with w2
+                if value[i2] < 0:
+                    _temp = self.parent[f'w1asy_{i1}_{i2}']
+                    self.parent[f'w1asy_{i1}_{i2}'] = self.parent[f'w2asy_{i1}_{i2}']
+                    self.parent[f'w2asy_{i1}_{i2}'] = _temp
+
+                # bounds
+                self.parent[_name].min   *= abs(value[i2])
+                self.parent[_name].max   *= abs(value[i2])
+
+                self.parent[f'w2asy_{i1}_{i2}'].min   *= abs(value[i2])
+                self.parent[f'w2asy_{i1}_{i2}'].max   *= abs(value[i2])
+  
+                # value
                 self.parent[_name].value = abs(self.parent[f'w1asy_{i1}_{i2}'].value*value[i2])
-            elif name == 'w2asy':
-                self.parent[_name].value = abs(self.parent[f'w2asy_{i1}_{i2}'].value*value[i2])
+                self.parent[f'w2asy_{i1}_{i2}'].value = abs(self.parent[f'w2asy_{i1}_{i2}'].value*value[i2])
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr   *= abs(value[i2])
+                if self.parent[f'w2asy_{i1}_{i2}'].stderr is not None:
+                    self.parent[f'w2asy_{i1}_{i2}'].stderr   *= abs(value[i2])
+
         return 
 
     #########
@@ -2656,7 +2745,7 @@ class Linear(_ComponentTemplate):
             self.parent.add(f'{tag}_{i1}_{_i2}', value=linear, vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)
             
             tag = self.nametags['const']
-            self.parent.add(f'{tag}_{i1}_{_i2}',   value=const,   vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)    
+            self.parent.add(f'{tag}_{i1}_{_i2}', value=const,   vary=True,  min=-np.inf, max=np.inf, expr=None, brute_step=None)    
         return
 
     ##################
@@ -2679,6 +2768,12 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a0':
+                # bounds
+                # self.parent[_name].min   += value[i2]
+                # self.parent[_name].max   += value[i2]
+                self.parent[_name].min   -= self.parent[f'a1_{i1}_{i2}'].value*value[i2]
+                self.parent[_name].max   -= self.parent[f'a1_{i1}_{i2}'].value*value[i2]
+                # value
                 self.parent[_name].value -= self.parent[f'a1_{i1}_{i2}'].value*value[i2]
         return 
     
@@ -2699,6 +2794,10 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a0':
+                # bounds
+                self.parent[_name].min   += value[i2]
+                self.parent[_name].max   += value[i2]
+                # value
                 self.parent[_name].value += value[i2]
         return 
     
@@ -2719,9 +2818,34 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a1':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
+
             if name == 'a0':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
         return 
     
     def set_calib(self, value):
@@ -2741,7 +2865,20 @@ class Linear(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'a1':
-                self.parent[_name].value *= 1/value[i2]
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= 1/value[i2]
+                    self.parent[_name].max   *= 1/value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max/value[i2]
+                    self.parent[_name].max   = _min/value[i2]
+                
+                # value
+                self.parent[_name].value *= 1/(value[i2])
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= 1/abs(value[i2])
         return 
 
 # %% Arctangent
@@ -2841,6 +2978,10 @@ class Arctan(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'carc':
+                # bounds
+                self.parent[_name].min   += value[i2]
+                self.parent[_name].max   += value[i2]
+                # value
                 self.parent[_name].value += value[i2]
 
         return 
@@ -2866,7 +3007,19 @@ class Arctan(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'amparc':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
         return 
     
     def set_calib(self, value):
@@ -2886,9 +3039,28 @@ class Arctan(_ComponentTemplate):
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
             if name == 'carc':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
             elif name == 'warc':
-                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value[i2])
+                # bounds
+                self.parent[_name].min   *= abs(value[i2])
+                self.parent[_name].max   *= abs(value[i2])
+                # value
+                self.parent[_name].value = abs(self.parent[_name].value*value[i2])
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr   *= abs(value[i2])
         return 
 
 # %% Arctangent
@@ -2987,7 +3159,11 @@ class Erf(_ComponentTemplate):
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
-            if name == 'carc':
+            if name == 'cerf':
+                # bounds
+                self.parent[_name].min   += value[i2]
+                self.parent[_name].max   += value[i2]
+                # value
                 self.parent[_name].value += value[i2]
 
         return 
@@ -3012,8 +3188,20 @@ class Erf(_ComponentTemplate):
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
-            if name == 'amparc':
+            if name == 'amperf':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
         return 
     
     def set_calib(self, value):
@@ -3032,10 +3220,29 @@ class Erf(_ComponentTemplate):
         ##################
         for _name in self._get_all_tags():
             name, i1, i2 = _name_parser(_name)
-            if name == 'carc':
+            if name == 'cerf':
+                # bounds
+                if value[i2] > 0:
+                    self.parent[_name].min   *= value[i2]
+                    self.parent[_name].max   *= value[i2]
+                else:
+                    _min = self.parent[_name].min
+                    self.parent[_name].min   = self.parent[_name].max*value[i2]
+                    self.parent[_name].max   = _min*value[i2]
+                # value
                 self.parent[_name].value *= value[i2]
-            elif name == 'warc':
-                self.parent[_name].value = abs(self.parent[f'w1_{i1}_{i2}'].value*value[i2])
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr *= abs(value[i2])
+            elif name == 'werf':
+                # bounds
+                self.parent[_name].min   *= abs(value[i2])
+                self.parent[_name].max   *= abs(value[i2])
+                # value
+                self.parent[_name].value = abs(self.parent[_name].value*value[i2])
+                # error
+                if self.parent[_name].stderr is not None:
+                    self.parent[_name].stderr   *= abs(value[i2])
         return 
 # %%
 
