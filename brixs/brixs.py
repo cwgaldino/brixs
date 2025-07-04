@@ -2991,7 +2991,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                     for attr in attrs2merge:
                         ss.__getattribute__(attr).append(self.__getattribute__(attr)[i])
             else:
-                indexes = [i for i, x in enumerate(values) if x == _x]
+                indexes = [j for j, x in enumerate(values) if x == _x]
                 if i == indexes[0]:
                     _s = self.merge(indexes=indexes, limits=limits, attrs2merge=attrs2merge)
                     ss.append(_s)
@@ -4829,15 +4829,15 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
 
         ss = Spectra()
-        for i in indexes:
-            ss.append(self[i].copy().set_factor(weights[i]))
+        for j, i in enumerate(indexes):
+            ss.append(self[i].copy().set_factor(weights[j]))
 
         if attrs2merge is not None:
             for attr in attrs2merge:
                 temp = self.__getattribute__(attr)
                 new = []
-                for i in indexes:
-                    new.append(temp[i]*weights[i])
+                for j, i in enumerate(indexes):
+                    new.append(temp[i]*weights[j])
                 ss.__setattr__(attr, np.mean(new))
 
         s = ss.calculate_average(limits=limits)
