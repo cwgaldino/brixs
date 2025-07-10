@@ -5535,7 +5535,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         return [s.calculate_x_sum(limits=limits) for s in self]
 
-    def calculate_y_average_per_spectrum(self, limits=None):
+    def calculate_y_average(self, limits=None):
         """returs a list of the average x value within range for each spectrum
 
         Args:
@@ -5550,7 +5550,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             list
         """
-        return [s.calculate_x_average(limits=limits) for s in self]
+        return [s.calculate_y_average(limits=limits) for s in self]
 
     def polyfit(self, deg, limits=None):
         """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
