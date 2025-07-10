@@ -5249,6 +5249,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # sequential cross-corelation #
         ###############################
         elif mode == 'seq':
+            ss = self._copy(limits=limits)
             for i in range(1, len(ss)):
                 cc        = np.correlate(ss[i-1].y, ss[i].y, mode='full')
                 values[i] = np.argmax(cc) - (len(ss[i-1].y) - 1) + values[i-1]
