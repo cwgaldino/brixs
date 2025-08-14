@@ -10,8 +10,8 @@ BRIXS is an object-oriented (OO) python package for processing/analysis of XAS a
 Installation
 ##########################################################
 
-Currently, the recommended method for using brixs is by cloning 
-(or downloading) the GitHub repository then adding brixs to the "path" using the 
+Currently, the recommended method for using BRIXS is by cloning 
+(or downloading) the GitHub repository then adding BRIXS to the "path" using the 
 code below,
 
 .. code-block:: python
@@ -20,7 +20,7 @@ code below,
     sys.path.append('<path-to-brixs>')
     import brixs as br
 
-note that `<path-to-brixs>` must point to the folder that has the folder brixs and 
+note that `<path-to-brixs>` must point to the folder that has the folder BRIXS and 
 the file README.rst.
 
 .. 2. Using pip 
