@@ -4,7 +4,65 @@ BRIXS
 
 BRIXS is an object-oriented (OO) python package for processing/analysis of XAS and RIXS spectra.
 
-Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
+.. Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
+
+##########################################################
+Installation
+##########################################################
+
+Currently, the recommended method for using brixs is by cloning 
+(or downloading) the GitHub repository then adding brixs to the "path" using the 
+code below,
+
+.. code-block:: python
+
+    import sys
+    sys.path.append('<path-to-brixs>')
+    import brixs as br
+
+note that `<path-to-brixs>` must point to the folder that has the folder brixs and 
+the file README.rst.
+
+.. 2. Using pip 
+
+.. .. code-block::    
+   
+..    pip install git+https://github.com/cwgaldino/brixs
+
+
+
+
+##########################################################
+Overview
+##########################################################
+
+BRIXS is based on four major objects:
+
+.. code-block:: python
+
+   im = br.Image()
+   pe = br.PhotonEvents()
+   s  = br.Spectrum()
+   ss = br.Spectra()
+
+
+Once a BRIXS object has been created, one can use the methods,
+
+.. code-block:: python
+
+   s  = br.Spectrum()
+   s.get_methods()
+   s.get_attrs()
+
+to print all methods (functions) and attrs related to that object (in this case `s`).
+
+The description of methods can be accessed via the python `help()` function. See 
+example below,
+
+.. code-block:: python
+
+   s  = br.Spectrum()
+   help(s.set_shift)
 
 
 ##########################################################
@@ -12,7 +70,7 @@ Introduction
 ##########################################################
 
 Object-oriented is a programming model that organizes software design 
-around objects, rather than functions. An OO approach makes sense for data 
+around objects rather than functions. An OO approach makes sense for data 
 processing/analysis of XAS and RIXS because it allows more intuitive syntax
 and make the project easier to maintain and upgrade as it grows.
 
@@ -68,21 +126,32 @@ In an OO approach, the same processing would look like this,
    s = br.Spectrum(...)   
 
    # initial processing
-   s.shift  = 10          # shift the x-axis
-   s.factor = 2.1         # apply a multiplicative factor
-   s.interp(0, 10, 1000)  # interpolate data
-   s.fit_peak()           # fit data with a gaussian peak
+   s = s.set_shift(10)           # shift the x-axis
+   s = s.set_factor(2.1)         # apply a multiplicative factor
+   s = s.interp(0, 10, 1000)     # interpolate data
+   fit, popt, sigma, model = s.fit_peak()  # fit data with a gaussian peak
 
    # display data
    br.figure()                        # open new figure
    s.plot(label=f"T={s.T}, P={s.P}")  # plot data
-   s.model.plot()                     # plot fitting 
+   fit.plot()                     # plot fitting 
    br.leg()                           # legend
    plt.show()                         # show figure
 
+or we can use a one-liner:
+
+   .. code-block:: python
+
+   # import packages
+   import brixs as br
+
+   # data processing
+   s = br.Spectrum(...).set_shift(10).set_factor(2.1).interp(0, 10, 1000)
+   fit, popt, sigma, model = s.fit_peak()
+
 We can argue that keeping track and labeling data is more intuitive in an OO approach as the 
 number of variables is drastically reduced. For instance, if one tries to load 2 different 
-datasets we have 2 variables with OO vs 8 variables using a functional approach: 
+datasets we have 2 variables with OO vs 8 variables using a functional approach. See below: 
 
 .. code-block:: python
 
@@ -124,10 +193,10 @@ Just like metadata, repetitive tasks can be added to the object,
 
    # define new method
    def common_processing(s):
-      s.shift = 10
-      s.factor = 2.1
-      s.interp(0, 10, 1000)
-      s.fit_peak()
+      s = s.shift = 10
+      s = s.factor = 2.1
+      s = s.interp(0, 10, 1000)
+      return s.fit_peak()
 
    # add new method to all Spectrum objects
    br.Spectrum.processing = common_processing
@@ -260,8 +329,8 @@ Module for data fitting. For enabling fitting functionally do
    # model functions are then available
    br.model.gaussian()
 
-This module is not ready yet.
-
+This module is fully implemented, but improvements are often implemented. 
+More information can be found inside brixs.model.model.py file.
 
 ================================
 beamlines
@@ -285,12 +354,14 @@ imported as a **Image** object using the code below,
    from brixs.beamlines.I21 import read
    im = read(<filepath>)
 
+Please, refer to the folder "beamlines" to see if code has been implemented for 
+the beamline of interest and refer to the beamline's .py files for more information.
 
 ================================
 crystal
 ================================
 
-Module with function for calculating momentum transfer in single crystals. 
+Module with functions for calculating momentum transfer in single crystals. 
 It is assumed that the photon hits the crystal surface at a angle th and is 
 scattered in a 2th angle. See drawing inside brixs.crystal.crystal.py file for 
 more information. This module can be used like this
@@ -305,38 +376,10 @@ more information. This module can be used like this
       br.calculate_q_transfer()
       br.momentum2rlu()
 
-The description of each function can be accessed via the python help() function or 
-by reading the documentation (PUT LINK HERE).
-
-================================
-xlsl
-================================
-
-Module for spreadsheet manipulation [FUTURE]. This is not ready yet.
+This module has some limitations. Please refer to the file brixs.crystal.crystal.py
+for more information.
 
 
-
-##########################################################
-Installation
-##########################################################
-
-There are two recommended methods:
-
-1. Using pip 
-
-.. code-block::    
-   
-   pip install git+https://github.com/cwgaldino/brixs
-
-or
-
-2. Cloning (or downloading) the GitHub repository then adding brixs to the "path":
-
-.. code-block:: python
-
-    import sys
-    sys.path.append('<path-to-brixs>')
-    import brixs as br
 
 
 ##########################################################
@@ -372,10 +415,4 @@ brixs.beamlines
 Some modules here might require 
 
 - h5py
-
-##########################################################
-Usage
-##########################################################
-
-Refer to the examples folder on GitHub for code examples.
 

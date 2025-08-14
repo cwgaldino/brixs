@@ -156,14 +156,20 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
             returned will be the sum of the ``w`` of the first and second half.
 
     Returns:
-        1) 2 column (x, y) array with "Smoothed" fitted peak (array length 100 bigger than input x, y).
-        2) An array with the optimized parameters.
-            if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
-            if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
-            if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
-            if asymmetry=False, fixed_m=True: amp, c, fwhm, offset
-        3) One standard deviation errors on the parameters
-        4) Peak function
+        fit, popt, sigma, model
+
+        fit:
+            2 column (x, y) array with "Smoothed" fitted peak (array length 100 bigger than input x, y).
+        popt:
+            An array with the optimized parameters.
+                if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
+                if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
+                if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
+                if asymmetry=False, fixed_m=True: amp, c, fwhm, offset
+        sigma
+            One standard deviation errors on the parameters
+        model
+            Peak function -> model(x)
     """
         # .. image:: _static/peak_fit.png
         #     :width: 600
