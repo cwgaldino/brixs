@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""centroid algorithm"""
+"""Centroid algorithm"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
 import numpy as np

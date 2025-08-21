@@ -2456,7 +2456,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################        
-    def plot(self, ax=None, smooth=1, label=None, limits=None, verbose=True, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, verbose=True, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
@@ -2466,6 +2466,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
+            calib, shift (number, optional): multiplicative and additive factor
+                 on the x-coordinates. calib is applied first.
+            factor, offset (number, optional): multiplicative and additive factor
+                 on the y-coordinates. Factor is applied first.
+            roll (int, optional): Roll value of array elements of the x-coordinates
             smooth (int, optional): number of points to average data. Default is 1.
             label (str, number, optional): if str or number, this label will be 
                 applied. If None and if spectrum have attr `label`, 
@@ -2478,6 +2483,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
+            switch_xy (bool, optional): Switch x and y axis.
             verbose (bool, optional): if True, prints warning if ploted data has
                 nun-numeric values (NaN). Default is True.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
@@ -2503,6 +2509,30 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 print('Warning: ploting spectrum with NaN values') 
         x = self.x
         y = self.y
+
+
+
+        #############
+        # switch xy #
+        #############
+        if switch_xy:
+            _x = x
+            x = y
+            y = _x
+
+        #############
+        # modifiers #
+        #############
+        x = (x*calib) + shift
+        y = (y*factor) + offset
+
+        ########
+        # roll #
+        ########
+        if roll != 0:
+            assert numanip.is_integer(roll), 'roll must be an integer'
+            x    = np.roll(x, roll)
+            x, y = arraymanip.sort(x, x, y)
 
         ##########
         # smooth #
@@ -2535,6 +2565,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         # plot #
         ########
         line = ax.plot(x, y, **kwargs)
+        line[0].offset = offset
+        line[0].shift  = shift
+        line[0].roll   = roll
+        line[0].calib  = calib
+        line[0].factor = factor
         line[0].smooth = smooth
 
         return line[0]
@@ -5690,7 +5725,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################  
-    def plot(self, ax=None, smooth=1, label=None, color=None, limits=None, vi=0, hi=0, pvi=0, phi=0, verbose=True, **kwargs):
+    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, verbose=True, **kwargs):
         """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
@@ -5698,11 +5733,16 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             `label`, this attr will be used as label, e.g., 
             `plt.plot(s.x, s.y, label=s.label)`.  
 
-        Note:
-            color can be a list of the same lenght as the number of spectra.
-
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
+            calib, shift (number or list, optional): multiplicative and additive factor
+                 on the x-coordinates. calib is applied first. If list, it must 
+                 have the same length as the number of spectra.
+            factor, offset (number or list, optional): multiplicative and additive factor
+                 on the y-coordinates. Factor is applied first. If list, it must 
+                 have the same length as the number of spectra.
+            roll (int or list, optional): Roll value of array elements of the x-coordinates.
+                If list, it must have the same length as the number of spectra.
             smooth (int, optional): number of points to average data. Default is 1.
             label (str, number, or list, optional): if str or number, this label will be 
                 applied to every spectra. If list, it must have the same length 
@@ -5710,11 +5750,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 spectrum `s` inside spectra `ss` have attr `label`, 
                 this attr will be used as label, e.g., `plt.plot(s.x, s.y, label=s.label)`.
                 Default is None. 
-            color (str, number, or list, optional): Plot color. If this is a 
-                Iterable (list), each spectra will be colored with the respective
-                color in the list. Note that this behaviour is different from 
-                default plt.plot. If color is a list in plt.plot, it will be 
-                interpreted as RGB values. 
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
                 this function simply returns None. If pairs, each pair 
@@ -5722,11 +5757,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-            hi, vi (number, optional): absolute value for the horizontal and 
-                vertical increments for cascading plots.
+            switch_xy (bool, optional): Switch x and y axis.
+            hi, vi (number, optional): horizontal and vertical increments for 
+                cascading plots.
             phi, pvi (number, optional): percentage wise horizontal and vertical 
-                increments for cascading plots (percentage of the y-range
-                 or x-range for each spectrum).
+                increments for cascading plots (percentage of the y-range for 
+                each spectrum).
             verbose (bool, optional): if True, prints warning if ploted data has
                 nun-numeric values (NaN). Default is True.
             **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
@@ -5744,53 +5780,75 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             ax = plt
             if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
                 figure()
-           
-        ##########
-        # label #
-        ##########
-        if isinstance(label, Iterable) == True and isinstance(label, str) == False:
-            assert len(label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of labels: {len(label)}\nnumber of spectra: {len(self)}'
-        else:
-            label = [label]*len(self)
-
-        ##########
-        # colors #
-        ##########
-        if isinstance(color, Iterable) == True and isinstance(label, str) == False:
-            assert len(color) == len(self), f'color must be a number of a list with length compatible with the number of spectra.\nnumber of colors: {len(color)}\nnumber of spectra: {len(self)}'
-        else:
-            color = [color]*len(self)
-        
 
         #####################################
         # vertical and horizontal increment #
         #####################################
-        offset = None
-        if vi != 0 or hi != 0 or pvi != 0 or phi != 0:
-            # percentage wise vertical and horizontal increment
-            pvi = [(max(_.y)-min(_.y))*pvi/100 for _ in self]
-            phi = [(max(_.x)-min(_.x))*phi/100  for _ in self]
+        vi  = [vi]*len(self)
+        hi  = [hi]*len(self)
 
-            # vertical and horizontal increment
-            vi  = [vi]*len(self)
-            hi  = [hi]*len(self)
+        #########
+        # calib #
+        #########
+        if isinstance(calib, Iterable):
+            assert len(calib) == len(self), f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}'
+        else:
+            calib = [calib]*len(self)
+        ##########
+        # factor #
+        ##########
+        if isinstance(factor, Iterable):
+            assert len(factor) == len(self), f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}'
+        else:
+            factor = [factor]*len(self)
+            
+        ##########
+        # label #
+        ##########
+        if isinstance(label, Iterable) == True and isinstance(label, str) == False:
+            assert len(label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}'
+        else:
+            label = [label]*len(self)
 
-            # offset
-            offset = []
+        #####################################################
+        # percentage wise vertical and horizontal increment #
+        #####################################################
+        pvi = [max(s.y)*factor[i]*pvi/100 for i, s in enumerate(self)]
+        phi = [max(s.x)*calib[i]*phi/100  for i, s in enumerate(self)]
+
+        ##########
+        # offset #
+        ##########
+        if isinstance(offset, Iterable):
+            assert len(offset) == len(self), f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}'
+        else:
+            offset = [offset]*len(self)
             for i in range(len(self)):
-                offset.append((vi[i] * i) + (pvi[i] * i))
+                offset[i] = offset[i] + (vi[i] * i) + (pvi[i] * i)
+        #########
+        # shift #
+        #########
+        if isinstance(shift, Iterable):
+            assert len(shift) == len(self), f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}'
+        else:
+            shift = [shift]*len(self)
+            for i in range(len(self)):
+                shift[i] = shift[i] + (hi[i] * i) + (phi[i] * i)
+        ########
+        # roll #
+        ########
+        if isinstance(roll, Iterable):
+            assert len(roll) == len(self), f'roll must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}'
+        else:
+            roll = [roll]*len(self)
         
         ########
         # plot #
         ########
         temp = [0]*len(self)
-        if offset is None:
-            for i in range(len(self)):
-                temp[i] = self.data[i].plot(ax=ax, label=label[i], color=color[i], smooth=smooth, limits=limits, verbose=verbose, **kwargs)
-        else:
-            for i in range(len(self)):
-                temp[i] = self.data[i].set_offset(offset[i]).plot(ax=ax, label=label[i], color=color[i], smooth=smooth, limits=limits, verbose=verbose, **kwargs)
-         
+        for i in range(len(self)):
+            temp[i] = self.data[i].plot(ax=ax, label=label[i], offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
+
         return temp
 
 # %% ================================ Image =============================== %% #

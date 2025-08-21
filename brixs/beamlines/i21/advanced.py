@@ -942,7 +942,7 @@ def verify_curv(scan, folderpath, popt=None, ncols=16,
     #######################
     # initializing figure #
     #######################
-    fig, axes = br.subplots(1, 4, width_ratios=[3, 3, 1, 3], wspace=0, figsize=(40, 12))
+    fig, axes = br.subplots(1, 4, width_ratios=[3, 3, 1, 3], sharey=True, wspace=0, figsize=(40, 12))
     plt.subplots_adjust(left=0.05, top=0.945, right=0.9, bottom=0.1)
 
     for i in (1, 2, 3, 3):
@@ -953,7 +953,7 @@ def verify_curv(scan, folderpath, popt=None, ncols=16,
     ##############
     # share axis #
     ##############
-    br.sharey([axes[1], axes[2]])
+    # br.sharey([axes[1], axes[2]])
 
     ######################
     # set initial titles #
@@ -974,7 +974,7 @@ def verify_curv(scan, folderpath, popt=None, ncols=16,
         offset = ss[0].get_x_where_y_is_max()
     else:
         offset = im2.integrated_rows_vs_y_centers().get_x_where_y_is_max()
-    fit.crop(x_start, x_stop).set_factor(-1).plot(offset=offset, ax=axes[1], color='black')
+    fit.crop(x_start, x_stop).set_factor(-1).set_offset(offset).plot(ax=axes[1], color='black')
         
     im2.plot(ax=axes[3])
 
