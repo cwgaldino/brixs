@@ -11,8 +11,8 @@ Installation
 ##########################################################
 
 Currently, the recommended method for using BRIXS is:
-
-1)Install it via the whl file:
+..
+1) Install it via the whl file:
 
    Go to Releases and select `v22-08-2025`
 
