@@ -14,28 +14,28 @@ Currently, the recommended method for using BRIXS is:
 
 1) Install it via the whl file:
 
-Go to Releases and select `v22-08-2025`
+   Go to Releases and select `v22-08-2025`
 
-Download the file `brixs-0.9.9-py3-none-any.whl` 
+   Download the file `brixs-0.9.9-py3-none-any.whl` 
 
-Install brixs by using pip via the command:
+   Install BRIXS by using pip via the command:
 
-.. code-block:: bash
+   .. code-block:: bash
 
-   pip install <path-to-whl-file>/brixs-0.9.9-py3-none-any.whl
+      pip install <path-to-whl-file>/brixs-0.9.9-py3-none-any.whl
 
 2) By cloning (or downloading) the GitHub repository then adding BRIXS to the "path" using the 
 code below at the top of you script,
 
-.. code-block:: python
+   .. code-block:: python
 
-    import sys
-    sys.path.append('<path-to-brixs>')
-    import brixs as br
+      import sys
+      sys.path.append('<path-to-brixs>')
+      import brixs as br
 
-note that `<path-to-brixs>` must point to the folder that has the folder BRIXS and 
-the file README.rst. This method might require a small file renaming. I will write
-detailed instructions soon.
+   note that `<path-to-brixs>` must point to the folder that has the folder BRIXS and 
+   the file README.rst. This method might require a small file renaming. I will write
+   detailed instructions soon.
 
 .. 2. Using pip 
 
