@@ -10,9 +10,9 @@ BRIXS is an object-oriented (OO) python package for processing/analysis of XAS a
 Installation
 ##########################################################
 
-Currently, the recommended method for using BRIXS is:
+Currently, the recommended method for using BRIXS are:
 
-1) Install it via the whl file,
+* Install it via the whl file:
 
    Go to Releases and select `v22-08-2025`
 
@@ -24,7 +24,9 @@ Currently, the recommended method for using BRIXS is:
 
       pip install <path-to-whl-file>/brixs-0.9.9-py3-none-any.whl
 
-2) By cloning (or downloading) the GitHub repository then adding BRIXS to the "path" using the 
+* By cloning (or downloading) the GitHub repository:
+
+   Clone or download the repository then adding BRIXS to the "path" using the 
 code below at the top of you script,
 
    .. code-block:: python
