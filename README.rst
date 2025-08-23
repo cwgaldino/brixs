@@ -26,8 +26,7 @@ Currently, the recommended method for using BRIXS are:
 
 * By cloning (or downloading) the GitHub repository:
 
-   Clone or download the repository then adding BRIXS to the "path" using the 
-code below at the top of you script,
+   Clone or download the repository then adding BRIXS to the "path" using the code below at the top of you script,
 
    .. code-block:: python
 
