@@ -14,15 +14,15 @@ Currently, the recommended method for using BRIXS are:
 
 * Install it via the whl file:
 
-   Go to Releases and select `v22-08-2025`
+   Go to Releases and select `v0.9.9`
 
-   Download the file `brixs-0.9.9-py3-none-any.whl` 
+   Download the file `brixs-0.9.9.whl` 
 
    Install BRIXS by using pip via the command:
 
    .. code-block:: bash
 
-      pip install <path-to-whl-file>/brixs-0.9.9-py3-none-any.whl
+      pip install <path-to-whl-file>/brixs-0.9.9.whl
 
 * By cloning (or downloading) the GitHub repository:
 
