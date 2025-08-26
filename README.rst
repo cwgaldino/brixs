@@ -10,23 +10,17 @@ BRIXS is an object-oriented (OO) python package for processing/analysis of XAS a
 Installation
 ##########################################################
 
-Currently, the recommended method for using BRIXS are:
+Currently, the recommended method for installing BRIXS is via pip command:
 
-* Install it via the whl file:
+.. code-block:: bash
 
-   Go to Releases and select `v0.9.9`
+   pip install brixs
 
-   Download the file `brixs-0.9.9.whl` 
-
-   Install BRIXS by using pip via the command:
-
-   .. code-block:: bash
-
-      pip install <path-to-whl-file>/brixs-0.9.9.whl
-
-* By cloning (or downloading) the GitHub repository:
-
-   Clone or download the repository then adding BRIXS to the "path" using the code below at the top of you script,
+But brixs can also be used by downloading the ZIP file directly from the GitHub repository.
+For that, download the repository as a ZIP file. Extract all and remove the contents from
+the folder. Rename the folder from `brixs-main` to `brixs`. In the end, you should
+have a folder named `brixs` with some files inside (README.rst, LICENCE, ...) and 
+another folder named `brixs` inside. Then add brixs to the "path" using the code below at the top of you script,
 
    .. code-block:: python
 
@@ -34,17 +28,8 @@ Currently, the recommended method for using BRIXS are:
       sys.path.append('<path-to-brixs>')
       import brixs as br
 
-   note that `<path-to-brixs>` must point to the folder that has the folder BRIXS and 
-   the file README.rst. This method might require a small file renaming. I will write
-   detailed instructions soon.
-
-.. 2. Using pip 
-
-.. .. code-block::    
-   
-..    pip install git+https://github.com/cwgaldino/brixs
-
-
+   note that `<path-to-brixs>` must point to the folder that has the folder `brixs` and 
+   the file README.rst. 
 
 
 ##########################################################
