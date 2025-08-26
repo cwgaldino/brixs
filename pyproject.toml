@@ -1,12 +1,15 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "brixs"
-version = "0.0.2"
-dependencies = ["numpy >= 1.15", "matplotlib>=3.4"]
+version = "0.0.3"
+description = "An object-oriented Python package for processing and analyzing RIXS and XAS experimental data, designed to be user-friendly and efficient for scientific research."
+readme = "README.rst"
 requires-python = ">=3.7"
+license = {file = "LICENSE.txt"}
+keywords = ["RIXS", "XAS", "X-ray", "Synchrotron", "beamline"]
 authors = [
     {name = "Carlos William Galdino", email = "carlos.galdino@psi.ch"},
     {name = "Thiago Mori",            email = "thiago.mori@lnls.br"},
@@ -15,21 +18,21 @@ authors = [
 maintainers = [
     {name = "Carlos William Galdino", email = "carlos.galdino@psi.ch"},
     {name = "Felipe Custodio",        email = "felipe.custodio@lnls.br"}]
-description = "An object-oriented Python package for processing and analyzing RIXS and XAS experimental data, designed to be user-friendly and efficient for scientific research."
-readme = "README.rst"    
-license = {file = "LICENSE.txt"}
-keywords = ["RIXS", "XAS", "X-ray", "Synchrotron", "beamline"]
+dependencies = [
+    "numpy >= 1.15", 
+    "matplotlib>=3.4",
+]
 classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent"]
+        "Operating System :: OS Independent"
+]
 
-[project.optional-dependencies]
-model     = ["lmfit", "scipy"]
-beamlines = ["h5py"]
-crystal   = ["pbcpy"]
-full      = ["lmfit", "scipy", "pbcpy"]
+[dependency-groups]
+dev = [
+    "pytest>=8.3.3",
+]
 
-[project.urls]
-Repository    = "https://github.com/cwgaldino/brixs"
-"Bug Tracker" = "https://github.com/cwgaldino/brixs/issues"
+
+
+
