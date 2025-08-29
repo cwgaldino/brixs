@@ -81,7 +81,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy.lib.stride_tricks import sliding_window_view
 
 # %% ----------------------------- backpack ------------------------------- %% #
-from .backpack import filemanip, arraymanip, figmanip, numanip, query
+from .backpack import filemanip, arraymanip, figmanip, numanip, vectormanip, other
 
 # %% ------------------------------ settings ------------------------------ %% #
 from .config import settings
@@ -269,6 +269,21 @@ class _BrixsObject(object):
 # %%
 
 # %% ========================= common support functions =================== %% #
+def get_functions():
+    """return a list of methods available including hidden ones"""        
+    methodList = []
+
+    for _module in (filemanip, arraymanip, figmanip, numanip, vectormanip, other):
+        methodList.append(f'')
+        methodList.append(f'===== {_module.__name__} =====')
+        for _method_name in dir(_module):
+            try:
+                if callable(getattr(_module, _method_name)) and _method_name.startswith('_') == False:
+                    methodList.append(str(_method_name))
+            except Exception:
+                methodList.append(str(_method_name))
+    return methodList
+
 def _attr2str(attrs_dict, verbose):
     """returns a list with strings ("name: value") for each attr and attr value
 
@@ -1252,7 +1267,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if other.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -3743,7 +3758,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if other.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -6940,7 +6955,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if other.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -7036,7 +7051,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if other.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -7115,7 +7130,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if other.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
@@ -9789,7 +9804,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if check_overwrite:
             if filepath.exists() == True:
                 if filepath.is_file() == True:
-                    if query.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
+                    if other.query('File already exists!! Do you wish to overwrite it?', 'yes') == True:
                         pass
                     else:
                         return
