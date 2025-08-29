@@ -6,7 +6,7 @@
 from collections.abc import Iterable
 import numpy as np
 
-# %% ======================== calculation/modification ==================== %% #
+# %% ======================== calculation/modification =================== %% #
 def sort(ref, *args):
     """Returns sorted arrays based on a reference array.
 
@@ -182,7 +182,21 @@ def mask(x, mask):
     """
     return [d for d, s in zip(x, mask) if s]
 
-# %% ============================= array check ============================ %% #
+def solve_linear_system(x1, y1, x2, y2):
+	"""Return m and b where, y = m*x + b
+
+	Args:
+    	x1, y1, x2, y2 (numbers): one needs two x, y pairs
+        	to solve the linear system.
+
+	returns:
+    	m, b
+	"""
+	m = (y2-y1)/(x2-x1)
+	b = y1 - m*x1
+	return m, b
+
+# %% ============================= array check =========================== %% #
 def index(x, value, closest=True):
     """Returns the first index of the element in array.
 
@@ -246,7 +260,7 @@ def remove_duplicates(array):
         temp = list(temp)
     return temp
 
-# %% ============================ monotonicity ============================ %% #
+# %% ============================ monotonicity =========================== %% #
 def check_monotonicity(array):
     """return 1 (-1) if increas. (decre.) monotonic or 0 if not monotonic."""
     if np.all(np.diff(array) > 0) == True:
@@ -290,7 +304,7 @@ def fix_monotonicity(x, y, mode='increasing'):
 
         self.check_monotonicity()
 
-# %% ============================== extract =============================== %% #
+# %% ============================== extract ============================== %% #
 def choose(x, limits):
     """Return a mask of x values inside range pairs.
 
@@ -429,7 +443,7 @@ def extract(x, y, limits, invert=False):
         return [], []
         # raise RuntimeError('No data points within the selected range.')
 
-# %% ========================== Experimental ============================== %% #
+# %% ========================== Experimental ============================= %% #
 def array2list(arr):
     """recursively transform a numpy array to a list"""
     final = []
