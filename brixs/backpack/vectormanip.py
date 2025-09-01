@@ -39,7 +39,7 @@ def change2prime(x_prime=(1, 0, 0), y_prime=(0, 1, 0), z_prime=(0, 0, 1), vector
         vector'
     """
     vector_prime = (np.matmul(vector, x_prime), np.matmul(vector, y_prime), np.matmul(vector, z_prime))
-    return np.array(chop(vector_prime))
+    return np.array(chop_vector(vector_prime))
 
 def rotate_vector(axis, angle, vector):
     """Returns a rotated vector
@@ -53,11 +53,11 @@ def rotate_vector(axis, angle, vector):
         rotated vector (array)
     """
     if 'x' in axis:
-        return np.array(chop(np.matmul(Rx(angle), vector)))
+        return np.array(chop_vector(np.matmul(Rx(angle), vector)))
     elif 'y' in axis:
-        return np.array(chop(np.matmul(Ry(angle), vector)))
+        return np.array(chop_vector(np.matmul(Ry(angle), vector)))
     elif 'z' in axis:
-        return np.array(chop(np.matmul(Rz(angle), vector)))
+        return np.array(chop_vector(np.matmul(Rz(angle), vector)))
 
 def rotate_system(axis, angle, x_initial=(1, 0, 0), y_initial=(0, 1, 0), z_initial=(0, 0, 1)):
     """Return a rotated coordinate system (relative to an old coordinate system)
@@ -72,29 +72,59 @@ def rotate_system(axis, angle, x_initial=(1, 0, 0), y_initial=(0, 1, 0), z_initi
         rotated vector (array)
     """
     if 'x' in axis:
-        return np.array(chop(np.matmul(Rx(angle), x_initial))), np.array(chop(np.matmul(Rx(angle), y_initial))), np.array(chop(np.matmul(Rx(angle), z_initial)))
+        return np.array(chop_vector(np.matmul(Rx(angle), x_initial))), np.array(chop_vector(np.matmul(Rx(angle), y_initial))), np.array(chop_vector(np.matmul(Rx(angle), z_initial)))
     elif 'y' in axis:
-        return np.array(chop(np.matmul(Ry(angle), x_initial))), np.array(chop(np.matmul(Ry(angle), y_initial))), np.array(chop(np.matmul(Ry(angle), z_initial)))
+        return np.array(chop_vector(np.matmul(Ry(angle), x_initial))), np.array(chop_vector(np.matmul(Ry(angle), y_initial))), np.array(chop_vector(np.matmul(Ry(angle), z_initial)))
     elif 'z' in axis:
-        return np.array(chop(np.matmul(Rz(angle), x_initial))), np.array(chop(np.matmul(Rz(angle), y_initial))), np.array(chop(np.matmul(Rz(angle), z_initial)))
+        return np.array(chop_vector(np.matmul(Rz(angle), x_initial))), np.array(chop_vector(np.matmul(Rz(angle), y_initial))), np.array(chop_vector(np.matmul(Rz(angle), z_initial)))
 
-def chop(vector, epsilon=10e-14):
+def chop_vector(vector, epsilon=10e-14):
     """change small values to zero"""
     return [x if np.abs(x) > epsilon else 0 for x in vector]
 
 def is_perpendicular(vector1, vector2, epsilon=10e-14):
-    """Raise error if vectors are not perpendicular"""
-    if np.dot(vector1, vector2) > epsilon: raise ValueError('Vectors not perpendicular')
+    """Return True if vectors are perpendicular"""
+    if np.dot(vector1, vector2) > epsilon: 
+        return False
+    return True
 
-def normalize(vector):
+def normalize_vector(vector):
     """Returns normalize vector to 1"""
     if np.linalg.norm(vector) != 1:
         return np.array(vector/np.linalg.norm(vector))
     else:
         return np.array(vector)
 
-def angle(vector1, vector2):
+def angle_between_vectors(vector1, vector2):
     """Returns the angle between two vectors in degrees"""
     vector1 = normalize(vector1)
     vector2 = normalize(vector2)
     return np.degrees(np.arccos(np.dot(vector1, vector2)))
+
+
+# %% =============================== drawing ============================= %% #
+def draw_octahedron(ax, center=(0, 0, 0), x=(1, 0, 0), y=(0, 1, 0), z=(0, 0, 1), color='blue'):
+    """Draw octahedron in a axes"""
+    x = np.array(x)
+    y = np.array(y)
+    z = np.array(z)
+
+    # xy
+    _ = ax.quiver(*np.concatenate((x, y-x)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((x, -y-x)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((-x, -y+x)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((-x, +y+x)), color=color, arrow_length_ratio=0)
+
+    # xz
+    _ = ax.quiver(*np.concatenate((x, z-x)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((x, -z-x)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((-x, -z+x)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((-x, +z+x)), color=color, arrow_length_ratio=0)
+
+    # yz
+    _ = ax.quiver(*np.concatenate((y, z-y)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((y, -z-y)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((-y, -z+y)), color=color, arrow_length_ratio=0)
+    _ = ax.quiver(*np.concatenate((-y, +z+y)), color=color, arrow_length_ratio=0)
+
+    return
