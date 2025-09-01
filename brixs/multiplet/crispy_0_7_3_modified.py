@@ -3,15 +3,17 @@
 r"""Multiplet calculation of XPS, XES, XAS, and RIXS via crispy and Quanty.
 
 Notes:
-
     This module requires a Quanty executable (Quanty.exe) that can be downloaded
     at https://www.quanty.org/index.html
 
 Warning:
-
     This module was only tested on windows and for a limited number of calculation parameters.
     It is good practice to compare the results from this module with results 
     obtained with the latest version of Crispy.
+
+Notes:
+    If you use this module on publications. Please, reference Crispy 0.7.3 as this
+    module is a modified version of Crispy.
 
 Usage:
 
