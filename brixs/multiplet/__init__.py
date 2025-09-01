@@ -20,4 +20,4 @@ with gzip.open(settings.PARAMETERS_FILEPATH, 'r') as f:
 settings._ELEMENTS = list(settings.PARAMETERS['elements'].keys())
 
 # 
-from .crispy_0_7_3_modified import Calculation, _QuantyCalculation
+from .crispy_0_7_3_modified import Calculation, load_calculation, quanty 
