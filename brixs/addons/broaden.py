@@ -121,6 +121,10 @@ def _broaden(self, w, m=0, mode='same'):
     assert w >= 0, 'w must be a positive number'
     assert m >=0 and m<=1, 'm must be a number between 0 and 1'
 
+    # if broadening is zero, does nothing
+    if w == 0:
+        return self.copy()
+
     # check step uniformity
     self.check_step()
 
