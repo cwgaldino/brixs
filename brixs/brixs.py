@@ -942,8 +942,10 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
     # this is what makes possible max(s) and min(s)
     def __iter__(self):
-        for x, y in zip(self.x, self.y):
-            yield x, y
+        for y in self.y:
+            yield y
+        # for x, y in zip(self.x, self.y):
+        #     yield x, y
 
     def __getitem__(self, item):
         if isinstance(item, int):
