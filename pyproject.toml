@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "brixs"
-version = "0.0.14"
+version = "0.0.15"
 description = "An object-oriented Python package for processing and analyzing RIXS and XAS experimental data, designed to be user-friendly and efficient for scientific research."
 requires-python = ">=3.10"
 long-description = "See https://github.com/cwgaldino/brixs for more info."
