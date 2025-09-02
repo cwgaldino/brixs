@@ -67,7 +67,10 @@ import brixs as br
 import brixs.addons.h5 as h5
 
 # %% ------------------------- Special Imports ---------------------------- %% #
-import h5py
+try:
+    import h5py
+except:
+    pass
 # %%
 
 # %% ========================= useful functions =========================== %% #
