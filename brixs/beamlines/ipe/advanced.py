@@ -769,7 +769,7 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     # plot fitting
     offset = cols[0].y[np.argmax(cols[0].x)]
     pe.plot(axes[3], color='black')
-    fit.plot(axes[3], factor=-1, offset=offset, color='red')
+    fit.set_factor(-1).set_offset(offset).plot(axes[3], color='red')
 
     # set shifts
     pe.plot(axes[4], color='black')
