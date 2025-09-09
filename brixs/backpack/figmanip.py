@@ -2870,16 +2870,20 @@ def hex2rgb(string, max_rgb_value=1):
 # %%
 
 # %% ================================= lines ============================== %% #
-def axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+def axvlines(x, ymin=None, ymax=None, ax=None, **kwargs):
     """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
 
     Args:
         x (float or array): x coordinates where to plot the lines.
         ymin, ymax (float, optional): Respective beginning and end of 
             each line. If None, infinite lines are plotted. Default is None.
-        colors (color or list, optional): line colors. Default is black
-        linestyles (string or list, optional): linestyles. Default is '--'.
-        labels (string or list, optional): labels. Default is ''.
+        color, colors, or c (str, number, or list, optional): if str or number, this color will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra and each element must be a color (a 
+                color can be a str or a 3 element (RGB) list.
+                Default is None. 
+        linestyles, linestyle, or ls (string or list, optional): linestyles. Default is '--'.
+        label or labels (string or list, optional): labels. Default is ''.
             If labels is str, only first line gets labeled. If labels is a list
             each line is labeled independtly.
         ax (axes, optional): axes. If None, the current axes will be used. Default is None
@@ -2899,49 +2903,87 @@ def axvlines(x, ymin=None, ymax=None, colors='black', linestyles='--', labels=''
     if isinstance(x, Iterable) == False:
         x = [x, ]
 
-    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
-        assert len(x) == len(colors), 'color must be the same length as x'
+    #########
+    # label #
+    #########
+    if 'label' in kwargs or 'labels' in kwargs:
+        if 'label' in kwargs:
+            _label = kwargs.pop('label')
+        else:
+            _label = kwargs.pop('labels')
+
+        if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
+            assert len(_label) == len(x), f'label must be a number of a list with length compatible with the number of lines.\nnumber of labels: {len(label)}\nnumber of spectra: {len(x)}'
+            label = _label
+        else:
+            label = [None]*len(x)
+            label[0] = _label
     else:
-        colors = [colors]*len(x)
-    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
-        assert len(x) == len(linestyles), 'linestyles must be the same length as x'
+        label = [None]*len(x)
+
+    #########
+    # color #
+    #########
+    if 'color' in kwargs or 'colors' in kwargs or 'c' in kwargs:
+        if 'color' in kwargs:
+            _color = kwargs.pop('color')
+        elif 'colors' in kwargs:
+            _color = kwargs.pop('colors')
+        else:
+            _color = kwargs.pop('c')
+
+        if isinstance(_color, Iterable) == True and isinstance(_color, str) == False:
+            assert len(_color) == len(x), f'`color` must be a number of a list with length compatible with the number of lines.\nnumber of colors: {len(_color)}\nnumber of lines: {len(x)}'
+            colors = _color
+        else:
+            colors = [_color]*len(x)
     else:
-        linestyles = [linestyles]*len(x)
-    # if isinstance(labels, Iterable) and isinstance(labels, str) == False:
-    #     assert len(x) == len(labels), 'labels must be the same length as x'
+        colors = [None]*len(x)
+
+    ##############
+    # linestyles #
+    ##############
+    if 'linestyles' in kwargs or 'linestyle' in kwargs or 'ls' in kwargs:
+        if 'linestyles' in kwargs:
+            _linestyle = kwargs.pop('linestyles')
+        elif 'linestyle' in kwargs:
+            _linestyle = kwargs.pop('linestyle')
+        else:
+            _linestyle = kwargs.pop('ls')
+
+        if isinstance(_linestyle, Iterable) == True and isinstance(_linestyle, str) == False:
+            assert len(_linestyle) == len(x), f'`linestyles` must be a number of a list with length compatible with the number of lines.\nnumber of linestyles: {len(_linestyle)}\nnumber of lines: {len(x)}'
+            linestyles = _linestyle
+        else:
+            linestyles = [_linestyle]*len(x)
+    else:
+        linestyles = ['--']*len(x)
         
     # plot
     final = []
     if ymin is None and ymax is None:
         for i, _x in enumerate(x):
-            if i == 0 and isinstance(labels, str):
-                _label = labels
-            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
-                _label = labels[i]
-            else:
-                _label = ''
-            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=_label, **kwargs))
+            final.append(ax.axvline(x=_x, color=colors[i], linestyle=linestyles[i], label=label[i], **kwargs))
     else:
         for i, _x in enumerate(x):
-            if i == 0 and isinstance(labels, str):
-                _label = labels
-            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
-                _label = labels[i]
-            else:
-                _label = ''
-            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], label=_label, **kwargs))
+            final.append(ax.vlines(x=_x, ymin=ymin, ymax=ymax, colors=colors[i], linestyles=linestyles[i], label=label[i], **kwargs))
     return final
 
-def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', ax=None, **kwargs):
+def axhlines(y, xmin=None, xmax=None, ax=None, **kwargs):
     """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
 
     Args:
         y (float or array): y coordinates where to plot the lines.
         xmin, xmax (float, optional): Respective beginning and end of 
             each line. If None, infinite lines are plotted. Default is None.
-        colors (color or list, optional): line colors. Default is black
-        linestyles (string or list, optional): linestyles. Default is '--'.
-        If labels is str, only first line gets labeled. If labels is a list
+        color, colors, or c (str, number, or list, optional): if str or number, this color will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra and each element must be a color (a 
+                color can be a str or a 3 element (RGB) list.
+                Default is None. 
+        linestyles, linestyle, or ls (string or list, optional): linestyles. Default is '--'.
+        label or labels (string or list, optional): labels. Default is ''.
+            If labels is str, only first line gets labeled. If labels is a list
             each line is labeled independtly.
         ax (axes, optional): axes. If None, the current axes will be used. Default is None
         **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
@@ -2960,51 +3002,88 @@ def axhlines(y, xmin=None, xmax=None, colors='black', linestyles='--', labels=''
     if isinstance(y, Iterable) == False:
         y = [y, ]
 
-    if isinstance(colors, Iterable) and isinstance(colors, str) == False:
-        assert len(y) == len(colors), 'color must be the same length as y'
+    #########
+    # label #
+    #########
+    if 'label' in kwargs or 'labels' in kwargs:
+        if 'label' in kwargs:
+            _label = kwargs.pop('label')
+        else:
+            _label = kwargs.pop('labels')
+
+        if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
+            assert len(_label) == len(y), f'label must be a number of a list with length compatible with the number of lines.\nnumber of labels: {len(label)}\nnumber of spectra: {len(y)}'
+            label = _label
+        else:
+            label = [None]*len(y)
+            label[0] = _label
     else:
-        colors = [colors]*len(y)
-    if isinstance(linestyles, Iterable) and isinstance(linestyles, str) == False:
-        assert len(y) == len(linestyles), 'linestyles must be the same length as y'
+        label = [None]*len(y)
+
+    #########
+    # color #
+    #########
+    if 'color' in kwargs or 'colors' in kwargs or 'c' in kwargs:
+        if 'color' in kwargs:
+            _color = kwargs.pop('color')
+        elif 'colors' in kwargs:
+            _color = kwargs.pop('colors')
+        else:
+            _color = kwargs.pop('c')
+
+        if isinstance(_color, Iterable) == True and isinstance(_color, str) == False:
+            assert len(_color) == len(y), f'`color` must be a number of a list with length compatible with the number of lines.\nnumber of colors: {len(_color)}\nnumber of lines: {len(y)}'
+            colors = _color
+        else:
+            colors = [_color]*len(y)
     else:
-        linestyles = [linestyles]*len(y)
-    if isinstance(labels, Iterable) and isinstance(labels, str) == False:
-        assert len(y) == len(labels), 'labels must be the same length as y'
+        colors = [None]*len(y)
+
+    ##############
+    # linestyles #
+    ##############
+    if 'linestyles' in kwargs or 'linestyle' in kwargs or 'ls' in kwargs:
+        if 'linestyles' in kwargs:
+            _linestyle = kwargs.pop('linestyles')
+        elif 'linestyle' in kwargs:
+            _linestyle = kwargs.pop('linestyle')
+        else:
+            _linestyle = kwargs.pop('ls')
+
+        if isinstance(_linestyle, Iterable) == True and isinstance(_linestyle, str) == False:
+            assert len(_linestyle) == len(y), f'`linestyles` must be a number of a list with length compatible with the number of lines.\nnumber of linestyles: {len(_linestyle)}\nnumber of lines: {len(y)}'
+            linestyles = _linestyle
+        else:
+            linestyles = [_linestyle]*len(y)
     else:
-        labels = [labels]*len(y)
+        linestyles = ['--']*len(y)
         
     # plot
     final = []
     if xmin is None and xmax is None:
         for i, _y in enumerate(y):
-            if i == 0 and isinstance(labels, str):
-                _label = labels
-            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
-                _label = labels[i]
-            else:
-                _label = ''
-            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=_label, **kwargs))
+            final.append(ax.axhline(y=_y, color=colors[i], linestyle=linestyles[i], label=label[i], **kwargs))
     else:
         for i, _y in enumerate(y):
-            if i == 0 and isinstance(labels, str):
-                _label = labels
-            elif isinstance(labels, Iterable) and isinstance(labels, str) == False:
-                _label = labels[i]
-            else:
-                _label = ''
-            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], label=_label, **kwargs))
+            final.append(ax.hlines(y=_y, xmin=xmin, xmax=xmax, colors=colors[i], linestyles=linestyles[i], label=label[i], **kwargs))
     return final
 
-def _axvlines(self, x, ymin=None, ymax=None, colors='black', linestyles='--', labels='', **kwargs):
+def _axvlines(self, x, ymin=None, ymax=None, **kwargs):
     """draw vertical lines. Wrapper for `plt.vlines()`_ and `plt.axvline()`_
 
     Args:
         x (float or array): x coordinates where to plot the lines.
         ymin, ymax (float, optional): Respective beginning and end of 
             each line. If None, infinite lines are plotted. Default is None.
-        colors (color or list, optional): line colors. Default is black
-        linestyles (string or list, optional): linestyles. Default is '--'.
-        labels (string or list, optional): labels. Default is ''.
+        color, colors, or c (str, number, or list, optional): if str or number, this color will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra and each element must be a color (a 
+                color can be a str or a 3 element (RGB) list.
+                Default is None. 
+        linestyles, linestyle, or ls (string or list, optional): linestyles. Default is '--'.
+        label or labels (string or list, optional): labels. Default is ''.
+            If labels is str, only first line gets labeled. If labels is a list
+            each line is labeled independtly.
         **kwargs: kwargs are passed to `plt.vlines()`_ or `plt.axvline()`_
 
     Returns:
@@ -3013,19 +3092,25 @@ def _axvlines(self, x, ymin=None, ymax=None, colors='black', linestyles='--', la
     .. _plt.axvline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axvline.html  
     .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
     """
-    return axvlines(x=x, ymin=ymin, ymax=ymax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
+    return axvlines(x=x, ymin=ymin, ymax=ymax, ax=self, **kwargs)
 mpl.axes.Axes.axvlines = _axvlines
 
-def _axhlines(self, y, xmin=None, xmax=None, colors='black', linestyles='--', labels='', **kwargs):
+def _axhlines(self, y, xmin=None, xmax=None, **kwargs):
     """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
 
     Args:
         y (float or array): y coordinates where to plot the lines.
         xmin, xmax (float, optional): Respective beginning and end of 
             each line. If None, infinite lines are plotted. Default is None.
-        colors (color or list, optional): line colors. Default is black
-        linestyles (string or list, optional): linestyles. Default is '--'.
-        labels (string or list, optional): labels. Default is ''.
+        color, colors, or c (str, number, or list, optional): if str or number, this color will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra and each element must be a color (a 
+                color can be a str or a 3 element (RGB) list.
+                Default is None. 
+        linestyles, linestyle, or ls (string or list, optional): linestyles. Default is '--'.
+        label or labels (string or list, optional): labels. Default is ''.
+            If labels is str, only first line gets labeled. If labels is a list
+            each line is labeled independtly.
         ax (axes, optional): axes. If None, the current axes will be used. Default is None
         **kwargs: kwargs are passed to `plt.hlines()`_ or `plt.axhline()`_
 
@@ -3035,7 +3120,7 @@ def _axhlines(self, y, xmin=None, xmax=None, colors='black', linestyles='--', la
     .. _plt.axhline(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.axhline.html  
     .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
     """
-    return axhlines(y=y, xmin=xmin, xmax=xmax, colors=colors, linestyles=linestyles, labels=labels, ax=self, **kwargs)
+    return axhlines(y=y, xmin=xmin, xmax=xmax, ax=self, **kwargs)
 mpl.axes.Axes.axhlines = _axhlines
 # %%
 

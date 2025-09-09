@@ -2473,7 +2473,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################        
-    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, verbose=True, **kwargs):
+    def plot(self, ax=None, smooth=1, label=None, limits=None, switch_xy=False, verbose=True, **kwargs):
         """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
@@ -2483,11 +2483,6 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
-            calib, shift (number, optional): multiplicative and additive factor
-                 on the x-coordinates. calib is applied first.
-            factor, offset (number, optional): multiplicative and additive factor
-                 on the y-coordinates. Factor is applied first.
-            roll (int, optional): Roll value of array elements of the x-coordinates
             smooth (int, optional): number of points to average data. Default is 1.
             label (str, number, optional): if str or number, this label will be 
                 applied. If None and if spectrum have attr `label`, 
@@ -2527,8 +2522,6 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         x = self.x
         y = self.y
 
-
-
         #############
         # switch xy #
         #############
@@ -2536,20 +2529,6 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             _x = x
             x = y
             y = _x
-
-        #############
-        # modifiers #
-        #############
-        x = (x*calib) + shift
-        y = (y*factor) + offset
-
-        ########
-        # roll #
-        ########
-        if roll != 0:
-            assert numanip.is_integer(roll), 'roll must be an integer'
-            x    = np.roll(x, roll)
-            x, y = arraymanip.sort(x, x, y)
 
         ##########
         # smooth #
@@ -2582,11 +2561,6 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         # plot #
         ########
         line = ax.plot(x, y, **kwargs)
-        line[0].offset = offset
-        line[0].shift  = shift
-        line[0].roll   = roll
-        line[0].calib  = calib
-        line[0].factor = factor
         line[0].smooth = smooth
 
         return line[0]
@@ -5742,7 +5716,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################  
-    def plot(self, ax=None, offset=0, shift=0, roll=0, factor=1, calib=1, smooth=1, label=None, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, verbose=True, **kwargs):
+    def plot(self, ax=None, smooth=1, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, verbose=True, **kwargs):
         """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
@@ -5752,20 +5726,17 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
-            calib, shift (number or list, optional): multiplicative and additive factor
-                 on the x-coordinates. calib is applied first. If list, it must 
-                 have the same length as the number of spectra.
-            factor, offset (number or list, optional): multiplicative and additive factor
-                 on the y-coordinates. Factor is applied first. If list, it must 
-                 have the same length as the number of spectra.
-            roll (int or list, optional): Roll value of array elements of the x-coordinates.
-                If list, it must have the same length as the number of spectra.
             smooth (int, optional): number of points to average data. Default is 1.
-            label (str, number, or list, optional): if str or number, this label will be 
+            label or labels (str, number, or list, optional): if str or number, this label will be 
                 applied to every spectra. If list, it must have the same length 
                 as the number of spectra. If None and if 
                 spectrum `s` inside spectra `ss` have attr `label`, 
                 this attr will be used as label, e.g., `plt.plot(s.x, s.y, label=s.label)`.
+                Default is None. 
+            color, colors, or c (str, number, or list, optional): if str or number, this color will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra and each element must be a color (a 
+                color can be a str or a 3 element (RGB) list.
                 Default is None. 
             limits (None or list): a pair of values `(x_start, x_stop)`, a list 
                 of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
@@ -5798,73 +5769,85 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
                 figure()
 
+        #########
+        # label #
+        #########
+        if 'label' in kwargs or 'labels' in kwargs:
+            if 'label' in kwargs:
+                _label = kwargs.pop('label')
+            else:
+                _label = kwargs.pop('labels')
+
+            if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
+                assert len(_label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of labels: {len(label)}\nnumber of spectra: {len(self)}'
+                label = _label
+            else:
+                label = [_label]*len(self)
+        else:
+            label = [None]*len(self)
+
+        #########
+        # color #
+        #########
+        if 'color' in kwargs or 'colors' in kwargs  or 'c' in kwargs:
+            if 'color' in kwargs:
+                _color = kwargs.pop('color')
+            elif 'colors' in kwargs:
+                _color = kwargs.pop('colors')
+            else:
+                _color = kwargs.pop('c')
+            
+            if isinstance(_color, Iterable) == True and isinstance(_color, str) == False:
+                assert len(_color) == len(self), f'`color` must be a number of a list with length compatible with the number of spectra.\nnumber of colors: {len(_color)}\nnumber of spectra: {len(self)}'
+                colors = _color
+            else:
+                colors = [_color]*len(self)
+        else:
+            colors = [None]*len(self)
+
+
         #####################################
         # vertical and horizontal increment #
         #####################################
         vi  = [vi]*len(self)
         hi  = [hi]*len(self)
 
-        #########
-        # calib #
-        #########
-        if isinstance(calib, Iterable):
-            assert len(calib) == len(self), f'calib must be a number of a list with length compatible with the number of spectra.\nnumber of calib: {len(calib)}\nnumber of spectra: {len(self)}'
-        else:
-            calib = [calib]*len(self)
-        ##########
-        # factor #
-        ##########
-        if isinstance(factor, Iterable):
-            assert len(factor) == len(self), f'factor must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}'
-        else:
-            factor = [factor]*len(self)
-            
-        ##########
-        # label #
-        ##########
-        if isinstance(label, Iterable) == True and isinstance(label, str) == False:
-            assert len(label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of factor: {len(factor)}\nnumber of spectra: {len(self)}'
-        else:
-            label = [label]*len(self)
-
         #####################################################
         # percentage wise vertical and horizontal increment #
         #####################################################
-        pvi = [max(s.y)*factor[i]*pvi/100 for i, s in enumerate(self)]
-        phi = [max(s.x)*calib[i]*phi/100  for i, s in enumerate(self)]
+        pvi = [max(s.y)*pvi/100 for i, s in enumerate(self)]
+        phi = [max(s.x)*phi/100  for i, s in enumerate(self)]
 
         ##########
         # offset #
         ##########
-        if isinstance(offset, Iterable):
-            assert len(offset) == len(self), f'offset must be a number of a list with length compatible with the number of spectra.\nnumber of offsets: {len(offset)}\nnumber of spectra: {len(self)}'
-        else:
-            offset = [offset]*len(self)
-            for i in range(len(self)):
-                offset[i] = offset[i] + (vi[i] * i) + (pvi[i] * i)
+        offset = [0]*len(self)
+        for i in range(len(self)):
+            offset[i] = offset[i] + (vi[i] * i) + (pvi[i] * i)
         #########
         # shift #
         #########
-        if isinstance(shift, Iterable):
-            assert len(shift) == len(self), f'shift must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}'
-        else:
-            shift = [shift]*len(self)
-            for i in range(len(self)):
-                shift[i] = shift[i] + (hi[i] * i) + (phi[i] * i)
-        ########
-        # roll #
-        ########
-        if isinstance(roll, Iterable):
-            assert len(roll) == len(self), f'roll must be a number of a list with length compatible with the number of spectra.\nnumber of shift: {len(shift)}\nnumber of spectra: {len(self)}'
-        else:
-            roll = [roll]*len(self)
+        shift = [0]*len(self)
+        for i in range(len(self)):
+            shift[i] = shift[i] + (hi[i] * i) + (phi[i] * i)
         
         ########
         # plot #
         ########
         temp = [0]*len(self)
-        for i in range(len(self)):
-            temp[i] = self.data[i].plot(ax=ax, label=label[i], offset=offset[i], shift=shift[i], factor=factor[i], calib=calib[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
+        if sum(shift) > 0:
+            if sum(offset) > 0:
+                for i in range(len(self)):
+                    temp[i] = self[i].set_shift(shift[i]).set_offset(offset[i]).plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
+            else:
+                for i in range(len(self)):
+                    temp[i] = self[i].set_shift(shift[i]).plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
+        elif sum(offset) > 0:
+            for i in range(len(self)):
+                temp[i] = self[i].set_offset(offset[i]).plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
+        else:
+            for i in range(len(self)):
+                temp[i] = self[i].plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
 
         return temp
 
@@ -6676,7 +6659,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         # raise error if object is too big #
         ####################################
         if self.shape[0] > max_number_of_rows:
-            raise ValueError(f'cannot return image rows with more than {max_number_of_rows} rows. Please, increase `max_number_of_rows`')
+            raise ValueError(f'Image has {self.shape[0]} rows. Cannot return image rows with more than {max_number_of_rows} rows. Please, increase `max_number_of_rows`')
         
         ################
         # empty object #
@@ -6707,7 +6690,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         # raise error if object is too big #
         ####################################
         if self.shape[1] > max_number_of_columns:
-            raise ValueError(f'cannot return image columns with more than {max_number_of_columns} rows. Please, increase `max_number_of_columns`')
+            raise ValueError(f'Image has {self.shape[1]} columns. Cannot return image columns with more than {max_number_of_columns} columns. Please, increase `max_number_of_columns`')
 
         ################
         # empty object #
