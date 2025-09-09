@@ -16,75 +16,11 @@ Notes:
     module is a modified version of Crispy.
 
 Usage:
-
-    >>> import brixs as br
-    >>> import brixs.multiplet as multiplet
-    >>>
-    >>> multiplet.settings.QUANTY_FILEPATH = r'C:\Users\gald\Documents\quanty\quanty_win\QuantyWin64.exe'
-    >>>
-    >>> todo
-
-
-Notes:
-
-    The assumed experimental geometry is given below:
-
-
-    Top view (lab coordinates)
-                           .
-                         .   .
-    LH y (010)         .       .
-        |            .           .
-    ────O────────  .   octahedron  . ────> x (100)
-     LV z (001)      .           .
-                       .       .
-                         .   .
-                           .
-
-    The outgoing beam (kout) is then defined based on the tth angle. See below
-
-          kout
-            .
-             .             
-              .
-               .     tth
-                .        
-    kin ─────── ||-------------  
-
-    Finally, we can define the incoming and outgoing beam direction as
-
-    kin  = 100
-    LHin = 010
-    LVin = 001
-
-    kout  = kin*Rz(tth)
-    LHout = LHin*Rz(tth)
-    LHout = LHin*Rz(tth)
-
-    Note that, the direction of the outgoing beam is given by kout, which is 
-    defined by a rotation of kin by tth angle (same for the polarization vectors).
-
-    For a octahedral local environment, the default Hamiltonian H (Crystal Field, Exchange direction, etc...) 
-    is such that the planar ligands point to the x and y coordinates and the apical 
-    ligands are laid along the z axis. Here, I am calling the coordinate system 
-    of the Hamiltonian the cf coordinate system. If you want H to be rotated in a 
-    different orientation in relation to the incoming beam, one can you the parameter R.
-     
-    R is a list of rotations one should do with the local environment before 
-    running the calculations. For instance R = [['x', 90], ] will rotate the 
-    a octahedra 90 degrees around the 'x' axis (100). This will make the apical 
-    ligands to point along the 'y' axis (010). 
-
-    One can double check the experimental geometry by using the method 
-    q.plot_geometry()
-
-
+    See brixs/examples/multiplet folder
+    
 TO DO:
     ( ) Check if broaden works with non-monotonic data.
-    ( ) Not sure if broaden works fine. Compare with crispy.
-    ( ) gaussian broaden
-    ( ) lorentizian broaden
-
+    ( ) implement new shapes for q.plot_geometry() 
     ( ) Implement linear RIXS for 1s2p and 1s3p
     ( ) Implement circular RIXS for 1s2p and 1s3p
 """
@@ -469,18 +405,14 @@ def load_calculation(filepath):
     q._nPsis          = calculation.pop('nPsis')
     q._nPsisMax       = calculation.pop('nPsisMax')
     q._nPsisAuto      = calculation.pop('nPsisAuto')
-    q._xGamma         = calculation.pop('xGamma')
     q._xLabel         = calculation.pop('xLabel')
+    q._yLabel         = calculation.pop('yLabel')
     q._xMin           = calculation.pop('xMin')
     q._xMax           = calculation.pop('xMax')
     q._xNPoints       = calculation.pop('xNPoints')
-    q._xEdge          = calculation.pop('xEdge')
-    q._yGamma         = calculation.pop('yGamma')
-    q._yLabel         = calculation.pop('yLabel')
-    q._yMin           = calculation.pop('yMin')
-    q._yMax           = calculation.pop('yMax')
-    q._yNPoints       = calculation.pop('yNPoints')
-    q._yEdge          = calculation.pop('yEdge')
+    q._resonance      = calculation.pop('resonance')
+    q._gamma1         = calculation.pop('gamma1')
+    q._gamma2         = calculation.pop('gamma2')
     q._verbosity      = calculation.pop('verbosity')
     q._denseBorder    = calculation.pop('denseBorder')
 
@@ -533,152 +465,7 @@ def put_back_greek_letters_from_hamiltonianData(hamiltonianData):
 class Calculation(object):
     """Initialize a Crispy/Quanty calculation object.
 
-    Args:
-        element (string, optional): transition metals, lanthanides and actinides.
-            default is 'Ni'.
-        charge (string, optional): suitable oxidation state of the element as
-            '1+', '2+' and so on. default depends on the element.
-        symmetry (string, optional): local symmetry. Possible values are 'Oh',
-            'D4h', 'Td', 'C3v', and 'D3h'. default depends on the element.
-        experiment (string, optional): experiment to simulate spectrum. Possible
-            values are 'XAS', 'XES', 'XPS', and 'RIXS'. default is 'XAS'.
-        edge (string, optional): investigated edge.
-            * For 'XAS' and 'XPS', possible values are 'K (1s)', 'L1 (2s)', 'L2,3 (2p)', 'M1 (3s)', and 'M2,3 (3p)'.
-            * For 'XES', possible values are 'Ka (1s2p)' and 'Kb (1s3p)'.
-            * For 'RIXS', possible values are 'K-L2,3 (1s2p)', 'K-M2,3 (1s3p)', and 'L2,3-M4,5 (2p3d)'
-            default is depends on the experiment type and element.
-
-        polarization (list, optional): type of spectrum to calculate.
-
-            * For 'XAS', possible values are `isotropic`, `linear`, `circular`.
-
-            * For 'XES' and 'XPS', possible value is `isotropic`.
-
-            * For 'RIXS', possible values are `isotropic`, `linear`, `circular`.
-
-        nPsis (number, optional): number of states to calculate. If None, 
-            nPsiAuto will be set to 1 and the maximum value will be used. 
-            Default is None. The max value is defined by q.nPsisMax
-        nPsisAuto (int, optional): If 1, a suitable value will be picked for 
-            nPsis. Default is 1.
-        k (vector, optional): quantization axis for calculating expected values. 
-            It does not influence the calculation, just the table printed at the end.
-            Default is (001).
-        denseBorder (int, optional): Number of determinants in the bases where 
-            quanty switch from dense methods to sparse methods. The higher this 
-            number, the more precise are the calculations, but also more expensive. 
-            Default is 2000, which should be enough. If in doubt, one can try 
-            this to see how the final results depends on it. Final result 
-            shouldn't improve much for values above 2000.
-
-        magneticField (number, optional): Magnetic field value in Tesla. If zero
-            or None, a very small magnetic field (0.002 T) will be used to
-            have nice expected values for observables. To force a zero magnetic
-            field you have to turn it off via the q.hamiltonianState. default
-            is 0.002 T. This can be overwritten by changing the hamiltonian data
-            directly.
-        magneticFieldOrientation (vector, optional): Direction of the magnetic field.
-            Default is (001). This can be overwritten by changing the hamiltonian data
-            directly.
-        temperature (number, optional): temperature in Kelvin. default is 10 K.
-            If temperature is zero, nPsi is set to 1 and nPsiAuto to 0.
-
-        tth (number): number from 0 to 180 indicating the 2theta scattering angle.
-            Default is 130.
-        R (list): list of rotations one should do with the local environment before 
-            running the calculations. For instance R = [['x', 90], ] will rotate the 
-            a octahedra 90 degrees around the 'x' axis (100). This will make the apical 
-            ligands to point along the 'y' axis (010). Example: R=[['x', 90], ['y', 45]]. 
-            One can double check the experimental geometry by using the method 
-            q.plot_geometry(). Default is []. 
-        
-        xMin, xMax, xNPoints (number, optional): minimum, maximum, and number of points.
-
-            * For 'XAS', incident photon (in eV).
-            * For 'XES', emission photon energy (in eV)
-            * For 'XPS', biding energy (in eV)
-            * For 'RIXS', incident photon energy (in eV).
-
-            If None, a suitable value depending on the element will
-            be chosen. default is None.
-
-        yMin, yMax, yNPoints (number, optional): minimum, maximum, and number of points.
-
-            * For 'XAS', 'XES' and 'XPS', n.a.
-            * For 'RIXS', energy transfer (in eV).
-            If None, a suitable value depending on the element will
-            be chosen. default is None.
-        
-        xGamma (number, optional): 
-            * For 'XAS', 'XES', and 'XPS', core-hole lifetime (defines lorentzian broadening - FWHM)
-            * For 'RIXS', correlation lenght (lorentzian broadening of the `incident energy`)
-        yGamma (tuple or list, optional): core-hole lifetime. 
-            * For 'XAS', 'XES', and 'XPS', n.a.
-            * For 'RIXS', core-hole lifetime (defines lorentzian broadening of the `energy loss`)
-
-    Attributes:
-        All initial args are also attributes, plus we have extra attrs to be 
-        edited after creating a Calculation object. Note that some of them are
-        read-only and some are defined automatically.
-
-        nConfigurations (int, optional): number of configurations. If None,
-            a suitable value will be calculated. default is None. If LMCT or
-            MLCT are False in hamiltonianState, then the nConfigurations is 
-            always 1 (there is only one final configuration). If LMCT or MLCT 
-            are True, then there could be multiple final states where the ligand
-            lends the Metal a electron (or more) and vice-versa. The maximum number
-            of final states depends on how many holes the Metal or the ligand has.
-            To check the maximum number of final states allowed, check q.nConfigurationsMax.
-            Example: for XAS Cu2+ (d9) the initial state is p6d9 and the final 
-            state is p5d10. If LMCT is `on`, then we have two possible initial 
-            states, p6 d9 L10 and p6 d10 L9. nConfigurations is basically, the 
-            maximum number of electrons to be shared between M and L.
-        nConfigurationsMax (int, read only): Maximum number of final configuration allowed.
-        nPsisMax (int, read only): maximum possible number of wavefunctions
-
-        hamiltonianState (dict, optional): a dictionary that turns on or off the
-            different contributions to the hamiltonian. default is such that
-            'Atomic', 'Crystal Field', and 'Magnetic Field' terms will be True.
-        hamiltonianData (dict, optional): dictionary with values for the strength
-            of each different contributions to the hamiltonian. The default value
-            ise different for each element and charge stat. Values are in eV.
-
-        templatePath, templateName: where template lus script is stored
-        template (string): loaded template
-        lua_script (string): lua script to be run
-        
-        verbosity: Verbosity for quanty. By default it is set to minimal verbosity.
-        
-        yLabel, xLabel: Axis labels.
-        nElectrons: number of electrons
-        configurations: Initial, Intermediate, and final configurations. Not always accurate I think.
-        block: d block, f block, ...
-
-        xEdge: Energy value of the resonance.
-        yEdge: Not used.
-
-        kin, LVin, LHin: incoming vectors in lab coordinates
-        kout, LVout, LHout: outgoing vectors in lab coordinates
-        kin_cf, LVin_cf, LHin_cf: incoming vectors in cf coordinates
-        kout_cf, LVout_cf, LHout_cf: outgoing vectors in cf coordinates
-        cf: cf cordinate system in terms of lab coordinate system.
-        
-    Methods:
-        q.get_attrs(): returns a list of available attrs
-        q.get_methods(): returns a list of methods available
-
-        q.plot_geometry(): Plot a 3D sketch of the experimental geometry
-
-        q.get_parameters(): Returns a dictionary with all calculation parameters.
-        q.save_parameters(): Save calculation parameters to a file.
-
-        q.run(): run quanty calculation and return spectra.
-        q.get_initial_wavefunctions(): Only tested for Cu2+ Oh and d4h. Returns the 
-            initial groundstate wavefunctions
-
-    Extra functions from the module:
-        out = multiplet.quanty(): Run quanty calculation from a filepath.
-        q   = multiplet.load_calculation(): Load calculation from parameters file.
+    Please refer to brixs/examples/multiplet folder
     """
 
     def __init__(self, element    = None,
@@ -701,27 +488,30 @@ class Calculation(object):
                        tth   = 130,
                        R     = [],
                        #
+                       E        = None,  # only for RIXS, incident photon energy. If None, the resonance value will be selected
                        xMin     = None,
                        xMax     = None,
                        xNPoints = None,
-                       xEdge    = None, # resonance value
-                       yMin     = None,
-                       yMax     = None,
-                       yNPoints = None,
-                       yEdge    = None, # ????
                        #
-                       xGamma = None, #0.1, # core-hole lifetime in eV (For RIXS: incident energy core-hole lifetime in eV)
-                       yGamma = None, # For RIXS: energy loss core-hole lifetime in eV
+                       gamma1 = None, #0.1, # core-hole lifetime in eV (For RIXS: incident energy core-hole lifetime in eV)
+                       gamma2 = None, # For RIXS: energy loss core-hole lifetime in eV
                        ):
-        # primary attributes
+        # primary attributes (cannot be modified)
         self._set_primary_attributes(element, charge, symmetry, experiment, edge)
 
-        # set secondary parameters
         branch = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]
-        # print(branch)
         self._configurations  = branch['configurations']
         self._block           = self.configurations[0][1][:2]
         self._nElectrons      = int(self.configurations[0][1][2:])
+
+        self._resonance = branch['axes'][0][4]
+
+        if self.experiment == 'RIXS':
+            self._xLabel = branch['axes'][1][0]
+        else:
+            self._xLabel = branch['axes'][0][0]
+        self._yLabel = 'Intensity'
+        
 
         # Calculation parameters
         self._nPsis           = branch['number of states']
@@ -732,7 +522,7 @@ class Calculation(object):
         self.polarization        = polarization       
         self._nConfigurationsMax = 1
         self.nConfigurations     = 1  # this is always 1 in Crispy if LMCT or MLCT is False
-        self.hamiltonianTerms = branch['hamiltonian terms']
+        self._hamiltonianTerms = branch['hamiltonian terms']
         
         # axis to calculate expected values
         self.k = k
@@ -747,29 +537,27 @@ class Calculation(object):
         assert tth >= 0 and tth <= 180, 'tth must be a number (in degrees) between 0 and 180'
         self._R   = R
         self._tth = tth
+
+        self._LVin = (0, 0, 1)
+        self._LHin = (0, 1, 0)
+        self._kin  = (1, 0, 0)
         self._update_geometry()
 
         # spectrum attributes
-        self._xLabel  = branch['axes'][0][0]
-        self.xMin     = xMin
-        self.xMax     = xMax
-        self.xNPoints = xNPoints
-        self.xEdge    = xEdge
-        self.xGamma   = xGamma
         if self.experiment == 'RIXS':
-            self._yLabel  = branch['axes'][1][0]
-            self.yMin     = yMin
-            self.yMax     = yMax
-            self.yNPoints = yNPoints
-            self.yEdge    = yEdge
-            self.yGamma   = yGamma
+            self.E = E
+            self.xMin     = xMin
+            self.xMax     = xMax
+            self.xNPoints = xNPoints
+            self.gamma1   = gamma1
+            self.gamma2   = gamma2
         else:
-            self._yLabel  = None
-            self.yMin     = None
-            self.yMax     = None
-            self.yNPoints = None
-            self.yEdge    = None
-            self.yGamma   = None
+            self._E = None
+            self.xMin     = xMin
+            self.xMax     = xMax
+            self.xNPoints = xNPoints
+            self.gamma1   = gamma1
+            self._gamma2  = None
 
         # set basename (for filepath_lua and filepath_spec)
         # if self.experiment in ['RIXS', 'XES']:
@@ -781,8 +569,8 @@ class Calculation(object):
         #     self.experiment)
 
         # get template filename
-        self.templateName = branch['template name']
-        self.templatePath = settings.TEMPLATES_FOLDERPATH/self.templateName
+        self._templateName = branch['template name']
+        self._templatePath = settings.TEMPLATES_FOLDERPATH/self.templateName
         with open(self.templatePath) as p:
             self.template = p.read()
 
@@ -792,8 +580,8 @@ class Calculation(object):
         self._lua_script = None  # stores lua script
 
         # hamiltonianData and hamiltonianState
-        self.hamiltonianData = odict()
-        self.hamiltonianState = odict()
+        self._hamiltonianData = odict()
+        self._hamiltonianState = odict()
         self._fixedTermsParameters = odict()
 
         branch = settings.PARAMETERS['elements'][self.element]['charges'][self.charge] # noqa
@@ -832,8 +620,8 @@ class Calculation(object):
                     self.hamiltonianState[term] = 2
                 else:
                     self.hamiltonianState[term] = 0
-        self.hamiltonianState = _hamiltonianState(self.hamiltonianState, parent=self)
-        self.hamiltonianData  = _hamiltonianData(self.hamiltonianData)
+        self._hamiltonianState = _hamiltonianState(self.hamiltonianState, parent=self)
+        self._hamiltonianData  = _hamiltonianData(self.hamiltonianData)
 
         # experiment attributes
         self.temperature   = temperature
@@ -982,17 +770,69 @@ class Calculation(object):
     def block(self):
         raise AttributeError('Cannot delete object.')
 
+    @property
+    def hamiltonianTerms(self):
+        return self._hamiltonianTerms
+    @hamiltonianTerms.setter
+    def hamiltonianTerms(self, value):
+        raise AttributeError('`hamiltonianTerms` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+    @hamiltonianTerms.deleter
+    def hamiltonianTerms(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def hamiltonianState(self):
+        return self._hamiltonianState
+    @hamiltonianState.setter
+    def hamiltonianState(self, value):
+        raise AttributeError('Cannot replace `hamiltonianState`. Please, edit one q.hamiltonianState[term] at a time')
+    @hamiltonianState.deleter
+    def hamiltonianState(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def hamiltonianData(self):
+        return self._hamiltonianData
+    @hamiltonianData.setter
+    def hamiltonianData(self, value):
+        raise AttributeError('Cannot replace `hamiltonianData`. Please, edit one q.hamiltonianData[term] at a time')
+    @hamiltonianData.deleter
+    def hamiltonianData(self):
+        raise AttributeError('Cannot delete object.')
 
 
     # SPECTRA ATTRIBUTES
+    @property
+    def E(self):
+        return self._E
+    @E.setter
+    def E(self, value):
+        if self.experiment == 'RIXS':
+            if value is None:
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][4]
+            assert value > 0, 'E cannot be negative'
+            self._E = value
+        else:
+            raise AttributeError(f'`E` (incidente photon energy) is only used for calculation of RIXS spectra and is not used for experiment of type: {self.experiment}') 
+    @E.deleter
+    def E(self):
+        raise AttributeError('Cannot delete object.')
+
+
     @property
     def xMin(self):
         return self._xMin
     @xMin.setter
     def xMin(self, value):
         if value is None:
-            value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][1]
-        assert value > 0, 'xMin cannot be negative'
+            if self.experiment == 'RIXS':
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][1]
+            else:
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][1]
+        if self.experiment == 'RIXS':
+            pass
+        else:
+            assert value > 0, 'xMin cannot be negative'
         self._xMin = value
     @xMin.deleter
     def xMin(self):
@@ -1004,8 +844,14 @@ class Calculation(object):
     @xMax.setter
     def xMax(self, value):
         if value is None:
-            value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][2]
-        assert value > 0, 'xMax cannot be negative'
+            if self.experiment == 'RIXS':
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][2]
+            else:
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][2]
+        if self.experiment == 'RIXS':
+            pass
+        else:
+            assert value > 0, 'xMax cannot be negative'
         self._xMax = value
     @xMax.deleter
     def xMax(self):
@@ -1017,7 +863,10 @@ class Calculation(object):
     @xNPoints.setter
     def xNPoints(self, value):
         if value is None:
-            value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][3]
+            if self.experiment == 'RIXS':
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][3]
+            else:
+                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][3]
         assert value >= 2, 'xNPoints cannot be less than 2.\nThe CreateResonantSpectra() function from Quanty prevents xNPoints to be less than 2.'
         self._xNPoints = int(value)
     @xNPoints.deleter
@@ -1025,86 +874,17 @@ class Calculation(object):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def xEdge(self):
-        return self._xEdge
-    @xEdge.setter
-    def xEdge(self, value):
-        if value is None:
-            value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][4]
-        assert value > 0, 'xEdge cannot be negative'
-        self._xEdge = value
-    @xEdge.deleter
-    def xEdge(self):
-        raise AttributeError('Cannot delete object.')
-
-
-    @property
-    def yMin(self):
-        return self._yMin
-    @yMin.setter
-    def yMin(self, value):
-        if value is None:
-            if self.experiment != 'RIXS':
-                value = None
-            else:
-                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][1]
-        self._yMin = value
-    @yMin.deleter
-    def yMin(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def yMax(self):
-        return self._yMax
-    @yMax.setter
-    def yMax(self, value):
-        if value is None:
-            if self.experiment != 'RIXS':
-                value = None
-            else:
-                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][2]
-        self._yMax = value
-    @yMax.deleter
-    def yMax(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def yNPoints(self):
-        return self._yNPoints
-        # try:
-        #     return self._yNPoints + 1
-        # except TypeError:
-        #     return self._yNPoints
-    @yNPoints.setter
-    def yNPoints(self, value):
-        if value is None:
-            if self.experiment != 'RIXS':
-                self._yNPoints = None
-                return
-            else:
-                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][3]
-        assert value >= 2, 'yNPoints cannot be less than 2.\nThe CreateResonantSpectra() function from Quanty prevents yNPoints to be less than 2.'
-    
-        self._yNPoints = int(value)
-    @yNPoints.deleter
-    def yNPoints(self):
-        raise AttributeError('Cannot delete object.')
-
-    @property
-    def yEdge(self):
-        return self._yEdge
-    @yEdge.setter
-    def yEdge(self, value):
-        if value is None:
-            if self.experiment != 'RIXS':
-                self._yEdge = None
-                return
-            else:
-                value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][4]
-        assert value > 0, 'yEdge cannot be negative'
-        self._yEdge = value
-    @yEdge.deleter
-    def yEdge(self):
+    def resonance(self):
+        return self._resonance
+    @resonance.setter
+    def resonance(self, value):
+        raise AttributeError('`resonance` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        # if value is None:
+        #     value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][4]
+        # assert value > 0, 'xEdge cannot be negative'
+        # self._xEdge = value
+    @resonance.deleter
+    def resonance(self):
         raise AttributeError('Cannot delete object.')
 
 
@@ -1155,7 +935,7 @@ class Calculation(object):
         return self._cf
     @cf.setter
     def cf(self, value):
-        raise AttributeError('`cf` is defined via _update_geometry() and depends on q.R attribute')
+        raise AttributeError('`cf` cannot be modified. It is defined via automatically and depends on q.R attribute')
     @cf.deleter
     def cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1201,9 +981,10 @@ class Calculation(object):
         return self._kout
     @kout.setter
     def kout(self, value):
-        assert len(value) == 3, 'kout must be a vector, like [0, 1, 0].'
-        self._kout = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`kout` cannot be modified. It is defined via automatically and depends on q.kin and q.tth')
+        # assert len(value) == 3, 'kout must be a vector, like [0, 1, 0].'
+        # self._kout = br.normalize_vector(value)
+        # self._update_geometry()
     @kout.deleter
     def kout(self):
         raise AttributeError('Cannot delete object.')
@@ -1213,9 +994,10 @@ class Calculation(object):
         return self._LVout
     @LVout.setter
     def LVout(self, value):
-        assert len(value) == 3, 'LVout must be a vector, like [0, 1, 0].'
-        self._LVout = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`LVout` cannot be modified. It is defined via automatically and depends on q.LVin and q.tth')
+        # assert len(value) == 3, 'LVout must be a vector, like [0, 1, 0].'
+        # self._LVout = br.normalize_vector(value)
+        # self._update_geometry()
     @LVout.deleter
     def LVout(self):
         raise AttributeError('Cannot delete object.')
@@ -1225,9 +1007,10 @@ class Calculation(object):
         return self._LHout
     @LHout.setter
     def LHout(self, value):
-        assert len(value) == 3, 'LHout must be a vector, like [0, 1, 0].'
-        self._LHout = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`LHout` cannot be modified. It is defined via automatically and depends on q.LHin and q.tth')
+        # assert len(value) == 3, 'LHout must be a vector, like [0, 1, 0].'
+        # self._LHout = br.normalize_vector(value)
+        # self._update_geometry()
     @LHout.deleter
     def LHout(self):
         raise AttributeError('Cannot delete object.')
@@ -1237,9 +1020,10 @@ class Calculation(object):
         return self._kin_cf
     @kin_cf.setter
     def kin_cf(self, value):
-        assert len(value) == 3, 'k1 must be a vector, like [0, 1, 0].'
-        self._kin_cf = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`kin` cannot be modified. It is defined via automatically and depends on q.LVin and q.R')
+        # assert len(value) == 3, 'k1 must be a vector, like [0, 1, 0].'
+        # self._kin_cf = br.normalize_vector(value)
+        # self._update_geometry()
     @kin_cf.deleter
     def kin_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1249,9 +1033,10 @@ class Calculation(object):
         return self._LVin_cf
     @LVin_cf.setter
     def LVin_cf(self, value):
-        assert len(value) == 3, 'LVin_cf must be a vector, like [0, 1, 0].'
-        self._LVin_cf = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`LVin_cf` cannot be modified. It is defined via automatically and depends on q.LVin and q.R')
+        # assert len(value) == 3, 'LVin_cf must be a vector, like [0, 1, 0].'
+        # self._LVin_cf = br.normalize_vector(value)
+        # self._update_geometry()
     @LVin_cf.deleter
     def LVin_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1261,9 +1046,10 @@ class Calculation(object):
         return self._LHin_cf
     @LHin_cf.setter
     def LHin_cf(self, value):
-        assert len(value) == 3, 'LHin_cf must be a vector, like [0, 1, 0].'
-        self._LHin_cf = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`LHin_cf` cannot be modified. It is defined via automatically and depends on q.LHin and q.R')
+        # assert len(value) == 3, 'LHin_cf must be a vector, like [0, 1, 0].'
+        # self._LHin_cf = br.normalize_vector(value)
+        # self._update_geometry()
     @LHin_cf.deleter
     def LHin_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1273,9 +1059,10 @@ class Calculation(object):
         return self._kout_cf
     @kout_cf.setter
     def kout_cf(self, value):
-        assert len(value) == 3, 'kout_cf must be a vector, like [0, 1, 0].'
-        self._kout_cf = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`kout_cf` cannot be modified. It is defined via automatically and depends on q.kout and q.R')
+        # assert len(value) == 3, 'kout_cf must be a vector, like [0, 1, 0].'
+        # self._kout_cf = br.normalize_vector(value)
+        # self._update_geometry()
     @kout_cf.deleter
     def kout_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1285,9 +1072,10 @@ class Calculation(object):
         return self._LVout_cf
     @LVout_cf.setter
     def LVout_cf(self, value):
-        assert len(value) == 3, 'LVout_cf must be a vector, like [0, 1, 0].'
-        self._LVout_cf = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`LVout_cf` cannot be modified. It is defined via automatically and depends on q.LVout and q.R')
+        # assert len(value) == 3, 'LVout_cf must be a vector, like [0, 1, 0].'
+        # self._LVout_cf = br.normalize_vector(value)
+        # self._update_geometry()
     @LVout_cf.deleter
     def LVout_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1297,9 +1085,10 @@ class Calculation(object):
         return self._LHout_cf
     @LHout_cf.setter
     def LHout_cf(self, value):
-        assert len(value) == 3, 'LHout_cf must be a vector, like [0, 1, 0].'
-        self._LHout_cf = br.normalize_vector(value)
-        self._update_geometry()
+        raise AttributeError('`LHout_cf` cannot be modified. It is defined via automatically and depends on q.LHout and q.R')
+        # assert len(value) == 3, 'LHout_cf must be a vector, like [0, 1, 0].'
+        # self._LHout_cf = br.normalize_vector(value)
+        # self._update_geometry()
     @LHout_cf.deleter
     def LHout_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1383,7 +1172,7 @@ class Calculation(object):
             assert value > 0, 'The number of states must be larger than zero.'
             assert value <= self._nPsisMax, f'The selected number of states exceeds the maximum.\nMaximum {self._nPsisMax}'
         self._nPsis     = value
-        self._nPsisAuto = 0
+        # self._nPsisAuto = 0
     @nPsis.deleter
     def nPsis(self):
         raise AttributeError('Cannot delete object.')
@@ -1479,7 +1268,7 @@ class Calculation(object):
         return self._templatePath
     @templatePath.setter
     def templatePath(self, value):
-        self._templatePath = value
+        raise AttributeError('`templatePath` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
     @templatePath.deleter
     def templatePath(self):
         raise AttributeError('Cannot delete object.')
@@ -1489,7 +1278,7 @@ class Calculation(object):
         return self._templateName
     @templateName.setter
     def templateName(self, value):
-        self._templateName = value
+        raise AttributeError('`templateName` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
     @templateName.deleter
     def templateName(self):
         raise AttributeError('Cannot delete object.')
@@ -1506,33 +1295,32 @@ class Calculation(object):
 
     # BROADENING
     @property
-    def xGamma(self):
-        return self._xGamma
-    @xGamma.setter
-    def xGamma(self, value):
+    def gamma1(self):
+        return self._gamma1
+    @gamma1.setter
+    def gamma1(self, value):
         if value is None:
             value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][5][0]
-        # assert value > 0, 'xGamma cannot be negative'
-        self._xGamma = value
-    @xGamma.deleter
-    def xGamma(self):
+        assert value > 0, 'gamma1 cannot be negative'
+        self._gamma1 = value
+    @gamma1.deleter
+    def gamma1(self):
         raise AttributeError('Cannot delete object.')
 
     @property
-    def yGamma(self):
-        return self._yGamma
-    @yGamma.setter
-    def yGamma(self, value):
-        if value is None:
-            if self.experiment == 'RIXS':
+    def gamma2(self):
+        return self._gamma2
+    @gamma2.setter
+    def gamma2(self, value):
+        if self.experiment == 'RIXS':
+            if value is None:
                 value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][5][0]       
-            else:
-                self._yGamma = None
-                return
-        # assert value > 0, 'yGamma cannot be negative'
-        self._yGamma = value
-    @yGamma.deleter
-    def yGamma(self):
+            assert value > 0, 'gamma2 cannot be negative'
+            self._gamma2 = value
+        else:
+            raise AttributeError(f'`gamma2` is only used for calculation of RIXS spectra and is not used for experiment of type: {self.experiment}') 
+    @gamma2.deleter
+    def gamma2(self):
         raise AttributeError('Cannot delete object.')
 
 
@@ -1543,9 +1331,13 @@ class Calculation(object):
         # lab coordinates: z points up and the beam points in x
         # LH, LV, kin, 
         # LHout, LVout, kout
-        LVin = (0, 0, 1)
-        LHin = (0, 1, 0)
-        kin  = (1, 0, 0)
+        # LVin = (0, 0, 1)
+        # LHin = (0, 1, 0)
+        # kin  = (1, 0, 0)
+        LVin = self.LVin
+        LHin = self.LHin
+        kin  = self.kin
+
         tth  = self.tth
         R    = self.R
         assert br.is_perpendicular(LVin, LHin) == True, 'LV and LH must be perpendicular'
@@ -1574,19 +1366,19 @@ class Calculation(object):
         LHout_cf = br.change2prime(x_prime, y_prime, z_prime, LHout)
         LVout_cf = br.change2prime(x_prime, y_prime, z_prime, LVout)
     
-        self._kin   = kin
-        self._LHin  = LHin
-        self._LVin  = LVin
-        self._kout  = kout
-        self._LHout = LHout
-        self._LVout = LVout
+        self._kin   = [float(_) for _ in kin]
+        self._LHin  = [float(_) for _ in LHin]
+        self._LVin  = [float(_) for _ in LVin]
+        self._kout  = [float(_) for _ in kout]
+        self._LHout = [float(_) for _ in LHout]
+        self._LVout = [float(_) for _ in LVout]
 
-        self._kin_cf   = kin_cf
-        self._LVin_cf  = LVin_cf
-        self._LHin_cf  = LHin_cf
-        self._kout_cf  = kout_cf
-        self._LVout_cf = LVout_cf
-        self._LHout_cf = LHout_cf
+        self._kin_cf   = [float(_) for _ in kin_cf]
+        self._LVin_cf  = [float(_) for _ in LVin_cf]
+        self._LHin_cf  = [float(_) for _ in LHin_cf]
+        self._kout_cf  = [float(_) for _ in kout_cf]
+        self._LVout_cf = [float(_) for _ in LVout_cf]
+        self._LHout_cf = [float(_) for _ in LHout_cf]
         self._cf    = [x_prime, y_prime, z_prime]
         return
     
@@ -1623,7 +1415,8 @@ class Calculation(object):
     # GET ATTRS AND METHODS
     def get_attrs(self):
         """returns attrs""" 
-        return [key for key in self.__dict__.keys() if key.startswith('_') == False] + [key[1:] for key in self.__dict__.keys() if key.startswith('_') == True] 
+        # return [key for key in self.__dir__.keys() if key.startswith('_') == False] + [key[1:] for key in self.__dict__.keys() if key.startswith('_') == True] 
+        return [key for key in self.__dir__() if key.startswith('_') == False and callable(getattr(self, key))==False]
 
     def _get_methods(self):
         """return a list of methods available (including hidden ones)"""
@@ -1717,10 +1510,6 @@ class Calculation(object):
             ax.set_ylabel('y')
             ax.set_zlabel('z')
 
-        if show_legend:
-            br.leg(ax=ax2)
-
-
         if show_magnetic_field:
             _x, _y, _z = self.magneticFieldOrientation
             magneticFieldOrientation = [-_x/2, -_y/2, -_z/2] + [2*_x/2, 2*_y/2, 2*_z/2]
@@ -1737,6 +1526,9 @@ class Calculation(object):
             _x, _y, _z = br.change2prime(x_prime, y_prime, z_prime, [_x, _y, _z])
             magneticFieldOrientation = [-_x/2, -_y/2, -_z/2] + [2*_x/2, 2*_y/2, 2*_z/2]
             _ = ax1.quiver(*magneticFieldOrientation, color='magenta', arrow_length_ratio=0.3, lw=3)
+
+        if show_legend:
+            br.leg(ax=ax2)
         return
 
     # LUA SCRIPT
@@ -1762,25 +1554,29 @@ class Calculation(object):
         replacements['$T'] = self.temperature
 
         # Spectrum and gamma parameters =====================
-        replacements['$Emin1'] = self.xMin
-        replacements['$Emax1'] = self.xMax
-        replacements['$NE1'] = self.xNPoints - 1
-        replacements['$Eedge1'] = self.xEdge
-        replacements['$Gamma1'] = self.xGamma
-        if self.experiment == 'XES':
-            replacements['$Emin1'] = self.xMin + 20
-            replacements['$Emax1'] = self.xMax + 20
         if self.experiment in ['RIXS', ]:
-            # The Lorentzian broadening along the incident axis cannot be
-            # changed in the interface, and must therefore be set to the
-            # final value before the start of the calculation.
-            # replacements['$Gamma1'] = self.xLorentzian
-            replacements['$Emin2']  = self.yMin
-            replacements['$Emax2']  = self.yMax
-            replacements['$NE2']    = self.yNPoints - 1
-            replacements['$Eedge2'] = self.yEdge
-            replacements['$Gamma2'] = self.yGamma  # For RIXS: Broadening of the energy loss
+            replacements['$Emin1'] = self.E
+            replacements['$Emax1'] = self.E + 10
+            replacements['$NE1'] = 2
+            replacements['$Eedge1'] = self.resonance
+            replacements['$Gamma1'] = self.gamma1
 
+            replacements['$Emin2']  = self.xMin
+            replacements['$Emax2']  = self.xMax
+            replacements['$NE2']    = self.xNPoints - 1
+            replacements['$Gamma2'] = self.gamma2  # For RIXS: Broadening of the energy loss
+
+        else:
+            replacements['$Emin1']  = self.xMin
+            replacements['$Emax1']  = self.xMax
+            replacements['$NE1']    = self.xNPoints - 1
+            replacements['$Eedge1'] = self.resonance
+            replacements['$Gamma1'] = self.gamma1
+            if self.experiment == 'XES':
+                replacements['$Emin1'] = self.xMin + 20
+                replacements['$Emax1'] = self.xMax + 20
+
+            
         # remove artificial broadening =====================
         if self.experiment == 'XPS' or self.experiment == 'XAS':
             pattern = r"Gmin1 = $Gmin1 - Gamma"
@@ -2008,7 +1804,7 @@ class Calculation(object):
                                    symmetry   = self.symmetry,
                                    experiment = self.experiment,
                                    edge       = self.edge),
-                    geometry = dict(tth      = self.tth,
+                    geometry = dict(tth      = float(self.tth),
                                     R        = list(self.R), 
                                     kin      = list(self.kin),
                                     LHin     = list(self.LHin),
@@ -2023,8 +1819,8 @@ class Calculation(object):
                                     LVout_cf = list(self.LVout_cf),
                                     LHout_cf = list(self.LHout_cf),
                                     cf       = [list(_) for _ in self.cf]),
-                    experiment = dict(temperature      = self.temperature,
-                                      magneticField    = self.magneticField,
+                    experiment = dict(temperature      = float(self.temperature),
+                                      magneticField    = float(self.magneticField),
                                       magneticFieldOrientation = list(self.magneticFieldOrientation)),
                     hamiltonian = dict(hamiltonianTerms = self.hamiltonianTerms,
                                        hamiltonianState = dict(self.hamiltonianState),
@@ -2039,18 +1835,14 @@ class Calculation(object):
                                        nPsis          = self.nPsis,
                                        nPsisMax       = self.nPsisMax,
                                        nPsisAuto      = self.nPsisAuto,
-                                       xGamma         = self.xGamma,
+                                       gamma1         = self.gamma1,
                                        xLabel         = self.xLabel,
                                        xMin           = self.xMin,
                                        xMax           = self.xMax,
                                        xNPoints       = self.xNPoints,
-                                       xEdge          = self.xEdge,
-                                       yGamma         = self.yGamma,
+                                       resonance      = self.resonance,
+                                       gamma2         = self.gamma2,
                                        yLabel         = self.yLabel,
-                                       yMin           = self.yMin,
-                                       yMax           = self.yMax,
-                                       yNPoints       = self.yNPoints,
-                                       yEdge          = self.yEdge,
                                        verbosity      = self.verbosity,
                                        denseBorder    = self.denseBorder)
             )
@@ -2153,139 +1945,159 @@ class Calculation(object):
         elif self.experiment == 'RIXS':
             # When crispy plot the data, it considers xMax to be xMax-step
             # I still don't understand why this is like this
-            step = (self.xMax - self.xMin)/(self.xNPoints)
-            _x = np.linspace(self.xMin, self.xMax-step, self.xNPoints)
-            _x2 = np.linspace(self.yMin, self.yMax, self.yNPoints)
+            # step = (self.E + 10 - self.E)/(2)
+            # _x3 = np.linspace(self.E, self.E + 10-step, 2)
+            # print(_x3)
+            # _x2 = np.linspace(self.yMin, self.yMax, self.yNPoints)
             if self.polarization.lower() == 'isotropic':
                 _out2 = _out.split('Here starts Giso spectrum:')[1].split('Here ends Giso spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss.append(_s)
-                ss.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s = br.Spectrum(_x, _y)
+                # ss = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x, _y)
+                #     # _s.E = _x[j]
+                #     ss.append(_s)
+                # s = ss[0]
                 out = _out.split('Here starts Giso spectrum:')[0]
 
                 parameters = self.get_parameters()
-                for _ss in (ss, ):
-                    for _name in parameters:
-                        _ss.__setattr__(_name, parameters[_name])
-                    _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+                for _name in parameters:
+                    s.__setattr__(_name, parameters[_name])
+                s.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(s.hamiltonian['hamiltonianData'])
 
-                return ss, out
+                return s, out
             elif self.polarization.lower() == 'linear':
                 _out2 = _out.split('Here starts Gvv spectrum:')[1].split('Here ends Gvv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_vv = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_vv.append(_s)
-                ss_vv.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_vv = br.Spectrum(_x, _y)
+                
+                # ss_vv = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x, _y)
+                #     # _s.E = _x[j]
+                #     ss_vv.append(_s)
+                # ss_vv.E = _x
                 out = _out.split('Here starts Gvv spectrum:')[0]
 
                 _out2 = _out.split('Here starts Gvh spectrum:')[1].split('Here ends Gvh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_vh = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_vh.append(_s)
-                ss_vh.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_vh = br.Spectrum(_x, _y)
+
+                # ss_vh = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x, _y)
+                #     # _s.E = _x[j]
+                #     ss_vh.append(_s)
+                # ss_vh.E = _x
 
                 _out2 = _out.split('Here starts Ghv spectrum:')[1].split('Here ends Ghv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_hv = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_hv.append(_s)
-                ss_hv.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_hv = br.Spectrum(_x, _y)
+                # ss_hv = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x, _y)
+                #     # _s.E = _x[j]
+                #     ss_hv.append(_s)
+                # ss_hv.E = _x
 
                 _out2 = _out.split('Here starts Ghh spectrum:')[1].split('Here ends Ghh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_hh = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_hh.append(_s)
-                ss_hh.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_hh = br.Spectrum(_x, _y)
+                # ss_hh = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x, _y)
+                #     # _s.E = _x[j]
+                #     ss_hh.append(_s)
+                # ss_hh.E = _x
 
                 parameters = self.get_parameters()
-                for _ss in (ss_vv, ss_vh, ss_hv, ss_hh):
+                for _s in (s_vv, s_vh, s_hv, s_hh):
                     for _name in parameters:
-                        _ss.__setattr__(_name, parameters[_name])
-                        for _s in _ss:
-                            _s.__setattr__(_name, parameters[_name])
-                    _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+                        _s.__setattr__(_name, parameters[_name])
+                        # for _s in _ss:
+                        #     _s.__setattr__(_name, parameters[_name])
+                    _s.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_s.hamiltonian['hamiltonianData'])
                     
-                return ss_vv, ss_vh, ss_hv, ss_hh, out
+                return {'vv':s_vv, 'vh':s_vh, 'hv':s_hv, 'hh':s_hh}, out
             elif self.polarization.lower() == 'circular':
                 _out2 = _out.split('Here starts Grv spectrum:')[1].split('Here ends Grv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_rv = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_rv.append(_s)
-                ss_rv.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_rv = br.Spectrum(_x, _y)
+                # ss_rv = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x2, _y)
+                #     _s.E = _x[j]
+                #     ss_rv.append(_s)
+                # ss_rv.E = _x
                 out = _out.split('Here starts Grv spectrum:')[0]
 
                 _out2 = _out.split('Here starts Grh spectrum:')[1].split('Here ends Grh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_rh = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_rh.append(_s)
-                ss_rh.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_rh = br.Spectrum(_x, _y)
+                # ss_rh = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x2, _y)
+                #     _s.E = _x[j]
+                #     ss_rh.append(_s)
+                # ss_rh.E = _x
 
                 _out2 = _out.split('Here starts Glv spectrum:')[1].split('Here ends Glv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_lv = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_lv.append(_s)
-                ss_lv.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_lv = br.Spectrum(_x, _y)
+                # ss_lv = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x2, _y)
+                #     _s.E = _x[j]
+                #     ss_lv.append(_s)
+                # ss_lv.E = _x
 
                 _out2 = _out.split('Here starts Glh spectrum:')[1].split('Here ends Glh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                ss_lh = br.Spectra()
-                for j in range(self.xNPoints):
-                    # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                    _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
-                    _s = br.Spectrum(_x2, _y)
-                    _s.E = _x[j]
-                    ss_lh.append(_s)
-                ss_lh.E = _x
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                s_lh = br.Spectrum(_x, _y)
+                # ss_lh = br.Spectra()
+                # for j in range(self.xNPoints):
+                #     # _x2 = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                #     _y = [float(_.split(' ')[2+j*2]) for _ in _out3[5:]]
+                #     _s = br.Spectrum(_x2, _y)
+                #     _s.E = _x[j]
+                #     ss_lh.append(_s)
+                # ss_lh.E = _x
 
                 parameters = self.get_parameters()
-                for _ss in (ss_rv, ss_rh, ss_lv, ss_lh):
+                for _s in (s_rv, s_rh, s_lv, s_lh):
                     for _name in parameters:
-                        _ss.__setattr__(_name, parameters[_name])
-                        for _s in _ss:
-                            _s.__setattr__(_name, parameters[_name])
-                    _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+                        _s.__setattr__(_name, parameters[_name])
+                        # for _s in _ss:
+                        #     _s.__setattr__(_name, parameters[_name])
+                    _s.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_s.hamiltonian['hamiltonianData'])
 
-                return ss_rv, ss_rh, ss_lv, ss_lh, out
+                return {'rv':s_rv, 'rh':s_rh, 'lv':s_lv, 'lh':s_lh}, out
         elif self.experiment == 'XAS':
             if self.polarization.lower() == 'isotropic':
                 _out2 = _out.split('Here starts ISO spectrum:')[1].split('Here ends ISO spectrum')[0].split('\n')
@@ -2323,7 +2135,7 @@ class Calculation(object):
                         _ss.__setattr__(_name, parameters[_name])
                     _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
                 
-                return cr, cl, out
+                return {'LV':cr, 'LH':cl}, out
             elif self.polarization.lower() == 'circular':
                 _out2 = _out.split('Here starts CR spectrum:')[1].split('Here ends CR spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
@@ -2345,7 +2157,7 @@ class Calculation(object):
                         _ss.__setattr__(_name, parameters[_name])
                     _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
 
-                return cr, cl, out
+                return {'CR':cr, 'CL':cl}, out
         return 
 
     def get_initial_wavefunctions(self):
