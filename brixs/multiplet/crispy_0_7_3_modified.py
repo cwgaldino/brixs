@@ -21,6 +21,7 @@ Usage:
 TO DO:
     ( ) Check if broaden works with non-monotonic data.
     ( ) implement new shapes for q.plot_geometry() 
+    ( ) q.plot.geometry() brakes depending on kin, LHin, and LVin
     ( ) Implement linear RIXS for 1s2p and 1s3p
     ( ) Implement circular RIXS for 1s2p and 1s3p
 """
@@ -481,7 +482,7 @@ class Calculation(object):
                        #  nConfigurations = 1,
                        denseBorder = 2000,
                        #
-                       magneticField = 0,
+                       magneticField = 0.002,
                        magneticFieldOrientation = [0, 0, 1],
                        temperature   = 10,
                        #
@@ -624,11 +625,13 @@ class Calculation(object):
         self._hamiltonianData  = _hamiltonianData(self.hamiltonianData)
 
         # experiment attributes
-        self.temperature   = temperature
-        self._magneticField = magneticField 
+        self.temperature               = temperature
+        self._magneticField            = magneticField 
         self._magneticFieldOrientation = magneticFieldOrientation 
-        self._update_magnetic_field_hamiltonian_data()
-
+        self.magneticField             = self.magneticField 
+        self.magneticFieldOrientation  = self.magneticFieldOrientation 
+        
+        return
         
     def _set_primary_attributes(self, element, charge, symmetry, experiment, edge):
         """Validate and set primary attributes."""
@@ -673,7 +676,7 @@ class Calculation(object):
         return self._element
     @element.setter
     def element(self, value):
-        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge).\nPlease, start a new Calculation() object')
+        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge). Please, start a new Calculation() object')
     @element.deleter
     def element(self):
         raise AttributeError('Cannot delete object.')
@@ -683,7 +686,7 @@ class Calculation(object):
         return self._charge
     @charge.setter
     def charge(self, value):
-        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge).\nPlease, start a new Calculation() object')
+        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge). Please, start a new Calculation() object')
     @charge.deleter
     def charge(self):
         raise AttributeError('Cannot delete object.')
@@ -693,7 +696,7 @@ class Calculation(object):
         return self._symmetry
     @symmetry.setter
     def symmetry(self, value):
-        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge).\nPlease, start a new Calculation() object')
+        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge). Please, start a new Calculation() object')
     @symmetry.deleter
     def symmetry(self):
         raise AttributeError('Cannot delete object.')
@@ -703,7 +706,7 @@ class Calculation(object):
         return self._experiment
     @experiment.setter
     def experiment(self, value):
-        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge).\nPlease, start a new Calculation() object')
+        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge). Please, start a new Calculation() object')
     @experiment.deleter
     def experiment(self):
         raise AttributeError('Cannot delete object.')
@@ -713,7 +716,7 @@ class Calculation(object):
         return self._edge
     @edge.setter
     def edge(self, value):
-        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge).\nPlease, start a new Calculation() object')
+        raise AttributeError('Primary attributes cannot be changed (element, charge, symmetry, experiment, edge). Please, start a new Calculation() object')
     @edge.deleter
     def edge(self):
         raise AttributeError('Cannot delete object.')
@@ -725,7 +728,7 @@ class Calculation(object):
         return self._xLabel
     @xLabel.setter
     def xLabel(self, value):
-        raise AttributeError('`xLabel` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`xLabel` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @xLabel.deleter
     def xLabel(self):
         raise AttributeError('Cannot delete object.')
@@ -735,7 +738,7 @@ class Calculation(object):
         return self._yLabel
     @yLabel.setter
     def yLabel(self, value):
-        raise AttributeError('`yLabel` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`yLabel` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @yLabel.deleter
     def yLabel(self):
         raise AttributeError('Cannot delete object.')
@@ -745,7 +748,7 @@ class Calculation(object):
         return self._nElectrons
     @nElectrons.setter
     def nElectrons(self, value):
-        raise AttributeError('`nElectrons` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`nElectrons` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @nElectrons.deleter
     def nElectrons(self):
         raise AttributeError('Cannot delete object.')
@@ -755,7 +758,7 @@ class Calculation(object):
         return self._configurations
     @configurations.setter
     def configurations(self, value):
-        raise AttributeError('`configurations` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`configurations` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @configurations.deleter
     def configurations(self):
         raise AttributeError('Cannot delete object.')
@@ -765,7 +768,7 @@ class Calculation(object):
         return self._block
     @block.setter
     def block(self, value):
-        raise AttributeError('`block` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`block` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @block.deleter
     def block(self):
         raise AttributeError('Cannot delete object.')
@@ -775,7 +778,7 @@ class Calculation(object):
         return self._hamiltonianTerms
     @hamiltonianTerms.setter
     def hamiltonianTerms(self, value):
-        raise AttributeError('`hamiltonianTerms` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`hamiltonianTerms` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @hamiltonianTerms.deleter
     def hamiltonianTerms(self):
         raise AttributeError('Cannot delete object.')
@@ -878,7 +881,7 @@ class Calculation(object):
         return self._resonance
     @resonance.setter
     def resonance(self, value):
-        raise AttributeError('`resonance` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`resonance` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
         # if value is None:
         #     value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][4]
         # assert value > 0, 'xEdge cannot be negative'
@@ -1116,13 +1119,12 @@ class Calculation(object):
     def magneticField(self, value):
         # print(value)
         # small = np.finfo(np.float32).eps  # ~1.19e-7 
-        if value is None or value == 0:
-            value = 0.002
+        if value is None:
+            raise ValueError('Magnetic field value must be number bigger than 0.002 T. To turn off magnetic field hamiltonian, please use hamiltonianState["Magnetic Field"] = False')     
         elif value < 0:
             raise ValueError('Magnetic field value must be positive.')
         elif value < 0.002:
-            raise ValueError('Magnetic field cannot be smaller than 0.002 T.\nTurn off the magnetic field hamiltonian using hamiltonianState["Magnetic Field"] = False')     
-       
+            raise ValueError('Magnetic field cannot be smaller than 0.002 T. Please, turn off the magnetic field hamiltonian using hamiltonianState["Magnetic Field"] = False')     
         self._magneticField = value
         self._update_magnetic_field_hamiltonian_data()      
     @magneticField.deleter
@@ -1268,7 +1270,7 @@ class Calculation(object):
         return self._templatePath
     @templatePath.setter
     def templatePath(self, value):
-        raise AttributeError('`templatePath` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`templatePath` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @templatePath.deleter
     def templatePath(self):
         raise AttributeError('Cannot delete object.')
@@ -1278,7 +1280,7 @@ class Calculation(object):
         return self._templateName
     @templateName.setter
     def templateName(self, value):
-        raise AttributeError('`templateName` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed.\nPlease, start a new Calculation() object')
+        raise AttributeError('`templateName` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
     @templateName.deleter
     def templateName(self):
         raise AttributeError('Cannot delete object.')
@@ -1387,7 +1389,7 @@ class Calculation(object):
         value = self.magneticField
         k1    = np.array(self.magneticFieldOrientation)
 
-        TESLA_TO_EV = 5.788e-05
+        TESLA_TO_EV = 5.788e-05  # muB Bohr magneton in units of electron Volt 
         value = value * TESLA_TO_EV
         
         # updating hamiltonian data
@@ -1403,6 +1405,7 @@ class Calculation(object):
                     value2 = 0.0
                 
                 self.hamiltonianData['Magnetic Field'][configuration][parameter] = value2
+        return 
     
     def _termSuffix(self, term):
         """sets up the i, m, f suffix (H_i, H_m, H_f, ...)"""
@@ -1662,14 +1665,14 @@ class Calculation(object):
                     except TypeError:
                         value = data
 
-                    if self.magneticField == 0:
-                        small = np.finfo(np.float32).eps  # ~1.19e-7
-                        if parameter == 'Bx':
-                            value = k1[0] * small
-                        elif parameter == 'By':
-                            value = k1[1] * small
-                        elif parameter == 'Bz':
-                            value = k1[2] * small
+                    # if self.magneticField == 0:
+                    #     small = np.finfo(np.float32).eps  # ~1.19e-7
+                    #     if parameter == 'Bx':
+                    #         value = k1[0] * small
+                    #     elif parameter == 'By':
+                    #         value = k1[1] * small
+                    #     elif parameter == 'Bz':
+                    #         value = k1[2] * small
 
                     key = '${}_{}_value'.format(parameter, suffix)
                     replacements[key] = '{}'.format(value)
