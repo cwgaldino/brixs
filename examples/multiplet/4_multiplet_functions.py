@@ -80,9 +80,3 @@ s.initial
 # plot calculated spectrum
 plt.figure()
 s.plot()
-
-# Error messages are designed to inform available options
-# for instance, if one does not know what edges are available for an experiment
-# one can write nonsense and the error message should guide you
-# see below the error message for this calculation
-q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='asdlkfjldakj;sdlkj')
