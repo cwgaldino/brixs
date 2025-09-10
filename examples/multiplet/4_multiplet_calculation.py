@@ -213,7 +213,7 @@ for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
 
 # %% run calculation (takes a while)
-energies = np.linspace(q.resonance-10, q.resonance+30, 10)  # 300 points
+energies = np.linspace(q.resonance-10, q.resonance+30, 300)  # 300 points
 ss = br.Spectra()
 for E in energies:
     q.E = E
@@ -234,8 +234,7 @@ im.plot(origin='lower')
 xas.plot(color='white')
 br.labels.energy_map()
 # %%
-br.figure()
-ss.plot(color=['black', 'black', 'black', 'black', 'black', 'red', 'black', 'black', 'black', 'black'])
+
 # %% run same calculation but with larger gamma1 (takes a while)
 q.gamma1 = 2
 ss2 = br.Spectra()

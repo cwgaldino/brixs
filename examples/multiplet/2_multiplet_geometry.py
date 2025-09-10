@@ -63,6 +63,9 @@ One can double check the experimental geometry by using the method
 
 q.plot_geometry()
 
+where the left panel must match you experimental setup and the right panel must
+match the left one.
+
 WARNING 1: As for right now, the only "shape" of local environment implemented in
 the plotting function is octahedral, however, the calculation of tetrahedral 
 environments (and others) is working fine. It is just the plotting that will 
