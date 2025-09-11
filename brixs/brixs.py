@@ -8209,7 +8209,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         final._y_edges        = None
         return final
     
-    def _rotate(self, direction='clockwise'):
+    def rotate(self, direction='clockwise'):
         """returns 90 degrees rotated image
 
         Args:
@@ -8232,7 +8232,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             im.y_centers = self.x_centers[::-1]
         return im
 
-    def _flipx(self):
+    def flipx(self):
         """flip data (in relation to x_centers)
 
         Returns:
@@ -8242,7 +8242,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         im._data = np.flip(self.data, axis=1)
         return im
 
-    def _flipy(self):
+    def flipy(self):
         """flip data (in relation to y_centers)
 
         Returns:
