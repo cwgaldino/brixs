@@ -8208,7 +8208,50 @@ class Image(_BrixsObject, metaclass=_Meta):
         final._x_edges        = None
         final._y_edges        = None
         return final
+    
+    def _rotate(self, direction='clockwise'):
+        """returns 90 degrees rotated image
+
+        Args:
+            direction (str, optional): rotation direction. Options are 'clockwise'
+            and 'counterclockwise'. Default is clockwise.
+
+        Returns:
+            rotated image
+        """
+        assert direction in ['clockwise', 'counterclockwise'], f"invalid direction `{direction}`. Valid options are 'clockwise', 'counterclockwise'"
         
+        im = self.copy()
+        if direction == 'clockwise':
+            im._data = np.rot90(self.data, k=3)
+            im.x_centers = self.y_centers[::-1]
+            im.y_centers = self.x_centers
+        else:
+            im._data = np.rot90(self.data, k=1)
+            im.x_centers = self.y_centers
+            im.y_centers = self.x_centers[::-1]
+        return im
+
+    def _flipx(self):
+        """flip data (in relation to x_centers)
+
+        Returns:
+            flipped image
+        """    
+        im = self.copy()
+        im._data = np.flip(self.data, axis=1)
+        return im
+
+    def _flipy(self):
+        """flip data (in relation to y_centers)
+
+        Returns:
+            flipped image
+        """    
+        im = self.copy()
+        im._data = np.flip(self.data, axis=0)
+        return im
+
     ########################
     # calculation and info #
     ########################
@@ -8951,14 +8994,17 @@ class Image(_BrixsObject, metaclass=_Meta):
 
             if im.x_edges is None:
                 im = im.estimate_x_edges_from_centers()
-            extent_x = [min(im.x_edges), max(im.x_edges)]
+            # extent_x = [min(im.x_edges), max(im.x_edges)]
+            extent_x = [im.x_edges[0], im.x_edges[-1]]
 
             if im.y_edges is None:
                 im = im.estimate_y_edges_from_centers()
             if origin == 'upper':
-                extent_y = [max(im.y_edges), min(im.y_edges)]
+                # extent_y = [max(im.y_edges), min(im.y_edges)]
+                extent_y = [im.y_edges[-1], im.y_edges[0]]
             else:
-                extent_y = [min(im.y_edges), max(im.y_edges)]
+                # extent_y = [min(im.y_edges), max(im.y_edges)]
+                extent_y = [im.y_edges[0], im.y_edges[-1]]
             
             # y  = np.linspace(im.y_centers[0], im.y_centers[-1], len(im.y_centers))
             # dy = np.mean(np.diff(y))
