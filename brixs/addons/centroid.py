@@ -2,15 +2,294 @@
 # -*- coding: utf-8 -*-
 """Centroid algorithm"""
 
-# %% ------------------------- Standard Imports --------------------------- %% #
+# %% ------------------------- Standard Imports -------------------------- %% #
 import numpy as np
+import math
 # %%
 
-# %% -------------------------- brixs Imports ----------------------------- %% #
+# %% -------------------------- brixs Imports ---------------------------- %% #
 import brixs as br
 # %%
 
-# %% -------------------------- support functions ------------------------- %% #
+# %% ============================= support =============================== %% #
+def get_positions_above_threshold(self, threshold, n=0, coordinates='centers'):
+    """returns list of y, x positions where pixel intensity is above threshold
+
+    Args:
+        threshold (number): threshold value
+        n (int, optional): If n>0, only the brightest pixel around the first 
+            n neighbors of the (y, x) positions will trigger the threshold,
+            e.g., if n=0 and all first neighbors around (y, x) are above the 
+            threshold, then all positions (y-1, x-1), ..., (y+1, x+1), all 
+            positions which intensity is above threshold will be considered.
+            However, if n=1 and all first neighbors around (y, x) are above the 
+            threshold, only the (yb, xb) with the brightest intensity amongst
+            all (y-1, x-1), ..., (y+1, x+1) will be considered. This is helpfull
+            when bright spot are more than one pixel wide. Default is n=0.
+        coordinates (str, optional): If `pixels`, (y, x) is given in pixel 
+            coordinates. If `centers`, (y, x) is given in terms of x_centers
+            and y_centers. Default is `centers`.
+
+    Returns:
+        list of positions [(y1, x1), (y2, x2), ...]
+    """
+    assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
+    assert isinstance(n, int), f'n must be of type integer, not {type(n)}'
+    assert n >= 0, f'n must be an integer number higher or equal to 0'
+
+    ys, xs = np.where(self.data > threshold)
+
+    central = []
+    for y, x in zip(ys, xs):
+        if n > 0:
+            _y, _x = self.get_brightest_pixel_position(y=y, x=x, n=n, coordinates='pixels')
+            bright_pixel = (_y, _x)
+            if bright_pixel not in central:
+                central.append(bright_pixel)
+        else:
+            central.append((y, x))
+    if coordinates == 'centers':
+        central = [self.index2center(y=_[0], x=_[1]) for _ in central]
+    return central
+br.Image.get_positions_above_threshold = get_positions_above_threshold
+
+def get_brightest_pixel_position(self, y, x, n, coordinates='centers'):
+    """Returns the positions of the most intense pixel around y, x
+
+    Args:
+        y, x (tuple or list): (y, x) position in terms of pixel value (if 
+            coordinates='pixels') or in terms of y_centers and x_centers (if
+            coordinates='centers').
+        n (int): number of neighbors to include, e.g., if n=1, only first neighbors 
+            will be considered and the spot will be a 3x3 array.
+        coordinates (str, optional): `pixels` if pixel positions are given in 
+            pixel coordinates or `centers` if positions are given in terms of 
+            y_centers and x_centers.
+    
+    Returns:
+        y, x
+    """
+    assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
+    assert isinstance(n, int), f'n must be of type integer, not {type(n)}'
+    assert n >= 0, f'n must be an integer number higher or equal to 0'
+
+    spot, yslice, xslice, is_near_edge = self.get_spot(y=y, x=x, n=n, coordinates=coordinates)
+    _y, _x = spot.argmax(coordinates='pixels')
+    
+    y = int(yslice.start+_y)
+    x = int(xslice.start+_x)
+
+    if coordinates == 'centers':
+        y, x = self.index2center(y=y, x=x)
+    return y, x
+br.Image.get_brightest_pixel_position = get_brightest_pixel_position
+
+def get_center_of_mass(self, coordinates='centers'):
+    """Returns the y, x position of the intensity center of mass of pixels
+
+    Args:
+        coordinates (str, optional): If `pixels`, (y, x) is given in pixel 
+            coordinates. If `centers`, (y, x) is given in terms of x_centers
+            and y_centers. Default is `centers`.
+
+    Returns:
+        y, x
+    """
+    if coordinates == 'centers':
+        mx = np.average(self.x_centers, weights=self.data.sum(axis=0))
+        my = np.average(self.y_centers, weights=self.data.sum(axis=1))
+    else:
+        mx = np.average(np.arange(0, self.shape[1]), weights=self.data.sum(axis=0))
+        my = np.average(np.arange(0, self.shape[0]), weights=self.data.sum(axis=1))
+    return my, mx
+br.Image.get_center_of_mass = get_center_of_mass
+
+def enhance(self, n):
+    """multiplies image by itself and apply moving average
+
+    This makes outliers stadout more.
+
+    Args:
+        n (int): Size of the moving average window, i.e., number of points to average.
+
+    Returns:
+        enhanced image
+    """
+    im = self.floor()
+    return im.multiply(im).moving_average(n)
+br.Image.enhance = enhance
+
+def find_candidates(self, n, n2, threshold):
+    """Returns a list of photon hit candidates defined by a threshold in a enhanced imave
+
+    Args:
+        n (int): Size of the moving average window used in the process of
+            enhancing the image, i.e., number of points to average.
+        n2 (int): photon hits candidates that are within n2 pixels of distance 
+            from each other will be considered the same candidate. n2 must
+            be the pixel distance between a photon hit and the farthest excited
+            pixel.
+        threshold (number): threshold value in terms of pixel value of the 
+            ENHANCED image (one might need to plot the enahnced image to get 
+            an idea of the pixel intensity).
+        
+    Returns:
+        photon events list
+    """
+    # enhance image
+    # # image is floored, squared, and moving_averaged
+    im = self.enhance(n=n)
+
+    # find photon hit candidates from the enhanced image
+    pos = im.get_positions_above_threshold(threshold, n=n2, coordinates='centers')
+    
+    # get brightst pixel around candidates in the original image
+    pos2 = []
+    for _pos in pos:
+        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], n=n2, coordinates='centers')
+        if (y, x) not in pos2:
+            pos2.append((y, x))
+    return br.PhotonEvents(x=[_[1] for _ in pos2], y=[_[0] for _ in pos2])
+br.Image.find_candidates = find_candidates
+
+def find_and_patch(self, n, n2, threshold, MAX_NUMBER_OF_CANDIDATES=200):
+    """Returns image where photon event are patched out (cosmic rays correction)
+
+    Args:
+        n (int): Size of the moving average window used in the process of
+            enhancing the image, i.e., number of points to average.
+        n2 (int): photon hits candidates that are within n2 pixels of distance 
+            from each other will be considered the same candidate. n2 must
+            be the pixel distance between a photon hit and the farthest excited
+            pixel.
+        threshold (number): threshold value in terms of pixel value of the 
+            ENHANCED image (one might need to plot the enahnced image to get 
+            an idea of the pixel intensity).
+        MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
+            photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
+            Useful for preventing too low threshold as patching image is slow.
+            Default is 10. 
+        
+    Returns:
+        im, pe
+        patched image and photon events list
+    """
+    pe = self.find_candidates(n, n2, threshold)
+    if len(pe) > MAX_NUMBER_OF_CANDIDATES:
+        raise ValueError(f'number of photon hit candidates ({len(pe)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES, n2, or `threshold`')
+    if len(pe) > 0:
+        im = self.patch(pos=[(_[1], _[0]) for _ in pe], n=int(n2/2), value=None, coordinates='centers')
+    else:
+        im = self.copy()
+    return im, pe
+br.Image.find_and_patch = find_and_patch
+# %%
+
+# %% ============================ centroid =============================== %% #
+def centroid(self, n, n2, n3, threshold, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=300):
+    """Returns a list of photon hits defined by a threshold in a enhanced image
+
+    Args:
+        n (int): Size of the moving average window used in the process of
+            enhancing the image, i.e., number of points to average.
+        n2 (int): photon hits candidates that are within n2 pixels of distance 
+            from each other will be considered the same candidate. n2 must
+            be the pixel distance between a photon hit and the farthest excited
+            pixel.
+        n3 (int): number of neighbors to include for calculating the center of
+            mass, e.g., if n=1, only first neighbors.
+        threshold (number): threshold value in terms of pixel value of the 
+            ENHANCED image (one might need to plot the enahnced image to get 
+            an idea of the pixel intensity).
+        threshold2 (number, optional): threshold value for double events in 
+            terms of the intensity of the original image (NOT the enhanced 
+            image like `threshold`). Any photon hit candidate where the 
+            brightest pixel in the original image is above threshold2 is 
+            considered as a double event. Also, two photon hit candidates that
+            are closer than n3 pixels is considered a double event.
+        floor (bool, optional): if True, an intensity offset is added to the image such as the average
+            intensity of the whole image is zero. Default is False.
+        MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
+            photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
+            Useful for preventing too low threshold as patching image is slow.
+            Default is 10. 
+
+    Returns:
+        pe, pe2
+        photon events list, and photon events list for double events
+    """
+    _pe = self.find_candidates(n, n2, threshold)
+    if len(_pe) > MAX_NUMBER_OF_CANDIDATES:
+        raise ValueError(f'number of photon hit candidates ({len(_pe)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES, n2, or `threshold`')
+    
+    # discriminate events that are too close together
+    if threshold2 is not None: 
+        double = []
+        for i, _a in enumerate(_pe):
+            for j, _b in enumerate(_pe[i+1:]):
+                if math.dist(_a, _b) < n3:
+                    double.append(i)
+                    double.append(j+1)
+        double = br.remove_duplicates(double)
+
+        # rebuild photon events list
+        pe2 = br.PhotonEvents()
+        pe  = br.PhotonEvents()
+        for i, _a in enumerate(_pe):
+            if i in double:
+                pe2.append(_a[0], _a[1])
+            else:
+                pe.append(_a[0], _a[1])     
+    else:
+        pe2 = br.PhotonEvents()
+        pe = _pe
+
+    # floor before calculating the center of mass
+    if floor:
+        im = self.floor()
+    else:
+        im = self
+    
+    # get center of mass
+    x  = []
+    y  = []
+    for _pos in pe:
+        spot, _, _, _ = im.get_spot(y=_pos[1], x=_pos[0], n=n3, coordinates='centers')
+        
+        # offset the spot to force all pixel values to be positive
+        # this is a requirement for the weighted sum (center of mass) to work fine
+        # if one mixes negative and positive weights, than the sum of the weights may
+        # be zero (or close to zero) and the weighted average x and/or y positions 
+        # are wrong
+        # vmin = np.min(spot)
+        # vmax = np.max(spot)
+        # if vmin < 0 and vmax > 0:
+        #     spot = spot - vmin
+        spot.data[spot.data < 0] = 0
+        # I still don't like this, if we are putting an offset in the spot, I think the 
+        # threshold should also be offset. I don't know.
+        # but also, It does not make much sense that we have negative pixel values
+
+        _y, _x = spot.get_center_of_mass()
+        if threshold2 is not None:
+            if spot.max() > threshold2:
+                pe2.append(_x, _y)
+            else:
+                x.append(_x)
+                y.append(_y)
+        else:
+            x.append(_x)
+            y.append(_y)
+
+    return br.PhotonEvents(x=x, y=y), pe2
+br.Image.centroid = centroid  
+# %%
+
+# %% ============================ process ================================ %% #
+# %%
+
+
+# %% -------------------------- OBSOLETE ------------------------ %% #
 def calculate_threshold_via_photon_energy(photon_energy, avg_multiplication_factor=0.2, avg_multiplication_factor_double=1):
     """return estimated avg_threshold from photon energy (from ESRF toolbox)
     
@@ -78,7 +357,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         floor (bool, optional): if True, an intensity offset is added to the image such as the average
             intensity of the whole image is zero. Default is False.
         avg_threshold_max (number or None, optional): any pixel with intensity higher than avg_threshold_max
-            in the n1-by-n1 averaged spot surrounding said pixel will removed from the photon-hit-candidate list. If None,
+            in the n1-by-n1 averaged spot surrounding said pixel will be removed from the photon-hit-candidate list. If None,
             this functionality is disabled and only the lower limit avg_threshold is used. Default is None.
         include_doubles (bool, optional): if False, double photon events will be removed from the
             final result
@@ -112,7 +391,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         >>> pe, pe2 = scs.centroid(n1, n2, avg_threshold, double_threshold=<very_high_number>, floor=True)
         >>>
         >>> br.figure()
-        >>> im.moving_average(n1).plot()
+        >>> im.moving_average(n1).set_factor(n1).plot()
         >>> pe.plot()
 
         if the photon count per image is so low that the elastic line cannot be identified and therefore
@@ -245,7 +524,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
     # moving average #
     ##################
     if n1 > 1:
-        image = image.moving_average(n1)
+        image = image.moving_average(n1).set_factor(n1)
 
     ##########################
     # check double threshold #
@@ -344,7 +623,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         spot[spot < 0] = 0
         # I still don't like this, if we are putting an offset in the spot, I think the 
         # threshold should also be offset. I don't know.
-        # to be honest, It does not make much sense that we have negative pixel values
+        # but also, It does not make much sense that we have negative pixel values
         
         # get brightest pixel
         _y, _x = np.unravel_index(np.argmax(spot), np.array(spot).shape)
@@ -414,4 +693,4 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
 
     # return res, bad
     return pe, bad
-br.Image.centroid = _centroid  
+# br.Image.centroid = _centroid  
