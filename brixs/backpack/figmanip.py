@@ -91,7 +91,7 @@ def _n_decimal_places(number, count_zero=False):
 
 # %% ------------ supporting functions from arraymanip -------------------- %% #
 # backpack developers note --> if these function change, it needs to be copied to arraymanip.py
-def _index(x, value, closest=True):
+def _index(x, value, closest=True, roundup=False):
     """Returns the first index of the element in array.
 
     Args:
@@ -99,16 +99,37 @@ def _index(x, value, closest=True):
         value (float or int): value.
         closest (book, optional): if True, returns the index of the element in 
             array which is closest to value.
+        roundup (bool, optional): if closest=True, and value is exactly midway
+            between 2 items in array x, rounup=True will return the index of 
+            item in x with highest value. Default is False.
 
     Returns:
         index (int)
     """
+    # backpack developers note!!!!
+    # if this function changes, it needs to be copied to these files: figmanip
     if closest:
         _inner1 = np.array(x) - value
         _inner2 = np.ma.masked_array(_inner1, np.isnan(_inner1))
-        return int(np.argmin(np.abs(_inner2)))
+        absv    = np.abs(_inner2)
+        vmin    = np.min(absv)
+        if np.sum(np.where(absv==vmin, 1, 0)) > 1:
+            indexes = [_[0] for _ in np.argwhere(absv==vmin)]
+            if roundup:
+                if x[indexes[0]] > x[indexes[1]]:
+                    return indexes[0]
+                else:
+                    return indexes[1]
+            else:
+                if x[indexes[0]] < x[indexes[1]]:
+                    return indexes[0]
+                else:
+                    return indexes[1]
+        else:
+            return int(np.argmin(np.abs(_inner2)))
     else:
         return np.where(x == value)[0]
+
 
 def _choose(x, ranges):
     """Return a mask of x values inside range pairs.

@@ -197,7 +197,30 @@ def solve_linear_system(x1, y1, x2, y2):
 	return m, b
 
 # %% ============================= array check =========================== %% #
-def index(x, value, closest=True):
+# def index(x, value, closest=True):
+#     """Returns the first index of the element in array.
+
+#     Args:
+#         x (list or array): 1D array.
+#         value (float or int): value.
+#         closest (book, optional): if True, returns the index of the element in 
+#             array which is closest to value.
+
+#     Returns:
+#         index (int)
+#     """
+#     # backpack developers note!!!!
+#     # if this function changes, it needs to be copied to these files: figmanip
+
+#     if closest:
+#         # return int(np.argmin(np.abs(  np.array(x)-value)   ))
+#         _inner1 = np.array(x) - value
+#         _inner2 = np.ma.masked_array(_inner1, np.isnan(_inner1))
+#         return int(np.argmin(np.abs(_inner2)))
+#     else:
+#         return np.where(x == value)[0]
+
+def index(x, value, closest=True, roundup=False):
     """Returns the first index of the element in array.
 
     Args:
@@ -205,18 +228,34 @@ def index(x, value, closest=True):
         value (float or int): value.
         closest (book, optional): if True, returns the index of the element in 
             array which is closest to value.
+        roundup (bool, optional): if closest=True, and value is exactly midway
+            between 2 items in array x, rounup=True will return the index of 
+            item in x with highest value. Default is False.
 
     Returns:
         index (int)
     """
     # backpack developers note!!!!
     # if this function changes, it needs to be copied to these files: figmanip
-
     if closest:
-        # return int(np.argmin(np.abs(  np.array(x)-value)   ))
         _inner1 = np.array(x) - value
         _inner2 = np.ma.masked_array(_inner1, np.isnan(_inner1))
-        return int(np.argmin(np.abs(_inner2)))
+        absv    = np.abs(_inner2)
+        vmin    = np.min(absv)
+        if np.sum(np.where(absv==vmin, 1, 0)) > 1:
+            indexes = [_[0] for _ in np.argwhere(absv==vmin)]
+            if roundup:
+                if x[indexes[0]] > x[indexes[1]]:
+                    return indexes[0]
+                else:
+                    return indexes[1]
+            else:
+                if x[indexes[0]] < x[indexes[1]]:
+                    return indexes[0]
+                else:
+                    return indexes[1]
+        else:
+            return int(np.argmin(np.abs(_inner2)))
     else:
         return np.where(x == value)[0]
 
@@ -465,6 +504,6 @@ def flatten(x):
     if len(x) == 0:
         return x
 
-    if len(np.array(x).shape) == 1:
-        return x
+    # if len(np.array(x).shape) == 1:
+    #     return x
     return np.concatenate(x).ravel()
