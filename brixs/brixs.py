@@ -6765,8 +6765,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             y, x in terms of pixel index
         """
-        x = br.index(self.x_centers, x, closest, roundup)
-        y = br.index(self.y_centers, y, closest, roundup)
+        x = arraymanip.index(self.x_centers, x, closest, roundup)
+        y = arraymanip.index(self.y_centers, y, closest, roundup)
         return y, x
 
     ########
@@ -7782,7 +7782,10 @@ class Image(_BrixsObject, metaclass=_Meta):
         rows, column_indices = np.ogrid[:im.data.shape[0], :im.data.shape[1]]
         value[value < 0] += im.data.shape[1]
         column_indices = column_indices - value[:, np.newaxis]
-        im._data = im.data[rows, column_indices]
+        try:
+            im._data = im.data[rows, column_indices]
+        except IndexError:
+            raise ValueError('Column rolling seems to be too large. Please, reduce the shift size.')
 
         ####################################
         # OLD IMPLEMENTATION (MUCH SLOWER) #
@@ -7833,14 +7836,17 @@ class Image(_BrixsObject, metaclass=_Meta):
         ########
         # roll #
         ########
-        # I copyied this part from stackoverflow. 
-        # Honestly, I don't 100% understand it, but it runs two order of magnetude
+        # I copied this part from stackoverflow. 
+        # Honestly, I don't 100% understand it, but it runs two order of magnitude
         # faster than the old implementation
         im = self.copy()    
         row_indices, cols = np.ogrid[:im.data.shape[0], :im.data.shape[1]]
         value[value < 0] += im.data.shape[0]
         row_indices = row_indices - value[np.newaxis, :]
-        im._data = im.data[row_indices, cols]
+        try:
+            im._data = im.data[row_indices, cols]
+        except IndexError:
+            raise ValueError('Column rolling seems to be too large. Please, reduce the shift size.')
 
         ####################################
         # OLD IMPLEMENTATION (MUCH SLOWER) #
@@ -8838,7 +8844,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             is_near_edge['top'] = False
 
         # get spot
-        spot = br.Image(data=self.data[y_start:y_stop, x_start:x_stop])
+        spot = Image(data=self.data[y_start:y_stop, x_start:x_stop])
         # if coordinates == 'centers':
         spot.x_centers = self.x_centers[x_start:x_stop]
         spot.y_centers = self.x_centers[y_start:y_stop]
@@ -8920,381 +8926,381 @@ class Image(_BrixsObject, metaclass=_Meta):
         return im
 
 
-        ##########################        
-        # plot and visualization #
-        ########################## 
-        def pcolormesh(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
-            """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
+    ##########################        
+    # plot and visualization #
+    ########################## 
+    def pcolormesh(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
+        """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
-            If x_edges and y_edges are not defined and x_centers and y_centers have 
-                irregular pixel separation, pcolormesh does its best to defined pixel 
-                edges so centers labels correspond to the real centers (nearest possible).
+        If x_edges and y_edges are not defined and x_centers and y_centers have 
+            irregular pixel separation, pcolormesh does its best to defined pixel 
+            edges so centers labels correspond to the real centers (nearest possible).
 
-            Args:
-                ax (matplotlib.axes, optional): axes for plotting on.
-                colorbar (bool, optional): if True, colorbar is shown on the right side.
-                **kwargs: kwargs are passed to `matplotlib.pyplot.pcolormesh()`_.
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.pcolormesh()`_.
 
-            If not specified, the following parameters are passed to `matplotlib.pyplot.pcolormesh()`_:
+        If not specified, the following parameters are passed to `matplotlib.pyplot.pcolormesh()`_:
 
-            Args:
-                cmap: The Colormap instance. Default is 'jet'.
-                vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                    calculated and vmin is set on the position of the maximum.
-                vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
-                    calculated and vmax is set to the value where the 
-                    intensity drops below 0.01 % of the maximum.
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
 
-            Returns:
-                `matplotlib.collections.QuadMesh`_
+        Returns:
+            `matplotlib.collections.QuadMesh`_
 
-            .. _matplotlib.pyplot.pcolormesh(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html
-            .. _matplotlib.collections.QuadMesh: https://matplotlib.org/3.5.0/api/collections_api.html#matplotlib.collections.QuadMesh
-            """
-            ##########
-            # limits #
-            ##########
-            im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        .. _matplotlib.pyplot.pcolormesh(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html
+        .. _matplotlib.collections.QuadMesh: https://matplotlib.org/3.5.0/api/collections_api.html#matplotlib.collections.QuadMesh
+        """
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
 
-            ##########
-            # kwargs #
-            ##########
-            if 'cmap' not in kwargs:
-                kwargs['cmap'] = 'jet'
-            if 'vmin' not in kwargs or 'vmax' not in kwargs:
-                vmin, vmax = self._calculated_vmin_vmax()
-                if 'vmin' not in kwargs:
-                    kwargs['vmin'] = vmin
-                if 'vmax' not in kwargs:
-                    kwargs['vmax'] = vmax
+        ##########
+        # kwargs #
+        ##########
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'vmin' not in kwargs or 'vmax' not in kwargs:
+            vmin, vmax = self._calculated_vmin_vmax()
+            if 'vmin' not in kwargs:
+                kwargs['vmin'] = vmin
+            if 'vmax' not in kwargs:
+                kwargs['vmax'] = vmax
 
-            ####################
-            # colorbar divider #
-            ####################
-            divider = False
-            if ax is not None and colorbar is True:
-                divider = True
-            
-            ###################
-            # figure and axes #
-            ###################
-            if ax is None:
-                ax = plt
-                if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
-                    figure()
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True
+        
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
-            #############
-            # get edges #
-            #############
-            if im.x_edges is None: 
-                if im.x_monotonicity is None:
-                    im.check_x_monotonicity()
-                im = im.estimate_x_edges_from_centers()
-            if im.y_edges is None: 
-                if im.y_monotonicity is None:
-                    im.check_y_monotonicity()
-                im = im.estimate_y_edges_from_centers()
+        #############
+        # get edges #
+        #############
+        if im.x_edges is None: 
+            if im.x_monotonicity is None:
+                im.check_x_monotonicity()
+            im = im.estimate_x_edges_from_centers()
+        if im.y_edges is None: 
+            if im.y_monotonicity is None:
+                im.check_y_monotonicity()
+            im = im.estimate_y_edges_from_centers()
 
-            ########
-            # plot #
-            ########
-            X, Y = np.meshgrid(im.x_edges, im.y_edges)
-            pos  = ax.pcolormesh(X, Y, im.data, **kwargs)
+        ########
+        # plot #
+        ########
+        X, Y = np.meshgrid(im.x_edges, im.y_edges)
+        pos  = ax.pcolormesh(X, Y, im.data, **kwargs)
 
-            ###########################################
-            # show x, y, z values upon mouse hovering #
-            ###########################################
-            def format_coord(x, y):
-                xarr = X[0,:]
-                yarr = Y[:,0]
-                if ((x > xarr.min()) & (x <= xarr.max()) & 
-                    (y > yarr.min()) & (y <= yarr.max())):
-                    col = np.searchsorted(xarr, x)-1
-                    row = np.searchsorted(yarr, y)-1
-                    z = im.data[row, col]
-                    return f'x={x:1.4f}, y={y:1.4f}, z={z:1.4f}   [{row},{col}]'
-                else:
-                    return f'x={x:1.4f}, y={y:1.4f}'
-            if ax == plt:
-                ax.gca().format_coord = format_coord
+        ###########################################
+        # show x, y, z values upon mouse hovering #
+        ###########################################
+        def format_coord(x, y):
+            xarr = X[0,:]
+            yarr = Y[:,0]
+            if ((x > xarr.min()) & (x <= xarr.max()) & 
+                (y > yarr.min()) & (y <= yarr.max())):
+                col = np.searchsorted(xarr, x)-1
+                row = np.searchsorted(yarr, y)-1
+                z = im.data[row, col]
+                return f'x={x:1.4f}, y={y:1.4f}, z={z:1.4f}   [{row},{col}]'
             else:
-                ax.format_coord = format_coord
+                return f'x={x:1.4f}, y={y:1.4f}'
+        if ax == plt:
+            ax.gca().format_coord = format_coord
+        else:
+            ax.format_coord = format_coord
 
-            ############
-            # colorbar #
-            ############
-            if colorbar:
-                if divider:
-                    divider = make_axes_locatable(ax)
-                    ax_cb = divider.append_axes("right", size="5%", pad=0.05)
-                    plt.colorbar(pos, cax=ax_cb)
-                else:
-                    plt.colorbar(pos, aspect=50)
+        ############
+        # colorbar #
+        ############
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
 
-            # add edges and centers to quadmesh
-            pos.x_edges   = pos.get_coordinates()[0][:, 0]
-            pos.y_edges   = pos.get_coordinates()[:, 1][:, 1]
-            pos.x_centers = im.x_centers
-            pos.y_centers = im.y_centers
+        # add edges and centers to quadmesh
+        pos.x_edges   = pos.get_coordinates()[0][:, 0]
+        pos.y_edges   = pos.get_coordinates()[:, 1][:, 1]
+        pos.x_centers = im.x_centers
+        pos.y_centers = im.y_centers
 
-            return pos
+        return pos
         
-        def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
-            """Display data as an image in terms of pixels. Wrapper for `matplotlib.pyplot.imshow()`_.
+    def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
+        """Display data as an image in terms of pixels. Wrapper for `matplotlib.pyplot.imshow()`_.
 
-            Warning:
-                Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh().
-                For image with axis in terms of x and y centers, use Image.plot().        
+        Warning:
+            Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh().
+            For image with axis in terms of x and y centers, use Image.plot().        
 
-            Args:
-                ax (matplotlib.axes, optional): axes for plotting on.
-                x_start, x_stop, y_start, y_stop (int): pixel range in terms of
-                    x_centers and y_centers. Interval is inclusive. Use None to 
-                    indicate the edge of the image.
-                colorbar (bool, optional): if True, colorbar is shown on the right side.
-                    (str, optional): Location of the [0, 0] index. Options are
-                    `upper` and `lower`. Default is 'lower'.
-                origin (str, optional): Place the [0, 0] index of the array in the 
-                    upper left (`origin='upper'`) or lower left corner (`origin='lower'`) of the Axes. 
-                    Default is 'lower'.
-                verbose (bool, optional): if True, a warning will show up if data
-                    has iregular pixel sizes. Default is true.
-                **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+                (str, optional): Location of the [0, 0] index. Options are
+                `upper` and `lower`. Default is 'lower'.
+            origin (str, optional): Place the [0, 0] index of the array in the 
+                upper left (`origin='upper'`) or lower left corner (`origin='lower'`) of the Axes. 
+                Default is 'lower'.
+            verbose (bool, optional): if True, a warning will show up if data
+                has iregular pixel sizes. Default is true.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
 
-            If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
+        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
 
-            Args:
-                cmap: The Colormap instance. Default is 'jet'.
-                aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
-                    an aspect ratio of 1 will be used (pixels will be square).
-                interpolation: The interpolation method used. Default is 'none'.
-                    Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
-                    'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
-                    'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
-                    'sinc', 'lanczos', 'blackman'.
-                vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                    calculated and vmin is set on the position of the maximum.
-                vmax: Maximmum intensity that the colormap covers. The intensity histogram is
-                    calculated and vmax is set to the value where the 
-                    intensity drops below 0.01 % of the maximum.
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
+                an aspect ratio of 1 will be used (pixels will be square).
+            interpolation: The interpolation method used. Default is 'none'.
+                Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
+                'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
+                'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
+                'sinc', 'lanczos', 'blackman'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
 
-            Returns:
-                `matplotlib.image.AxesImage`_
+        Returns:
+            `matplotlib.image.AxesImage`_
 
-            .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
-            .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
-            """
-            ##########
-            # limits #
-            ##########
-            im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
+        """
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
 
-            ##########
-            # kwargs #
-            ##########
-            kwargs['origin'] = origin
-            if 'cmap' not in kwargs:
-                kwargs['cmap'] = 'jet'
-            if 'aspect' not in kwargs:
-                kwargs['aspect'] = 'auto'
-            if 'interpolation' not in kwargs:
-                kwargs['interpolation'] = 'none'
-            if 'vmin' not in kwargs or 'vmax' not in kwargs:
-                vmin, vmax = self._calculated_vmin_vmax()
-                if 'vmin' not in kwargs:
-                    kwargs['vmin'] = vmin
-                if 'vmax' not in kwargs:
-                    kwargs['vmax'] = vmax
+        ##########
+        # kwargs #
+        ##########
+        kwargs['origin'] = origin
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'aspect' not in kwargs:
+            kwargs['aspect'] = 'auto'
+        if 'interpolation' not in kwargs:
+            kwargs['interpolation'] = 'none'
+        if 'vmin' not in kwargs or 'vmax' not in kwargs:
+            vmin, vmax = self._calculated_vmin_vmax()
+            if 'vmin' not in kwargs:
+                kwargs['vmin'] = vmin
+            if 'vmax' not in kwargs:
+                kwargs['vmax'] = vmax
 
-            ####################
-            # colorbar divider #
-            ####################
-            divider = False
-            if ax is not None and colorbar is True:
-                divider = True 
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True 
 
-            ###################
-            # figure and axes #
-            ###################
-            if ax is None:
-                ax = plt
-                if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
-                    figure()
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
-            # plot
-            pos = ax.imshow(im.data, **kwargs)
+        # plot
+        pos = ax.imshow(im.data, **kwargs)
 
-            # colorbar
-            if colorbar:
-                if divider:
-                    divider = make_axes_locatable(ax)
-                    ax_cb = divider.append_axes("right", size="5%", pad=0.05)
-                    plt.colorbar(pos, cax=ax_cb)
-                else:
-                    plt.colorbar(pos, aspect=50)
+        # colorbar
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
 
-            # add edges and centers to axesimage object
-            pos.x_edges = np.linspace(-0.5, len(im.x_centers)+0.5, len(im.x_centers)+1)
-            pos.y_edges = np.linspace(-0.5, len(im.y_centers)+0.5, len(im.y_centers)+1)
-            pos.x_centers = arraymanip.moving_average(pos.x_edges, 2)
-            pos.y_centers = arraymanip.moving_average(pos.y_edges, 2)
-            
-            return pos
+        # add edges and centers to axesimage object
+        pos.x_edges = np.linspace(-0.5, len(im.x_centers)+0.5, len(im.x_centers)+1)
+        pos.y_edges = np.linspace(-0.5, len(im.y_centers)+0.5, len(im.y_centers)+1)
+        pos.x_centers = arraymanip.moving_average(pos.x_edges, 2)
+        pos.y_centers = arraymanip.moving_average(pos.y_edges, 2)
         
-        def plot(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
-            """Display data as an image with axis based on x and y centers. Wrapper for `matplotlib.pyplot.imshow()`_.
+        return pos
+    
+    def plot(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
+        """Display data as an image with axis based on x and y centers. Wrapper for `matplotlib.pyplot.imshow()`_.
 
-            Warning:
-                Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh()
+        Warning:
+            Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh()
 
-            Args:
-                ax (matplotlib.axes, optional): axes for plotting on.
-                x_start, x_stop, y_start, y_stop (int): pixel range in terms of
-                    x_centers and y_centers. Interval is inclusive. Use None to 
-                    indicate the edge of the image.
-                colorbar (bool, optional): if True, colorbar is shown on the right side.
-                    (str, optional): Location of the [0, 0] index. Options are
-                    `upper` and `lower`. Default is 'lower'.
-                origin (str, optional): Place the [0, 0] index of the array in the 
-                    upper left (`origin='upper'`) or lower left corner (`origin='lower'`) of the Axes. 
-                    Default is 'lower'.
-                verbose (bool, optional): if True, a warning will show up if data
-                    has iregular pixel sizes. Default is true.
-                **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            x_start, x_stop, y_start, y_stop (int): pixel range in terms of
+                x_centers and y_centers. Interval is inclusive. Use None to 
+                indicate the edge of the image.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+                (str, optional): Location of the [0, 0] index. Options are
+                `upper` and `lower`. Default is 'lower'.
+            origin (str, optional): Place the [0, 0] index of the array in the 
+                upper left (`origin='upper'`) or lower left corner (`origin='lower'`) of the Axes. 
+                Default is 'lower'.
+            verbose (bool, optional): if True, a warning will show up if data
+                has iregular pixel sizes. Default is true.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.imshow()`_.
 
-            If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
+        If not specified, the following parameters are passed to `matplotlib.pyplot.imshow()`_:
 
-            Args:
-                cmap: The Colormap instance. Default is 'jet'.
-                aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
-                    an aspect ratio of 1 will be used (pixels will be square).
-                interpolation: The interpolation method used. Default is 'none'.
-                    Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
-                    'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
-                    'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
-                    'sinc', 'lanczos', 'blackman'.
-                extent: minimun and maximum x and y values. Default will be given by
-                    the Image.x and Image.y attributes.
-                vmin: Minimum intensity that the colormap covers. The intensity histogram is
-                    calculated and vmin is set on the position of the maximum.
-                vmax: Maximmum intensity that the colormap covers. The intensity histogram is
-                    calculated and vmax is set to the value where the 
-                    intensity drops below 0.01 % of the maximum.
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            aspect: The aspect ratio of the Axes. Default is 'auto'. If 'equal',
+                an aspect ratio of 1 will be used (pixels will be square).
+            interpolation: The interpolation method used. Default is 'none'.
+                Supported values are 'none', 'antialiased', 'nearest', 'bilinear',
+                'bicubic', 'spline16', 'spline36', 'hanning', 'hamming', 'hermite',
+                'kaiser', 'quadric', 'catrom', 'gaussian', 'bessel', 'mitchell',
+                'sinc', 'lanczos', 'blackman'.
+            extent: minimun and maximum x and y values. Default will be given by
+                the Image.x and Image.y attributes.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
 
-            Returns:
-                `matplotlib.image.AxesImage`_
+        Returns:
+            `matplotlib.image.AxesImage`_
 
-            .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
-            .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
-            """
-            ##########
-            # limits #
-            ##########
-            im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+        .. _matplotlib.pyplot.imshow(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.imshow.html
+        .. _matplotlib.image.AxesImage: https://matplotlib.org/3.5.0/api/image_api.html#matplotlib.image.AxesImage
+        """
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
 
-            ##########
-            # kwargs #
-            ##########
-            assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{origin}`'
-            kwargs['origin'] = origin
-            kwargs.setdefault('cmap', 'jet')
-            kwargs.setdefault('aspect', 'auto')
-            kwargs.setdefault('interpolation', 'none')
-            if 'vmin' not in kwargs or 'vmax' not in kwargs:
-                vmin, vmax = self._calculated_vmin_vmax()
-                if 'vmin' not in kwargs:
-                    kwargs['vmin'] = vmin
-                if 'vmax' not in kwargs:
-                    kwargs['vmax'] = vmax
+        ##########
+        # kwargs #
+        ##########
+        assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{origin}`'
+        kwargs['origin'] = origin
+        kwargs.setdefault('cmap', 'jet')
+        kwargs.setdefault('aspect', 'auto')
+        kwargs.setdefault('interpolation', 'none')
+        if 'vmin' not in kwargs or 'vmax' not in kwargs:
+            vmin, vmax = self._calculated_vmin_vmax()
+            if 'vmin' not in kwargs:
+                kwargs['vmin'] = vmin
+            if 'vmax' not in kwargs:
+                kwargs['vmax'] = vmax
 
-            ######################
-            # check monotonicity #
-            ######################
-            if self.x_monotonicity is None:
-                try:
-                    self.check_x_monotonicity()
-                except ValueError:
-                    raise ValueError(f'x centers is not monotonic. Plot image using im.imshow() or maybe use im.fix_x_monotonicity()')
-            if self.y_monotonicity is None:
-                try:
-                    self.check_y_monotonicity()
-                except ValueError:
-                    raise ValueError(f'y centers is not monotonic. Plot image using im.imshow() or maybe use im.fix_y_monotonicity()')
+        ######################
+        # check monotonicity #
+        ######################
+        if self.x_monotonicity is None:
+            try:
+                self.check_x_monotonicity()
+            except ValueError:
+                raise ValueError(f'x centers is not monotonic. Plot image using im.imshow() or maybe use im.fix_x_monotonicity()')
+        if self.y_monotonicity is None:
+            try:
+                self.check_y_monotonicity()
+            except ValueError:
+                raise ValueError(f'y centers is not monotonic. Plot image using im.imshow() or maybe use im.fix_y_monotonicity()')
+        
+        ##############
+        # check step #
+        ##############
+        if self.x_step is None or self.y_monotonicity is None:
+            try:
+                self.check_x_step()
+                self.check_y_step()
+            except ValueError:
+                if verbose:
+                    print('Warning: Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
+
+        # extent
+        if 'extent' not in kwargs:
+            # x  = np.linspace(im.x_centers[0], im.x_centers[-1], len(im.x_centers))
+            # dx = np.mean(np.diff(x))
+            # extent_x = [x[0]-dx/2, x[-1]+dx/2]
+
+            if im.x_edges is None:
+                im = im.estimate_x_edges_from_centers()
+            # extent_x = [min(im.x_edges), max(im.x_edges)]
+            extent_x = [im.x_edges[0], im.x_edges[-1]]
+
+            if im.y_edges is None:
+                im = im.estimate_y_edges_from_centers()
+            if origin == 'upper':
+                # extent_y = [max(im.y_edges), min(im.y_edges)]
+                extent_y = [im.y_edges[-1], im.y_edges[0]]
+            else:
+                # extent_y = [min(im.y_edges), max(im.y_edges)]
+                extent_y = [im.y_edges[0], im.y_edges[-1]]
             
-            ##############
-            # check step #
-            ##############
-            if self.x_step is None or self.y_monotonicity is None:
-                try:
-                    self.check_x_step()
-                    self.check_y_step()
-                except ValueError:
-                    if verbose:
-                        print('Warning: Data seems to have irregular pixel size. Maybe plot it using Image.pcolormesh().\nTo turn off this warning set verbose to False.')
+            # y  = np.linspace(im.y_centers[0], im.y_centers[-1], len(im.y_centers))
+            # dy = np.mean(np.diff(y))
+            # if origin == 'upper':
+            #     extent_y = [y[-1]+dy/2, y[0]-dy/2]
+            # else:
+            #     extent_y = [y[0]-dy/2, y[-1]+dy/2]
 
-            # extent
-            if 'extent' not in kwargs:
-                # x  = np.linspace(im.x_centers[0], im.x_centers[-1], len(im.x_centers))
-                # dx = np.mean(np.diff(x))
-                # extent_x = [x[0]-dx/2, x[-1]+dx/2]
+            kwargs['extent'] = np.append(extent_x, extent_y)
 
-                if im.x_edges is None:
-                    im = im.estimate_x_edges_from_centers()
-                # extent_x = [min(im.x_edges), max(im.x_edges)]
-                extent_x = [im.x_edges[0], im.x_edges[-1]]
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True 
 
-                if im.y_edges is None:
-                    im = im.estimate_y_edges_from_centers()
-                if origin == 'upper':
-                    # extent_y = [max(im.y_edges), min(im.y_edges)]
-                    extent_y = [im.y_edges[-1], im.y_edges[0]]
-                else:
-                    # extent_y = [min(im.y_edges), max(im.y_edges)]
-                    extent_y = [im.y_edges[0], im.y_edges[-1]]
-                
-                # y  = np.linspace(im.y_centers[0], im.y_centers[-1], len(im.y_centers))
-                # dy = np.mean(np.diff(y))
-                # if origin == 'upper':
-                #     extent_y = [y[-1]+dy/2, y[0]-dy/2]
-                # else:
-                #     extent_y = [y[0]-dy/2, y[-1]+dy/2]
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
 
-                kwargs['extent'] = np.append(extent_x, extent_y)
+        # plot
+        pos = ax.imshow(im.data, **kwargs)
 
-            ####################
-            # colorbar divider #
-            ####################
-            divider = False
-            if ax is not None and colorbar is True:
-                divider = True 
+        # colorbar
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
 
-            ###################
-            # figure and axes #
-            ###################
-            if ax is None:
-                ax = plt
-                if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
-                    figure()
-
-            # plot
-            pos = ax.imshow(im.data, **kwargs)
-
-            # colorbar
-            if colorbar:
-                if divider:
-                    divider = make_axes_locatable(ax)
-                    ax_cb = divider.append_axes("right", size="5%", pad=0.05)
-                    plt.colorbar(pos, cax=ax_cb)
-                else:
-                    plt.colorbar(pos, aspect=50)
-
-            # add edges and centers to axesimage object
-            pos.x_edges = np.linspace(pos._extent[0], pos._extent[1], len(im.x_centers)+1)
-            pos.y_edges = np.linspace(pos._extent[2], pos._extent[3], len(im.y_centers)+1)
-            pos.x_centers = arraymanip.moving_average(pos.x_edges, 2)
-            pos.y_centers = arraymanip.moving_average(pos.y_edges, 2)
-            
-            return pos
+        # add edges and centers to axesimage object
+        pos.x_edges = np.linspace(pos._extent[0], pos._extent[1], len(im.x_centers)+1)
+        pos.y_edges = np.linspace(pos._extent[2], pos._extent[3], len(im.y_centers)+1)
+        pos.x_centers = arraymanip.moving_average(pos.x_edges, 2)
+        pos.y_centers = arraymanip.moving_average(pos.y_edges, 2)
+        
+        return pos
 
 # %% ============================= PhotonEvents =========================== %% #
 class PhotonEvents(_BrixsObject, metaclass=_Meta):
