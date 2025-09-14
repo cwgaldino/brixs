@@ -985,7 +985,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     
     # This is what makes possible s1 < s2 ?
     # Also makes possible min(ss)
-    def __gt__(self, object):
+    def __lt__(self, object):
         return min(self.y) < min(object.y)
     
     #########
@@ -5226,7 +5226,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         return im
     
 
-    def calculate_shift(self, mode='max', limits=None, **kwargs):
+    def calculate_shift(self, mode='cc', limits=None, **kwargs):
         """Returns shift list so all spectra is aligned to the first spectrum.
 
         Args:
@@ -5268,14 +5268,44 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # cross-corelation #
         ####################
         if mode == 'cc':
-            step = self.check_step()
-            values = list(np.array(self.calculate_roll(mode='cc', limits=limits))*step)
+            ########
+            # crop #
+            ########
+            ss = self._copy(limits=limits)
+
+            ######################
+            # x must be the same #
+            ######################
+            _x = ss.check_same_x()
+
+            #########################################################
+            # x must be uniform (same step between each data point) #
+            #########################################################
+            step = ss.check_step()
+
+            values = np.array(ss.calculate_roll(mode='cc'))
+            values = list(values*step)
         ###############################
         # sequential cross-corelation #
         ###############################
         elif mode == 'seq':
-            step = self.check_step()
-            values = list(np.array(self.calculate_roll(mode='seq', limits=limits))*step)
+            ########
+            # crop #
+            ########
+            ss = self._copy(limits=limits)
+
+            ######################
+            # x must be the same #
+            ######################
+            _x = ss.check_same_x()
+
+            #########################################################
+            # x must be uniform (same step between each data point) #
+            #########################################################
+            step = ss.check_step()
+
+            values = np.array(ss.calculate_roll(mode='seq'))
+            values = list(values*step)
         #######
         # max #
         #######
@@ -5336,22 +5366,26 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################
         values = np.array([0.0]*len(self))
 
+        ########
+        # crop #
+        ########
+        ss = self._copy(limits=limits)
+
         ######################
         # x must be the same #
         ######################
-        _x = self.check_same_x()
+        _x = ss.check_same_x()
 
         #########################################################
         # x must be uniform (same step between each data point) #
         #########################################################
-        self.check_step()
+        step = ss.check_step()
 
         ####################
         # cross-corelation #
         ####################
         if mode == 'cc':
-            ss = self._copy(limits=limits)
-            for i, s in enumerate(self):
+            for i, s in enumerate(ss):
                 cc        = np.correlate(ss[0].y, s.y, mode='full')
                 values[i] = np.argmax(cc)
             values = values - values[0]
@@ -5359,7 +5393,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # sequential cross-corelation #
         ###############################
         elif mode == 'seq':
-            ss = self._copy(limits=limits)
             for i in range(1, len(ss)):
                 cc        = np.correlate(ss[i-1].y, ss[i].y, mode='full')
                 values[i] = np.argmax(cc) - (len(ss[i-1].y) - 1) + values[i-1]
@@ -5368,16 +5401,14 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # max #
         #######
         elif mode == 'max':
-            step = self.check_step()
-            values = np.array(self.calculate_shift(mode='max', limits=limits, **kwargs))
+            values = np.array(ss.calculate_shift(mode='max', **kwargs))
             values = list(int(round(values/step)))
         #########
         # peaks #
         #########
         elif mode == 'peak':
-            step = self.check_step()
-            values = np.array(self.calculate_shift(mode='peak', limits=limits, **kwargs))
-            values = list(int(round(self.calculated_shift/step)))
+            values = np.array(ss.calculate_shift(mode='peak', **kwargs))
+            values = list(int(round(values/step)))
         else:
             raise ValueError(f'mode={mode} not valid. Valid modes: `cc`, `max`, `peak`')
         return values
@@ -8067,14 +8098,14 @@ class Image(_BrixsObject, metaclass=_Meta):
     def rows_moving_average(self, n):
         """Returns an Image object with moving average on rows.
 
-            Note:
-                moving average is also applied to x_centers.
+        Note:
+            moving average is also applied to x_centers.
 
-            Args:
-                n (int): number of points to average.
+        Args:
+            n (int): number of points to average.
 
-            Returns:
-                :py:class:`Image` with number of columns given by (number_of_columns - n + 1)
+        Returns:
+            :py:class:`Image` with number of columns given by (number_of_columns - n + 1)
         """
         ################
         # empty object #
@@ -8115,14 +8146,14 @@ class Image(_BrixsObject, metaclass=_Meta):
     def columns_moving_average(self, n):
         """Returns an Image object with moving average on columns.
 
-            Note:
-                moving average is also applied to y_centers.
+        Note:
+            moving average is also applied to y_centers.
 
-            Args:
-                n (int): number of points to average.
+        Args:
+            n (int): number of points to average.
 
-            Returns:
-                :py:class:`Image` with number of rows given by (number_of_rows - n + 1)
+        Returns:
+            :py:class:`Image` with number of rows given by (number_of_rows - n + 1)
         """
         ################
         # empty object #
@@ -8163,15 +8194,15 @@ class Image(_BrixsObject, metaclass=_Meta):
     def moving_average(self, n):
         """Returns an Image object with 2d moving average.
 
-            Note:
-                moving average is also applied to x_centers and y_centers.
+        Note:
+            moving average is also applied to x_centers and y_centers.
 
-            Args:
-                n (int): number of points to average.
+        Args:
+            n (int): number of points to average.
 
-            Returns:
-                :py:class:`Image` with number of rows given by (number_of_rows - n + 1) 
-                and columns given by (number_of_columns - n + 1)
+        Returns:
+            :py:class:`Image` with number of rows given by (number_of_rows - n + 1) 
+            and columns given by (number_of_columns - n + 1)
         """
         ################
         # empty object #
@@ -8376,7 +8407,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         return np.sort(list(numanip.factors(self.shape[0]))), np.sort(list(numanip.factors(self.shape[1])))
 
 
-    def calculate_horizontal_shift(self, mode='cc', xlimits=None, limit_size=1000, **kwargs):
+    def calculate_horizontal_shift(self, mode='cc', xlimits=None, limit_size=100, **kwargs):
         """Calculate intensity misalignments in terms of x centers.
 
         Args:
@@ -8400,26 +8431,23 @@ class Image(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            limit_size (int, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. It 
+                ensures that the number of rows is not bigger than 
+                limit_size. Default is 100.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
             
         Returns:
             list
         """
-        ss = self.rows
-        if limit_size:
-            if len(ss) > limit_size:
-                raise ValueError(f'Number of rows is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.y_centers)}\nlimit size: {limit_size}')
+        ss = self.get_rows(max_number_of_rows=xlimits)
 
         # calculate
         values = ss.calculate_shift(mode=mode, limits=xlimits, **kwargs)
         return values
     
-    def calculate_vertical_shift(self, mode='cc', ylimits=None, limit_size=1000, **kwargs):
+    def calculate_vertical_shift(self, mode='cc', ylimits=None, limit_size=100, **kwargs):
         """Calculate intensity misalignments in terms of y centers.
 
         Args:
@@ -8443,29 +8471,24 @@ class Image(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            limit_size (int, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. It 
+                ensures that the number of colums is not bigger than 
+                limit_size. Default is 100.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'` 
             
         Returns:
             list
         """
-        ss = self.columns
-        if limit_size:
-            if len(ss) > limit_size:
-                raise ValueError(f'Number of columns is bigger than limit_size.\nImage is seems to be too big.\nAre you sure you want to calculate shifts for such a big image.\nIf so, either set limit_size to False or a higher value.\nNumber of columns: {len(self.x_centers)}\nlimit size: {limit_size}')
-
-        # calculate
+        ss = self.get_columns(max_number_of_columns=limit_size)
         values = ss.calculate_shift(mode=mode, limits=ylimits, **kwargs)
         return values
     
     ############
     # composed #
     ############
-    def calculate_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=1000, **kwargs):
+    def calculate_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=100, **kwargs):
         """Calculate vertical shift values to fix curvature.
 
         Note:
@@ -8496,10 +8519,10 @@ class Image(_BrixsObject, metaclass=_Meta):
                 `y_start = None` or `y_stop = None` to indicate the minimum or 
                 maximum y value of the data, respectively. If limits = [], i.e.,
                 an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            limit_size (int, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. It 
+                ensures that the number of colums is not bigger than 
+                limit_size. Default is 100.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
@@ -8526,7 +8549,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         fit, popt, R2, model = s.polyfit(deg=deg)
         return s, fit, popt, R2, model
     
-    def calculate_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
+    def calculate_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=100, **kwargs):
         """Calculate horizontal shift values to fix curvature.
 
         Note:
@@ -8557,10 +8580,10 @@ class Image(_BrixsObject, metaclass=_Meta):
                 `x_start = None` or `x_stop = None` to indicate the minimum or 
                 maximum x value of the data, respectively. If limits = [], i.e.,
                 an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            limit_size (int, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. It 
+                ensures that the number of rows is not bigger than 
+                limit_size. Default is 100.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
@@ -8588,7 +8611,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         return s, fit, popt, R2, model
     
 
-    def fix_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=1000, **kwargs):
+    def fix_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=100, **kwargs):
         """Roll column of pixels to fix curvature.
 
         Args:
@@ -8614,10 +8637,10 @@ class Image(_BrixsObject, metaclass=_Meta):
                 `y_start = None` or `y_stop = None` to indicate the minimum or 
                 maximum y value of the data, respectively. If limits = [], i.e.,
                 an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            limit_size (int, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. It 
+                ensures that the number of colums is not bigger than 
+                limit_size. Default is 100.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
@@ -8640,7 +8663,7 @@ class Image(_BrixsObject, metaclass=_Meta):
 
         return self.set_vertical_shift_via_polyval(popt) 
     
-    def fix_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
+    def fix_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=100, **kwargs):
         """Roll row of pixels to fix curvature.
 
         Args:
@@ -8666,10 +8689,10 @@ class Image(_BrixsObject, metaclass=_Meta):
                 `x_start = None` or `x_stop = None` to indicate the minimum or 
                 maximum x value of the data, respectively. If limits = [], i.e.,
                 an empty list, it assumes `limits = (None, None)`.
-            limit_size (int or False, optional): prevents from mistakenly calculating
-                cross-corelation for unusualy big images. If axis = 0 (1), it 
-                ensures that the number of columns (rows) is not bigger than 
-                limit_size. Default is 1000. Set to False to bypass this limit.
+            limit_size (int, optional): prevents from mistakenly calculating
+                cross-corelation for unusualy big images. It 
+                ensures that the number of rows is not bigger than 
+                limit_size. Default is 100.
             **kwargs (dict)
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
@@ -8773,6 +8796,25 @@ class Image(_BrixsObject, metaclass=_Meta):
         ########
         X, Y = np.meshgrid(im.x_edges, im.y_edges)
         pos  = ax.pcolormesh(X, Y, im.data, **kwargs)
+
+        ###########################################
+        # show x, y, z values upon mouse hovering #
+        ###########################################
+        def format_coord(x, y):
+            xarr = X[0,:]
+            yarr = Y[:,0]
+            if ((x > xarr.min()) & (x <= xarr.max()) & 
+                (y > yarr.min()) & (y <= yarr.max())):
+                col = np.searchsorted(xarr, x)-1
+                row = np.searchsorted(yarr, y)-1
+                z = im.data[row, col]
+                return f'x={x:1.4f}, y={y:1.4f}, z={z:1.4f}   [{row},{col}]'
+            else:
+                return f'x={x:1.4f}, y={y:1.4f}'
+        if ax == plt:
+            ax.gca().format_coord = format_coord
+        else:
+            ax.format_coord = format_coord
 
         ############
         # colorbar #
@@ -9098,7 +9140,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     _read_only = ['has_nan']
     _non_removable = []
     
-    def __init__(self, x=None, y=None, xlim=None, ylim=None, filepath=None, **kwargs): 
+    def __init__(self, x=[], y=[], xlim=None, ylim=None, filepath=None, **kwargs): 
         """Initialize the object instance"""
         ###########################
         # Initializing attributes #
@@ -9124,17 +9166,21 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ################
         # loading data #
         ################
-        # keyword arguments
-        if y is not None:
-            if x is None:
-                raise ValueError('missing x coordinates')
+        if filepath is not None:
+            self.load(filepath=filepath, **kwargs)
+        else:
+            if not isinstance(y, Iterable):
+                raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is not an Iterable.\nThe type of the variable you passed is: {type(y)}\nAccepted types are: list, array, ...')
+            if len(y) > 0:
+                try:
+                    _ = sum(y)
+                except:
+                    raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+            self._y = y
             self.x = x
-            self.y = y
 
             self.xlim = xlim
             self.ylim = ylim       
-        elif filepath is not None:
-            self.load(filepath=filepath, **kwargs)
         return
 
     ###################
@@ -9145,10 +9191,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         return self._x
     @x.setter
     def x(self, value):
-        # check None
         if value is None:
-            self._x = None
-            self._y = None
+            self._x = []
+            self._y = []
 
             self._has_nan = None
             return
@@ -9160,10 +9205,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
     
         # check if iterable is made of numbers
-        try:
-            _ = sum(value)
-        except:
-            raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+        if len(value) > 0:
+            try:
+                _ = sum(value)
+            except:
+                raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
         if self.y is not None:
@@ -9171,7 +9217,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
         # empty array
         if len(value) == 0:
-            self._x = None
+            self._x = []
             self._has_nan = None
             return
         
@@ -9192,8 +9238,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     def y(self, value):
         # check None
         if value is None:
-            self._x = None
-            self._y = None
+            self._x = []
+            self._y = []
             self._has_nan = None
 
             return
@@ -9205,10 +9251,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
     
         # check if iterable is made of numbers
-        try:
-            _ = sum(value)
-        except:
-            raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
+        if len(value) > 0:
+            try:
+                _ = sum(value)
+            except:
+                raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
         if self.x is not None:
@@ -9216,7 +9263,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
         # empty array
         if len(value) == 0:
-            self._y = None
+            self._y = []
             self._has_nan = None
             return
         
@@ -9419,12 +9466,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         Returns:
             None
         """
-        if self._x is None:
-            self._x = np.array([x, ])    
-            self._y = np.array([y, ])    
-        else:
-            self._x = np.append(self._x, x)
-            self._y = np.append(self._y, y)
+        self._x = np.append(self._x, x)
+        self._y = np.append(self._y, y)
         self._has_nan = None
         return
 
@@ -9846,10 +9889,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # kwargs #
         ##########
         if 'fmt' not in kwargs: # pick best format
-            if self._x is not None:
-                if len(self._x) > 0:
-                    decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
-                    kwargs['fmt'] = f'%.{decimal}f'
+            if len(self._x) > 0:
+                decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
+                kwargs['fmt'] = f'%.{decimal}f'
         kwargs.setdefault('delimiter', ', ')
         kwargs.setdefault('newline', '\n')
         kwargs.setdefault('comments', '# ')
@@ -10765,7 +10807,18 @@ class Dummy(_BrixsObject, metaclass=_Meta):
     ########################
     # calculation and info #
     ########################
-    pass
+    def calculate_sum(self):
+        """Tries to return object which is the sum of all objects in the list"""
+        obj = self[0]
+        for _obj in self[1:]:
+            obj += _obj
+        return obj
+
+    def calculate_average(self, limits=None):
+        """Tries to return object which is the average of all objects in the list"""
+        return self.calculate_sum().set_factor(1/len(self))
+
+
 
     ############
     # composed #
