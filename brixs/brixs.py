@@ -3721,7 +3721,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             assert filepath.is_file(), 'filepath must point to a file'
 
         #######################
-        # check x is the same # # x is being checked inside _gather_ys()
+        # check x is the same #
         #######################
         try:
             _x = self.check_same_x()
