@@ -104,67 +104,128 @@ def get_center_of_mass(self, coordinates='centers'):
     return my, mx
 br.Image.get_center_of_mass = get_center_of_mass
 
-def enhance(self, n):
+def enhance(self, n, bkg=None):
     """multiplies image by itself and apply moving average
 
-    This makes outliers stadout more.
+    This makes outliers standout more.
 
     Args:
         n (int): Size of the moving average window, i.e., number of points to average.
+        bkg (number, optional): If bkg is not None, the image will be 
+            subtracted by bkg. If bkg is None, bkg will be defined so the 
+            average of the whole image is zero. Default is None.
 
     Returns:
         enhanced image
     """
-    im = self.floor()
+    if bkg is None:
+        im = self.floor()
+    else:
+        im = im.set_offset(-bkg)
     return im.multiply(im).moving_average(n)
 br.Image.enhance = enhance
 
-def find_candidates(self, n, n2, threshold):
+def find_candidates(self, n, threshold, enhance=True, _n=None, _bkg=None):
     """Returns a list of photon hit candidates defined by a threshold in a enhanced image
 
+    This is an approximate description of the algorithm:
+    1) enhance image (only if enhance is True)
+    2) get all positions where pixel intensity is above threshold
+    3) for positions that are too close (<=n), keep only the one for the brightest pixel
+    4) go back to the original image and find brightest pixel around the positions
+    suggested by the enhanced image (<=n) 
+
     Args:
-        n (int): Size of the moving average window used in the process of
-            enhancing the image, i.e., number of points to average.
-        n2 (int): photon hits candidates that are within n2 pixels of distance 
-            from each other will be considered the same candidate. n2 must
-            be the pixel distance between a photon hit and the farthest excited
-            pixel.
-        threshold (number): threshold value in terms of pixel value of the 
-            ENHANCED image (one might need to plot the enhanced image to get 
-            an idea of the pixel intensity).
-        
+        n (int): photon hits candidates that are within n pixels of distance 
+            from each other will be considered the same candidate. For better 
+            results, set n to be roughly the expected pixel distance between a 
+            photon hit and the farthest excited pixel.
+        threshold (number): threshold value in terms of pixel intensity of the 
+            image. Any pixel value above threshold will be considered as a 
+            candidate.
+        enhance (bool, optional): If True, the image will be floored (an offset
+            will be applied so avg pixel intensity is zero), squared, 
+            and a moving averaged of size n will be applied. Default is True.
+        _n (int): Use this to overwrite the size of the moving average window 
+            used in the process of enhancing the image, i.e., number of points
+            to average. If this is None, the averaging window size will be set 
+            to n*2+1. If enhance is False, this has no effect.
+        _bkg (number, optional): Use this to overwrite the bkg value for flooring
+            the image. If _bkg is not None, the image will be subtracted by _bkg.
+            If _bkg is None, bkg will be defined so the average of the whole 
+            image is zero. Default is None. If enhance is False, this has no effect.
+
     Returns:
         photon events list
     """
     # enhance image
-    # # image is floored, squared, and moving_averaged
-    im = self.enhance(n=n)
-
+    if enhance:
+        # floor 
+        if _bkg is None:
+            temp = self.copy()
+            _bkg  = temp.calculate_average()
+        im = self.set_offset(-_bkg)
+        # square
+        if _n is None: 
+            _n = int(n*2+1)
+        im = im.multiply(im).moving_average(_n)
+        # adjust threshold
+        # threshold = (threshold-_bkg)**2
+    else:
+        im = self
+    # print(threshold)
     # find photon hit candidates from the enhanced image
-    pos = im.get_positions_above_threshold(threshold, n=n2, coordinates='centers')
+    pos = im.get_positions_above_threshold(threshold, n=n, coordinates='centers')
     
-    # get brightst pixel around candidates in the original image
+    # get brightest pixel around candidates in the original image
     pos2 = []
     for _pos in pos:
-        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], n=n2, coordinates='centers')
+        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], n=n, coordinates='centers')
         if (y, x) not in pos2:
             pos2.append((y, x))
     return br.PhotonEvents(x=[_[1] for _ in pos2], y=[_[0] for _ in pos2])
 br.Image.find_candidates = find_candidates
 
-def find_and_patch(self, n, n2, threshold, MAX_NUMBER_OF_CANDIDATES=200):
+def find_and_patch(self, n, threshold, enhance=True, _n=None, _bkg=None, _patch_size=None, _patch_value=None, MAX_NUMBER_OF_CANDIDATES=200):
     """Returns image where photon event are patched out (cosmic rays correction)
 
+    This is an approximate description of the algorithm:
+    1) enhance image (only if enhance is True)
+    2) get all positions where pixel intensity is above threshold
+    3) for positions that are too close (<=n), keep only the one for the brightest pixel
+    4) go back to the original image and find brightest pixel around the positions
+    suggested by the enhanced image (<=n) 
+    5) replace all pixels around (<=_patch_size) the selected positions by a 
+    value (_patch_value)
+
     Args:
-        n (int): Size of the moving average window used in the process of
-            enhancing the image, i.e., number of points to average.
-        n2 (int): photon hits candidates that are within n2 pixels of distance 
-            from each other will be considered the same candidate. n2 must
-            be the pixel distance between a photon hit and the farthest excited
-            pixel.
-        threshold (number): threshold value in terms of pixel value of the 
-            ENHANCED image (one might need to plot the enahnced image to get 
-            an idea of the pixel intensity).
+        n (int): photon hits candidates that are within n pixels of distance 
+            from each other will be considered the same candidate. For better 
+            results, set n to be roughly the expected pixel distance between a 
+            photon hit and the farthest excited pixel.
+        threshold (number): threshold value in terms of pixel intensity of the 
+            image. Any pixel value above threshold will be considered as a 
+            candidate.
+        enhance (bool, optional): If True, the image will be floored (an offset
+            will be applied so avg pixel intensity is zero), squared, 
+            and a moving averaged of size n will be applied. Default is True.
+        _n (int): Use this to overwrite the size of the moving average window 
+            used in the process of enhancing the image, i.e., number of points
+            to average. If this is None, the averaging window size will be set 
+            to n*2+1. If enhance is False, this has no effect.
+        _bkg (number, optional): Use this to overwrite the bkg value for flooring
+            the image. If _bkg is not None, the image will be subtracted by _bkg.
+            If _bkg is None, bkg will be defined so the average of the whole 
+            image is zero. Default is None. If enhance is False, this has no effect.
+
+        _patch_size (int, optional): Use this to overwrite the patch size (how
+            many pixel around a photon hit will be patched out of the image). 
+            If None, this will be set to be the same size as n. Default is None.
+        _patch_value (number, optional): Use this to overwrite the pixel 
+            value of the patches. If None, patches will be dynamically calculated
+            to the average of the surrounding pixels around the patch. Default is
+            None.
+
         MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
             photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
             Useful for preventing too low threshold as patching image is slow.
@@ -174,11 +235,14 @@ def find_and_patch(self, n, n2, threshold, MAX_NUMBER_OF_CANDIDATES=200):
         im, pe
         patched image and photon events list
     """
-    pe = self.find_candidates(n, n2, threshold)
+    if _patch_size is None:
+        _patch_size = n
+
+    pe = self.find_candidates(n=n, threshold=threshold, enhance=enhance, _n=_n, _bkg=_bkg)
     if len(pe) > MAX_NUMBER_OF_CANDIDATES:
         raise ValueError(f'number of photon hit candidates ({len(pe)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES, n2, or `threshold`')
     if len(pe) > 0:
-        im = self.patch(pos=[(_[1], _[0]) for _ in pe], n=int(n2/2), value=None, coordinates='centers')
+        im = self.patch(pos=[(_[1], _[0]) for _ in pe], n=_patch_size, value=_patch_value, coordinates='centers')
     else:
         im = self.copy()
     return im, pe
@@ -186,29 +250,73 @@ br.Image.find_and_patch = find_and_patch
 # %%
 
 # %% ============================ centroid =============================== %% #
-def centroid(self, n, n2, n3, threshold, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=300):
+def centroid(self, n, threshold, threshold2=None, floor=True, enhance=True, _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', MAX_NUMBER_OF_CANDIDATES=300):
     """Returns a list of photon hits defined by a threshold in a enhanced image
 
+    This is an approximate description of the algorithm:
+    1) enhance image (only if enhance is True)
+    2) get all positions where pixel intensity is above threshold
+    3) for positions that are too close (<=n), keep only the one for the brightest pixel
+    4) go back to the original image and find brightest pixel around the positions
+    suggested by the enhanced image (<=n) 
+    5) if two positions are too close (<=_n2), assign them as double events (only 
+    works if threshold2 is not None)
+    6) if floor is True, floor the image. See floor argument below.
+    7) calculate center of mass of position (<=_n2)
+    8) if the pixel intensity of a position is higher than threshold2, assign
+    it as double event (only works if threshold2 is not None)
+
     Args:
-        n (int): Size of the moving average window used in the process of
-            enhancing the image, i.e., number of points to average.
-        n2 (int): photon hits candidates that are within n2 pixels of distance 
-            from each other will be considered the same candidate. n2 must
-            be the pixel distance between a photon hit and the farthest excited
-            pixel.
-        n3 (int): number of neighbors to include for calculating the center of
-            mass, e.g., if n=1, only first neighbors.
-        threshold (number): threshold value in terms of pixel value of the 
-            ENHANCED image (one might need to plot the enahnced image to get 
-            an idea of the pixel intensity).
+        n (int): photon hits candidates that are within n pixels of distance 
+            from each other will be considered the same candidate. For better 
+            results, set n to be roughly the expected pixel distance between a 
+            photon hit and the farthest excited pixel.
+        threshold (number): threshold value in terms of pixel intensity of the 
+            image. Any pixel value above threshold will be considered as a 
+            candidate.
         threshold2 (number, optional): threshold value for double events in 
-            terms of the intensity of the original image (NOT the enhanced 
-            image like `threshold`). Any photon hit candidate where the 
-            brightest pixel in the original image is above threshold2 is 
-            considered as a double event. Also, two photon hit candidates that
-            are closer than n3 pixels is considered a double event.
-        floor (bool, optional): if True, an intensity offset is added to the image such as the average
-            intensity of the whole image is zero. Default is False.
+            terms of the intensity of the image. Any photon hit candidate where the 
+            brightest pixel is above threshold2 is considered as a double event. 
+            Also, two photon hit candidates that are closer than _n2 pixels is 
+            considered a double event.
+
+        floor (bool, optional): if True, an intensity offset is added to the 
+            image before calculating the the center of masses such as the 
+            average intensity of the whole image is zero. Default is True. This 
+            is unnecessary if the image is already originally floored. Center of
+            mass calculation can yield less precise results if image is not floored and
+            _n2 >> n.
+
+        enhance (bool, optional): If True, the image will be floored (an offset
+            will be applied so avg pixel intensity is zero), squared, 
+            and a moving averaged of size n will be applied. Default is True.
+        _n (int): Use this to overwrite the size of the moving average window 
+            used in the process of enhancing the image, i.e., number of points
+            to average. If this is None, the averaging window size will be set 
+            to n*2+1. If enhance is False, this has no effect.
+        _bkg (number, optional): Use this to overwrite the bkg value for flooring
+            the image. If _bkg is not None, the image will be subtracted by _bkg.
+            If _bkg is None, bkg will be defined so the average of the whole 
+            image is zero. Default is None. If enhance is False, this has no effect.
+
+        _n2 (int): Use this to overwrite the number of neighbors to include for
+            calculating the center of mass of a photon hit candidate, e.g., if 
+            _n2=1, only first neighbors. _n2 also defines how close two 
+            candidates need to be to be considered a double event (only valid
+            if threshold2 is not None). If None, _n2 will be same as n. Default 
+            is None.     
+        spot_zeroing_type (str): when calculating the center of mass of a 
+            candidate, pixels around the candidate cannot be negative, otherwise
+            center of mass calculation can yield to less precise result (the
+            result of the center of mass calculation can even be a detector
+            position "outside" the range of the detector). Therefore, if a 
+            negative pixel intensity is present around a candidate there is 
+            two thing we can do 1) set it to zero (which makes sense because
+            if it is negative, we assume it is close to zero), or 2) we apply a 
+            small intensity offset to the whole spot around the candidate to 
+            make all pixels around it positive or zero. Use
+            spot_zeroing_type='zero' for 1 and 'offset' for 2. Default is 'zero'
+        
         MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
             photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
             Useful for preventing too low threshold as patching image is slow.
@@ -218,7 +326,15 @@ def centroid(self, n, n2, n3, threshold, threshold2=None, floor=True, MAX_NUMBER
         pe, pe2
         photon events list, and photon events list for double events
     """
-    _pe = self.find_candidates(n, n2, threshold)
+    assert spot_zeroing_type in ['zero', 'offset'], f'spot_zeroing_type must be `zero` or `offset`'
+    if _n2 is None:
+        _n2 = n
+    # if _n3 is None:
+    #     _n3 = n
+    assert _n2 > 0
+
+    # _pe = self.find_candidates(n, n2, threshold)
+    _pe = self.find_candidates(n=n, threshold=threshold, enhance=enhance, _n=_n, _bkg=_bkg)
     if len(_pe) > MAX_NUMBER_OF_CANDIDATES:
         raise ValueError(f'number of photon hit candidates ({len(_pe)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES, n2, or `threshold`')
     
@@ -227,7 +343,7 @@ def centroid(self, n, n2, n3, threshold, threshold2=None, floor=True, MAX_NUMBER
         double = []
         for i, _a in enumerate(_pe):
             for j, _b in enumerate(_pe[i+1:]):
-                if math.dist(_a, _b) < n3:
+                if math.dist(_a, _b) < _n2:
                     double.append(i)
                     double.append(j+1)
         double = br.remove_duplicates(double)
@@ -254,7 +370,7 @@ def centroid(self, n, n2, n3, threshold, threshold2=None, floor=True, MAX_NUMBER
     x  = []
     y  = []
     for _pos in pe:
-        spot, _, _, _ = im.get_spot(y=_pos[1], x=_pos[0], n=n3, coordinates='centers')
+        spot, _, _, _ = im.get_spot(y=_pos[1], x=_pos[0], n=_n2, coordinates='centers')
         
         # offset the spot to force all pixel values to be positive
         # this is a requirement for the weighted sum (center of mass) to work fine
@@ -265,7 +381,13 @@ def centroid(self, n, n2, n3, threshold, threshold2=None, floor=True, MAX_NUMBER
         # vmax = np.max(spot)
         # if vmin < 0 and vmax > 0:
         #     spot = spot - vmin
-        spot.data[spot.data < 0] = 0
+        if spot_zeroing_type == 'zero':
+            spot.data[spot.data < 0] = 0
+        else:
+            vmin = np.min(spot)
+            vmax = np.max(spot)
+            if vmin < 0 and vmax > 0:
+                spot = spot - vmin
         # I still don't like this, if we are putting an offset in the spot, I think the 
         # threshold should also be offset. I don't know.
         # but also, It does not make much sense that we have negative pixel values

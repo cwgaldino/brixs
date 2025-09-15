@@ -114,6 +114,7 @@ def list_samples(TOP):
         list
     """
     TOP = Path(TOP)
+    assert TOP.exists(), f'Top directory does not exist TOP="{TOP}"'
     assert 'RAW_DATA' in [_.name for _ in br.filelist(TOP)], f'folder RAW_DATA cannot be found in TOP="{TOP}". TOP must be the top/main folderpath of the experiment'
     return [_.name for _ in br.filelist(TOP/'RAW_DATA') if _.is_dir()]
 
