@@ -147,7 +147,6 @@ plt.ion()
 # the path to the top/main folder is going to be used constantly, so we are better
 # off defining a variable for it
 TOP = Path(r'C:\Users\galdino\Documents\id32')
-TOP = Path(r'C:\Users\galdin_c\Documents\work\CrSBr\ares\2025_09_10_ESRF_EDA\id32')
 # %%
 
 
