@@ -232,7 +232,7 @@ xas = br.Spectrum(x=energies, y=_y/max(_y))
 br.figure()
 im.plot(origin='lower')
 xas.plot(color='white')
-br.labels.energy_map()
+br.labels.energy_map('Energy map')
 # %%
 
 # %% run same calculation but with larger gamma1
@@ -255,32 +255,36 @@ xas2 = br.Spectrum(x=energies, y=_y/max(_y))
 br.figure()
 im2.plot(origin='lower')
 xas2.plot(color='white')
-br.labels.energy_map()
+br.labels.energy_map('Energy map with larger gamma1')
 # %%
 
-# %% broadening x
-im3 = im.broaden_x(2, m=0).broaden_y(0.1, m=0)
+# %% broadening x (gaussian/lorentzian broadening)
+# apply broadening by using the im.broaden_x() and im.broaden_y() methods
+# note that m goes from 0 to 1 and is the amount of Lorentizan compared to Gaussian (pseudo-voigt)
+# To apply a lorentzian and a gaussian broadening use im.broaden_x(w, m=0).broaden_x(w, m=1)
+# or im.broaden_x(w, m=m)
+im3  = im.broaden_x(2, m=0)
 xas3 = im3.integrated_columns_vs_x_centers()
 xas3 = xas3.set_factor(1/max(xas3))
 
 br.figure()
 im3.plot(origin='lower')
 xas3.plot(color='white')
-br.labels.energy_map('broadened 2.0 gaussian x')
+br.labels.energy_map('gaussian broadening in the x direction (w=2)')
 
 # get broadened spectra
 ss3 = im3.get_columns(max_number_of_columns=im3.shape[1])
 # %%
 
-# %% broadening y
-im4 = im.broaden_x(2, m=0).broaden_y(0.1, m=0)
+# %% broadening x and broadening y
+im4  = im.broaden_x(2, m=0).broaden_y(0.1, m=0)
 xas4 = im4.integrated_columns_vs_x_centers()
-xas4 = xas4.set_factor(1/max(xas3))
+xas4 = xas4.set_factor(1/max(xas4))
 
 br.figure()
 im4.plot(origin='lower')
 xas4.plot(color='white')
-br.labels.energy_map('broadened 2 gaussian x and 0.1 gaussian y')
+br.labels.energy_map('gaussian broadening in the x and y directions (wx=2, wy=0.1)')
 
 # get broadened spectra
 ss4 = im4.get_columns(max_number_of_columns=im3.shape[1])

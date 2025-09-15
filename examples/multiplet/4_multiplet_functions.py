@@ -43,16 +43,29 @@ q.get_methods()
 
 # get parameters in a dictionary
 par = q.get_parameters()
+# del par['initial']
+# del par['geometry']
+# del par['experiment']
+# par.keys()
+# import json
+# filepath = Path('test.par')
+# pretty_print = True
+# with open(str(filepath), 'w') as file:
+#     if pretty_print:
+#         file.write(json.dumps(par, indent=4, sort_keys=False))
+#     else:
+#         file.write(json.dumps(par))
 
-# save parameters to a file
-# this function is a little finicky because it used json package
+
+# [EXPERIMENTAL] save/load parameters to a file
+# thise functions are a little finicky because it used json package
 # and this package can raise errors if parameters are not formatted right
 # for example, it will raise an error if parameters is saved as a type np.int32
 # however, it should be fine if one uses only "regular" float's and int's
-q.save_parameters('test.par')
-
-# parameters can be loaded by
-q2 = multiplet.load_calculation('test.par')
+# q.save_parameters('test.par')
+# q2 = multiplet.load_calculation('test.par')
+# for now, I will leave them commented out until I ran more tests. However, they
+# should work fine and can be used.
 
 # lua template
 print(q.template)

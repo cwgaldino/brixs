@@ -96,7 +96,7 @@ nConfigurationsMax (int, read only): Maximum number of final configuration
 
 gamma1 (number, optional): 
     * For 'RIXS', 'XAS', 'XES', and 'XPS', core-hole lifetime (defines lorentzian broadening - FWHM
-    for RIXS it is the  lorentzian broadening of the `photon incident energy`
+    for RIXS it is the lorentzian broadening of the `photon incident energy`
 gamma2 (tuple or list, optional): core-hole lifetime. 
     * For 'XAS', 'XES', and 'XPS', n.a.
     * For 'RIXS', lifetime of the intermediate state (defines lorentzian broadening of the `energy loss`)
@@ -318,7 +318,7 @@ print(q.kin, q.LHin, q.LVin)
 # change them, because the `q` expects kin, LHin, and LVin to always be 
 # perpendicular, however, this condition may not be satisfied while changing 
 # these parameters. Note how the following command gives an error
-q.kin = [0, 1, 0]
+# q.kin = [0, 1, 0]  # this line yields an error
 # before we change kin, LHin, and LVin, let's print q.kout to see what we have
 print(q.kout)  # [-0.6427876096865394, 0.766044443118978, 0.0]
 # this parameters is defined from q.kin and q.tth, where kout = kin*Rz(tth)

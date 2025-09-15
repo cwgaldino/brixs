@@ -49,12 +49,12 @@ print(q.element, q.charge, q.symmetry, q.experiment, q.edge)
 # for instance, if one does not know what edges are available for an experiment
 # one can write nonsense and the error message should guide you
 # see below the error message for this calculation
-q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='asdlkfjldakj;sdlkj')
+# q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='asdlkfjldakj;sdlkj')  # this line yields an error
 # these 5 parameters (element, charge, symmetry, experiment, edge) are called
 # primary parameters and cannot be changed once the `q` is created and a new
 # calculation object must be created
 # see below the error message when trying to change the element for `q`
-q.element = 'Ni'
+# q.element = 'Ni'  # this line gives an error
 # other parameters can also be set on initialization. Below is the full list
 q = multiplet.Calculation(element='Cu', 
                           charge='2+', 
@@ -66,7 +66,7 @@ q = multiplet.Calculation(element='Cu',
                           nPsisAuto=1, 
                           k=(0, 0, 1), 
                           denseBorder=2000, 
-                          magneticField=0, 
+                          magneticField=0.002, 
                           magneticFieldOrientation=[0, 0, 1], 
                           temperature=10, 
                           tth=130, 

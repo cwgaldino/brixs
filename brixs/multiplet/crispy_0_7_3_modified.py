@@ -1824,7 +1824,7 @@ class Calculation(object):
                                     cf       = [list(_) for _ in self.cf]),
                     experiment = dict(temperature      = float(self.temperature),
                                       magneticField    = float(self.magneticField),
-                                      magneticFieldOrientation = list(self.magneticFieldOrientation)),
+                                      magneticFieldOrientation = list([float(_) for _ in self.magneticFieldOrientation])),
                     hamiltonian = dict(hamiltonianTerms = self.hamiltonianTerms,
                                        hamiltonianState = dict(self.hamiltonianState),
                                        hamiltonianData  = p),
