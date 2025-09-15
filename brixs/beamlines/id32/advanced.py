@@ -35,7 +35,7 @@ def process(TOP, sample, dataset, scan, nbins=2000, curv=None, calib=None, cosmi
             highest degree to the constant term 
             [f(x_centers) = curv[n]*x**n + curv[n-1]*x**n-1 + ... + curv[0]]
         calib (number, optional): if not None, the x axis of the final spectrum
-            is multipled by calib. This number must have unit of eV/pixel.
+            is multiplied by calib. This number must have unit of eV/pixel.
 
         includ_double_events (bool, optional): if True, double events are 
             included for calculating the final spectrum. Only for centroid mode.
@@ -45,16 +45,34 @@ def process(TOP, sample, dataset, scan, nbins=2000, curv=None, calib=None, cosmi
             False.
         
         cosmic (dict or None, optional): dict with parameters for cosmic ray removal.
-            Valid paraters are:
-                 n (int): Size of the moving average window used in the process of
-                    enhancing the image, i.e., number of points to average.
-                n2 (int): photon hits candidates that are within n2 pixels of distance 
-                    from each other will be considered the same candidate. n2 must
-                    be the pixel distance between a photon hit and the farthest excited
-                    pixel.
-                threshold (number): threshold value in terms of pixel value of the 
-                    ENHANCED image (one might need to plot the enahnced image to get 
-                    an idea of the pixel intensity).
+            Valid parameters are:
+                 n (int): photon hits candidates that are within n pixels of distance 
+                    from each other will be considered the same candidate. For better 
+                    results, set n to be roughly the expected pixel distance between a 
+                    photon hit and the farthest excited pixel.
+                threshold (number): threshold value in terms of pixel intensity of the 
+                    image. Any pixel value above threshold will be considered as a 
+                    candidate.
+                enhance (bool, optional): If True, the image will be floored (an offset
+                    will be applied so avg pixel intensity is zero), squared, 
+                    and a moving averaged of size n will be applied. Default is True.
+                _n (int): Use this to overwrite the size of the moving average window 
+                    used in the process of enhancing the image, i.e., number of points
+                    to average. If this is None, the averaging window size will be set 
+                    to n*2+1. If enhance is False, this has no effect.
+                _bkg (number, optional): Use this to overwrite the bkg value for flooring
+                    the image. If _bkg is not None, the image will be subtracted by _bkg.
+                    If _bkg is None, bkg will be defined so the average of the whole 
+                    image is zero. Default is None. If enhance is False, this has no effect.
+
+                _patch_size (int, optional): Use this to overwrite the patch size (how
+                    many pixel around a photon hit will be patched out of the image). 
+                    If None, this will be set to be the same size as n. Default is None.
+                _patch_value (number, optional): Use this to overwrite the pixel 
+                    value of the patches. If None, patches will be dynamically calculated
+                    to the average of the surrounding pixels around the patch. Default is
+                    None.
+
                 MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
                     photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
                     Useful for preventing too low threshold as patching image is slow.
@@ -62,30 +80,61 @@ def process(TOP, sample, dataset, scan, nbins=2000, curv=None, calib=None, cosmi
             If None, cosmic rays removal is not applied. 
 
         centroid (dict or None, optional): dict with parameters for centroid.
-            Valid paraters are:
-                n (int): Size of the moving average window used in the process of
-                    enhancing the image, i.e., number of points to average.
-                n2 (int): photon hits candidates that are within n2 pixels of distance 
-                    from each other will be considered the same candidate. n2 must
-                    be the pixel distance between a photon hit and the farthest excited
-                    pixel.
-                n3 (int): number of neighbors to include for calculating the center of
-                    mass, e.g., if n=1, only first neighbors.
-                threshold (number): threshold value in terms of pixel value of the 
-                    ENHANCED image (one might need to plot the enahnced image to get 
-                    an idea of the pixel intensity).
+            Valid parameters are:
+                n (int): photon hits candidates that are within n pixels of distance 
+                    from each other will be considered the same candidate. For better 
+                    results, set n to be roughly the expected pixel distance between a 
+                    photon hit and the farthest excited pixel.
+                threshold (number): threshold value in terms of pixel intensity of the 
+                    image. Any pixel value above threshold will be considered as a 
+                    candidate.
                 threshold2 (number, optional): threshold value for double events in 
-                    terms of the intensity of the original image (NOT the enhanced 
-                    image like `threshold`). Any photon hit candidate where the 
-                    brightest pixel in the original image is above threshold2 is 
-                    considered as a double event. Also, two photon hit candidates that
-                    are closer than n3 pixels is considered a double event.
-                floor (bool, optional): if True, an intensity offset is added to the image such as the average
-                    intensity of the whole image is zero. Default is False.
+                    terms of the intensity of the image. Any photon hit candidate where the 
+                    brightest pixel is above threshold2 is considered as a double event. 
+                    Also, two photon hit candidates that are closer than _n2 pixels is 
+                    considered a double event.
+
+                floor (bool, optional): if True, an intensity offset is added to the 
+                    image before calculating the the center of masses such as the 
+                    average intensity of the whole image is zero. Default is True. This 
+                    is unnecessary if the image is already originally floored. Center of
+                    mass calculation can yield less precise results if image is not floored and
+                    _n2 >> n.
+
+                enhance (bool, optional): If True, the image will be floored (an offset
+                    will be applied so avg pixel intensity is zero), squared, 
+                    and a moving averaged of size n will be applied. Default is True.
+                _n (int): Use this to overwrite the size of the moving average window 
+                    used in the process of enhancing the image, i.e., number of points
+                    to average. If this is None, the averaging window size will be set 
+                    to n*2+1. If enhance is False, this has no effect.
+                _bkg (number, optional): Use this to overwrite the bkg value for flooring
+                    the image. If _bkg is not None, the image will be subtracted by _bkg.
+                    If _bkg is None, bkg will be defined so the average of the whole 
+                    image is zero. Default is None. If enhance is False, this has no effect.
+
+                _n2 (int): Use this to overwrite the number of neighbors to include for
+                    calculating the center of mass of a photon hit candidate, e.g., if 
+                    _n2=1, only first neighbors. _n2 also defines how close two 
+                    candidates need to be to be considered a double event (only valid
+                    if threshold2 is not None). If None, _n2 will be same as n. Default 
+                    is None.     
+                spot_zeroing_type (str): when calculating the center of mass of a 
+                    candidate, pixels around the candidate cannot be negative, otherwise
+                    center of mass calculation can yield to less precise result (the
+                    result of the center of mass calculation can even be a detector
+                    position "outside" the range of the detector). Therefore, if a 
+                    negative pixel intensity is present around a candidate there is 
+                    two thing we can do 1) set it to zero (which makes sense because
+                    if it is negative, we assume it is close to zero), or 2) we apply a 
+                    small intensity offset to the whole spot around the candidate to 
+                    make all pixels around it positive or zero. Use
+                    spot_zeroing_type='zero' for 1 and 'offset' for 2. Default is 'zero'
+                
                 MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
                     photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
                     Useful for preventing too low threshold as patching image is slow.
-                    Default is 10. 
+                    Default is 10.
             If None, Integration mode is used.
             
     Return:
