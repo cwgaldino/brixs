@@ -212,7 +212,7 @@ for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Ds(3d)'] = round(Ds, 5)
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
 
-# %% run calculation (takes a while)
+# %% run calculation
 energies = np.linspace(q.resonance-10, q.resonance+30, 300)  # 300 points
 ss = br.Spectra()
 for E in energies:
@@ -235,7 +235,7 @@ xas.plot(color='white')
 br.labels.energy_map()
 # %%
 
-# %% run same calculation but with larger gamma1 (takes a while)
+# %% run same calculation but with larger gamma1
 q.gamma1 = 2
 ss2 = br.Spectra()
 for E in energies:
@@ -258,7 +258,7 @@ xas2.plot(color='white')
 br.labels.energy_map()
 # %%
 
-# %% broadening x (takes a while)
+# %% broadening x
 im3 = im.broaden_x(2, m=0).broaden_y(0.1, m=0)
 xas3 = im3.integrated_columns_vs_x_centers()
 xas3 = xas3.set_factor(1/max(xas3))
@@ -272,7 +272,7 @@ br.labels.energy_map('broadened 2.0 gaussian x')
 ss3 = im3.get_columns(max_number_of_columns=im3.shape[1])
 # %%
 
-# %% broadening y (takes a while)
+# %% broadening y
 im4 = im.broaden_x(2, m=0).broaden_y(0.1, m=0)
 xas4 = im4.integrated_columns_vs_x_centers()
 xas4 = xas4.set_factor(1/max(xas3))
