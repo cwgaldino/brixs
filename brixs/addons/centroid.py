@@ -120,7 +120,7 @@ def enhance(self, n):
 br.Image.enhance = enhance
 
 def find_candidates(self, n, n2, threshold):
-    """Returns a list of photon hit candidates defined by a threshold in a enhanced imave
+    """Returns a list of photon hit candidates defined by a threshold in a enhanced image
 
     Args:
         n (int): Size of the moving average window used in the process of
@@ -130,7 +130,7 @@ def find_candidates(self, n, n2, threshold):
             be the pixel distance between a photon hit and the farthest excited
             pixel.
         threshold (number): threshold value in terms of pixel value of the 
-            ENHANCED image (one might need to plot the enahnced image to get 
+            ENHANCED image (one might need to plot the enhanced image to get 
             an idea of the pixel intensity).
         
     Returns:
