@@ -2,12 +2,18 @@
 # -*- coding: utf-8 -*-
 """Quality-of-life functions for handling hdf5 files"""
 
-# %% ------------------------- Standard Imports --------------------------- %% #
+# %% ------------------------- Standard Imports -------------------------- %% #
+from collections.abc import Iterable
 from pathlib import Path
 import numpy as np
 import h5py
 
-# %% ------------------------------- tree --------------------------------- %% #
+# %% -------------------------- brixs Imports ---------------------------- %% #
+import brixs as br
+# %%
+
+
+# %% =============================== tree ================================ %% #
 def tree(filepath, initial=None):
     """Returns a text with the structure of a hdf5 file
 
@@ -69,7 +75,7 @@ def _tree(f, pre=''):
     return text
 # %%
 
-# %% ----------------------------- metadata ------------------------------- %% #
+# %% ============================= metadata ============================== %% #
 def sort_metadata(f, attrs_dict, verbose=True):
     """get and pre-process metadata from hdf5 file
 
@@ -169,4 +175,95 @@ def _sort_metadata(f, attrs_dict, verbose):
                     print(f'get attr `{name}` error: {e}')
     return values
 # %%  
+
+# %% =========================== save spectra ============================ %% #
+# 	Check if the x range for each spectrum is correct before creating HDF file. 
+# def save_all_as_nexus_map(self, filepath, extra={}, verbose=False):
+#     """[EXPERIMENTAL] Saves an HDF5 file in NeXus NXdata format containing spectra.
+
+#     Args:
+#         filepath (str or path): filepath to save files
+    
+#     Returns:
+#         None
+#     """    
+#     ######################################
+#     # check if filepath points to a file #
+#     ######################################
+#     filepath = Path(filepath)
+#     assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+#     if filepath.exists():
+#         assert filepath.is_file(), 'filepath must point to a file'
+
+#     #######################
+#     # check x is the same #
+#     #######################
+#     try:
+#         _x = self.check_same_x()
+#     except ValueError:
+#         raise ValueError('Cannot save spectra in one file. x axis are different.\nMaybe try interpolating the x axis (Spectra.interp()) or use Spectra.save() to save spectra in multiple files.')
+        
+
+#     # --- Checking spectra consistency ---
+#     # E_inc_all = np.array([float(_s.Energy) for _s in self], dtype=np.float64)  # X axis
+#     # E_loss_ref = np.asarray(self[0].x, dtype=np.float64)                       # Y axis (reference)
+
+#     # Sort spectra by incident energy
+#     # order = np.argsort(E_inc_all)
+#     # E_inc = E_inc_all[order]
+
+#     # Stack signals according to sorted incident energies
+#     _, ys = ss._gather_ys()
+#     # Z = np.stack([np.asarray(self[i].y, dtype=np.float32) for i in order], axis=0)
+
+#     # check extra attrs
+#     attrs = {}
+#     for attr in extra:
+#         assert any([hasattr(_s, attr)==False for _s in self])==False, f'Not all spectrum have extra attr `{attr}`'
+#         _temp = [_s.__getattribute__(attr) for _s in self]
+#         assert sum([br.is_number(x) for x in _temp]) == len(_temp), f'extra attrs must be numbers. Extra attr `{attr}` is not a number for all Spectra'
+#         attrs[attr] = _temp
+
+#     # --- Create NeXus data (NXdata) ---
+#     with h5py.File(filepath, 'w') as f:
+#         f.attrs['default'] = 'entry'
+
+#         nxentry = f.create_group('entry')
+#         nxentry.attrs['NX_class'] = 'NXentry'
+#         nxentry.attrs['default']  = 'data'
+
+#         nxdata = nxentry.create_group('data')
+#         nxdata.attrs['NX_class'] = 'NXdata'
+
+#         # Axes datasets
+#         for attr in attrs:
+#             print(attrs[attr])
+#             a = np.array([float(_) for _ in attrs[attr]], dtype=np.float64)
+#             _temp = nxdata.create_dataset(attr, data=a)        # X axis
+#             _temp.attrs['units']     = 'units'
+#             _temp.attrs['long_name'] = attr
+#         x = nxdata.create_dataset('x', data=_x)   # Y axis
+#         x.attrs['units']     = 'units'
+#         x.attrs['long_name'] = 'x'
+
+#         # Signal dataset
+#         ds = nxdata.create_dataset('Spectra', data=ys.transpose(), chunks=True, compression='gzip', compression_opts=4)
+#         ds.attrs['Energy_Incident_indices'] = np.array([0])
+#         ds.attrs['Energy_Loss_indices']     = np.array([1])
+#         ds.attrs['interpretation'] = 'image'       # 2D image/matrix
+#         ds.attrs['long_name'] = 'y'           # Label for the signal
+
+#         # --- Essential NXdata attributes ---
+#         nxdata.attrs['signal'] = 'Spectra'
+#         nxdata.attrs['axes'] = list(attrs.keys()) + ['x', ]
+#         print(nxdata.attrs['axes'])
+
+#     if verbose:
+#         print(f"HDF5 file successfully created: {filepath.name}")
+#     return 
+# br.Spectra.save_all_as_nexus_map = save_all_as_nexus_map
+
+# %% 
+
+
 

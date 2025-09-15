@@ -12,6 +12,99 @@ import numpy as np
 import brixs as br
 # %%
 
+
+# %% --------------------------------------------------------------------- %% #
+try:
+    import h5py
+except:
+    pass
+def create_hdf5(self, filename, verbose=False):
+    """Create an HDF5 file in NeXus NXdata format containing stacked spectra.
+	
+	Check if the x range for each spectrum is correct before creating HDF file. 
+	
+	Parameters
+    ----------
+    filename : str
+        Name of the output file.
+    spectra : list
+        List of spectra objects. Each spectrum must have attributes:
+        - Energy : incident energy value
+        - x      : energy-loss axis
+        - y      : signal values
+    """
+    spectra  = spectra.fix_monotonicity().interp()
+    # --- Checking spectra consistency ---
+    E_inc_all = np.array([float(_s.Energy) for _s in spectra], dtype=np.float64)   # X axis
+    E_loss_ref = np.asarray(spectra[0].x, dtype=np.float64)                      # Y axis (reference)
+
+    # Verify that all energy-loss axes have the same shape and values
+    for k, _s in enumerate(spectra):
+        xk = np.asarray(_s.x, dtype=np.float64)
+        if xk.shape != E_loss_ref.shape or not np.allclose(xk, E_loss_ref, rtol=0, atol=1e-12):
+            raise ValueError(f"Spectrum {k} has a different energy-loss axis. "
+                             "Standardize or interpolate before saving as NXdata.")
+
+    # Sort spectra by incident energy
+    order = np.argsort(E_inc_all)
+    E_inc = E_inc_all[order]
+
+    # Stack signals according to sorted incident energies
+    Z = np.stack([np.asarray(spectra[i].y, dtype=np.float32) for i in order], axis=0)
+
+    # Sanity check for expected dimensions
+    if Z.shape != (E_inc.size, E_loss_ref.size):
+        raise RuntimeError("Unexpected shape for Z. "
+                           f"Expected ({E_inc.size}, {E_loss_ref.size}), got {Z.shape}.")
+    
+    if not filename.lower().endswith('.h5'): # If it does not end with '.h5', the extension is added.
+        filename = f"{filename}.h5"
+
+    #print("Shapes -> E_inc:", E_inc.shape, " E_loss:", E_loss_ref.shape, " Z:", Z.shape)
+
+    # --- Create NeXus data (NXdata) ---
+    with h5py.File(filename, 'w') as f:
+        f.attrs['default'] = 'entry'
+
+        nxentry = f.create_group('entry')
+        nxentry.attrs['NX_class'] = 'NXentry'
+        nxentry.attrs['default'] = 'data'
+
+        nxdata = nxentry.create_group('data')
+        nxdata.attrs['NX_class'] = 'NXdata'
+
+        # Axes datasets
+        dEinc  = nxdata.create_dataset('Energy Incident (eV)', data=E_inc)        # X axis
+        dEloss = nxdata.create_dataset('Energy Loss (eV)',    data=E_loss_ref)    # Y axis
+
+        # Signal dataset
+        ds = nxdata.create_dataset('spectra', data=Z, chunks=True, compression='gzip', compression_opts=4)
+
+        # --- Essential NXdata attributes ---
+        nxdata.attrs['signal'] = 'spectra'
+        nxdata.attrs['axes'] = ['Energy Incident (eV)', 'Energy Loss (eV)']
+
+        # Axis-to-dimension mapping
+        ds.attrs['Energy_Incident_indices'] = np.array([0])
+        ds.attrs['Energy_Loss_indices']     = np.array([1])
+
+        # Viewer hints
+        ds.attrs['interpretation'] = 'image'       # 2D image/matrix
+        ds.attrs['long_name'] = 'Counts (Arb. Units)'           # Label for the signal
+
+        dEinc.attrs['units'] = 'eV'
+        dEinc.attrs['long_name'] = 'Incident energy'
+
+        dEloss.attrs['units'] = 'eV'
+        dEloss.attrs['long_name'] = 'Energy loss'
+
+    if verbose:
+        print(f"HDF5 file successfully created: {filename}")
+br.Spectra.create_hdf5 = create_hdf5
+# %%
+
+
+
 # %% Spectra
 def sequential_plot(self, xlim=None, ylim=None, keep=None, update_function=None, **kwargs):
     """[EXPERIMENTAL] plot where you can use up and down keys to flip through spectra.
