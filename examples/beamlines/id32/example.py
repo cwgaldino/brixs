@@ -4,8 +4,8 @@
 and data analysis for data collected at the ID32 beamline of ESRF.
 
 Example data for running this example can be downloaded at 
-<link-onedrive>
-I am putting this data up in 2025. et us know if the link gets broken.
+https://1drv.ms/f/c/6666810d266a3cc9/EjNzJssVTWhFqAOx0-nDCxoBSNt2cvvF8zqOmNdx_zzslQ?e=BOAgx4
+I am putting this data up in 2025. let me know if the link gets broken.
 
 Note that some less important files have been removed from this example data to
 make the folder lighter and easier to download.
@@ -19,7 +19,7 @@ Onsite, the path of the top (main) directory is
 
 for example
 
-/data/visitor/hc6098/id32/20250408/
+/data/visitor/hc1234/id32/20250408/
 
 The folder structure of the top directory is:
 
@@ -139,14 +139,15 @@ get_ipython().run_line_magic('matplotlib', 'qt5')
 plt.ion()
 
 # brixs (optional)
-br.settings.FIGURE_POSITION = (434, 2268)#(283, 567)
+# br.settings.FIGURE_POSITION = (283, 567)
 # br.get_window_position()
 # %%
 
 # %% ============================= folderpaths =========================== %% #
 # the path to the top/main folder is going to be used constantly, so we are better
 # off defining a variable for it
-# TOP = Path(r'C:\Users\galdino\Documents\id32')
+TOP = Path(r'C:\Users\galdino\Documents\id32')
+TOP = Path(r'C:\Users\galdin_c\Documents\work\CrSBr\ares\2025_09_10_ESRF_EDA\id32')
 # %%
 
 
