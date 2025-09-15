@@ -7928,7 +7928,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         """
         temp  = self.copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
         value = temp.calculate_average()
-        return self.copy().set_offset(-value)
+        return self.set_offset(-value)
 
     ############
     # advanced #
