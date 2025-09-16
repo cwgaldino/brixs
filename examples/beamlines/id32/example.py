@@ -786,7 +786,7 @@ br.labels.rixs()
 # %  ===================== raw rixs data (CENTROID) ====================== %% #
 # %% ===================================================================== %% #
 
-# %% Spike fiding and patching (step-by-step)
+# %% Spike finding and patching (step-by-step)
 sample  = 'align_rixs'
 dataset = 'align_0001'
 scan    = 125
@@ -807,7 +807,7 @@ _patch_size = _n2
 # _n: moving average window used in the process of enhancing the image, i.e., 
 # number of points to average. For optimal results, _n should be roughly the
 # same size of the spike, e.g., if a spike lights up 4x4 grid of pixels, then _n=4
-# should be optimal. If _n is too high, the image is whased out. If _n is too 
+# should be optimal. If _n is too high, the image is washed out. If _n is too 
 # little, the bkg does not go to zero so fast and spikes do not stand out as much.
 
 # _n2: number of neighbors to include for calculating the center of mass of a 
@@ -818,8 +818,8 @@ _patch_size = _n2
 # _patch_size: patch size will be a square of side n3+1.
 
 # threshold: intensity threshold for spike candidates (in this case, note that
-# thershold must be in terms pixel intensity in the enhanced image). 
-# defining the threshold for detecting spikes is an iteractive process by 
+# threshold must be in terms pixel intensity in the enhanced image). 
+# defining the threshold for detecting spikes is an iterative process by 
 # inspecting this image we can now go back and tweak threshold. Note also that 
 # one must use multiple images to define this threshold.
 
