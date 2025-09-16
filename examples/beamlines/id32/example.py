@@ -502,10 +502,6 @@ plt.xlabel('Shift necessary to align spectra (pixel)')
 plt.ylabel('Photon energy (eV)')
 # %%
 
-# %% data fitting
-# import brixs.model
-# todo
-# %%
 
 # %  ===================================================================== %% #
 # %  =========================== raw rixs data =========================== %% #
@@ -784,19 +780,7 @@ br.leg()
 br.labels.rixs()
 # %%
 
-quit()
-ipython
-# %%
-import matplotlib.pyplot as plt
-from pathlib import Path
-import numpy as np
-import brixs as br
-import brixs.beamlines.id32 as id32
-import brixs.addons.centroid
-import brixs.addons.fitting
-get_ipython().run_line_magic('matplotlib', 'qt5')
-plt.ion()
-TOP = Path(r'C:\Users\galdin_c\github\brixsexampledata\beamlines\id32')
+
 
 # %  ===================================================================== %% #
 # %  ===================== raw rixs data (CENTROID) ====================== %% #
@@ -849,7 +833,7 @@ im2.pcolormesh(ax=axes[0])
 im3.pcolormesh(ax=axes[1])
 
 # white dots are is the brightest pixel above threshold in the enhanced image around 6 pixels of distance
-pos = im3.get_positions_above_threshold(threshold, n=n, coordinates='centers')
+pos, _ = im3.get_positions_above_threshold(threshold, threshold2=None, n=n, coordinates='centers')
 
 # plot for verification
 for i, (y, x) in enumerate(pos):
@@ -919,12 +903,11 @@ im = ims[0]
 # parameters
 n  = 6
 _n = 4
-threshold = 600
-threshold = 1e4#3e4
+threshold = 1e4#3e4  # note that threshold must be interms of enhanced image as enhance=True in im.find_and_patch()
 _patch_size = n         
 
 # find and patch
-im2, pe = im.find_and_patch(n, threshold, _n=_n, _patch_size=_patch_size)
+im2, pe = im.find_and_patch(n, threshold, threshold2=None, enhance=True, _n=_n, _bkg=None, _patch_size=_patch_size, _patch_value=None)
 
 # plot for verification
 fig, axes = br.subplots(1, 3, sharex=True, sharey=True, figsize=(40, 12), layout='constrained')
@@ -947,8 +930,10 @@ ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims[1]
 
 # parameters
-cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=400, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=1000)
+cosmic   = dict(n=6, _n=4, threshold=1e4, enhance=True)
+centroid = dict(n=1, threshold=400, threshold2=None, floor=True, enhance=True, 
+                _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', 
+                MAX_NUMBER_OF_CANDIDATES=1000)
 
 # find and patch
 im2, pec = im.find_and_patch(**cosmic)
@@ -981,8 +966,10 @@ ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims[0]
 
 # parameters
-cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=400, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=2000)
+cosmic   = dict(n=6, _n=4, threshold=1e4, enhance=True)
+centroid = dict(n=1, threshold=400, threshold2=900, floor=True, enhance=True, 
+                _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', 
+                MAX_NUMBER_OF_CANDIDATES=2000)
 
 # find and patch
 im2, pec = im.find_and_patch(**cosmic)
@@ -992,7 +979,7 @@ pe, pe2 = im2.centroid(**centroid)
 
 # plot for verification
 fig, axes = br.subplots(1, 4, sharex=True, sharey=True, figsize=(40, 12), layout='constrained')
-im.plot(ax=axes[0])
+im.floor().plot(ax=axes[0])
 im.enhance(n=cosmic['n']).plot(vmin=0, vmax=2000, ax=axes[1])
 im2.enhance(n=centroid['n']).plot(vmin=0, vmax=2000, ax=axes[2])
 im2.floor().plot(ax=axes[3])
@@ -1015,7 +1002,9 @@ scan    = 125
 
 # centroid parameters
 cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=400, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=400, threshold2=900, floor=True, enhance=True, 
+                _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', 
+                MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
