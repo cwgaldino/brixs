@@ -6597,6 +6597,14 @@ class Image(_BrixsObject, metaclass=_Meta):
         except IndexError:  # in case the max of y is too high
             vmin = min([min(x) for x in self.data])
             vmax = max([max(x) for x in self.data])
+
+        # in case vmax ends up being higher then vmin
+        if vmax <= vmin:
+            vmax = self.min() + (self.max()-self.min())/2
+            vmin = self.min()
+            if vmax <= vmin:
+                vmax = None
+                vmin = None
         return vmin, vmax
 
     ################
@@ -8880,8 +8888,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         if isinstance(pos[0], Iterable) == False:
             pos = [pos, ]
         else:
-            assert any([isinstance(_, Iterable) for _ in pos]), f'pos must be a pixel position (x, y) or a list of positions [(x1, y1), (x2, y2), ...]'
-            assert any([len(_) != 2 for _ in pos])==False, f'pos must be a pixel position (x, y) or a list of positions [(x1, y1), (x2, y2), ...]'
+            assert any([isinstance(_, Iterable) for _ in pos]), f'pos must be a pixel position (y, x) or a list of positions [(y1, x1), (y2, x2), ...]'
+            assert any([len(_) != 2 for _ in pos])==False, f'pos must be a pixel position (y, x) or a list of positions [(y1, x1), (y2, x2), ...]'
             if coordinates == 'pixels':
                 xhigh = [x > self.shape[1] for _, x in pos]
                 xlow  = [x < 0 for _, x in pos]
@@ -8916,19 +8924,139 @@ class Image(_BrixsObject, metaclass=_Meta):
                 if is_near_edge['left']  and is_near_edge['top']:    _positions_around += [(x_start-1, y_stop)]
                 if is_near_edge['right'] and is_near_edge['bottom']: _positions_around += [(x_stop, y_start-1)]
                 if is_near_edge['right'] and is_near_edge['top']:    _positions_around += [(x_stop, y_stop)]
-                _value = []
+                _values = []
                 for _x, _y in _positions_around:
-                    _value.append(self.data[_y, _x])
-                value = np.mean(_value)
+                    _values.append(self.data[_y, _x])
+                valuefinal = np.mean(_values)
+            else:
+                valuefinal = value
                 
             # replace value
-            im.data[y_start:y_stop, x_start:x_stop] = np.ones((abs(y_start-y_stop), abs(x_start-x_stop)))*value
+            im.data[y_start:y_stop, x_start:x_stop] = np.ones((abs(y_start-y_stop), abs(x_start-x_stop)))*valuefinal
         return im
 
 
     ##########################        
     # plot and visualization #
     ########################## 
+    def pcolorfast(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
+        """Fast alternative to im.pcolormesh. Wrapper for `ax.pcolorfast()`_.
+
+        If x_edges and y_edges are not defined and x_centers and y_centers have 
+            irregular pixel separation, pcolormesh does its best to defined pixel 
+            edges so centers labels correspond to the real centers (nearest possible).
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            colorbar (bool, optional): if True, colorbar is shown on the right side.
+            **kwargs: kwargs are passed to `matplotlib.pyplot.pcolormesh()`_.
+
+        If not specified, the following parameters are passed to `matplotlib.pyplot.pcolormesh()`_:
+
+        Args:
+            cmap: The Colormap instance. Default is 'jet'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers.  The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
+
+        Returns:
+            `matplotlib.collections.QuadMesh`_
+
+        .. _matplotlib.pyplot.pcolormesh(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pcolormesh.html
+        .. _matplotlib.collections.QuadMesh: https://matplotlib.org/3.5.0/api/collections_api.html#matplotlib.collections.QuadMesh
+        """
+        ##########
+        # limits #
+        ##########
+        im = self.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+
+        ##########
+        # kwargs #
+        ##########
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = 'jet'
+        if 'vmin' not in kwargs or 'vmax' not in kwargs:
+            vmin, vmax = self._calculated_vmin_vmax()
+            if 'vmin' not in kwargs:
+                kwargs['vmin'] = vmin
+            if 'vmax' not in kwargs:
+                kwargs['vmax'] = vmax
+
+        ####################
+        # colorbar divider #
+        ####################
+        divider = False
+        if ax is not None and colorbar is True:
+            divider = True
+        
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
+
+        #############
+        # get edges #
+        #############
+        if im.x_edges is None: 
+            if im.x_monotonicity is None:
+                im.check_x_monotonicity()
+            im = im.estimate_x_edges_from_centers()
+        if im.y_edges is None: 
+            if im.y_monotonicity is None:
+                im.check_y_monotonicity()
+            im = im.estimate_y_edges_from_centers()
+
+        ########
+        # plot #
+        ########
+        if ax == plt:
+            ax = plt.gca()
+        X, Y = np.meshgrid(im.x_edges, im.y_edges)
+        pos  = ax.pcolorfast(X, Y, im.data, **kwargs)
+
+        ###########################################
+        # show x, y, z values upon mouse hovering #
+        ###########################################
+        def format_coord(x, y):
+            xarr = X[0,:]
+            yarr = Y[:,0]
+            if ((x > xarr.min()) & (x <= xarr.max()) & 
+                (y > yarr.min()) & (y <= yarr.max())):
+                col = np.searchsorted(xarr, x)-1
+                row = np.searchsorted(yarr, y)-1
+                z = im.data[row, col]
+                return f'x={x:1.4f}, y={y:1.4f}, z={z:1.4f}   [{row},{col}]'
+            else:
+                return f'x={x:1.4f}, y={y:1.4f}'
+        if ax == plt:
+            ax.gca().format_coord = format_coord
+        else:
+            ax.format_coord = format_coord
+
+        ############
+        # colorbar #
+        ############
+        if colorbar:
+            if divider:
+                divider = make_axes_locatable(ax)
+                ax_cb = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(pos, cax=ax_cb)
+            else:
+                plt.colorbar(pos, aspect=50)
+
+        # add edges and centers to quadmesh
+        pos.x_edges   = pos.get_coordinates()[0][:, 0]
+        pos.y_edges   = pos.get_coordinates()[:, 1][:, 1]
+        pos.x_centers = im.x_centers
+        pos.y_centers = im.y_centers
+
+        return pos
+        
     def pcolormesh(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
         """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
