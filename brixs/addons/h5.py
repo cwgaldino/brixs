@@ -12,6 +12,12 @@ import h5py
 import brixs as br
 # %%
 
+# %% ========================== Special Imports ========================== %% #
+try:
+    import h5py
+except:
+    pass
+# %%
 
 # %% =============================== tree ================================ %% #
 def tree(filepath, initial=None):
