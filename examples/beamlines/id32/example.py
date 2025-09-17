@@ -3,15 +3,13 @@
 """The brixs.beamlines.id32 module offers a python solution for data processing
 and data analysis for data collected at the ID32 beamline of ESRF.
 
-Example data for running this example can be downloaded at 
+Example data for running this example can be downloaded at this Onedrive link
 https://1drv.ms/f/c/6666810d266a3cc9/EjNzJssVTWhFqAOx0-nDCxoBSNt2cvvF8zqOmNdx_zzslQ?e=BOAgx4
-I am putting this data up in 2025. let me know if the link gets broken.
-
 Note that some less important files have been removed from this example data to
 make the folder lighter and easier to download.
 
 
-Besides brixs requirements, this module also requires h5py and silx.
+Besides brixs requirements, brixs.beamlines.id32 module also requires h5py and silx.
 
 Onsite, the path of the top (main) directory is 
 
@@ -796,24 +794,30 @@ im = ims[1]
 # defining 
 n   = 6
 _n  = 4
-_n2 = n
+_cm_n = n
 threshold = 1e4
-_patch_size = _n2
+_patch_size = _cm_n
 # n: photon hits candidates that are within n pixels of distance 
 # from each other will be considered the same candidate. For better 
 # results, set n to be roughly the expected pixel distance between a 
 # photon hit and the farthest excited pixel.
 
-# _n: moving average window used in the process of enhancing the image, i.e., 
-# number of points to average. For optimal results, _n should be roughly the
+# _n (int): Use this to overwrite the size of the moving average window 
+# used in the process of enhancing the image, i.e., number of points
+# to average. If this is None, the averaging window size will be set 
+# to n*2+1. Note that _n=1 implies no moving average.
+# For visually inspecting image, sometimes it is 
+# best to make _n large to make it easy to see spikes by eye. For finding spikes 
+# optimally with im.find_candidates(), one might want to set up _n roughly the
 # same size of the spike, e.g., if a spike lights up 4x4 grid of pixels, then _n=4
 # should be optimal. If _n is too high, the image is washed out. If _n is too 
 # little, the bkg does not go to zero so fast and spikes do not stand out as much.
 
-# _n2: number of neighbors to include for calculating the center of mass of a 
-# photon hit candidate. e.g., if _n2=1, only first neighbors. Calculating the 
-# center of mass for spike removal is not necessary though, here we are 
-# calculating it just for reference.
+# _cm_n: Use this to overwrite the number of neighbors when
+# calculating the center of mass of a photon hit candidate, e.g., if 
+# _cm_n=1, only first neighbors. _cm_n also defines how close two 
+# candidates need to be to be considered a double event. If None, 
+# _cm_n will be same as n. Default is None. 
 
 # _patch_size: patch size will be a square of side n3+1.
 
@@ -860,7 +864,7 @@ for i, (y, x) in enumerate(pos2):
 # get center of mass
 pos3 = []
 for y, x in pos2:
-    spot, _, _, _ = im2.get_spot(y=y, x=x, n=_n2, coordinates='centers')
+    spot, _, _, _ = im2.get_spot(y=y, x=x, n=_cm_n, coordinates='centers')
     pos3.append(spot.get_center_of_mass())
 
 # plot for verification
@@ -870,7 +874,7 @@ for i, (y, x) in enumerate(pos3):
             ax.scatter(x, y, color='magenta', label='Center of mass around a spike in the raw image')
         else:      
             ax.scatter(x, y, color='magenta')
-        ax.scatter(x, y, s=10, edgecolors='magenta', fc='None', linewidths=10*_n2)
+        ax.scatter(x, y, s=10, edgecolors='magenta', fc='None', linewidths=10*_cm_n)
 
 # patch
 if len(pos) > 0:
@@ -903,11 +907,11 @@ im = ims[0]
 # parameters
 n  = 6
 _n = 4
-threshold = 1e4#3e4  # note that threshold must be interms of enhanced image as enhance=True in im.find_and_patch()
+threshold = 1e4#3e4  # note that threshold must be in terms of enhanced image as _square=True in im.find_and_patch()
 _patch_size = n         
 
 # find and patch
-im2, pe = im.find_and_patch(n, threshold, threshold2=None, enhance=True, _n=_n, _bkg=None, _patch_size=_patch_size, _patch_value=None)
+im2, pe = im.find_and_patch(n, threshold, threshold2=None, _bkg=None, _square=True, _n=_n, _patch_size=_patch_size, _patch_value=None)
 
 # plot for verification
 fig, axes = br.subplots(1, 3, sharex=True, sharey=True, figsize=(40, 12), layout='constrained')
@@ -930,10 +934,10 @@ ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims[1]
 
 # parameters
-cosmic   = dict(n=6, _n=4, threshold=1e4, enhance=True)
-centroid = dict(n=1, threshold=400, threshold2=None, floor=True, enhance=True, 
-                _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', 
-                MAX_NUMBER_OF_CANDIDATES=1000)
+cosmic   = dict(n=6, threshold=1e4, _bkg=None, _square=True, _n=4)
+centroid = dict(n=1, threshold=400, threshold2=None, _bkg=None, _square=True, 
+                _n=None, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', 
+                MAX_NUMBER_OF_CANDIDATES=2000)
 
 # find and patch
 im2, pec = im.find_and_patch(**cosmic)
@@ -966,9 +970,9 @@ ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims[0]
 
 # parameters
-cosmic   = dict(n=6, _n=4, threshold=1e4, enhance=True)
-centroid = dict(n=1, threshold=400, threshold2=900, floor=True, enhance=True, 
-                _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', 
+cosmic   = dict(n=6, threshold=1e4, _bkg=None, _square=True, _n=4)
+centroid = dict(n=1, threshold=400, threshold2=900, _bkg=None, _square=True, 
+                _n=None, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', 
                 MAX_NUMBER_OF_CANDIDATES=2000)
 
 # find and patch
@@ -1001,9 +1005,9 @@ dataset = 'align_0001'
 scan    = 125
 
 # centroid parameters
-cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=400, threshold2=900, floor=True, enhance=True, 
-                _n=None, _bkg=None, _n2=None, spot_zeroing_type='zero', 
+cosmic   = dict(n=6, threshold=1e4, _n=4)
+centroid = dict(n=1, threshold=400, threshold2=900, _bkg=None, _square=True, 
+                _n=None, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', 
                 MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
@@ -1051,7 +1055,7 @@ sample  = 'align_rixs'
 dataset = 'align_0001'
 scan    = 125
 
-# get online-processed spectrum for comparisson
+# get online-processed spectrum for comparison
 s1 = id32.read(TOP, sample, dataset, scan)
 
 # integration mode (no cosmic rays removal)
@@ -1065,7 +1069,7 @@ s2 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 s2 = s2.floor(limits=(None, 5))
 
 # integration mode
-cosmic   = dict(n=6, _n=4, threshold=1e4)
+cosmic   = dict(n=6, threshold=1e4, _n=4)
 centroid = None
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = None
@@ -1076,7 +1080,7 @@ s3 = s3.floor(limits=(None, 5))
 
 # centroid 1 (no cosmic rays removal)
 cosmic   = None
-centroid = dict(n=1, threshold=400, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=400, threshold2=None, _square=True, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
@@ -1084,8 +1088,8 @@ include_double_events = True
 s4 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=calib, cosmic=cosmic, centroid=centroid, include_double_events=include_double_events)
 
 # centroid 1
-cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=400, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=2000)
+cosmic   = dict(n=6, threshold=1e4, _n=4)
+centroid = dict(n=1, threshold=400, threshold2=None, _square=True, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
@@ -1094,7 +1098,7 @@ s5 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 
 # centroid 2
 cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=500, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=500, threshold2=None, _square=True, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
@@ -1103,7 +1107,7 @@ s6 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 
 # centroid 3
 cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=600, threshold2=None, floor=True, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=600, threshold2=None, _square=True, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px

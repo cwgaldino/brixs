@@ -503,7 +503,7 @@ def readxas(filepath, scan, branch=None, detectors_rixs_branch=['dbig_n', 'sam_n
         ss = id32.read(filepath, scan)
 
     Args:
-        filepath (str or path, optional): filepath is expected to point to
+        filepath (str or path): filepath is expected to point to
             the .h5 file from a dataset, 
             e.g., TOP/RAW_DATA/<sample>/<dataset>/dataset.h5
         scan (int): scan number.
@@ -651,7 +651,7 @@ def readrixs(filepath, scan):
         Metadata is not loaded like in id32.read() and id32.readxas()
 
     Args:
-        filepath (str or path, optional): filepath is expected to point to
+        filepath (str or path): filepath is expected to point to
             the .spec file from a dataset, 
             e.g., TOP/PROCESSED_DATA/<sample>/<dataset>/Online_analysis_..._andor1.SPEC
         scan (int): scan number.
@@ -694,7 +694,7 @@ def readraw(filepath):
         Metadata is not loaded like in id32.read() and id32.readxas()
 
     Args:
-        filepath (str or path, optional): filepath is expected to point to
+        filepath (str or path): filepath is expected to point to
             the .h5 file from the detector, e.g., andor1_0000.h5
 
     Return:
