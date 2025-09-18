@@ -10,13 +10,6 @@ make the folder lighter and easier to download.
 
 This example also requires the cv2 package for reading tif images.
 pip install opencv-python
-
-# approximate values
-# pixel saturation value ~ 16K300
-# pixel value for single photon hit ~700 - 2e3 (bkg ~200)
-# enhanced (_n=4)       --> 4e4 (bkg ~4e2)
-# raw - dark            --> 600 (bkg ~30)
-# (raw - dark) enhanced --> 5e4 (bkg ~ 1e3)
 """
 
 # %% ========================== standard imports ========================= %% #
@@ -39,7 +32,7 @@ get_ipython().run_line_magic('matplotlib', 'qt5')
 plt.ion()
 
 # brixs (optional)
-br.settings.FIGURE_POSITION = (80, 200)
+br.settings.FIGURE_POSITION = (327, 1971)#(80, 200)
 # br.get_window_position()
 # %%
 
@@ -84,15 +77,14 @@ def read_rixs_image(scan, index=None, TOP=TOP):
         single image otherwise
     """
     TOP = Path(TOP)
-    assert index >= 0, 'index must be a positive integer or zero'
-    assert index < number_of_images_inside_scan(scan, TOP=TOP), f'index not valid.'
-
     imagelist = br.parsed_filelist(TOP/f'data/RIXS/TIF/{str(scan).zfill(4)}', string='.tif', ref=1, return_type='dict')
     if index is None:
         im = br.Dummy()
         for _index in imagelist:
-            im.append(br.Image(data=cv2.imread(imagelist[index], -1)))
+            im.append(br.Image(data=cv2.imread(imagelist[_index], -1)))
     else:
+        assert index >= 0, 'index must be a positive integer or zero'
+        assert index < number_of_images_inside_scan(scan, TOP=TOP), f'index not valid.'
         im = br.Image(data=cv2.imread(imagelist[index], -1))
     return im
 
@@ -122,52 +114,6 @@ def get_photon_events(scan, index=None, verbose=False, start=0, stop=None, curv=
 # %%
 
 
-# %  ===================================================================== %% #
-# %  ============ enhancing image to visually detect photon hits ========= %% #
-# %% ===================================================================== %% #
-scan = 100
-index = 0
-_n = 8
-
-# raw image
-im   = read_rixs_image(scan, index=index)
-_pe1, _pe2, _, _ = get_photon_events(100, index=index)
-pe = _pe1 + _pe2
-
-# enhance image
-im2 = im.enhance(_n)
-
-# simulated dark image (remove photon events and cosmic rays from random image)
-d = read_rixs_image(scan, index=index+1)
-_pe1, _pe2, _, _ = get_photon_events(scan, index=index+1)
-d = d.patch([(y, x) for x, y in _pe1 + _pe2], n=6)  # remove photon events
-d, _ = d.find_and_patch(n=4, threshold=1e4, _bkg=0, _square=False, _n=1, _patch_size=4)  # remove cosmic rays
-im3 = im - d
-
-# enhance image
-im4 = im3.enhance(_n, 0)
-
-# detect cosmic rays from the raw image
-pec, _ = im.find_candidates(n=4, threshold=5e3, _bkg=0, _square=False, _n=1)
-
-# plot
-fig, axes = br.subplots(1, 4, sharex=True, sharey=True, figsize=(46, 12), layout='constrained')
-im.pcolormesh(ax=axes[0],  vmin=0, vmax=800)
-im2.pcolormesh(ax=axes[1], vmin=0, vmax=1e4)
-im3.pcolormesh(ax=axes[2], vmin=0, vmax=1000)
-im4.pcolormesh(ax=axes[3], vmin=0, vmax=1e4)
-for ax in axes: 
-    pe.plot(ax=ax, s=50, edgecolors='red', fc='None', linewidths=1, label='photon events (from xcam centroid)')
-for ax in axes: 
-    pec.plot(ax=ax, s=70, edgecolors='white', fc='None', linewidths=1, label='cosmic rays (from brixs)')
-
-axes[1].legend(labelcolor='black')
-axes[0].set_title('raw')
-axes[1].set_title('raw enhanced')
-axes[2].set_title(f'raw - dark')
-axes[3].set_title(f'(raw - dark) enhanced')
-# %%
-
 quit()
 ipython
 # %%
@@ -180,8 +126,8 @@ import brixs.addons.centroid
 from brixs.addons.sound import make_sound
 get_ipython().run_line_magic('matplotlib', 'qt5')
 plt.ion()
-br.settings.FIGURE_POSITION = (80, 100)
-TOP = Path(r'C:\Users\galdin_c\github\brixsexampledata\beamlines\ipe')
+br.settings.FIGURE_POSITION = (327, 1971)#(80, 200)
+TOP = Path(r'C:\Users\galdin_c\github\brixsexampledata\beamlines\ipe2')
 # %%
 
 # %  ===================================================================== %% #
@@ -191,11 +137,11 @@ scan = 100
 index = 0
 n = 2   # photon hits candidates that are within n pixels of distance from each other will be considered the same candidate.
 threshold = 500  # pixel intensity for detecting candidates
-_n = 8  # moving average window for enhancing image 
+_n = 12  # moving average window for enhancing image 
 
 # raw image
 im   = read_rixs_image(scan, index=index)
-_pe1, _pe2, _, _ = get_photon_events(100, index=index)
+_pe1, _pe2, _, _ = get_photon_events(scan, index=index)
 pe = _pe1 + _pe2
 
 # enhance image
@@ -220,18 +166,17 @@ peb, _ = temp.centroid(n=n, threshold=threshold, _bkg=0, _square=False, _n=1)
 
 # plot
 fig, axes = br.subplots(1, 4, sharex=True, sharey=True, figsize=(46, 12), layout='constrained')
-im.pcolormesh(ax=axes[0],  vmin=0, vmax=800)
-im2.pcolormesh(ax=axes[1], vmin=0, vmax=1e4)
-im3.pcolormesh(ax=axes[2], vmin=0, vmax=1000)
-im4.pcolormesh(ax=axes[3], vmin=0, vmax=1e4)
-for ax in axes: 
-    pe.plot(ax=ax, s=50, edgecolors='red', fc='None', linewidths=1, label=f'photon events from xcam (counts={len(pe)})')
-for ax in axes: 
-    pec.plot(ax=ax, s=50, edgecolors='white', fc='None', linewidths=1, label=f'cosmic rays from brixs (counts={len(pec)})')
-for ax in axes: 
-    peb.plot(ax=ax, s=80, edgecolors='orange', fc='None', linewidths=1, label=f'photon events from raw brixs (counts={len(peb)})')
+im.plot(ax=axes[0],  vmin=0, vmax=800, origin='lower')
+im2.plot(ax=axes[1], vmin=0, vmax=1e4, origin='lower')
+im3.plot(ax=axes[2], vmin=0, vmax=1000, origin='lower')
+im4.plot(ax=axes[3], vmin=0, vmax=1e4, origin='lower')
 
-axes[1].legend(labelcolor='black')
+ax = axes[0]
+pe.plot(ax=ax, s=50, edgecolors='red', fc='None', linewidths=1, label=f'photon events from xcam (counts={len(pe)})')
+pec.plot(ax=ax, s=50, edgecolors='white', fc='None', linewidths=1, label=f'cosmic rays from brixs (counts={len(pec)})')
+peb.plot(ax=ax, s=80, edgecolors='orange', fc='None', linewidths=1, label=f'photon events from raw brixs (counts={len(peb)})')
+
+axes[0].legend(labelcolor='black')
 axes[0].set_title('raw')
 axes[1].set_title('raw enhanced')
 axes[2].set_title(f'raw - dark')
@@ -240,70 +185,113 @@ axes[3].set_title(f'(raw - dark) enhanced')
 
 
 # %  ===================================================================== %% #
-# %  ======================== optimizing centroid ======================== %% #
+# %  ============== centroid parameters 1 (no moving window) ============= %% #
 # %% ===================================================================== %% # 
 scan = 100
-index = 0
+# scan = 130
+# scan = 124
 
-# photon hist are assumed to excite at least the first neighbors. Enhancing the
-# image does a moving average which makes sure that a pixel will only became a
-# candidate if pixels around it were also light up
+# parameters
+cosmic   = dict(n=6, threshold=5e3)
+centroid = dict(n=2, threshold=500)  # photon hit is assumed to excite at up to second neighbors
+enhance  = dict(n=20)
 
+# read image, remove cosmic rays, and centroid
+ims = read_rixs_image(scan)
+enh = br.Dummy()
+pe1, pe2, pec = br.Dummy(), br.Dummy(), br.Dummy()
+for _im in ims:
+    _temp, _pec = _im.find_and_patch(**cosmic)
+    _pe1, _pe2  = _temp.centroid(**centroid)
+    enh.append(_im.enhance(**enhance))
+    pe1.append(_pe1)
+    pe2.append(_pe2)
+    pec.append(_pec)
 
-peb, _ = temp.centroid(n=n, threshold=500, enhance=True)
-
-
-
-n = 2   # photon hits candidates that are within n pixels of distance from each other will be considered the same candidate.
-_n = 8  # moving average window for enhancing image, 
-
-# raw image
-im   = read_rixs_image(scan, index=index)
-_pe1, _pe2, _, _ = get_photon_events(100, index=index)
-pe = _pe1 + _pe2
-
-# enhance image
-im2 = im.enhance(_n)
-
-# simulated dark image (remove photon events and cosmic rays from random image from th same scan)
-d = read_rixs_image(scan, index=index+1)
-_pe1, _pe2, _, _ = get_photon_events(scan, index=index+1)
-d = d.patch([(y, x) for x, y in _pe1 + _pe2], n=6)  # remove photon events
-d, _ = d.find_and_patch(n=6, threshold=10000)       # remove cosmic rays
-im3 = im - d
-
-# enhance image
-im4 = im3.enhance(_n, 0)
-
-# detect cosmic rays from the raw image
-pec, _ = im.find_candidates(n=6, threshold=5e3, enhance=False)
-
-# centroid from the raw image (removed cosmic events)
-temp = im.patch(pos=[(_[1], _[0]) for _ in pec], n=_n)
-peb, _ = temp.centroid(n=n, threshold=500, enhance=False)
+# get photon events from xcam
+pex = br.Dummy()
+for i in range(len(ims)):
+    _pe_a, _pe_b, _, _ = get_photon_events(scan, index=i)
+    pex.append(_pe_a + _pe_b)
 
 # plot
-fig, axes = br.subplots(1, 4, sharex=True, sharey=True, figsize=(46, 12), layout='constrained')
-im.pcolormesh(ax=axes[0],  vmin=0, vmax=800)
-im2.pcolormesh(ax=axes[1], vmin=0, vmax=1e4)
-im3.pcolormesh(ax=axes[2], vmin=0, vmax=1000)
-im4.pcolormesh(ax=axes[3], vmin=0, vmax=1e4)
-for ax in axes: 
-    pe.plot(ax=ax, s=50, edgecolors='red', fc='None', linewidths=1, label=f'photon events from xcam (counts={len(pe)})')
-for ax in axes: 
-    pec.plot(ax=ax, s=50, edgecolors='white', fc='None', linewidths=1, label=f'cosmic rays from brixs (counts={len(pec)})')
-for ax in axes: 
-    peb.plot(ax=ax, s=80, edgecolors='orange', fc='None', linewidths=1, label=f'photon events from raw brixs (counts={len(peb)})')
+fig, axes = br.subplots(4, 6, sharex=True, sharey=True, hspace=0.04, wspace=0.1, figsize=(46, 16))
+plt.subplots_adjust(left=0.04, right=0.98, top=0.96, bottom=0.1)
+for ax in axes[12:]:
+    ax.ymove(-0.05)
+for i in range(len(ims[:12])):
+    if i > 5: j = i + 6
+    else: j = i
+    ims[i].plot(ax=axes[j],   vmin=0, vmax=800, origin='lower')
+    enh[i].plot(ax=axes[j+6], vmin=0, vmax=5e3, origin='lower')
+    pex[i].plot(ax=axes[j], s=40, edgecolors='red',    fc='None', linewidths=1, label=f'photon events from xcam (counts={len(pex[i])})')
+    pec[i].plot(ax=axes[j], s=60, edgecolors='white',  fc='None', linewidths=1, label=f'cosmic rays from brixs (counts={len(pec[i])})')
+    pe1[i].plot(ax=axes[j], s=80, edgecolors='orange', fc='None', linewidths=1, label=f'photon events from raw brixs (counts={len(pe1[i])})')
+    pe2[i].plot(ax=axes[j], s=100, edgecolors='green',  fc='None', linewidths=1, label=f'double events from raw brixs (counts={len(pe2[i])})')
 
-axes[1].legend(labelcolor='black')
-axes[0].set_title('raw')
-axes[1].set_title('raw enhanced')
-axes[2].set_title(f'raw - dark')
-axes[3].set_title(f'(raw - dark) enhanced')
+axes[0].legend(labelcolor='black', fontsize='xx-small')
+for i, ax in enumerate(axes.rows[0] + axes.rows[2]):
+    ax.set_title(f'scan {scan}, image {i}', fontsize='x-small')
+    ax.note(f'{len(pex[i])}, {len(pec[i])}, {len(pe1[i])}, {len(pe2[i])}', loc='lower right', color='white', fontsize='xx-small')
+for ax in axes.rows[1] + axes.rows[3]:
+    ax.note('Enhanced', loc='lower right', color='white', fontsize='x-small')
+_ = br.label_axes(axes)
 # %%
 
 
+# %  ===================================================================== %% #
+# %  ================ centroid parameters 2 (moving window) ============== %% #
+# %% ===================================================================== %% # 
+scan = 100
+# scan = 130
+# scan = 124
 
+# parameters
+cosmic   = dict(n=6, threshold=4e3)
+centroid = dict(n=2, threshold=260, _n=3)
+enhance  = dict(n=20)
+
+# read image, remove cosmic rays, and centroid
+ims = read_rixs_image(scan)
+enh = br.Dummy()
+pe1, pe2, pec = br.Dummy(), br.Dummy(), br.Dummy()
+for _im in ims:
+    _temp, _pec = _im.find_and_patch(**cosmic)
+    _pe1, _pe2  = _temp.centroid(**centroid)
+    enh.append(_im.enhance(**enhance))
+    pe1.append(_pe1)
+    pe2.append(_pe2)
+    pec.append(_pec)
+
+# get photon events from xcam
+pex = br.Dummy()
+for i in range(len(ims)):
+    _pe_a, _pe_b, _, _ = get_photon_events(scan, index=i)
+    pex.append(_pe_a + _pe_b)
+
+# plot
+fig, axes = br.subplots(4, 6, sharex=True, sharey=True, hspace=0.04, wspace=0.1, figsize=(46, 16))
+plt.subplots_adjust(left=0.04, right=0.98, top=0.96, bottom=0.1)
+for ax in axes[12:]:
+    ax.ymove(-0.05)
+for i in range(len(ims[:12])):
+    if i > 5: j = i + 6
+    else: j = i
+    ims[i].plot(ax=axes[j],   vmin=0, vmax=800, origin='lower')
+    enh[i].plot(ax=axes[j+6], vmin=0, vmax=5e3, origin='lower')
+    pex[i].plot(ax=axes[j], s=40, edgecolors='red',    fc='None', linewidths=1, label=f'photon events from xcam (counts={len(pex[i])})')
+    pec[i].plot(ax=axes[j], s=60, edgecolors='white',  fc='None', linewidths=1, label=f'cosmic rays from brixs (counts={len(pec[i])})')
+    pe1[i].plot(ax=axes[j], s=80, edgecolors='orange', fc='None', linewidths=1, label=f'photon events from raw brixs (counts={len(pe1[i])})')
+    pe2[i].plot(ax=axes[j], s=100, edgecolors='green',  fc='None', linewidths=1, label=f'double events from raw brixs (counts={len(pe2[i])})')
+
+axes[0].legend(labelcolor='black', fontsize='xx-small')
+for i, ax in enumerate(axes.rows[0] + axes.rows[2]):
+    ax.set_title(f'scan {scan}, image {i}', fontsize='x-small')
+    ax.note(f'{len(pex[i])}, {len(pec[i])}, {len(pe1[i])}, {len(pe2[i])}', loc='lower right', color='white', fontsize='xx-small')
+for ax in axes.rows[1] + axes.rows[3]:
+    ax.note('Enhanced', loc='lower right', color='white', fontsize='x-small')
+_ = br.label_axes(axes)
+# %%
 
 
 
