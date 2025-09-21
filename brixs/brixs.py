@@ -8855,7 +8855,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         spot = Image(data=self.data[y_start:y_stop, x_start:x_stop])
         # if coordinates == 'centers':
         spot.x_centers = self.x_centers[x_start:x_stop]
-        spot.y_centers = self.x_centers[y_start:y_stop]
+        spot.y_centers = self.y_centers[y_start:y_stop]
 
         return spot, slice(y_start, y_stop), slice(x_start, x_stop), is_near_edge
 

@@ -569,13 +569,10 @@ def digitize(x, bins, xmin=None, xmax=None):
             indexes (dict), bin_edges (list)
     """
     if isinstance(bins, Iterable)==False or isinstance(bins, str):
-        range_ = None
-        if xmin is not None or xmax is not None:
-            if xmin is None: xmin = np.min(x)
-            if xmax is None: xmax = np.max(x)
-            range_ = (xmin, xmax)
+        if xmin is None: xmin = np.min(x)
+        if xmax is None: xmax = np.max(x)
         assert xmax > xmin, 'xmax must be higher than xmin'
-        bin_edges = np.histogram_bin_edges(x, bins=bins, range=range_, weights=None)
+        bin_edges = np.histogram_bin_edges(x, bins=bins, range=(xmin, xmax), weights=None)
     else:
         assert xmin is None, 'if bins is a list (assumed to be the bins edges), than xmin must be None'
         assert xmax is None, 'if bins is a list (assumed to be the bins edges), than xmax must be None'
