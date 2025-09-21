@@ -1427,7 +1427,7 @@ def merge_axes(ax1, ax2):
         merged axes object
     """
     # check if axes came from the same figure
-    assert ax1.figure == ax1.figure, 'axes must come from the same figure'
+    assert ax1.figure == ax2.figure, 'axes must come from the same figure'
 
     # check if axes are neighbors and the same size
     xmin1 = ax1._subplotspec.rowspan.start
