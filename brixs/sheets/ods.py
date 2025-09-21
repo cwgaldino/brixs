@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """Quality-of-life functions for libreoffice Calc macros
 
 Usage:
@@ -13,7 +15,6 @@ Usage:
     >>> from brixs.sheets.ods import get_width, get_height, set_width, set_height
     >>> from brixs.sheets.ods import get_border, set_border
     >>> from brixs.sheets.ods import get_protection, lock_cells, unlock_cells
-
 """
 # %% ------------------------- standard imports --------------------------- %% #
 pass
