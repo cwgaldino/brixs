@@ -5993,7 +5993,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             if y_centers is not None:
                 self.y_centers = y_centers
         elif filepath is not None:
-            self.load(filepath, **kwargs)
+            self.loadtxt(filepath, **kwargs)
         return
 
     ###################
