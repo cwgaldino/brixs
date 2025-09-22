@@ -8516,9 +8516,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             list
         """
-        ss = self.get_rows(max_number_of_rows=xlimits)
-
-        # calculate
+        ss = self.get_rows(max_number_of_rows=limit_size)
         values = ss.calculate_shift(mode=mode, limits=xlimits, **kwargs)
         return values
     
