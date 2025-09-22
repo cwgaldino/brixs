@@ -1,6 +1,9 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Centroid algorithm"""
+"""Centroid algorithm
+
+Import this using import brixs.addons.centroid
+"""
 
 # %% ------------------------- Standard Imports -------------------------- %% #
 import numpy as np
@@ -157,7 +160,7 @@ def enhance(self, n, bkg=None):
     return im.multiply(im).moving_average(n)
 br.Image.enhance = enhance
 
-def find_candidates(self, n, threshold, threshold2=None, _bkg=0, _square=False, _n=1):
+def find_candidates(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1):
     """Returns a list of photon hit candidates defined by a threshold in a enhanced image
 
     This is an approximate description of the algorithm:
@@ -185,11 +188,10 @@ def find_candidates(self, n, threshold, threshold2=None, _bkg=0, _square=False, 
 
         Image enhancement:
         
-        _bkg (number, optional): Use this to overwrite the bkg value for flooring
-            the image. If _bkg is not None, the image will be subtracted by _bkg.
-            If _bkg is None, bkg will be defined so the average of the whole 
-            image is zero. Default is None. Note that _bkg = 0 implies no 
-            flooring.
+        _bkg (number, 'auto', or None, optional): the image will be subtracted by _bkg.
+            If _bkg is 'auto', bkg will be defined so the average of the whole 
+            image is zero. If None, no offsetting is applied. Default is None. 
+            Note that _bkg = 0 implies no flooring (same as _bkg=None).
         _square (bool, optional): If True, the image will be floored (an offset
             will be applied so avg pixel intensity is zero), squared, 
             and a moving averaged of size n will be applied. Default is True.
@@ -204,8 +206,10 @@ def find_candidates(self, n, threshold, threshold2=None, _bkg=0, _square=False, 
         photon events list, and double events list
     """
     # enhance image
-    if _bkg is None:
+    if _bkg == 'auto':
         im = self.floor()
+    elif _bkg is None:
+        im = self._copy()
     else:
         im = self.set_offset(-_bkg)
 
@@ -234,7 +238,7 @@ def find_candidates(self, n, threshold, threshold2=None, _bkg=0, _square=False, 
     return br.PhotonEvents(x=[_[1] for _ in final], y=[_[0] for _ in final]), br.PhotonEvents(x=[_[1] for _ in final2], y=[_[0] for _ in final2])
 br.Image.find_candidates = find_candidates
 
-def find_and_patch(self, n, threshold, threshold2=None,  _bkg=0, _square=False, _n=1, _patch_size=None, _patch_value=None, MAX_NUMBER_OF_CANDIDATES=200):
+def find_and_patch(self, n, threshold, threshold2=None,  _bkg=None, _square=False, _n=1, _patch_size=None, _patch_value=None, MAX_NUMBER_OF_CANDIDATES=200):
     """Returns image where photon event are patched out (cosmic rays correction)
 
     This is an approximate description of the algorithm:
@@ -264,11 +268,10 @@ def find_and_patch(self, n, threshold, threshold2=None,  _bkg=0, _square=False, 
         
         Image enhancement args:
 
-        _bkg (number, optional): Use this to overwrite the bkg value for flooring
-            the image. If _bkg is not None, the image will be subtracted by _bkg.
-            If _bkg is None, bkg will be defined so the average of the whole 
-            image is zero. Default is None. Note that _bkg = 0 implies no 
-            flooring.
+        _bkg (number, 'auto', or None, optional): the image will be subtracted by _bkg.
+            If _bkg is 'auto', bkg will be defined so the average of the whole 
+            image is zero. If None, no offsetting is applied. Default is None. 
+            Note that _bkg = 0 implies no flooring (same as _bkg=None).
         _square (bool, optional): If True, the image will be floored (an offset
             will be applied so avg pixel intensity is zero), squared, 
             and a moving averaged of size n will be applied. Default is True.
@@ -313,7 +316,7 @@ br.Image.find_and_patch = find_and_patch
 # %%
 
 # %% ============================ centroid =============================== %% #
-def centroid(self, n, threshold, threshold2=None, _bkg=0, _square=False, _n=1, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', MAX_NUMBER_OF_CANDIDATES=300):
+def centroid(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1, _cm_bkg='auto', _cm_n=None, _cm_spot_zero_type='zero', MAX_NUMBER_OF_CANDIDATES=300):
     """Returns a list of photon hits defined by a threshold in a enhanced image
 
     For a complete description of this function, Please refer to 
@@ -355,8 +358,10 @@ def centroid(self, n, threshold, threshold2=None, _bkg=0, _square=False, _n=1, _
             pe.append(_a[0], _a[1])     
 
     # floor before calculating the center of mass
-    if _cm_bkg is None:
+    if _cm_bkg == 'auto':
         im = self.floor()
+    elif _cm_bkg is None:
+        im = self.copy()
     else:
         im = self.set_offset(-_cm_bkg)
     

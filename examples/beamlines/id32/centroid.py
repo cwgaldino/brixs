@@ -189,7 +189,7 @@ threshold = 1e4#3e4  # note that threshold must be in terms of enhanced image as
 _patch_size = n         
 
 # find and patch
-im2, pe = im.find_and_patch(n, threshold, threshold2=None, _bkg=None, _square=True, _n=_n, _patch_size=_patch_size, _patch_value=None)
+im2, pe = im.find_and_patch(n, threshold, threshold2=None, _bkg='auto', _square=True, _n=_n, _patch_size=_patch_size, _patch_value=None)
 
 # plot for verification
 fig, axes = br.subplots(1, 3, sharex=True, sharey=True, figsize=(40, 12), layout='constrained')
@@ -212,9 +212,9 @@ ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims[1]
 
 # parameters
-cosmic   = dict(n=6, threshold=1e4, _bkg=None, _square=True, _n=4)
-centroid = dict(n=1, threshold=400, threshold2=None, _bkg=None, _square=True, 
-                _n=None, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', 
+cosmic   = dict(n=6, threshold=1e4, _bkg='auto', _square=True, _n=4)
+centroid = dict(n=1, threshold=400, threshold2=None, _bkg='auto', _square=True, 
+                _n=None, _cm_bkg='auto', _cm_n=None, _cm_spot_zero_type='zero', 
                 MAX_NUMBER_OF_CANDIDATES=2000)
 
 # find and patch
@@ -248,9 +248,9 @@ ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims[0]
 
 # parameters
-cosmic   = dict(n=6, threshold=1e4, _bkg=None, _square=True, _n=4)
-centroid = dict(n=1, threshold=400, threshold2=900, _bkg=None, _square=True, 
-                _n=None, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', 
+cosmic   = dict(n=6, threshold=1e4, _bkg='auto', _square=True, _n=4)
+centroid = dict(n=1, threshold=400, threshold2=900, _bkg='auto', _square=True, 
+                _n=None, _cm_bkg='auto', _cm_n=None, _cm_spot_zero_type='zero', 
                 MAX_NUMBER_OF_CANDIDATES=2000)
 
 # find and patch
@@ -284,8 +284,8 @@ scan    = 125
 
 # centroid parameters
 cosmic   = dict(n=6, threshold=1e4, _n=4)
-centroid = dict(n=1, threshold=400, threshold2=900, _bkg=None, _square=True, 
-                _n=None, _cm_bkg=None, _cm_n=None, _cm_spot_zero_type='zero', 
+centroid = dict(n=1, threshold=400, threshold2=900, _bkg='auto', _square=True, 
+                _n=None, _cm_bkg='auto', _cm_n=None, _cm_spot_zero_type='zero', 
                 MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
@@ -358,7 +358,7 @@ s3 = s3.floor(limits=(None, 5))
 
 # centroid 1 (no cosmic rays removal)
 cosmic   = None
-centroid = dict(n=1, threshold=400, threshold2=None, _bkg=None, _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=400, threshold2=None, _bkg='auto', _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
@@ -367,7 +367,7 @@ s4 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 
 # centroid 1
 cosmic   = dict(n=6, threshold=1e4, _n=4)
-centroid = dict(n=1, threshold=500, threshold2=None, _bkg=None,  _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=500, threshold2=None, _bkg='auto',  _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
@@ -376,7 +376,7 @@ s5 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 
 # centroid 2
 cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=600, threshold2=None, _bkg=None,  _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=600, threshold2=None, _bkg='auto',  _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px
@@ -385,7 +385,7 @@ s6 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 
 # centroid 3
 cosmic   = dict(n=6, _n=4, threshold=1e4)
-centroid = dict(n=1, threshold=700, threshold2=None, _bkg=None,  _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
+centroid = dict(n=1, threshold=700, threshold2=None, _bkg='auto',  _square=True, _n=None, MAX_NUMBER_OF_CANDIDATES=2000)
 curv     = [-1.376e-06, 7.1524e-02, 0]
 nbins    = 6000
 calib    = 8.5878e-3  # eV/px

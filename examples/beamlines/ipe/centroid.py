@@ -32,7 +32,7 @@ get_ipython().run_line_magic('matplotlib', 'qt5')
 plt.ion()
 
 # brixs (optional)
-br.settings.FIGURE_POSITION = (327, 1971)#(80, 200)
+# br.settings.FIGURE_POSITION = (80, 200)
 # br.get_window_position()
 # %%
 
@@ -114,22 +114,6 @@ def get_photon_events(scan, index=None, verbose=False, start=0, stop=None, curv=
 # %%
 
 
-quit()
-ipython
-# %%
-import matplotlib.pyplot as plt
-from pathlib import Path
-import numpy as np
-import brixs as br
-import brixs.beamlines.ipe as ipe
-import brixs.addons.centroid
-from brixs.addons.sound import make_sound
-get_ipython().run_line_magic('matplotlib', 'qt5')
-plt.ion()
-br.settings.FIGURE_POSITION = (327, 1971)#(80, 200)
-TOP = Path(r'C:\Users\galdin_c\github\brixsexampledata\beamlines\ipe2')
-# %%
-
 # %  ===================================================================== %% #
 # %  ============ enhancing image to visually detect photon hits ========= %% #
 # %% ===================================================================== %% # 
@@ -151,18 +135,18 @@ im2 = im.enhance(_n)
 d = read_rixs_image(scan, index=index+1)
 _pe1, _pe2, _, _ = get_photon_events(scan, index=index+1)
 d = d.patch([(y, x) for x, y in _pe1 + _pe2], n=6)  # remove photon events
-d, _ = d.find_and_patch(n=4, threshold=1e4, _bkg=0, _square=False, _n=1, _patch_size=4)  # remove cosmic rays
+d, _ = d.find_and_patch(n=4, threshold=1e4, _bkg=None, _square=False, _n=1, _patch_size=4)  # remove cosmic rays
 im3 = im - d
 
 # enhance image
 im4 = im3.enhance(_n, 0)
 
 # detect cosmic rays from the raw image
-pec, _ = im.find_candidates(n=4, threshold=5e3, _bkg=0, _square=False, _n=1)
+pec, _ = im.find_candidates(n=4, threshold=5e3, _bkg=None, _square=False, _n=1)
 
 # centroid from the raw image (removed cosmic events)
 temp = im.patch(pos=[(_[1], _[0]) for _ in pec], n=_n)
-peb, _ = temp.centroid(n=n, threshold=threshold, _bkg=0, _square=False, _n=1)
+peb, _ = temp.centroid(n=n, threshold=threshold, _bkg=None, _square=False, _n=1)
 
 # plot
 fig, axes = br.subplots(1, 4, sharex=True, sharey=True, figsize=(46, 12), layout='constrained')

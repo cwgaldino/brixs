@@ -39,11 +39,10 @@ the centroid method,
 
         Image enhancement for finding candidates:
         
-        _bkg (number, optional): Use this to overwrite the bkg value for flooring
-            the image. If _bkg is not None, the image will be subtracted by _bkg.
-            If _bkg is None, bkg will be defined so the average of the whole 
-            image is zero. Default is None. Note that _bkg = 0 implies no 
-            flooring.
+        _bkg (number, 'auto', or None, optional): the image will be subtracted by _bkg.
+            If _bkg is 'auto', bkg will be defined so the average of the whole 
+            image is zero. If None, no offsetting is applied. Default is None. 
+            Note that _bkg = 0 implies no flooring (same as _bkg=None).
         _square (bool, optional): If True, the image will be floored (an offset
             will be applied so avg pixel intensity is zero), squared, 
             and a moving averaged of size n will be applied. Default is True.
@@ -54,14 +53,14 @@ the centroid method,
 
         Center of mass calculation:
 
-        _cm_bkg (bool, optional): If _cm_bkg is not None, the image will be 
-            subtracted by _bkg before calculating the center of masses.
-            If _cm_bkg is None, _cm_bkg will be defined so the average of the whole 
-            image is zero. Default is None. Note that _cm_bkg = 0 implies no 
-            flooring before calculating center of mass. This 
-            is unnecessary if the image is already originally floored. Center of
-            mass calculation can yield less precise results if image is not floored and
-            _cm_bkg >> n.
+        _cm_bkg (number, 'auto', or None, optional): If _cm_bkg is not None, the image will be 
+            subtracted by _cm_bkg before calculating the center of masses.
+            If _cm_bkg is 'auto', _cm_bkg will be defined so the average of the whole 
+            image is zero. If _cm_bkg is None, no offsetting of the image is 
+            applied. Default is None. Note that _cm_bkg = 0 implies no 
+            flooring before calculating center of mass (same as _cm_bkg=None). 
+            Note that, center of mass calculation can yield less precise 
+            results if image is not floored and _cm_bkg >> n.
         _cm_n (int): Use this to overwrite the number of neighbors when
             calculating the center of mass of a photon hit candidate, e.g., if 
             _cm_n=1, only first neighbors. _cm_n also defines how close two 
