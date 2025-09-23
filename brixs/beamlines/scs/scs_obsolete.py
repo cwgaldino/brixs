@@ -18,6 +18,7 @@ import copy
 
 # %% ------------------------------ brixs --------------------------------- %% #
 import brixs as br
+import brixs.addons.centroid
 
 # %% ------------------------- Special Imports ---------------------------- %% #
 import toolbox_scs as tb
@@ -106,7 +107,7 @@ def _digitize_via_binning(arr, bins, xmin=None, xmax=None):
             If bins is a list, it is assumed to be the bins edges. 
             
             Bins in inclusive at the bin_edge with smaller value, 
-            and exclusive at the bin_edge with higher value.
+            and excusive at the bin_edge with higher value.
         
             (from np.histogram_bin_edges):
             If bins is an int, it defines the number of equal-width 
@@ -156,7 +157,7 @@ def _digitize_via_binning(arr, bins, xmin=None, xmax=None):
             indexes (dict), bin_edges (list)
     """
     if isinstance(bins, Iterable)==False or isinstance(bins, str):
-        bin_edges = np.histogram_bin_edges(arr, bins=bins, range=None, weights=None)
+        bin_edges = np.histogram_bin_edges(arr, bins=20, range=None, weights=None)
     else:
         bin_edges = bins
     temp = np.digitize(arr, bins=bin_edges, right=False)
@@ -235,40 +236,52 @@ def _digitize_via_duplicates(arr, max_error=None):
 # is_time_trace
 # When t0 changes, s.delay_line is calculated based on s.time_delay if s.time_delay exists
 # t0_ and time_delay must be defined for all spectra
-br.Spectrum.is_time_trace = False
-br.Spectrum.t0_ = None
-def getter(self):
-    if hasattr(self, 't0_'):
-        return self.t0_
-def setter(self, value):
-    if hasattr(self, 'time_delay'):
-        # print([float(_) for _ in self.time_delay])
-        # print(tb.delayToPosition([int(_) for _ in self.time_delay], origin=int(self.t0_)))
-        # print(self.t0_)
-        # self.t0_ = 300.0
-        # if self.t0_ is not None:
-        if isinstance(self.time_delay, Iterable):
-            delay_line      = [tb.delayToPosition(_, origin=self.t0_) for _ in self.time_delay]
-            self.time_delay = [tb.positionToDelay(_, origin=value) for _ in delay_line]
-        else:
-            delay_line      = tb.delayToPosition(self.time_delay, origin=self.t0_)
-            self.time_delay = tb.positionToDelay(delay_line, origin=value)
-        if hasattr(self, 'is_time_trace'):
-            if self.is_time_trace:
-                self.x = self.time_delay
-    self.t0_ = value
-    return
-setattr(br.Spectrum, 't0', property(getter, setter, ))
 
-def getter(self):
-    if hasattr(self, 'time_delay') and hasattr(self, 't0_'):
-        if isinstance(self.time_delay, Iterable):
-            return [tb.delayToPosition(_, origin=self.t0_) for _ in self.time_delay]
-        else:
-            return tb.delayToPosition(self.time_delay, self.t0_)
-def setter(self, value):
-    raise ValueError('cannot set delay_line value. Change time_delay instead or t0')
-setattr(br.Spectrum, 'delay_line', property(getter, setter, ))
+
+# br.Spectrum.is_time_trace = False
+# br.Spectrum.t0_ = None
+# def getter(self):
+#     if hasattr(self, 't0_'):
+#         return self.t0_
+# def setter(self, value):
+#     if hasattr(self, 'time_delay'):
+#         # print([float(_) for _ in self.time_delay])
+#         # print(tb.delayToPosition([int(_) for _ in self.time_delay], origin=int(self.t0_)))
+#         # print(self.t0_)
+#         # self.t0_ = 300.0
+#         # if self.t0_ is not None:
+#         if isinstance(self.time_delay, Iterable):
+#             delay_line      = [tb.delayToPosition(_, origin=self.t0_) for _ in self.time_delay]
+#             self.time_delay = [tb.positionToDelay(_, origin=value) for _ in delay_line]
+#         else:
+#             delay_line      = tb.delayToPosition(self.time_delay, origin=self.t0_)
+#             self.time_delay = tb.positionToDelay(delay_line, origin=value)
+#         if hasattr(self, 'is_time_trace'):
+#             if self.is_time_trace:
+#                 self.x = self.time_delay
+#     self.t0_ = value
+#     return
+# setattr(br.Spectrum, 't0', property(getter, setter, ))
+
+# def getter(self):
+#     if hasattr(self, 'time_delay') and hasattr(self, 't0_'):
+#         if isinstance(self.time_delay, Iterable):
+#             return [tb.delayToPosition(_, origin=self.t0_) for _ in self.time_delay]
+#         else:
+#             return tb.delayToPosition(self.time_delay, self.t0_)
+# def setter(self, value):
+#     raise ValueError('cannot set delay_line value. Change time_delay instead or t0')
+# setattr(br.Spectrum, 'delay_line', property(getter, setter, ))
+
+def change_t0(self, t0):
+    delayline  = tb.delayToPosition(np.array(self.time_delay), origin=self.t0)
+    time_delay = tb.positionToDelay(np.array(delayline), origin=t0)
+    if self.is_time_trace:
+        self.x = time_delay
+    self.time_delay = time_delay
+    self.t0 = t0
+    return
+br.Spectrum.change_t0 = change_t0
 # %%
 
 # %% ============================= metadata =============================== %% #
@@ -320,7 +333,7 @@ def _get_dataset_xas(scan, proposal=None):
     
     return run, ds
 
-def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=False):
+def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False, t0=300, bins_overwrite=None):#, debug=False):
     """return spectrum from dataset
 
     Args:
@@ -380,17 +393,26 @@ def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=F
     # creating spectra #
     ####################
     if is_time_trace:
-        ds2['time_delay'] = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)   # delay in ps
+        ds2['time_delay'] = tb.positionToDelay(ds2['PP800_DelayLine'], origin=t0)   # delay in ps
+        if step is None:
+            step = 0.1
         bins = int((np.amax(ds2['time_delay'])-np.amin(ds2['time_delay']))/step)
         nrjkey = 'time_delay'
     else:
+        if step is None:
+            step = 0.1
         bins = int((np.amax(ds2['nrj'])-np.amin(ds2['nrj']))/step)
         nrjkey = 'nrj'    
+
+    if bins_overwrite is not None:
+        bins = bins_overwrite
     
     # normalized by SCS_SA3
     temp = tb.xas(ds2, bins, Iokey='i0_sa3', Itkey='FastADC2_9peaks', nrjkey=nrjkey, fluorescence=True, plot=False)
     raw  = tb.xas(ds2, bins, Iokey='i0_none', Itkey='FastADC2_9peaks', nrjkey=nrjkey, fluorescence=True, plot=False)
     TFY     = br.Spectrum(x=temp['nrj'], y=temp['muA'])
+    TFY.error = br.Spectrum(x=temp['nrj'], y=temp['sterrA'])
+    TFY.sigma = br.Spectrum(x=temp['nrj'], y=temp['sigmaA'])
     TFY.i0  = br.Spectrum(x=temp['nrj'], y=temp['muIo'])
     TFY.not_norm = br.Spectrum(x=raw['nrj'],  y=raw['muIo'])
 
@@ -400,7 +422,7 @@ def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=F
     # metadata for final spectrum
     for attr in metadata:
         TFY.__setattr__(attr, metadata[attr])
-    TFY.t0_ = 300
+    TFY.t0 = 300
     if is_time_trace:
         TFY.is_time_trace = True
         TFY.time_delay    = TFY.x
@@ -408,7 +430,7 @@ def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=F
         TFY.is_time_trace = False
         # TFY.time_delay    = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)
         # TFY.time_delay    = tb.positionToDelay(ds2['PP800_DelayLine'], origin=300)
-        TFY.time_delay    = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=300)
+        TFY.time_delay    = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=t0)
         # TFY.delay_line = tb.delayToPosition(TFY.x, origin=300)
     
     return {'ds2':ds2, 'TFY': TFY}
@@ -479,7 +501,7 @@ def _dataset2dict_xas(ds2, step=0.1, is_time_trace='auto', raw=False):#, debug=F
 
 #     return s
 
-def _internal_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
+def _internal_xas(scan, onoff=False, params=None, step=0.1, t0=300, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False, bins_overwrite=None):
     """Process XAS and time-trace from 1 run
     
     We are only counting the signal from the detectors if the signal matches in time with 
@@ -560,8 +582,8 @@ def _internal_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_ti
     if onoff:
         pumped   = ds2.isel({'sa3_pId': slice(0, None, 2)})
         unpumped = ds2.isel({'sa3_pId': slice(1, None, 2)})
-        on   = _dataset2dict_xas(pumped, step=step, is_time_trace=is_time_trace, raw=raw)
-        off  = _dataset2dict_xas(unpumped, step=step, is_time_trace=is_time_trace, raw=raw)
+        on   = _dataset2dict_xas(pumped, step=step, is_time_trace=is_time_trace, raw=raw, t0=t0, bins_overwrite=bins_overwrite)
+        off  = _dataset2dict_xas(unpumped, step=step, is_time_trace=is_time_trace, raw=raw, t0=t0, bins_overwrite=bins_overwrite)
         ds2 = on['ds2']
         TFY = on['TFY']
         TFY.off = off['TFY']
@@ -570,7 +592,7 @@ def _internal_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_ti
         return {'ds':ds, 'ds2':ds2, 'TFY': TFY}
     
     else:
-        d   = _dataset2dict_xas(ds2, step=step, is_time_trace=is_time_trace, raw=raw)
+        d   = _dataset2dict_xas(ds2, step=step, is_time_trace=is_time_trace, raw=raw, t0=t0, bins_overwrite=bins_overwrite)
         ds2 = d['ds2']
         TFY = d['TFY']
 
@@ -588,21 +610,21 @@ def _internal_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_ti
     if debug: print('final: ', br.stop_time_seconds(start_time))
     return {'ds':ds, 'ds2':ds2, 'TFY': TFY}
 
-@br.finder.track
-def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
-    """same as process but without t0"""
+# @br.finder.track
+# def _process_xas(scan, onoff=False, params=None, step=0.1, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
+#     """same as process but without t0"""
 
-    # finder
-    s = br.finder.search(parameters=locals(), folderpath=br.finder.folderpath)
-    if s is not None:
-        return s
+#     # # finder
+#     # s = br.finder.search(parameters=locals(), folderpath=br.finder.folderpath)
+#     # if s is not None:
+#     #     return s
 
-    d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
-    s = d['TFY']
+#     d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+#     s = d['TFY']
 
-    return s
+#     return s
 
-def process_xas(scan, onoff=False, params=None, step=0.1, t0=300, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False):
+def process_xas(scan, onoff=False, params=None, step=0.1, t0=300, proposal=None, is_time_trace='auto', bunchPattern='sase3', raw=False, debug=False, bins_overwrite=None):
     # s = _process_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
     
     #######################
@@ -614,17 +636,20 @@ def process_xas(scan, onoff=False, params=None, step=0.1, t0=300, proposal=None,
 
     # finder
     _vars = locals()
-    _vars.pop('t0')
-    s = br.finder.search(parameters=_vars, folderpath=br.finder.folderpath)
-    if s is None:
-        d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug)
+    # _vars.pop('t0')
+    s = br.finder.search(kwargs=_vars, folderpath=br.finder.folderpath)
+    if s == False:
+        d = _internal_xas(scan=scan, onoff=onoff, params=params, step=step, t0=t0, proposal=proposal, is_time_trace=is_time_trace, bunchPattern=bunchPattern, raw=raw, debug=debug, bins_overwrite=bins_overwrite)
         s = d['TFY']
-        br.finder.save(s=s, parameters=_vars, folderpath=br.finder.folderpath)
+        s.check_nan()
+        if s.has_nan:
+            s.remove_nan()
+        br.finder.save(obj=s, folderpath=br.finder.folderpath)
 
     ##########
     # set t0 #
     ##########
-    s.t0 = t0
+    # s.change_t0(t0=t0)
 
     return s
 
@@ -657,7 +682,7 @@ def _get_dataset(scan, proposal=None):
     # get data #
     ############
     h  = hRIXS(proposal)
-    ds = h.from_run(scan, extra_fields=_attrs + ['hRIXS_exposure'])  
+    ds = h.from_run(scan, extra_fields=_attrs + ['hRIXS_exposure', 'hRIXS_delay'])  
     return ds
 
 def _dataset2dict(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, include_metadata_for_each_image=False):
@@ -706,7 +731,7 @@ def _dataset2dict(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv
     #     ims[i].scan = scan
     
     # time
-    ims.t0_ = 300
+    ims.t0 = 300
     ims.time_delay = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=300)
 
     ########################
@@ -715,6 +740,10 @@ def _dataset2dict(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv
     if curv is not None:
         for i, _im in enumerate(ims):
             ims[i] = _im.set_horizontal_shift_via_polyval(p=curv)
+
+
+
+
     
     ####################
     # aggregate images #
@@ -746,7 +775,7 @@ def _dataset2dict(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv
     # im.scan = scan 
 
     # time
-    im.t0_ = 300
+    im.t0 = 300
     im.time_delay = ims.time_delay
 
     ##################
@@ -763,7 +792,483 @@ def _dataset2dict(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv
 
     return {'ds':ds, 'ims':ims, 'im':im, 's':s}
 
-@br.finder.track2
+
+
+
+
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+
+def _dataset2dict2(ds, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, include_metadata_for_each_image=False):
+    
+    ################
+    # get metadata # 
+    ################
+    metadata = {}
+
+    # required metadata
+    metadata['number_of_images'] = ds.dims['trainId']  # one image per train
+    metadata['exposure']         = ds['hRIXS_exposure'].values + 0
+    metadata['total_exposure']   = ds['hRIXS_exposure'].sum().values + 0
+    metadata['i0']               = ds['SCS_photonFlux'].values + 0
+    metadata['time_delay2']      = ds['hRIXS_delay'].values + 0
+
+    # metadata per train
+    metadata['raw']  = {attr: ds[attr].values + 0 for attr in _attrs}
+    metadata['stat'] = {attr: {'avg': np.mean(metadata['raw'][attr]),
+                               'min': np.min(metadata['raw'][attr]),
+                               'max': np.max(metadata['raw'][attr]),
+                               'std': np.std(metadata['raw'][attr])} for attr in metadata['raw']}
+    if include_metadata_for_each_image == False: del metadata['raw']
+
+    # manual assignment
+    metadata['E']          = round(metadata['stat']['nrj']['avg'], 2)
+    metadata['sample_z']   = round(metadata['stat']['XRD_STZ']['avg'], 5)
+    metadata['sample_y']   = round(metadata['stat']['XRD_STY']['avg'], 5)
+    metadata['sample_x']   = round(metadata['stat']['XRD_STX']['avg'], 5)
+    metadata['GATT']       = metadata['stat']['GATT_pressure']['avg']
+    metadata['exit_slit']  = round(metadata['stat']['ESLIT']['avg'], 2)
+
+    ################
+    # brixs object #
+    ################
+    ims = br.Dummy(data=[br.Image(data=_.values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop) for _ in ds['hRIXS_det']])    
+    
+    # metadata for individual images
+    if include_metadata_for_each_image:
+        for attr in metadata['raw']:
+            for i, _im in enumerate(ims):
+                ims[i].__setattr__(attr, metadata['raw'][attr][i])
+    
+    # # scan
+    # ims.scan = scan
+    # for i, _im in enumerate(ims):
+    #     ims[i].scan = scan
+    
+    # time
+    ims.t0 = 300
+    ims.time_delay = tb.positionToDelay(metadata['stat']['PP800_DelayLine']['avg'], origin=300)
+
+    ########################
+    # curvature correction #
+    ########################
+    if curv is not None:
+        for i, _im in enumerate(ims):
+            ims[i] = _im.set_horizontal_shift_via_polyval(p=curv)
+
+
+
+
+    
+    ####################
+    # aggregate images #
+    ####################
+    im = br.Image(data=np.zeros(ims[0].shape))
+    for i, _im in enumerate(ims):
+        if norm:
+            factor = 1/metadata['i0'][i]
+        else:
+            factor = 1
+        ims[i]   = _im.set_factor(factor)
+        im.data += _im.set_factor(factor).data
+    im.x_centers = ims[0].x_centers
+    im.y_centers = ims[0].y_centers
+    # else:
+    #     h     = hRIXS(proposal)
+    #     data2 = h.aggregate(ds=ds)
+    #     im    = br.Image(data=data2['hRIXS_det'].values).crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+    #     if curv is not None:
+    #         im = im.set_horizontal_shift_via_polyval(p=curv)
+
+    #################################
+    # metadata for aggregated image #
+    #################################
+    for attr in metadata:
+        im.__setattr__(attr, metadata[attr])
+    
+    # # scan
+    # im.scan = scan 
+
+    # time
+    im.t0 = 300
+    im.time_delay = ims.time_delay
+
+    ##################
+    # final spectrum #
+    ##################
+    if norm:
+        s = im.integrated_columns_vs_x_centers().set_factor(1/metadata['total_exposure'])
+    else:
+        s = im.integrated_columns_vs_x_centers()
+
+    # metadata for final spectrum
+    for attr in metadata:
+        s.__setattr__(attr, metadata[attr])
+
+    return {'ds':ds, 'ims':ims, 'im':im, 's':s}
+
+###############################################################################
+def _process2(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, bins=None, t0=300, include_metadata_for_each_image=False, proposal=None):
+    """internal function for _process()
+
+    Returns:
+        list with spectra
+    """    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    # finder
+    br.finder.kwargs = vars()
+    s = br.finder.search()
+    if s != False:
+        return s
+    
+    ###############
+    # get dataset #
+    ###############
+    ds = _get_dataset(scan=scan, proposal=proposal)
+    # delay_line = ds['PP800_DelayLine'].values + 0
+
+    if bins is None:
+        d = _dataset2dict2(ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+        s = d['s']
+        s.t0 = t0
+        s.time_delay = tb.positionToDelay(ds['PP800_DelayLine'], origin=t0).values
+        s.scan = scan
+        
+        br.finder.save(s)
+        
+        return s
+    else:
+        ss = br.Spectra()
+        ss.delays_real_avg = []
+        ss.delays_bin_avg  = []
+        arr = [round(x, 5) for x in tb.positionToDelay(ds['PP800_DelayLine'], origin=t0).values]
+        indexes, bin_edges = _digitize_via_binning(arr, bins, xmin=None, xmax=None)
+        for delay in list(indexes.keys())[::2]:
+            _ds = ds.isel({'trainId': indexes[delay]})
+            d = _dataset2dict2(_ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+            s = d['s']
+            s.t0 = t0
+            
+            time_delay = tb.positionToDelay(_ds['PP800_DelayLine'], origin=t0).values
+            s.time_delay = time_delay
+            s.time_delay_avg = np.mean(time_delay)
+            s.time_delay_min = np.min(time_delay)#np.mean(indexes[delay])
+            s.time_delay_max = np.max(time_delay)#np.mean(indexes[delay])
+            s.time_delay_std = np.std(time_delay)#np.mean(indexes[delay])
+            s.scan = scan
+            
+            ss.append(s)
+            # ss.delays_real_avg.append(np.mean(indexes[delay]))
+            # ss.delays_bin_avg.append(delay)
+
+        br.finder.save(ss)
+
+        return ss
+
+def process2(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, t0=300, bins=None, include_metadata_for_each_image=False, proposal=None):
+    """process rixs images via integration mode
+
+    images -> curv. corr. -> I0 norm. -> sum images to one image (or n images if bins is not None) -> 
+    -> integrate columns to get a spectrum -> exposure norm -> calib
+    
+    Args:
+        scan (int or list): scan number. If list of scans, scans will be aligned
+            via cross-correlation and summed up.
+        x_start, x_stop, y_start, y_stop (int, optional): detector limits to be
+            considered in px. If None, the whole image is used.
+        curv (list, optional): 1D array of polynomial coefficients (including 
+                coefficients equal to zero) from highest degree to the constant 
+                term so f(y) = an*y**n + ... + a1*y + a0 gives the horizontal 
+                shift (f(y)) for each pixel row (y). If None, no curvature correction
+                is applied. Default is None.
+        calib (number, optional): if not None, the x axis is multiplied by calib.
+            Calib can be a number (multiplicative term) or a tuple with two 
+            numbers (linear and constant terms), like calib=[calib, shift].
+        norm (bool, optional): if True, images are normalized by I0, while spectra
+            is also normalized by total exposure time (number of images and 
+            exposure per image. Default is True.
+        bins ():
+        include_metadata_for_each_image ():
+        t0 (number, optional): delay line t0 value. Default is 300.
+        proposal (int, optional): proposal number. If None, proposal number will be read
+            from SCS.settings['default_proposal']. Default is None
+
+    Returns:
+        spectrum
+    """
+    s = _process2(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, bins=bins, t0=t0, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal)
+    
+    ###############
+    # calibration #
+    ###############
+    if calib is not None:
+        s.calib = calib
+
+    return s
+
+def _process3(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, bins=None, t0=300, n1=1, n2=4, floor=[850, None, None, None], avg_threshold=900, avg_threshold_max=None, double_threshold=500000, nbins=1400, include_metadata_for_each_image=False, proposal=None):
+    """internal function for _process3()
+    """    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    # finder
+    br.finder.kwargs = vars()
+    s = br.finder.search()
+    if s != False:
+        return s
+    
+    ###############
+    # get dataset #
+    ###############
+    ds = _get_dataset(scan=scan, proposal=proposal)
+    # delay_line = ds['PP800_DelayLine'].values + 0
+
+    if bins is None:
+        d = _dataset2dict2(ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+        
+        ims = d['ims']
+        pe = br.PhotonEvents()
+        pes = br.Dummy() # temporary
+        for im in ims:
+            _pe, _ = im.floor(*floor).centroid(n1=n1, n2=n2, avg_threshold=avg_threshold, double_threshold=double_threshold, floor=False, avg_threshold_max=avg_threshold_max)
+            # print(len(_pe))
+            pes.append(_pe)  # temporary
+            pe += _pe
+        if curv is not None:
+            pe = pe.set_horizontal_shift_via_polyval(curv)
+        s = pe.integrated_columns_vs_x_centers(ncols=nbins)
+        
+        s.copy_attrs_from(d['s'])
+        s.t0 = t0
+        s.time_delay = tb.positionToDelay(ds['PP800_DelayLine'], origin=t0).values
+        s.scan = scan
+
+        # temporary
+        s.ims = ims
+        s.pes = pes
+        
+        br.finder.save(s)
+        
+        return s
+    else:
+        ss = br.Spectra()
+        ss.delays_real_avg = []
+        ss.delays_bin_avg  = []
+        arr = [round(x, 5) for x in tb.positionToDelay(ds['PP800_DelayLine'], origin=t0).values]
+        # arr = [round(x, 5) for x in ds['hRIXS_delay'].values]
+        # print(arr)
+        indexes, bin_edges = _digitize_via_binning(arr, bins, xmin=None, xmax=None)
+        
+        for delay in list(indexes.keys())[::2]:
+            _ds = ds.isel({'trainId': indexes[delay]})
+            d = _dataset2dict2(_ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+
+            # s = d['s']
+            ims = d['ims']
+            pe = br.PhotonEvents()
+            pes = br.Dummy() # temporary
+            for im in ims:
+                _pe, _ = im.floor(*floor).centroid(n1=n1, n2=n2, avg_threshold=avg_threshold, double_threshold=double_threshold, floor=False, avg_threshold_max=avg_threshold_max)
+                # print(len(_pe))
+                pes.append(_pe)  # temporary
+                pe += _pe
+            if curv is not None:
+                pe = pe.set_horizontal_shift_via_polyval(curv)
+            s = pe.integrated_columns_vs_x_centers(ncols=nbins)
+
+            s.copy_attrs_from(d['s'])
+            s.t0 = t0
+            time_delay = tb.positionToDelay(_ds['PP800_DelayLine'], origin=t0).values
+            s.time_delay = time_delay
+            s.time_delay_avg = np.mean(time_delay)
+            s.time_delay_min = np.min(time_delay)#np.mean(indexes[delay])
+            s.time_delay_max = np.max(time_delay)#np.mean(indexes[delay])
+            s.time_delay_std = np.std(time_delay)#np.mean(indexes[delay])
+            s.scan = scan
+
+            # temporary
+            s.ims = ims
+            s.pes = pes
+            
+            ss.append(s)
+            # ss.delays_real_avg.append(np.mean(indexes[delay]))
+            # ss.delays_bin_avg.append(delay)
+
+        br.finder.save(ss)
+
+        return ss
+
+def process3(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, t0=300, bins=None, n1=1, n2=4, floor=[850, None, None, None], avg_threshold=900, avg_threshold_max=None, double_threshold=500000, nbins=1400,  include_metadata_for_each_image=False, proposal=None):
+    """same as process2 but with centroid
+    """
+    s = _process3(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, bins=bins, t0=t0, n1=n1, n2=n2, floor=floor, avg_threshold=avg_threshold, avg_threshold_max=avg_threshold_max, double_threshold=double_threshold, nbins=nbins, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal)
+    
+    ###############
+    # calibration #
+    ###############
+    if calib is not None:
+        s.calib = calib
+
+    return s
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _process4(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, bins=None, t0=300, n1=1, n2=4, floor=[850, None, None, None], avg_threshold=900, avg_threshold_max=None, double_threshold=500000, nbins=1400, include_metadata_for_each_image=False, proposal=None, _dummy=0):
+    """internal function for _process3()
+    """    
+    #######################
+    # get proposal number #
+    #######################
+    if proposal is None:
+        proposal = settings['default_proposal']
+    assert proposal is not None, 'proposal cannot be None. Either provide a proposal number of set default proposal number at SCS.settings["default_proposal"]'
+
+    # finder
+    br.finder.kwargs = vars()
+    s = br.finder.search()
+    if s != False:
+        return s
+    
+    ###############
+    # get dataset #
+    ###############
+    ds = _get_dataset(scan=scan, proposal=proposal)
+    # delay_line = ds['PP800_DelayLine'].values + 0
+
+    if bins is None:
+        d = _dataset2dict2(ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+        
+        ims = d['ims']
+        pe = br.PhotonEvents()
+        pes = br.Dummy() # temporary
+        for im in ims:
+            _pe, _ = im.floor(*floor).centroid(n1=n1, n2=n2, avg_threshold=avg_threshold, double_threshold=double_threshold, floor=False, avg_threshold_max=avg_threshold_max)
+            # print(len(_pe))
+            pes.append(_pe)  # temporary
+            pe += _pe
+        if curv is not None:
+            pe = pe.set_horizontal_shift_via_polyval(curv)
+        s = pe.integrated_columns_vs_x_centers(ncols=nbins)
+        
+        s.copy_attrs_from(d['s'])
+        s.t0 = t0
+        s.time_delay = tb.positionToDelay(ds['PP800_DelayLine'], origin=t0).values
+        s.scan = scan
+
+        # temporary
+        s.ims = ims
+        s.pes = pes
+        
+        br.finder.save(s)
+        
+        return s
+    else:
+        ss = br.Spectra()
+        ss.delays_real_avg = []
+        ss.delays_bin_avg  = []
+        # arr = [round(x, 5) for x in tb.positionToDelay(ds['PP800_DelayLine'], origin=t0).values]
+        arr = [round(x, 5) for x in ds['hRIXS_delay'].values]
+        # print(arr)
+        indexes, bin_edges = _digitize_via_binning(arr, bins, xmin=None, xmax=None)
+        
+        for delay in list(indexes.keys())[::2]:
+            _ds = ds.isel({'trainId': indexes[delay]})
+            d = _dataset2dict2(_ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=norm, include_metadata_for_each_image=include_metadata_for_each_image)
+
+            # s = d['s']
+            ims = d['ims']
+            pe = br.PhotonEvents()
+            pes = br.Dummy() # temporary
+            for im in ims:
+                _pe, _ = im.floor(*floor).centroid(n1=n1, n2=n2, avg_threshold=avg_threshold, double_threshold=double_threshold, floor=False, avg_threshold_max=avg_threshold_max)
+                # print(len(_pe))
+                pes.append(_pe)  # temporary
+                pe += _pe
+            if curv is not None:
+                pe = pe.set_horizontal_shift_via_polyval(curv)
+            s = pe.integrated_columns_vs_x_centers(ncols=nbins)
+
+            s.copy_attrs_from(d['s'])
+            s.t0 = t0
+            time_delay = _ds['hRIXS_delay'].values
+            s.time_delay = time_delay
+            s.time_delay_avg = np.mean(time_delay)
+            s.time_delay_min = np.min(time_delay)#np.mean(indexes[delay])
+            s.time_delay_max = np.max(time_delay)#np.mean(indexes[delay])
+            s.time_delay_std = np.std(time_delay)#np.mean(indexes[delay])
+            s.scan = scan
+
+            # temporary
+            s.ims = ims
+            s.pes = pes
+            
+            ss.append(s)
+            # ss.delays_real_avg.append(np.mean(indexes[delay]))
+            # ss.delays_bin_avg.append(delay)
+
+        br.finder.save(ss)
+
+        return ss
+
+def process4(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, calib=None, norm=True, t0=300, bins=None, n1=1, n2=4, floor=[850, None, None, None], avg_threshold=900, avg_threshold_max=None, double_threshold=500000, nbins=1400,  include_metadata_for_each_image=False, proposal=None):
+    """same as process2 but with centroid
+    """
+    s = _process4(scan=scan, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=curv, norm=norm, bins=bins, t0=t0, n1=n1, n2=n2, floor=floor, avg_threshold=avg_threshold, avg_threshold_max=avg_threshold_max, double_threshold=double_threshold, nbins=nbins, include_metadata_for_each_image=include_metadata_for_each_image, proposal=proposal, _dummy=0)
+    
+    ###############
+    # calibration #
+    ###############
+    if calib is not None:
+        s.calib = calib
+
+    return s
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @br.finder.track2
 def _process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=None, norm=True, is_tr='auto', include_metadata_for_each_image=False, proposal=None):
     """internal function for _process()
 
@@ -867,11 +1372,7 @@ def process(scan, x_start=None, x_stop=None, y_start=None, y_stop=None, curv=Non
     # calibration #
     ###############
     if calib is not None:
-        if isinstance(calib, br.Iterable):
-            s.shift = -calib[1]
-            s.calib = calib[0]
-        else:
-            s.calib = calib
+        s.calib = calib
 
     ############
     # metadata #
@@ -1176,7 +1677,7 @@ def verify_curv(scan, popt=None, ncols=None, nrows=None, deg=2, x_start=None, x_
     ################
     # process data #
     ################
-    d   = _dataset2dict(ds=ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=False, include_metadata_for_each_image=False)
+    d   = _dataset2dict(ds=ds, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, curv=None, norm=False, include_metadata_for_each_image=False, proposal=proposal)
     ims = d['ims']
     im  = d['im']
     s   = d['s']
@@ -1511,15 +2012,11 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             
         Args:
             n1 (int): number of pixels to average to detect a photon hit candidate, e.g., a photon hit candidate 
-                is selected if the average of the intensities within a n1-by-n1 square exceeds avg_threshold.
-            n2 (int): For a photon hit candidate, n2 sets a 
-                (n1+n2)-by-(n1+n2) square where the brightest pixel will be then
-                considered. Candidates that yield the same brightest pixel won't
-                be accounted for. Finally, for each `brightest pixel`, the 
-                'center-of-mass' of the photon hit is calculated 
+            is selected if the average of the intensities within a n1-by-n1 square exceeds avg_threshold.
+            n2 (int): For a photon hit candidates the 'center-of-mass' of the photon hit is calculated 
                 within a (n1+n2)-by-(n1+n2) square. n2 must be an even number to ensure that the 
                 `center of mass` of a photon hit is calculated in a square where the pixel with the 
-                photon hit is close to the center.
+                photon hit is the central pixel.
             avg_threshold (number): any pixel with intensity higher than avg_threshold in the n1-by-n1 
                 averaged image will be selected as a photon-hit-candidate position.
             double_threshold (number): any a photon-hit-candidate position where the sum of the surounding
@@ -1534,9 +2031,6 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             MAX_PHOTONS (number or False): if number, this function will raise an error if the number of 
                 detected photons exceed MAX_PHONTOS
         
-        Returns:
-            PhotonEvents and double PhotonEvents in terms of x_centers and y_centers
-
         Note:
             The averaging n1 prevents that noise is counted as a candidate. By averaging, we are
             requiring that, not only the `central` pixel is iluminated, but also the surrounding 
@@ -1555,17 +2049,8 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             such as one has no photon at `negative` energy loss. One can do this by slowly increasing 
             avg_threshold, and/or by visually inspecting the image using
             
-            >>> avg_threshold = <increase_value_slowly>
-            >>> n1 = 2
-            >>> n2 = 2
-            >>> pe, pe2 = scs.centroid(n1, n2, avg_threshold, double_threshold=<very_high_number>, floor=True)
-            >>>
             >>> br.figure()
             >>> im.moving_average(n1).plot()
-            >>> pe.plot()
-
-            if the photon count per image is so low that the elastic line cannot be identified and therefore
-            the `negative` energy loss region is unkown, then one have to sum many images.  
             
         Note:
             For determining a resonable double_threshold, I think the best option is to get a pixel which
@@ -1587,7 +2072,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         
             This example goes over the step-by-step algorithm for detecting a candidate and assigning a photon hit.
         
-            Given the following matrix:
+            Given the follwoing matrix:
 
                 [[14, -7,  4,  6, -4,  8],
                  [14,  4, -9, 79, 52, 10],
@@ -1603,54 +2088,35 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
                  [-2, -1, -2, -5, -7, -6],
                  [ 0,  4,  4, -2, -6,  0]]
                  
-            note that in this example we are using a "aprox" rounded average to facilitate the visualization
-            of the matrix (instead of an "exact" average), but the script does an exact calculation.
+            (note that in this example we are using a aprox rounded average to facilitate the visualization
+            of the matrix, but the script does an exact calculation).
                  
             For avg_treshold = 25, we have two spots which are candidates: (x, y) = (3, 0) and (3, 1).
-
-            Going back to the original matrix, we run over all candidates, i.e., 
-            (3, 0) and (3, 1). For each candidate we get their `spots`. 
-            A spot is a (n1+n2 x n1+n2) matrix surrounding the candidate. For example, 
-
-            we see that position (3, 1) yields intensity 79
-            (note that the pixels pixels that yielded 42 in the averaged (n1 x n1) matrix are:
+            
+            Between these two spots, (3, 0) will be disregarded, because the intensity of (3, 1) is 
+            brighest.
+            
+            Going back to the original matrix, the position (3, 1) yields intensity 79. We then get
+            pixels surrounding it (n1 x n1) like:
             
             [[79, 52],
              [19, 17]]
-
-            We gather pixel rows and cols to the 
-            left/right/top/bottom of the candidate so to make a square of size n1+n2. 
-            The n2 factor expands this matrix on all sides equally (that's why 
-            n2 must be even). For n2 = 2 we have
+             
+            (these are the pixels that yielded 42 in the averaged matrix).
+            
+            We then add pixel rows and cols to the left/right/top/bottom so to make a square of size
+            n1+n2. For n2 = 2 we have
             
             [[ 4,  6, -4,  8],
              [-9, 79, 52, 10],
              [-2, 19, 17, -2],
              [-6, -9,  2, -8]]
-             
-            we than find the index of the brightest pixel within each spot. In this
-            case, the brightest spot the one yielding 79. This pixel is the (3, 1).
-
-            The larger n2, the larger is the `search area` for the brightest pixel.
-
-            In this example, both candidates [(x, y) = (3, 0) and (3, 1)] yield 
-            the same brightest pixel. The brightest pixels are only counted once.
-
-            Now, each `brightest pixel` is considerend a HIT, we only have to 
-            determine if this HIT is a double or single hit. 
-
-            For that we get the `spot` of each HIT and compare it against double_threshold.
-            For the HIT at (3, 1), we now that the spot is 
-
-            [[ 4,  6, -4,  8],
-             [-9, 79, 52, 10],
-             [-2, 19, 17, -2],
-             [-6, -9,  2, -8]]
-
-            Remember that the spot is defined as the (n1+n2 x n1+n2) matrix 
-             surrounding a pixel. The sum of this spot is 157. Let's say that 
-             double_threshold = 255, therefore, this spot is
-            a single hit, because it is below double_threshold.
+            
+            this is what we call a `spot`. Now we only have to determine if this spot is a double or
+            single hit. 
+            
+            the sum of the spot is 157. Let's say that double_threshold = 255, therefore, this spot is
+            a single hit.
             
             Here is an example with a double hit
             
@@ -1678,13 +2144,46 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
              [37, 81, 50, 12],
              [-3, 46, 16, -6]]
              
-            For this example, we the photon hit threshold should be around 200. Therefore, a 
+            For this example, we know that a photon hit threshold should be around 200. Therefore, a 
             suitable double hit treshold would be 1.5 * 200 = 300.
              
             This sum is 413, so it will be regarded as a double photon hit.
             
             The position of a photon hit is then calculated by the 2D weighted sum of the intensities 
             (the mean x and y values within a spot).
+            
+            
+            
+            
+                
+                
+        Obsolete:
+            Note:
+                ESRF algorithm: n1=1, n2=2, mode='energy', energy=<photon-energy>
+                XFEL algorithm: n1=2, n2=2, mode='std' [note that XFEL cannot be 100% 
+                reproduced with this code because in the XFEL algorithm the brightest pixel
+                within a `spot` is detected on the averaged (moving average) image instead
+                of on the original image. Mostly, the original XFEL code leads to some candidates 
+                at the edges to be left out]
+            
+            Args:
+                mode (str): mode for calculating threshold
+                    `manual`: 'treshold' must be passed as kwargs
+
+                    `std` [XFEL]: 'treshold' must be given in terms of `number of 
+                    standard deviations`, i.e., 'treshold'=3.5 (default) will assume
+                    that pixels with intensity higher than intensity_avg+3.5*intensity_std
+                    is a candidate for photon hit.
+
+                    `energy` [ESRF]: 'threshold' is defined as (0.2) * (photon_energy/3.6/1.06)
+                    where 3.6 and 1.06 are a factor defined by the ADU of the detector. 
+                    Photon energy must be passed with the kwarg 'energy'.
+                double_factor (number, optional): the treshold factor in which to indentify double photon events, e.g.,
+                    if the summed intensity of a spot [(n1+n2)-by-(n1+n2) square] is bigger than 
+                    treshold*double_factor, then this spot is identified as a double photon event.
+        
+        Returns:
+            PhotonEvents, double PhotonEvents in terms of x_centers and y_centers
         """
         ###################
         # check n1 and n2 #
@@ -1813,7 +2312,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         # centroid algorithm 2 #
         ########################
         # an improved version of algorithm 1
-        hit  = []
+        flag = []
         res  = []
         dres = []
         for i, (y, x) in enumerate(cp):       
@@ -1826,9 +2325,9 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
             bx = x + (_x - n2//2)
             by = y + (_y - n2//2)
                              
-            if (bx, by) not in hit:
-                # flag that this point has been accounted for (this point is a hit)
-                hit.append((bx, by))
+            if (bx, by) not in flag:
+                # flag that this point has been accounted for
+                flag.append((bx, by))
                 
                 # calculate x center of mass
                 mx = np.average(np.arange(x-n2//2, x+n1+n2//2), weights=spot.sum(axis=0))
