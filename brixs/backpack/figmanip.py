@@ -2655,7 +2655,7 @@ mpl.axes.Axes.zoom = _zoom
 # %%
 
 # %% ================================= inset ============================== %% #
-def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2putinset=None, **kwargs):
+def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True, rect_xlim=None, rect_ylim=None, ax2put_inset=None, **kwargs):
     """add inset to axes. Inset will have all curves from axes
 
     Args:
@@ -2670,7 +2670,7 @@ def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True
             at the plotting limits defined by xticks_kwargs and yticks_kwargs. 
         rect_xlim, rect_ylim (tuple, optional): if defines the rectangle edges.
             overwrites limits defined by xticks_kwargs, yticks_kwargs. 
-        ax2putinset (axex, optional): axes to put inset in. If None, the current axes 
+        ax2put_inset (axex, optional): axes to put inset in. If None, the current axes 
             will be used. Default is None
 
     Returns:    
@@ -2678,8 +2678,8 @@ def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True
     """
     if ax is None:
         ax = plt.gca()
-    if ax2putinset is None:
-        ax2putInset = ax
+    if ax2put_inset is None:
+        ax2put_inset = ax
 
     x_init      = xlim[0]
     x_final     = xlim[1]
@@ -2687,9 +2687,9 @@ def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True
     y_final     = ylim[1]
 
     # create inset
-    inset = ax.get_figure().add_axes(_ax_box2fig_box(ax2putInset, [x_init, y_init, x_final, y_final]))
+    inset = ax.get_figure().add_axes(_ax_box2fig_box(ax2put_inset, [x_init, y_init, x_final, y_final]))
 
-    for line in ax2putInset.get_lines():
+    for line in ax2put_inset.get_lines():
         line2, = inset.plot(line.get_xdata(), line.get_ydata(),
                             ls=line.get_linestyle(),
                             linewidth=line.get_linewidth(),
@@ -2728,9 +2728,9 @@ def inset(xlim, ylim, ax=None, xticks_kwargs=None, yticks_kwargs=None, rect=True
             rect_ylim = (inset.get_ylim()[0],  inset.get_ylim()[1]-inset.get_ylim()[0])
             print(f'rect_ylim={rect_ylim}')
         
-        _ = ax2putInset.spines['left'].get_linewidth()
+        _ = ax2put_inset.spines['left'].get_linewidth()
         rect = plt.Rectangle((rect_xlim[0], rect_ylim[0]), rect_xlim[1], rect_ylim[1], **kwargs)
-        ax2putInset.add_patch(rect)
+        ax2put_inset.add_patch(rect)
 
     return inset
 
