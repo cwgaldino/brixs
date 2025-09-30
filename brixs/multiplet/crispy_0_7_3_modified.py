@@ -1560,7 +1560,7 @@ class Calculation(object):
         if self.experiment in ['RIXS', ]:
             replacements['$Emin1'] = self.E
             replacements['$Emax1'] = self.E + 10
-            replacements['$NE1'] = 2
+            replacements['$NE1'] = 1
             replacements['$Eedge1'] = self.resonance
             replacements['$Gamma1'] = self.gamma1
 
@@ -1851,7 +1851,10 @@ class Calculation(object):
             )
 
     def save_parameters(self, filepath):
-        """Save calculation parameters to a text file"""
+        """Save calculation parameters to a text file
+        
+        This function is a bit finicky because it use json package and the 
+        parameters have to be perfectly formated for it to work. """
         filepath = Path(filepath)
         pretty_print = True
         par = self.get_parameters()
@@ -1877,9 +1880,8 @@ class Calculation(object):
 
             XAS returns 1 spectrum (iso) or 2 spectra and calculation output
 
-            RIXS returns 1 spectra (iso) or 4 spectra and calculation output
-            For RIXS, each spectrum inside a Spectra objects has different 
-            incident energy (according to xMin, xMax, and xNpoints). 
+            RIXS returns 1 spectra (iso) or one dictionary with 4 spectra
+             and calculation output 
 
             XPS, isotropic
                 iso, out = q.run()
@@ -1890,16 +1892,16 @@ class Calculation(object):
             RIXS, isotropic
                 iso, out = q.run()
             RIXS, linear
-                vv, vh, hv, hh, out = q.run()
+                {vv, vh, hv, hh}, out = q.run()
             RIXS, circular
-                rv, rh, lv, lh, out = q.run()
+                {rv, rh, lv, lh}, out = q.run()
         
             XAS, isotropic
                 iso, out = q.run()
             XAS, linear
-                LV, LH, out = q.run()
+                {LV, LH}, out = q.run()
             XAS, circular
-                CR, CL, out = q.run()
+                {CR, CL}, out = q.run()
         """
         # update and run lua script
         if update:
@@ -1911,8 +1913,7 @@ class Calculation(object):
         os.unlink(fp.name)
         
         # get spectra from output
-        _x = np.linspace(self.xMin, self.xMax, self.xNPoints)
-        # _x = np.linspace(self.xMin, self.xMax, self.xNPoints + 1)
+        _x = np.linspace(self.xMin, self.xMax, self.xNPoints)  # _x = np.linspace(self.xMin, self.xMax, self.xNPoints + 1)
         if self.experiment == 'XPS':
             if self.polarization.lower() == 'isotropic':
                 _out2 = _out.split('Here starts ISO spectrum:')[1].split('Here ends ISO spectrum')[0].split('\n')
@@ -1955,6 +1956,7 @@ class Calculation(object):
             if self.polarization.lower() == 'isotropic':
                 _out2 = _out.split('Here starts Giso spectrum:')[1].split('Here ends Giso spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s = br.Spectrum(_x, _y)
                 # ss = br.Spectra()
@@ -1976,6 +1978,7 @@ class Calculation(object):
             elif self.polarization.lower() == 'linear':
                 _out2 = _out.split('Here starts Gvv spectrum:')[1].split('Here ends Gvv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_vv = br.Spectrum(_x, _y)
                 
@@ -1991,6 +1994,7 @@ class Calculation(object):
 
                 _out2 = _out.split('Here starts Gvh spectrum:')[1].split('Here ends Gvh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_vh = br.Spectrum(_x, _y)
 
@@ -2005,6 +2009,7 @@ class Calculation(object):
 
                 _out2 = _out.split('Here starts Ghv spectrum:')[1].split('Here ends Ghv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_hv = br.Spectrum(_x, _y)
                 # ss_hv = br.Spectra()
@@ -2018,6 +2023,7 @@ class Calculation(object):
 
                 _out2 = _out.split('Here starts Ghh spectrum:')[1].split('Here ends Ghh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_hh = br.Spectrum(_x, _y)
                 # ss_hh = br.Spectra()
@@ -2041,6 +2047,7 @@ class Calculation(object):
             elif self.polarization.lower() == 'circular':
                 _out2 = _out.split('Here starts Grv spectrum:')[1].split('Here ends Grv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_rv = br.Spectrum(_x, _y)
                 # ss_rv = br.Spectra()
@@ -2055,6 +2062,7 @@ class Calculation(object):
 
                 _out2 = _out.split('Here starts Grh spectrum:')[1].split('Here ends Grh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_rh = br.Spectrum(_x, _y)
                 # ss_rh = br.Spectra()
@@ -2068,6 +2076,7 @@ class Calculation(object):
 
                 _out2 = _out.split('Here starts Glv spectrum:')[1].split('Here ends Glv spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_lv = br.Spectrum(_x, _y)
                 # ss_lv = br.Spectra()
@@ -2081,6 +2090,7 @@ class Calculation(object):
 
                 _out2 = _out.split('Here starts Glh spectrum:')[1].split('Here ends Glh spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 s_lh = br.Spectrum(_x, _y)
                 # ss_lh = br.Spectra()
@@ -2105,8 +2115,8 @@ class Calculation(object):
             if self.polarization.lower() == 'isotropic':
                 _out2 = _out.split('Here starts ISO spectrum:')[1].split('Here ends ISO spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-                _y = [float(_.split(' ')[2]) for _ in _out3[5::]]
+                # _x = [float(_.split(' ')[0])+self.resonance for _ in _out3[5:]]
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 iso = br.Spectrum(_x, _y)
                 out = _out.split('Here starts ISO spectrum:')[0]
 
@@ -2120,13 +2130,13 @@ class Calculation(object):
             elif self.polarization.lower() == 'linear':
                 _out2 = _out.split('Here starts LV spectrum:')[1].split('Here ends LV spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                # _x = [float(_.split(' ')[0])+self.resonance for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 cr = br.Spectrum(_x, _y)
 
                 _out2 = _out.split('Here starts LH spectrum:')[1].split('Here ends LH spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                # _x = [float(_.split(' ')[0])+self.resonance for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 cl = br.Spectrum(_x, _y)
 
@@ -2142,13 +2152,13 @@ class Calculation(object):
             elif self.polarization.lower() == 'circular':
                 _out2 = _out.split('Here starts CR spectrum:')[1].split('Here ends CR spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                # _x = [float(_.split(' ')[0])+self.resonance for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 cr = br.Spectrum(_x, _y)
 
                 _out2 = _out.split('Here starts CL spectrum:')[1].split('Here ends CL spectrum')[0].split('\n')
                 _out3 = [_ for _ in _out2 if _ != '']
-                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                # _x = [float(_.split(' ')[0])+self.resonance for _ in _out3[5:]]
                 _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
                 cl = br.Spectrum(_x, _y)
 
