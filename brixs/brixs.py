@@ -11145,10 +11145,15 @@ class Dummy(_BrixsObject, metaclass=_Meta):
     ########################
     def calculate_sum(self):
         """Tries to return object which is the sum of all objects in the list"""
-        obj = self[0]
-        for _obj in self[1:]:
-            obj += _obj
-        return obj
+        if isinstance(self[0], Image):
+            im = Image(data=np.sum([_.data for _ in self], axis=0))
+            im.copy_attrs_from(self[0])
+            return im
+        else:
+            obj = self[0]
+            for _obj in self[1:]:
+                obj += _obj
+            return obj
 
     def calculate_average(self, limits=None):
         """Tries to return object which is the average of all objects in the list"""
