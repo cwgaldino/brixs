@@ -45,6 +45,9 @@ class _settings():
 
     def __init__(self):
         self._QUANTY_FILEPATH      = ''
+        self._WSL_NTHREADS         = 1
+        self._WSL_QUANTY_FILEPATH  = ''
+        self._WSL_TEMP_FILEPATH    = ''
         self._TEMPLATES_FOLDERPATH = ''
         self._PARAMETERS_FILEPATH  = ''
         self._PARAMETERS           = None
@@ -61,6 +64,45 @@ class _settings():
         self._QUANTY_FILEPATH = value
     @QUANTY_FILEPATH.deleter
     def QUANTY_FILEPATH(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def WSL_NTHREADS(self):
+        return self._WSL_NTHREADS
+    @WSL_NTHREADS.setter
+    def WSL_NTHREADS(self, value):
+        value = int(round(value))
+        vmax = os.cpu_count()
+        assert value<=vmax and value>1, f'Invalid (WSL_NTHREADS={value}). It must be a integer higher or equal to 1 and less or equal to the max number of available threads on the machine (vmax={vmax})'
+        self._WSL_NTHREADS = value
+    @WSL_NTHREADS.deleter
+    def WSL_NTHREADS(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def WSL_QUANTY_FILEPATH(self):
+        return self._WSL_QUANTY_FILEPATH
+    @WSL_QUANTY_FILEPATH.setter
+    def WSL_QUANTY_FILEPATH(self, value):
+        value = Path(value)
+        assert value.exists(), 'Cannot find filepath'
+        assert value.is_file(), 'filepath does not point to a file'
+        self._WSL_QUANTY_FILEPATH = value
+    @WSL_QUANTY_FILEPATH.deleter
+    def WSL_QUANTY_FILEPATH(self):
+        raise AttributeError('Cannot delete object.')
+    
+    @property
+    def WSL_TEMP_FILEPATH(self):
+        return self._WSL_TEMP_FILEPATH
+    @WSL_TEMP_FILEPATH.setter
+    def WSL_TEMP_FILEPATH(self, value):
+        value = Path(value)
+        assert value.parent.exists(), 'Cannot find folderpath'
+        # assert value.is_file(), 'filepath does not point to a file'
+        self._WSL_TEMP_FILEPATH = value
+    @WSL_TEMP_FILEPATH.deleter
+    def WSL_TEMP_FILEPATH(self):
         raise AttributeError('Cannot delete object.')
     
     @property
@@ -113,6 +155,9 @@ class _settings():
     def __str__(self):
         text  = ''
         text += f'QUANTY_FILEPATH:      {self.QUANTY_FILEPATH}\n' +\
+                f'WSL_NTHREADS:         {self.WSL_NTHREADS}\n' +\
+                f'WSL_QUANTY_FILEPATH:  {self.WSL_QUANTY_FILEPATH}\n' +\
+                f'WSL_TEMP_FILEPATH:    {self.WSL_TEMP_FILEPATH}\n' +\
                 f'TEMPLATES_FOLDERPATH: {self.TEMPLATES_FOLDERPATH}\n' +\
                 f'PARAMETERS_FILEPATH:  {self.PARAMETERS_FILEPATH}\n' +\
                 f'ELEMENTS:             {self.ELEMENTS}\n' +\
@@ -122,7 +167,6 @@ class _settings():
 
     def __repr__(self):
         return self.__str__()
-
 
     def help(self):
         print(self._help)
@@ -308,7 +352,7 @@ class _hamiltonianData(MutableMapping):
 # %%
 
 # %% ========================= support functions ========================= %% #
-def quanty(filepath):
+def quanty(filepath, wsl=False):
     """Run Quanty.
 
     Args:
@@ -317,33 +361,78 @@ def quanty(filepath):
     Returns:
         Calculation output (stdout).
     """
-    quanty_exe = Path(settings.QUANTY_FILEPATH)
-    if is_windows:
-        if quanty_exe.is_absolute():
+    if wsl:
+        assert is_windows, 'Failed to recognized windows machine. One must be on a windows machine to run quanty with wsl'
+        assert settings.WSL_QUANTY_FILEPATH != '', 'settings.WSL_QUANTY_FILEPATH not set'
+        assert settings.WSL_TEMP_FILEPATH != '', 'settings.WSL_TEMP_FILEPATH not set'
+
+        quanty_exe = Path(settings.WSL_QUANTY_FILEPATH).absolute()
+        filepath   = Path(filepath).absolute()
+        temporary  = Path(settings.WSL_TEMP_FILEPATH).absolute()
+
+        # converting filepath from windows to wsl
+        drive = quanty_exe.home().drive[0].lower()  # get drive letter
+        quanty_exe = '/'.join(['/mnt', drive] + list(quanty_exe.parts[1:]))
+        drive = filepath.home().drive[0].lower()  # get drive letter
+        filepath = '/'.join(['/mnt', drive] + list(filepath.absolute().parts[1:]))
+        drive = temporary.home().drive[0].lower()  # get drive letter
+        temporary = '/'.join(['/mnt', drive] + list(temporary.absolute().parts[1:]))
+        
+
+        # threads
+        NTHREADS = int(settings.WSL_NTHREADS)
+
+        # run
+        # print(quanty_exe)
+        # print(filepath)
+        quanty = subprocess.Popen(r'C:\Windows\System32\wsl.exe -e sh -c "export OMP_NUM_THREADS=' + f'{NTHREADS};' + f' {quanty_exe} {filepath}' + r'>' + f'{temporary}' + r'"', shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         # quanty = subprocess.Popen(['wsl', f'export OMP_NUM_THREADS={NTHREADS}', f"{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         # quanty = subprocess.Popen([f'wsl ~ -e sh -c ' + f'export OMP_NUM_THREADS={NTHREADS}; {quanty_exe} {filepath}'], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         # quanty = subprocess.Popen([f'wsl ~ -e sh -c ' + f'export OMP_NUM_THREADS={NTHREADS}; {quanty_exe}'], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         # quanty = subprocess.Popen([f'wsl ~ -e sh -c "' + f'export OMP_NUM_THREADS={NTHREADS}' + '"'], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         import subprocess
+#         # quanty = subprocess.Popen([f'C:\Windows\System32\wsl.exe ~'], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         quanty = subprocess.Popen([r'C:\Windows\System32\wsl.exe'], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         quanty = subprocess.Popen([r'C:\Windows\System32\wsl.exe'], close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         quanty = subprocess.Popen([r'C:\Windows\System32\wsl.exe'], close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         quanty = subprocess.Popen(r'C:\Windows\System32\wsl.exe', shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         quanty = subprocess.Popen(r'C:\Windows\System32\wsl.exe -e sh -c "export OMP_NUM_THREADS=2; ' + r'/mnt/c/Users/galdin_c/github/quanty/quanty_lin/Quanty' + '"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+# r'/mnt/c/Users/galdin_c/github/quanty/quanty_lin/Quanty'
+# C:\Windows\System32\wsl.exe -e sh -c "export OMP_NUM_THREADS=2; /mnt/c/Users/galdin_c/github/quanty/quanty_lin/Quanty /mnt/c/Users/galdin_c/AppData/Local/Temp/tmpfh8gkcgi"
+# r'/mnt/c/Users/galdin_c/AppData/Local/Temp/tmpfh8gkcgi
+# quanty = subprocess.Popen(r'C:\Windows\System32\wsl.exe -e sh -c "export OMP_NUM_THREADS=' + f'{16};' + f' /mnt/c/Users/galdin_c/github/quanty/quanty_lin/Quanty /mnt/c/Users/galdin_c/AppData/Local/Temp/tmpfh8gkcgi' + r' > /mnt/c/Users/galdin_c/Downloads/temp.txt"', shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+# export OMP_NUM_THREADS=2
+# /mnt/c/Users/galdin_c/github/quanty/quanty_lin/Quanty /mnt/c/Users/galdin_c/AppData/Local/Temp/tmpfh8gkcgi
+    else:
+        assert settings.QUANTY_FILEPATH != '', 'settings.QUANTY_FILEPATH not set'
+
+        quanty_exe = Path(settings.QUANTY_FILEPATH).absolute()
+        filepath = Path(filepath).absolute()
+
+        if is_windows:
             quanty = subprocess.Popen([f"{quanty_exe}", f"{filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        else:
-            quanty = subprocess.Popen([f"./{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    elif is_linux:
-        if quanty_exe.is_absolute():
+            # if quanty_exe.is_absolute():
+            #     quanty = subprocess.Popen([f"{quanty_exe}", f"{filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # else:
+            #     quanty = subprocess.Popen([f"./{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        elif is_linux:
             quanty = subprocess.Popen([f"{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        else:
+            # if quanty_exe.is_absolute():
+            #     quanty = subprocess.Popen([f"{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # else:
+            #     quanty = subprocess.Popen([f"./{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        elif is_mac:
             quanty = subprocess.Popen([f"./{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    elif is_mac:
-        quanty = subprocess.Popen([f"./{quanty_exe} {filepath}"], shell=True, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # print('here')
-    # print(quanty)
-
-    
-    output = quanty.stdout.read().decode("utf-8")
-    # print(output)
-
+    if wsl:
+        output = quanty.stdout.read().decode("utf-8")
+        with Path(settings.WSL_TEMP_FILEPATH).open() as f:
+            output = f.read()
+        # br.rm(Path(settings.WSL_TEMP_FILEPATH))
+    else:
+        output = quanty.stdout.read().decode("utf-8")
     error  = quanty.stderr.read().decode("utf-8")
-    # print(error)
-
-    # print('there')
     if error != '':
-        raise RuntimeError(f"Error while reading file: {filepath}. \n {error}")
-
+        raise RuntimeError(f"Error while reading file: {filepath}\nERROR: {error}")
     if 'Error while loading the script' in output:
         error = output[output.find('Error while loading the script')+len('Error while loading the script:')+1:]
         raise ValueError(f'Error while loading file: {filepath}. \n {error}')
@@ -2142,7 +2231,7 @@ class Calculation(object):
                 return {'CR':cr, 'CL':cl}, out
         return 
 
-    def run_rixs_energy_map(self, Emin, Emax, npoints, update=True):
+    def run_rixs_energy_map(self, Emin, Emax, npoints, update=True, wsl=False):
         """same as q.run(), but returns rixs spectra for many incident energies
 
         Args:
@@ -2192,7 +2281,7 @@ class Calculation(object):
         with tempfile.NamedTemporaryFile(delete=False) as fp:
             fp.write(self.lua_script.encode('utf-8'))
             fp.close()
-            _out = quanty(fp.name)
+            _out = quanty(fp.name, wsl=wsl)
         os.unlink(fp.name)
         
         # get spectra from output
@@ -2205,9 +2294,14 @@ class Calculation(object):
             _out3 = [_ for _ in _out2 if _ != '']
             # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
             ss = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
-                ss.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                    ss.append(br.Spectrum(_x, _y))
 
             # calculation metadata
             parameters = self.get_parameters()
@@ -2234,32 +2328,52 @@ class Calculation(object):
             _out2 = _out.split('Here starts Gvv spectrum:')[1].split('Here ends Gvv spectrum')[0].split('\n')
             _out3 = [_ for _ in _out2 if _ != '']
             ss_vv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_vv.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_vv.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_vv.append(br.Spectrum(_x, _y))
 
             # =============== vh =============== #
             _out2 = _out.split('Here starts Gvh spectrum:')[1].split('Here ends Gvh spectrum')[0].split('\n')
             ss_vh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_vh.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_vh.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_vh.append(br.Spectrum(_x, _y))
 
             # =============== hv =============== #
             _out2 = _out.split('Here starts Ghv spectrum:')[1].split('Here ends Ghv spectrum')[0].split('\n')
             _out3 = [_ for _ in _out2 if _ != '']
             ss_hv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_hv.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_hv.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_hv.append(br.Spectrum(_x, _y))
 
             # =============== hh =============== #
             _out2 = _out.split('Here starts Ghh spectrum:')[1].split('Here ends Ghh spectrum')[0].split('\n')
             _out3 = [_ for _ in _out2 if _ != '']
             ss_hh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_hh.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_hh.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_hh.append(br.Spectrum(_x, _y))
 
             # =============== v and h =============== #
             ss_v = br.Spectra()
@@ -2300,18 +2414,28 @@ class Calculation(object):
             _out2 = _out.split('Here starts Grv spectrum:')[1].split('Here ends Grv spectrum')[0].split('\n')
             _out3 = [_ for _ in _out2 if _ != '']
             ss_rv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_rv.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_rv.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_rv.append(br.Spectrum(_x, _y))
 
             # =============== rh =============== #
             _out2 = _out.split('Here starts Grh spectrum:')[1].split('Here ends Grh spectrum')[0].split('\n')
             _out3 = [_ for _ in _out2 if _ != '']
             # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
             ss_rh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_rh.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_rh.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_rh.append(br.Spectrum(_x, _y))
 
             # =============== lv =============== #
             _out2 = _out.split('Here starts Glv spectrum:')[1].split('Here ends Glv spectrum')[0].split('\n')
@@ -2319,18 +2443,28 @@ class Calculation(object):
             # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
             _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
             ss_lv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_lv.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_lv.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_lv.append(br.Spectrum(_x, _y))
 
             # =============== lh =============== #
             _out2 = _out.split('Here starts Glh spectrum:')[1].split('Here ends Glh spectrum')[0].split('\n')
             _out3 = [_ for _ in _out2 if _ != '']
             # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
             ss_lh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
-                ss_lh.append(br.Spectrum(_x, _y))
+            if wsl:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_lh.append(br.Spectrum(_x, _y))
+            else:
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
+                    ss_lh.append(br.Spectrum(_x, _y))
             
             # =============== r and l =============== #
             ss_r = br.Spectra()
