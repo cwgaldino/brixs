@@ -18,7 +18,6 @@ The main function of this implementation is the im.centroid(). See below the arg
 the centroid method,
 
     Args:
-
         n (int): photon hits candidates that are within n pixels of distance 
             from each other will be considered the same candidate. For better 
             results, set n to be roughly the expected pixel distance between a 
