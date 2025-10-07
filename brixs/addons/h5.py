@@ -3,14 +3,8 @@
 """Quality-of-life functions for handling hdf5 files"""
 
 # %% ------------------------- Standard Imports -------------------------- %% #
-from collections.abc import Iterable
 from pathlib import Path
 import numpy as np
-import h5py
-
-# %% -------------------------- brixs Imports ---------------------------- %% #
-import brixs as br
-# %%
 
 # %% ========================== Special Imports ========================== %% #
 try:
@@ -128,7 +122,7 @@ def _sort_metadata(f, attrs_dict, verbose):
         if _type != 'ignore': 
             for name in attrs_dict[_type]:
                 if name in values:
-                    raise KeyError(f"name `{name}` is duplicated in VERITAS attrs list. Names must be unique")
+                    raise KeyError(f"name `{name}` is duplicated in attrs list. Names must be unique")
                 values[name] = None
 
     # get attr values

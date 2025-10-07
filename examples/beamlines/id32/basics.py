@@ -452,8 +452,11 @@ for i, scan in enumerate(scans):
     ss.append(_s)
 energies = np.linspace(575, 576, len(scans))  # comment this out for real energy map
 
-# align and create image
+# align spectra (sometimes, it must be done mannualy)
+# ss2 = ss[i].set_shift(value)  # manually 
 ss2 = ss.interp().align().set_shift(-3.34)
+
+# create image
 im  = ss2.stack_spectra_as_columns()
 im.x_centers = energies
 
