@@ -29,6 +29,38 @@ each dataset, there will be two hdf5 files
 
     <dataset>.h5      --> for xas, linescans, and meshscans
     <dataset>_DLD.h5  --> for rixs
+
+
+One can use this code directly on MAX-IV JupyterHub through the
+following link https://jupyterhub.maxiv.lu.se
+Note that to access it you need to be onsite or connected to a MAX-IV VPN.
+
+As for today, I do not think one can install brixs via pip directly on your 
+MAX-IV JupyterHub workspace. Therefore, you have to upload a zipped version of brixs
+to your folder.
+
+For that, download brixs directly from github
+
+https://github.com/cwgaldino/brixs
+
+click on Code/Download ZIP. The downloaded folder will be named brixs-main.zip.
+Click and drag this zipped folder to jupyter slurm directory
+To unzip it, open a new tap on jupyter and click on Terminal.
+In the terminal, type  
+
+unzip brixs-main.zip
+
+The unzipped folder named `brixs-main` will appear. That's all. 
+
+In you script, make sure to add this folder to your path using the two lines 
+below
+>>> import sys
+>>> sys.path.insert(0, 'brixs-main/')
+
+Note that brixs requires only numpy and matplotlib to work. 
+The brixs.beamlines.veritas modules requires h5py.
+
+See examples below.
 """
 
 # %% ========================== standard imports ========================= %% #
