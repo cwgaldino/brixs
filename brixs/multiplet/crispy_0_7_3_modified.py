@@ -2261,6 +2261,7 @@ class Calculation(object):
         """
         assert self.experiment in ['RIXS', ], 'This only works for experiment=RIXS'
         assert update, 'the current implementation requires `update=True`. If you need `update=False`, this function must be revised'
+        assert npoints > 1, f'invalid npoints ({npoints}). npoints must be higher than 1'
 
         # update lua script
         self._is_energy_map = True
