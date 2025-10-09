@@ -490,6 +490,7 @@ def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n
             _s.pol = pol
 
             _s.metadata = _metadata
+            _s.additional = _additional
 
         return out
 # %%
