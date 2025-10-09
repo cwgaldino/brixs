@@ -8,7 +8,6 @@ Last updated 08/09/2025
 
 # %% ========================== Standard imports ========================== %% #
 import matplotlib.pyplot as plt
-from pathlib import Path
 import numpy as np
 
 # %% ============================ brixs imports =========================== %% #
@@ -176,23 +175,24 @@ ss['vv'].plot(label='LV in, LV out')
 ss['vh'].plot(label='LV in, LH out')
 ss['hv'].plot(label='LH in, LV out')
 ss['hh'].plot(label='LH in, LH out')
+ss['v'].plot(label='LV in, LH and LV out')
+ss['h'].plot(label='LH in, LH and LV out')
 br.labels.xas()
 
-# plot calculated spectrum 2
-LV = br.Spectra([ss['vv'], ss['vh']]).calculate_average()
-LH = br.Spectra([ss['hv'], ss['hh']]).calculate_average()
-
+# XLD
 plt.figure()
-LV.plot(label='LV in')
-LH.plot(label='LH in')
+ss['v'].plot(label='LV in')
+ss['h'].plot(label='LH in')
 br.labels.xas()
 # %%
 
+
+
 # %  ===================================================================== %% #
-# %  ========================== RIXS Energy map ========================== %% #
+# %  ==== RIXS Energy map via internal function (faster, recommended) ==== %% #
 # %% ===================================================================== %% #
 
-# Initialization
+# %% Initialization
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 q.polarization = 'isotropic'
 q.xMin = -1
@@ -211,50 +211,26 @@ for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dq(3d)'] = round(Dq, 5)
     q.hamiltonianData['Crystal Field'][h]['Ds(3d)'] = round(Ds, 5)
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
+# %%
 
 # %% run calculation
-energies = np.linspace(q.resonance-10, q.resonance+30, 300)  # 300 points
-ss = br.Spectra()
-for E in energies:
-    q.E = E
-    s, out = q.run()
-    ss.append(s)
-
-# get map
-im = ss.stack_spectra_as_columns()
-im.x_centers = energies
-
-# XAS
-_y = ss.calculate_y_sum()
-xas = br.Spectrum(x=energies, y=_y/max(_y))
+ss, im, xas, out = q.run_rixs_energy_map(Emin=q.resonance-10, Emax=q.resonance+30, npoints=300)
 
 # plot map
 br.figure()
 im.plot(origin='lower')
-xas.plot(color='white')
+xas.set_factor(1.8/max(xas.y)).plot(color='white')
 br.labels.energy_map('Energy map')
 # %%
 
 # %% run same calculation but with larger gamma1
 q.gamma1 = 2
-ss2 = br.Spectra()
-for E in energies:
-    q.E = E
-    s, out = q.run()
-    ss2.append(s)
-
-# get map
-im2 = ss2.stack_spectra_as_columns()
-im2.x_centers = energies
-
-# XAS
-_y = ss2.calculate_y_sum()
-xas2 = br.Spectrum(x=energies, y=_y/max(_y))
+ss2, im2, xas2, out2 = q.run_rixs_energy_map(Emin=q.resonance-10, Emax=q.resonance+30, npoints=300)
 
 # plot map
 br.figure()
 im2.plot(origin='lower')
-xas2.plot(color='white')
+xas2.set_factor(1.8/max(xas2.y)).plot(color='white')
 br.labels.energy_map('Energy map with larger gamma1')
 # %%
 
@@ -289,3 +265,53 @@ br.labels.energy_map('gaussian broadening in the x and y directions (wx=2, wy=0.
 # get broadened spectra
 ss4 = im4.get_columns(max_number_of_columns=im3.shape[1])
 # %%
+
+
+# %  ===================================================================== %% #
+# %  ================ RIXS Energy map by looping energies ================ %% #
+# %% ===================================================================== %% #
+
+# %% Initialization
+q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
+q.polarization = 'isotropic'
+q.xMin = -1
+q.xMax = 2
+
+Dq = 0.1
+Ds = 0.08
+Dt = 0.06
+
+q.gamma1 = 1
+
+#################
+# Crystal Field #
+#################
+for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
+    q.hamiltonianData['Crystal Field'][h]['Dq(3d)'] = round(Dq, 5)
+    q.hamiltonianData['Crystal Field'][h]['Ds(3d)'] = round(Ds, 5)
+    q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
+# %%
+
+# %% run calculation
+energies = np.linspace(q.resonance-10, q.resonance+30, 300)  # 300 points
+ss = br.Spectra()
+for E in energies:
+    q.E = E
+    s, out = q.run()
+    ss.append(s)
+
+# get map
+im = ss.stack_spectra_as_columns()
+im.x_centers = energies
+
+# XAS
+_y = ss.calculate_y_sum()
+xas = br.Spectrum(x=energies, y=_y/max(_y))
+
+# plot map
+br.figure()
+im.plot(origin='lower')
+xas.plot(color='white')
+br.labels.energy_map('Energy map')
+# %%
+

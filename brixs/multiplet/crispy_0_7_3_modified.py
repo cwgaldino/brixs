@@ -2264,8 +2264,12 @@ class Calculation(object):
 
         # update lua script
         self._is_energy_map = True
-        self.update_lua_script()
-        self._is_energy_map = False
+        try:
+            self.update_lua_script()
+        except Exception as e:
+            raise e
+        finally:
+            self._is_energy_map = False
 
         # adjust lua script for energy map
         replacements = odict()
@@ -2300,7 +2304,7 @@ class Calculation(object):
                     ss.append(br.Spectrum(_x, _y))
             else:
                 for i in np.arange(2, (npoints+1)*2, 2):
-                    _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                    _y = [float(_.split(' ')[i]) for _ in _out3[5:]]
                     ss.append(br.Spectrum(_x, _y))
 
             # calculation metadata
@@ -2316,7 +2320,7 @@ class Calculation(object):
             im.x_centers = ss.E
 
             # create xas
-            xas = br.Spectrum(x=ss[_pol].E, y=ss[_pol].calculate_y_sum())
+            xas = br.Spectrum(x=ss.E, y=ss.calculate_y_sum())
 
             # output is everything before first spectrum
             out = _out.split('Here starts Giso spectrum:')[0]
