@@ -2202,7 +2202,7 @@ class Calculation(object):
                 # output is everything before first spectrum
                 out = _out.split('Here starts LV spectrum:')[0]
 
-                return {'LV':cr, 'LH':cl}, out
+                return {'v':cr, 'h':cl}, out
             elif self.polarization.lower() == 'circular':
                 # =============== r =============== #
                 _out2 = _out.split('Here starts CR spectrum:')[1].split('Here ends CR spectrum')[0].split('\n')
@@ -2228,7 +2228,7 @@ class Calculation(object):
                 # output is everything before first spectrum
                 out = _out.split('Here starts CR spectrum:')[0]
 
-                return {'CR':cr, 'CL':cl}, out
+                return {'r':cr, 'l':cl}, out
         return 
 
     def run_rixs_energy_map(self, Emin, Emax, npoints, update=True, wsl=False):

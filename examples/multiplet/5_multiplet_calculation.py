@@ -138,8 +138,8 @@ ss, out = q.run()
 
 # plot calculated spectrum
 plt.figure()
-ss['LV'].plot(label='LV')
-ss['LH'].plot(label='LH')
+ss['v'].plot(label='LV')
+ss['h'].plot(label='LH')
 br.labels.xas()
 # %%
 
