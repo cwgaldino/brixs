@@ -9121,11 +9121,28 @@ class Image(_BrixsObject, metaclass=_Meta):
         if im.x_edges is None: 
             if im.x_monotonicity is None:
                 im.check_x_monotonicity()
+            assert im.x_monotonicity == 'increasing', 'x edges are not increasingly monotonic. Use im.fix_x_monotonicity() of adjust im.x_centers or im.x_edges directly'
             im = im.estimate_x_edges_from_centers()
+        else:
+            s = Spectrum(x=self.x_edges)
+            try:
+                s.check_monotonicity()
+                assert s.monotonicity == 'increasing', 'x edges are not increasingly monotonic. Use im.fix_x_monotonicity() of adjust im.x_centers or im.x_edges directly'
+            except ValueError:
+                raise ValueError('x edges are not increasingly monotonic. Use im.fix_x_monotonicity() of adjust im.x_centers or im.x_edges directly')
+        
         if im.y_edges is None: 
             if im.y_monotonicity is None:
                 im.check_y_monotonicity()
+            assert im.y_monotonicity == 'increasing', 'y edges are not increasingly monotonic. Use im.fix_y_monotonicity() of adjust im.y_centers or im.y_edges directly'
             im = im.estimate_y_edges_from_centers()
+        else:
+            s = Spectrum(x=self.y_edges)
+            try:
+                s.check_monotonicity()
+                assert s.monotonicity == 'increasing', 'y edges are not increasingly monotonic. Use im.fix_y_monotonicity() of adjust im.y_centers or im.y_edges directly'
+            except ValueError:
+                raise ValueError('y edges are not increasingly monotonic. Use im.fix_y_monotonicity() of adjust im.y_centers or im.y_edges directly')
 
         ########
         # plot #
@@ -9137,8 +9154,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         # show x, y, z values upon mouse hovering #
         ###########################################
         def format_coord(x, y):
-            xarr = X[0,:]
-            yarr = Y[:,0]
+            xarr = X[0, :]
+            yarr = Y[:, 0]
             if ((x > xarr.min()) & (x <= xarr.max()) & 
                 (y > yarr.min()) & (y <= yarr.max())):
                 col = np.searchsorted(xarr, x)-1

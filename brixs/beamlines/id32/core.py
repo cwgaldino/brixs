@@ -3,6 +3,7 @@
 """Core functions for ID32 beamline at ESRF"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
+from collections.abc import Iterable
 from pathlib import Path
 import numpy as np
 import datetime
@@ -92,6 +93,9 @@ def _polarization(value):
     """returns polarization string based on undulator gap"""
     pol = value
 
+    if isinstance(value, Iterable):
+        value = np.mean(value)
+        
     if value < -5:
         pol = 'CM'
     elif -5 <= value < 5:
