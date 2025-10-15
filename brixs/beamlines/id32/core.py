@@ -396,7 +396,14 @@ def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n
                         s.metadata[key] = initial['instrument']['positioners'][metadata[branch][key]][()]
                     except KeyError:
                         pass
-
+                
+                s.additional = {}
+                for key in additional[branch]:
+                    try:    
+                        s.additional[key] = initial['measurement'][additional[branch][key]][()]
+                    except KeyError:
+                        pass
+                    
                 return s
             else:
                 if branch == 'rixs': # ref indicates how to find the image number via the filename of the image
