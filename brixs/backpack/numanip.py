@@ -58,8 +58,9 @@ def is_number(n):
     """Returns True if variable is number."""
     # backpack developers note!!!!
     # if this function changes, it needs to be copied to these files: figmanip
-
-    if isinstance(n, int):
+    if isinstance(n, bool):
+        return False
+    elif isinstance(n, int):
         return True
     elif isinstance(n, float):
         return True

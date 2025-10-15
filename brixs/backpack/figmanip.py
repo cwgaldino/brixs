@@ -49,9 +49,10 @@ import numbers
 def is_number(n):
     """Returns True if variable is number."""
     # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
-
-    if isinstance(n, int):
+    # if this function changes, it needs to be copied to these files: numanip
+    if isinstance(n, bool):
+        return False
+    elif isinstance(n, int):
         return True
     elif isinstance(n, float):
         return True
@@ -664,7 +665,7 @@ def _onclick(event):
         x = event.x/(w*100)
         y = event.y/(h*100)
 
-        _copy2clipboard([x, y])
+        _copy2clipboard(str([x, y]))
 
         # # get variables        
         # global onclick_fig_format, onclick_resolution, onclick_folder
