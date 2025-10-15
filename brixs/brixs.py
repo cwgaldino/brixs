@@ -8140,8 +8140,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         return reduced
     
 
-    def rows_moving_average(self, n):
-        """Returns an Image object with moving average on rows.
+    def moving_average_x(self, n):
+        """Returns an Image object with moving average on rows (x direction).
 
         Note:
             moving average is also applied to x_centers.
@@ -8188,8 +8188,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         final._y_edges        = copy.deepcopy(self.y_edges)
         return final
 
-    def columns_moving_average(self, n):
-        """Returns an Image object with moving average on columns.
+    def moving_average_y(self, n):
+        """Returns an Image object with moving average on columns (y direction)
 
         Note:
             moving average is also applied to y_centers.
@@ -8789,8 +8789,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         return self.set_horizontal_shift_via_polyval(popt) 
 
     
-    def get_spot(self, y, x, n, coordinates='centers'):
-        """return a square image with side n*2+1 with pixels surrounding x, y
+    def get_spot(self, y, x, ny, nx, coordinates='centers'):
+        """return a square image with side (ny*2+1, nx*2+1) with pixels surrounding x, y
 
         Note:
             if x, y is too close to the edges, spot is considered up the edge and 
@@ -8801,7 +8801,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             y, x (tuple or list): (y, x) position in terms of pixel value (if 
                 coordinates='pixels') or in terms of y_centers and x_centers (if
                 coordinates='centers').
-            n (int): number of neighbors to include, e.g., if n=1, only first neighbors 
+            ny, nx (int): number of neighbors to include, e.g., if ny=nx=1, only first neighbors 
                 will be considered and the spot will be a 3x3 array.
             coordinates (str, optional): `pixels` if pixel positions are given in 
                 pixel coordinates or `centers` if positions are given in terms of 
@@ -8818,21 +8818,23 @@ class Image(_BrixsObject, metaclass=_Meta):
             is_near_edge is a dict indicates if the spot touched the edges of the image.
         """
         assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-        assert isinstance(n, int), f'n must be of type integer, not {type(n)}'
-        assert n >= 0, f'n must be an integer number higher or equal to 0'
+        assert numanip.is_integer(nx), f'n must be of type integer, not {type(nx)}'
+        assert numanip.is_integer(ny), f'n must be of type integer, not {type(ny)}'
+        assert nx >= 0, f'nx must be an integer number higher or equal to 0'
+        assert ny >= 0, f'ny must be an integer number higher or equal to 0'
 
         # returns the full image if n is larger that the figure
-        if n > self.shape[0] and n > self.shape[1]:
+        if ny > self.shape[0] and nx > self.shape[1]:
             is_near_edge = {'left':True, 'right':True, 'bottom':True, 'top':True}
             return self.copy(), slice(0, self.shape[0]), slice(0, self.shape[1]), is_near_edge
 
         # get square
         if coordinates == 'centers':
             y, x = self.center2index(y=y, x=x)
-        x_start = int(x-int(n))
-        x_stop  = int(x+int(n))+1
-        y_start = int(y-int(n))
-        y_stop  = int(y+int(n))+1
+        x_start = int(x-int(nx))
+        x_stop  = int(x+int(nx))+1
+        y_start = int(y-int(ny))
+        y_stop  = int(y+int(ny))+1
 
         # get edges
         is_near_edge = {'left':True, 'right':True, 'bottom':True, 'top':True}
@@ -8857,16 +8859,16 @@ class Image(_BrixsObject, metaclass=_Meta):
 
         return spot, slice(y_start, y_stop), slice(x_start, x_stop), is_near_edge
 
-    def patch(self, pos, n, value=None, coordinates='centers'):
-        """Return an image with all y, x pixel positions patched by a n x n square
+    def patch(self, pos, ny, nx, value=None, coordinates='centers'):
+        """Return an image with all y, x pixel positions patched by a ny x nx square
         
-        The pixels inside a (n x n) square around all y, x pixel positions in pos
+        The pixels inside a (ny x nx) square around all y, x pixel positions in pos
         will be replaced by a value. 
 
         Args:
             pos (tuple or list): (y, x) pixel position or a list of positions 
                 [(y1, x1), (y2, x2), ...]. 
-            n (int): number of neighbors around (y, x) to be patched, e.g., if n=1,
+            ny, nx (int): number of neighbors around (y, x) to be patched, e.g., if ny=nx=1,
                 only first neighbors will be considered and the patch will be a 3x3
                 array.
             value (number, optional): patch value. If None, this value will be 
@@ -8880,8 +8882,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         """
         # check if arguments make sense
         assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-        assert isinstance(n, int), f'n must be of type integer, not {type(n)}'
-        assert n >= 0, f'n must be an integer number higher or equal to 0'
+        assert numanip.is_integer(nx), f'n must be of type integer, not {type(nx)}'
+        assert numanip.is_integer(ny), f'n must be of type integer, not {type(ny)}'
+        assert nx >= 0, f'nx must be an integer number higher or equal to 0'
+        assert ny >= 0, f'ny must be an integer number higher or equal to 0'
+
         assert isinstance(pos, Iterable), f'pos must be an Iterable (list or tuple), not type {type(pos)}'
         if isinstance(pos[0], Iterable) == False:
             pos = [pos, ]
@@ -8908,7 +8913,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         for y, x in pos:
 
             # get spot around x, y
-            spot, yslice, xslice, is_near_edge = self.get_spot(y=y, x=x, n=n, coordinates=coordinates)
+            spot, yslice, xslice, is_near_edge = self.get_spot(y=y, x=x, ny=ny, nx=nx, coordinates=coordinates)
 
             # if value is None, get average value around patch
             x_start, x_stop, y_start, y_stop = xslice.start, xslice.stop, yslice.start, yslice.stop
@@ -11186,4 +11191,64 @@ class Dummy(_BrixsObject, metaclass=_Meta):
     ##########################        
     # plot and visualization #
     ##########################
-    pass
+    def plot(self, ax=None, **kwargs):
+        """Plot items one by one. Wrapper for `matplotlib.pyplot.plot()`_.
+
+        Note:
+            If `label` is `None` and if spectrum inside spectra have attr 
+            `label`, this attr will be used as label, e.g., 
+            `plt.plot(s.x, s.y, label=s.label)`.  
+
+        Args:
+            ax (matplotlib.axes, optional): axes for plotting on.
+            smooth (int, optional): number of points to average data. Default is 1.
+            label or labels (str, number, or list, optional): if str or number, this label will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra. If None and if 
+                spectrum `s` inside spectra `ss` have attr `label`, 
+                this attr will be used as label, e.g., `plt.plot(s.x, s.y, label=s.label)`.
+                Default is None. 
+            color, colors, or c (str, number, or list, optional): if str or number, this color will be 
+                applied to every spectra. If list, it must have the same length 
+                as the number of spectra and each element must be a color (a 
+                color can be a str or a 3 element (RGB) list.
+                Default is None. 
+            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
+                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
+                this function simply returns None. If pairs, each pair 
+                represents the start and stop of a data range from x. Limits are
+                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
+                the minimum or maximum x value of the data, respectively. If 
+                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
+            switch_xy (bool, optional): Switch x and y axis.
+            hi, vi (number, optional): horizontal and vertical increments for 
+                cascading plots.
+            phi, pvi (number, optional): percentage wise horizontal and vertical 
+                increments for cascading plots (percentage of the y-range for 
+                each spectrum).
+            verbose (bool, optional): if True, prints warning if ploted data has
+                nun-numeric values (NaN). Default is True.
+            **kwargs: kwargs are passed to ``plt.plot()`` that plots the data.
+
+        Returns:
+            `Line2D`_ list
+
+        .. _matplotlib.pyplot.plot(): https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.plot.html
+        .. _Line2D: https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.lines.Line2D.html#matplotlib.lines.Line2D
+        """
+        ###################
+        # figure and axes #
+        ###################
+        if ax is None:
+            ax = plt
+            if settings.FIGURE_FORCE_NEW_WINDOW or len(plt.get_fignums()) == 0:
+                figure()
+        
+        ########
+        # plot #
+        ########
+        temp = [0]*len(self)
+        for i in range(len(self)):
+            temp[i] = self[i].plot(ax=ax, **kwargs)
+
+        return temp
