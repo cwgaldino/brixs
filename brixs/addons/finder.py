@@ -313,9 +313,17 @@ def search(kwargs=None, folderpath=None):
     Returns 
         False, or spectrum/spectra if data is found
     """
-    ########
+    ##############
+    # folderpath #
+    ##############
+    if folderpath is None:
+        folderpath = br.finder.folderpath
+    folderpath = Path(folderpath)
+    assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
+    
+    ##########
     # kwargs #
-    ########
+    ##########
     if kwargs is None:
         kwargs = br.finder.kwargs
         if kwargs == '':
@@ -361,7 +369,7 @@ def search(kwargs=None, folderpath=None):
             stop  = int(split[3])
             ss = br.Spectra()
             for i in range(start, stop+1):
-                folderpath = search_result.parent
+                # folderpath = search_result.parent
                 filename = f'finderfile_Spectra_{i}_{stop}'
                 ss.append(br.Spectrum(filepath=folderpath/filename))
             return ss
@@ -466,7 +474,8 @@ def save(obj, folderpath=None):
     # save string and filepath to finder file #
     ###########################################
     f = open(folderpath/'finder.txt', 'a')
-    f.write(br.finder._search_string + '\n' + str(folderpath/filename) + '\n')
+    # f.write(br.finder._search_string + '\n' + str(folderpath/filename) + '\n')
+    f.write(br.finder._search_string + '\n' + str(filename) + '\n')
     f.close() 
 
     ################
