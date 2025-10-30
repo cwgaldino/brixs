@@ -18,7 +18,7 @@ The main function of this implementation is the im.centroid(). See below the arg
 the centroid method,
 
     Args:
-        n (int): photon hits candidates that are within n pixels of distance 
+        nx, ny (int): photon hits candidates that are within n pixels of distance 
             from each other will be considered the same candidate. For better 
             results, set n to be roughly the expected pixel distance between a 
             photon hit and the farthest excited pixel.
@@ -39,32 +39,30 @@ the centroid method,
         Image enhancement for finding candidates:
         
         _bkg (number, 'auto', or None, optional): the image will be subtracted by _bkg.
-            If _bkg is 'auto', bkg will be defined so the average of the whole 
+            If _bkg='auto', bkg will be defined so the average of the whole 
             image is zero. If None, no offsetting is applied. Default is None. 
             Note that _bkg = 0 implies no flooring (same as _bkg=None).
-        _square (bool, optional): If True, the image will be floored (an offset
-            will be applied so avg pixel intensity is zero), squared, 
-            and a moving averaged of size n will be applied. Default is True.
-        _n (int): Use this to overwrite the size of the moving average window 
+        _square (bool, optional): If True, the image will be squared. Default 
+            is False.
+        _nx, _ny (int): Use this to overwrite the size of the moving average window 
             used in the process of enhancing the image, i.e., number of points
             to average. If this is None, the averaging window size will be set 
-            to n*2+1. Note that _n=1 implies no moving average.
+            to n*2+1. Note that _n=1 implies no moving average. Default is 1.
 
         Center of mass calculation:
 
         _cm_bkg (number, 'auto', or None, optional): If _cm_bkg is not None, the image will be 
             subtracted by _cm_bkg before calculating the center of masses.
-            If _cm_bkg is 'auto', _cm_bkg will be defined so the average of the whole 
+            If _cm_bkg='auto', _cm_bkg will be defined so the average of the whole 
             image is zero. If _cm_bkg is None, no offsetting of the image is 
             applied. Default is None. Note that _cm_bkg = 0 implies no 
             flooring before calculating center of mass (same as _cm_bkg=None). 
             Note that, center of mass calculation can yield less precise 
             results if image is not floored and _cm_bkg >> n.
-        _cm_n (int): Use this to overwrite the number of neighbors when
+        _cm_nx, _cm_ny (int): Use this to overwrite the number of neighbors when
             calculating the center of mass of a photon hit candidate, e.g., if 
-            _cm_n=1, only first neighbors. _cm_n also defines how close two 
-            candidates need to be to be considered a double event. If None, 
-            _cm_n will be same as n. Default is None.     
+            _cm_n=1, only first neighbors. If 'auto', 
+            _cm_n will be same as n. Default is 'auto'.     
         _cm_spot_zero_type (str): when calculating the center of mass of a 
             candidate, pixels around the candidate cannot be negative, otherwise
             center of mass calculation can yield to less precise result (the
@@ -80,9 +78,11 @@ the centroid method,
         other args:
 
         MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
-            photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
-            Useful for preventing too low threshold as patching image is slow.
-            Default is 10. 
+            pixels with intensity higher than the threshold is larger than 
+            MAX_NUMBER_OF_CANDIDATES in the enhanced image. Note that this will take into account
+            every pixel with intensity above the threshold (without excluding
+            pixels around (nx, ny) brightest pixels. Default is 1000.
+            Useful for preventing setting up the threshold too low.
     
 im.centroid returns a list of photon hits and double events
 

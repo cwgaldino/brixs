@@ -15,11 +15,11 @@ import brixs as br
 # %%
 
 # %% ============================= support =============================== %% #
-def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordinates='centers'):
+def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, coordinates='centers', MAX_NUMBER_OF_CANDIDATES=1000):
     """returns list of y, x positions where pixel intensity is above threshold
 
     This is an approximate description of the algorithm:
-    1) search for all pixel values that satisfies: threshold > value > threshold2
+    1) search for all pixel values that satisfies: threshold < value < threshold2
     2) if many pixels above the threshold are close (< n), then keep only the
     one with maximum value (brightest pixel).
 
@@ -28,7 +28,7 @@ def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordin
         threshold2 (number, optional): upper limit for threshold. If 
             threshold2 is not None, pixel values
             above threshold2 will be placed in a separate list. Default is None.
-        n (int, optional): If n>0, only the brightest pixel around the first 
+        nx, ny (int, optional): If n>0, only the brightest pixel around the first 
             n neighbors of the (y, x) positions will trigger the threshold,
             e.g., if n=0 and all first neighbors around (y, x) are above the 
             threshold, then all positions (y-1, x-1), ..., (y+1, x+1), all 
@@ -40,6 +40,12 @@ def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordin
         coordinates (str, optional): If `pixels`, (y, x) is given in pixel 
             coordinates. If `centers`, (y, x) is given in terms of x_centers
             and y_centers. Default is `centers`.
+        MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
+            pixels with intensity higher than the threshold is larger than 
+            MAX_NUMBER_OF_CANDIDATES. Note that this will take into account
+            every pixel with intensity above the threshold (without excluding
+            pixels around (nx, ny) brightest pixels. Default is 1000.
+            Useful for preventing setting up the threshold too low.
 
     Returns:
         pos, pos2
@@ -49,8 +55,10 @@ def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordin
 
     """
     assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-    assert isinstance(n, int), f'n must be of type integer, not {type(n)}'
-    assert n >= 0, f'n must be an integer number higher or equal to 0'
+    assert br.is_integer(nx), f'n must be of type integer, not {type(nx)}'
+    assert br.is_integer(ny), f'n must be of type integer, not {type(ny)}'
+    assert nx >= 0, f'nx must be an integer number higher or equal to 0'
+    assert ny >= 0, f'ny must be an integer number higher or equal to 0'
 
     if threshold2 is None:
         ys, xs   = np.where(self.data > threshold)
@@ -59,13 +67,17 @@ def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordin
         ys, xs   = np.where(np.logical_and(self.data > threshold, self.data < threshold2))
         ys2, xs2 = np.where(self.data > threshold2)
 
+    if len(xs) > MAX_NUMBER_OF_CANDIDATES:
+        raise ValueError(f'number of positions positions above the threshold ({len(xs)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES or `threshold`')
+    
+
     # get brightest pixel
     central  = []
     central2 = []
     if threshold2 is not None:
         for y, x in zip(ys2, xs2):
-            if n > 0:
-                _y, _x = self.get_brightest_pixel_position(y=y, x=x, n=n, coordinates='pixels')
+            if ny>0 or nx>0:
+                _y, _x = self.get_brightest_pixel_position(y=y, x=x, ny=ny, nx=nx, coordinates='pixels')
                 bright_pixel = (_y, _x)
                 if bright_pixel not in central2:
                     central2.append(bright_pixel)
@@ -75,8 +87,8 @@ def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordin
             central2 = [self.index2center(y=_[0], x=_[1]) for _ in central2]
 
     for y, x in zip(ys, xs):
-        if n > 0:
-            _y, _x = self.get_brightest_pixel_position(y=y, x=x, n=n, coordinates='pixels')
+        if ny>0 or nx>0:
+            _y, _x = self.get_brightest_pixel_position(y=y, x=x, ny=ny, nx=nx, coordinates='pixels')
             bright_pixel = (_y, _x)
             if bright_pixel not in central and bright_pixel not in central2:
                 central.append(bright_pixel)
@@ -88,14 +100,14 @@ def get_positions_above_threshold(self, threshold, threshold2=None, n=0, coordin
     return central, central2
 br.Image.get_positions_above_threshold = get_positions_above_threshold
 
-def get_brightest_pixel_position(self, y, x, n, coordinates='centers'):
+def get_brightest_pixel_position(self, y, x, ny, nx, coordinates='centers'):
     """Returns the positions of the most intense pixel around y, x
 
     Args:
         y, x (tuple or list): (y, x) position in terms of pixel value (if 
             coordinates='pixels') or in terms of y_centers and x_centers (if
             coordinates='centers').
-        n (int): number of neighbors to include, e.g., if n=1, only first neighbors 
+        ny, nx (int): number of neighbors to include, e.g., if ny=nx=1, only first neighbors 
             will be considered and the spot will be a 3x3 array.
         coordinates (str, optional): `pixels` if pixel positions are given in 
             pixel coordinates or `centers` if positions are given in terms of 
@@ -105,10 +117,12 @@ def get_brightest_pixel_position(self, y, x, n, coordinates='centers'):
         y, x
     """
     assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-    assert isinstance(n, int), f'n must be of type integer, not {type(n)}'
-    assert n >= 0, f'n must be an integer number higher or equal to 0'
+    assert br.is_integer(nx), f'n must be of type integer, not {type(nx)}'
+    assert br.is_integer(ny), f'n must be of type integer, not {type(ny)}'
+    assert nx >= 0, f'nx must be an integer number higher or equal to 0'
+    assert ny >= 0, f'ny must be an integer number higher or equal to 0'
 
-    spot, yslice, xslice, is_near_edge = self.get_spot(y=y, x=x, n=n, coordinates=coordinates)
+    spot, yslice, xslice, is_near_edge = self.get_spot(y=y, x=x, ny=ny, nx=nx, coordinates=coordinates)
     _y, _x = spot.argmax(coordinates='pixels')
     
     y = int(yslice.start+_y)
@@ -139,28 +153,62 @@ def get_center_of_mass(self, coordinates='centers'):
     return my, mx
 br.Image.get_center_of_mass = get_center_of_mass
 
-def enhance(self, n, bkg=None):
+def enhance(self, bkg='auto', square=True, nx=2, ny=2):
     """floor and multiplies image by itself and apply moving average
 
     This makes outliers standout more.
 
     Args:
-        n (int): Size of the moving average window, i.e., number of points to average.
-        bkg (number, optional): If bkg is not None, the image will be 
-            subtracted by bkg. If bkg is None, bkg will be defined so the 
-            average of the whole image is zero. Default is None.
+        bkg (number, optional): If bkg is a number, the image will be 
+            subtracted by this number [set_offset(-bkg)]. If bkg='auto', 
+            bkg will be defined so the average of the whole image is zero. 
+            If None, no bkg subtraction is applied. Default is 'auto'.
+        square (bool, optional): If True, the image will be squared. Default 
+            is True.
+        nx, ny (int): Size of the moving average window in the x and y directions, 
+            i.e., number of points to average.
+            If None, no moving average is applied. Note that n=1 has the same 
+            effect as n=None. Default is 2.
 
     Returns:
         enhanced image
     """
-    if bkg is None:
-        im = self.floor()
+    if bkg is not None:
+        if bkg != 'auto':
+            assert br.is_number(bkg), 'bkg can only be `auto`, None, or a number'
+    assert isinstance(square, bool), 'square must be True or False'
+    if nx is not None:
+        assert br.is_integer(nx) and nx > 0, 'nx must be None, or an integer equal or higher than 1'
+    if ny is not None:
+        assert br.is_integer(ny) and ny > 0, 'ny must be None, or an integer equal or higher than 1'
+
+    # bkg subtraction
+    if bkg is not None:
+        if bkg == 'auto':
+            im = self.floor()
+        else:
+            im = self.set_offset(-bkg)
     else:
-        im = self.set_offset(-bkg)
-    return im.multiply(im).moving_average(n)
+        im = self.copy()
+
+    # square
+    if square:
+        im = im.multiply(im)
+    
+    # moving average
+    if nx is not None:
+        if nx > 1:
+            im = im.moving_average_x(nx)
+    if ny is not None:
+        if ny > 1:
+            im = im.moving_average_y(ny)
+
+    return im
 br.Image.enhance = enhance
 
-def find_candidates(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1):
+def find_candidates(self, nx, ny, threshold, threshold2=None, 
+                    _bkg=None, _square=False, _nx=None, _ny=None, 
+                    MAX_NUMBER_OF_CANDIDATES=1000):
     """Returns a list of photon hit candidates defined by a threshold in a enhanced image
 
     This is an approximate description of the algorithm:
@@ -169,76 +217,108 @@ def find_candidates(self, n, threshold, threshold2=None, _bkg=None, _square=Fals
     3) for positions that are too close (<=n), keep only the one for the brightest pixel
     4) go back to the original image and find brightest pixel around the positions
     suggested by the enhanced image (<=n) 
+    5) again, check the original image for positions that are too close (<=n) and
+    keep only the one with the brightest pixel
 
     Args:
-        n (int): photon hits candidates that are within n pixels of distance 
+        nx, ny (int): photon hits candidates that are within n pixels of distance 
             from each other will be considered the same candidate. For better 
             results, set n to be roughly the expected pixel distance between a 
             photon hit and the farthest excited pixel.
         threshold (number): threshold value. Any pixel value above threshold 
-            will be considered as a photon hit candidate. If enhance=True, 
-            threshold must be given in terms of pixel intensity of the 
-            enhanced image [use im.enhance(n=_n, bkg=_bkg) to get enhanced image]. 
+            will be considered as a photon hit candidate. If _bkg!=None, 
+            _square=True or _n>1, threshold must be given in terms of pixel 
+            intensity of the squared image [use im.enhance(n=_n, bkg=_bkg, square=_square) to 
+            get enhanced image]. 
         threshold2 (number, optional): upper limit for threshold. If 
             threshold2 is not None, pixel values
             above threshold2 will be placed in a separate array. If enhance=True, 
             threshold2 must be given in terms of pixel intensity of the 
-            enhanced image [use im.enhance(n=_n, bkg=_bkg) to get enhanced image]. 
+            enhanced image [use im.enhance(n=_n, bkg=_bkg, square=_square) to get enhanced image]. 
             Default is None.
+        
 
         Image enhancement:
         
-        _bkg (number, 'auto', or None, optional): the image will be subtracted by _bkg.
-            If _bkg is 'auto', bkg will be defined so the average of the whole 
-            image is zero. If None, no offsetting is applied. Default is None. 
-            Note that _bkg = 0 implies no flooring (same as _bkg=None).
-        _square (bool, optional): If True, the image will be floored (an offset
-            will be applied so avg pixel intensity is zero), squared, 
-            and a moving averaged of size n will be applied. Default is True.
-        _n (int): Use this to overwrite the size of the moving average window 
-            used in the process of enhancing the image, i.e., number of points
-            to average. If this is None, the averaging window size will be set 
-            to n*2+1. Note that _n=1 implies no moving average.
+        _bkg (number, optional): If bkg is a number, the image will be 
+            subtracted by this number [set_offset(-bkg)]. If bkg='auto', 
+            bkg will be defined so the average of the whole image is zero. 
+            If None, no bkg subtraction is applied. Default is None.
+        _square (bool, optional): If True, the image will be squared. Default 
+            is None.
+        _nx, _ny (int): Size of the moving average window, i.e., number of points to average.
+            If None, no moving average is applied. Note that _n=1 has the same 
+            effect as _n=None. If 'auto', _n=n*2+1 which is the number of pixels
+            expected to be excited by a photon. Default is None.
         
+        other args:
+
+        MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
+            pixels with intensity higher than the threshold is larger than 
+            MAX_NUMBER_OF_CANDIDATES in the enhanced image. Note that this will take into account
+            every pixel with intensity above the threshold (without excluding
+            pixels around (nx, ny) brightest pixels. Default is 1000.
+            Useful for preventing setting up the threshold too low.
 
     Returns:
         pe, pe2
         photon events list, and double events list
     """
     # enhance image
-    if _bkg == 'auto':
-        im = self.floor()
-    elif _bkg is None:
-        im = self._copy()
-    else:
-        im = self.set_offset(-_bkg)
-
-    if _square:
-        im = im.multiply(im)
-    
-    if _n is None: 
-        _n = int(n*2+1)
-    im = im.moving_average(_n)
+    if _nx == 'auto': 
+        _nx = int(nx*2+1)
+    if _ny == 'auto': 
+        _ny = int(ny*2+1)
+    im = self.enhance(bkg=_bkg, square=_square, nx=_nx, ny=_ny)
 
     # find photon hit candidates from the enhanced image
-    pos, pos2 = im.get_positions_above_threshold(threshold=threshold, threshold2=threshold2, n=n, coordinates='centers')
+    pos, pos2 = im.get_positions_above_threshold(threshold=threshold, threshold2=threshold2, ny=ny, nx=nx, coordinates='centers', MAX_NUMBER_OF_CANDIDATES=MAX_NUMBER_OF_CANDIDATES)
     
     # get brightest pixel around candidates in the original image
     final  = []
     final2 = []
     for _pos in pos2:
-        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], n=n, coordinates='centers')
+        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], ny=ny, nx=nx, coordinates='centers')
         if (y, x) not in final2:
             final2.append((y, x))
     for _pos in pos:
-        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], n=n, coordinates='centers')
+        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], ny=ny, nx=nx, coordinates='centers')
         if (y, x) not in final and (y, x) not in final2:
             final.append((y, x))
     
-    return br.PhotonEvents(x=[_[1] for _ in final], y=[_[0] for _ in final]), br.PhotonEvents(x=[_[1] for _ in final2], y=[_[0] for _ in final2])
+    # remove two brightest pixels that are closer then nx and ny
+    to_remove_from_final = []
+    to_add_to_final2 = []
+    for i, _a in enumerate(final):
+        _y1, _x1 = _a
+        for j, _b in enumerate(final[i+1:]):
+            _y2, _x2 = _b
+            if abs(_y2-_y1) < ny and abs(_x2-_x1) < nx:
+                to_remove_from_final.append(i)
+                to_remove_from_final.append(j)
+                if im[_y1, _x1] > im[_y2, _x2]:
+                    to_add_to_final2.append(i)
+                else:
+                    to_add_to_final2.append(j)
+    to_remove_from_final = br.remove_duplicates(to_remove_from_final)
+    to_add_to_final2 = br.remove_duplicates(to_add_to_final2)
+
+    # build photon events list
+    x=[_[1] for i, _ in enumerate(final) if i not in to_remove_from_final]
+    y=[_[0] for i, _ in enumerate(final) if i not in to_remove_from_final]
+    pe = br.PhotonEvents(x=x, y=y)
+
+    x=[_[1] for i, _ in enumerate(final2)] + [_[1] for i, _ in enumerate(final) if i in to_add_to_final2]
+    y=[_[0] for i, _ in enumerate(final2)] + [_[0] for i, _ in enumerate(final) if i in to_add_to_final2]
+    pe2 = br.PhotonEvents(x=x, y=y)
+
+    return pe, pe2
 br.Image.find_candidates = find_candidates
 
-def find_and_patch(self, n, threshold, threshold2=None,  _bkg=None, _square=False, _n=1, _patch_size=None, _patch_value=None, MAX_NUMBER_OF_CANDIDATES=200):
+def find_and_patch(self, nx, ny, threshold, threshold2=None,  
+                   _bkg=None, _square=False, _nx=None, _ny=None, 
+                   _patch_x_size='auto', _patch_y_size='auto', _patch_value='auto', 
+                   MAX_NUMBER_OF_CANDIDATES=1000):
     """Returns image where photon event are patched out (cosmic rays correction)
 
     This is an approximate description of the algorithm:
@@ -251,64 +331,77 @@ def find_and_patch(self, n, threshold, threshold2=None,  _bkg=None, _square=Fals
     value (_patch_value)
 
     Args:
-        n (int): photon hits candidates that are within n pixels of distance 
+        nx, ny (int): photon hits candidates that are within n pixels of distance 
             from each other will be considered the same candidate. For better 
             results, set n to be roughly the expected pixel distance between a 
             photon hit and the farthest excited pixel.
         threshold (number): threshold value. Any pixel value above threshold 
             will be considered as a photon hit candidate. If enhance=True, 
             threshold must be given in terms of pixel intensity of the 
-            enhanced image [use im.enhance(n=_n, bkg=_bkg) to get enhanced image]. 
+            enhanced image [use im.enhance(n=_n, bkg=_bkg, square=_square) to get enhanced image]. 
         threshold2 (number, optional): upper limit for threshold. If 
             threshold2 is not None, pixel values
             above threshold2 will be disregarded. If enhance=True, 
             threshold2 must be given in terms of pixel intensity of the 
-            enhanced image [use im.enhance(n=_n, bkg=_bkg) to get enhanced image]. 
+            enhanced image [use im.enhance(n=_n, bkg=_bkg, square=_square) to get enhanced image]. 
             Default is None.
         
         Image enhancement args:
 
-        _bkg (number, 'auto', or None, optional): the image will be subtracted by _bkg.
-            If _bkg is 'auto', bkg will be defined so the average of the whole 
-            image is zero. If None, no offsetting is applied. Default is None. 
-            Note that _bkg = 0 implies no flooring (same as _bkg=None).
-        _square (bool, optional): If True, the image will be floored (an offset
-            will be applied so avg pixel intensity is zero), squared, 
-            and a moving averaged of size n will be applied. Default is True.
-        _n (int): Use this to overwrite the size of the moving average window 
-            used in the process of enhancing the image, i.e., number of points
-            to average. If this is None, the averaging window size will be set 
-            to n*2+1. Note that _n=1 implies no moving average.
+        _bkg (number, optional): If bkg is a number, the image will be 
+            subtracted by this number [set_offset(-bkg)]. If bkg='auto', 
+            bkg will be defined so the average of the whole image is zero. 
+            If None, no bkg subtraction is applied. Default is None.
+        _square (bool, optional): If True, the image will be squared. Default 
+            is None.
+        _nx, _ny (int): Size of the moving average window, i.e., number of points to average.
+            If None, no moving average is applied. Note that _n=1 has the same 
+            effect as _n=None. If 'auto', _n=n*2+1 which is the number of pixels
+            expected to be excited by a photon. Default is None.
 
         patch args:
 
-        _patch_size (int, optional): Use this to overwrite the patch size (how
+        _patch_x_size, _patch_y_size (int, optional): Use this to overwrite the patch size (how
             many pixel around a photon hit will be patched out of the image). 
-            If None, this will be set to be the same size as n. Default is None.
+            If 'auto', this will be set to be the same size as n. Default is 'auto'.
         _patch_value (number, optional): Use this to overwrite the pixel 
-            value of the patches. If None, patches will be dynamically calculated
+            value of the patches. If 'auto', patches will be dynamically calculated
             to the average of the surrounding pixels around the patch. Default is
-            None.
+            'auto'.
 
         other args:
 
         MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
-            photons to be patched out is larger than MAX_NUMBER_OF_CANDIDATES.
-            Useful for preventing too low threshold as patching image is slow.
-            Default is 10. 
+            pixels with intensity higher than the threshold is larger than 
+            MAX_NUMBER_OF_CANDIDATES in the enhanced image. Note that this will take into account
+            every pixel with intensity above the threshold (without excluding
+            pixels around (nx, ny) brightest pixels. Default is 1000.
+            Useful for preventing setting up the threshold too low.
         
     Returns:
         im, pe
         patched image and photon events list
     """
-    if _patch_size is None:
-        _patch_size = n
+    if br.is_number(_patch_x_size):
+        assert br.is_integer(_patch_x_size), '_patch_x_size must be `auto` or an integer higher or equal than 1'
+    else:
+        assert _patch_x_size == 'auto', '_patch_x_size must be `auto` or an integer higher or equal than 1'
+    if br.is_number(_patch_y_size):
+        assert br.is_integer(_patch_y_size), '_patch_y_size must be `auto` or an integer higher or equal than 1'
+    else:
+        assert _patch_y_size == 'auto', '_patch_y_size must be `auto` or an integer higher or equal than 1'
+    assert br.is_number(_patch_value) or _patch_value == 'auto', '_patch_value must be `auto` or an number'
 
-    pe, _ = self.find_candidates(n=n, threshold=threshold, threshold2=threshold2, _bkg=_bkg, _square=_square, _n=_n)
-    if len(pe) > MAX_NUMBER_OF_CANDIDATES:
-        raise ValueError(f'number of photon hit candidates ({len(pe)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES, n2, or `threshold`')
+    if _patch_x_size == 'auto':
+        _patch_x_size = nx
+    if _patch_y_size == 'auto':
+        _patch_y_size = ny
+    if _patch_value == 'auto':
+        _patch_value = None
+
+    pe, _ = self.find_candidates(nx=nx, ny=ny, threshold=threshold, threshold2=threshold2, _bkg=_bkg, _square=_square, _ny=_ny, _nx=_nx, MAX_NUMBER_OF_CANDIDATES=MAX_NUMBER_OF_CANDIDATES)
     if len(pe) > 0:
-        im = self.patch(pos=[(_[1], _[0]) for _ in pe], n=_patch_size, value=_patch_value, coordinates='centers')
+        im = self.patch(pos=[(_[1], _[0]) for _ in pe], nx=_patch_x_size, ny=_patch_y_size, value=_patch_value, coordinates='centers')
     else:
         im = self.copy()
     return im, pe
@@ -316,7 +409,7 @@ br.Image.find_and_patch = find_and_patch
 # %%
 
 # %% ============================ centroid =============================== %% #
-def centroid(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1, _cm_bkg='auto', _cm_n=None, _cm_spot_zero_type='zero', MAX_NUMBER_OF_CANDIDATES=300):
+def centroid(self, nx, ny, threshold, threshold2=None, _bkg=None, _square=False, _nx=None, _ny=None, _cm_bkg='auto', _cm_nx='auto', _cm_ny='auto', _cm_spot_zero_type='zero', MAX_NUMBER_OF_CANDIDATES=1000):
     """Returns a list of photon hits defined by a threshold in a enhanced image
 
     For a complete description of this function, Please refer to 
@@ -327,35 +420,42 @@ def centroid(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1
         photon events list, and photon events list for double events
     """
     assert _cm_spot_zero_type in ['zero', 'offset'], f'spot_zeroing_type must be `zero` or `offset`'
-    if _cm_n is None:
-        _cm_n = n
-    assert _cm_n > 0, '_cm_n must be a positive integer'
+    assert br.is_integer(nx) and nx >= 0, 'nx must an integer equal or higher than 0'
+    assert br.is_integer(ny) and ny >= 0, 'ny must an integer equal or higher than 0'
+    if _cm_nx == 'auto':
+        _cm_nx = nx
+    else:
+        assert br.is_integer(_cm_nx) and _cm_nx > 0, '_cm_nx must an integer equal or higher than 1'
+    if _cm_ny == 'auto':
+        _cm_ny = ny
+    else:
+        assert br.is_integer(_cm_ny) and _cm_ny > 0, '_cm_ny must an integer equal or higher than 1'
 
     # find candidates
-    _pe, _pe2 = self.find_candidates(n=n, threshold=threshold, threshold2=threshold2, _bkg=_bkg, _square=_square, _n=_n)
-    if len(_pe) + len(_pe2) > MAX_NUMBER_OF_CANDIDATES:
-        raise ValueError(f'number of photon hit candidates ({len(_pe)+len(_pe2)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES or `threshold`')
+    pe, pe2 = self.find_candidates(nx=nx, ny=ny, threshold=threshold, threshold2=threshold2, _bkg=_bkg, _square=_square, _nx=_nx, _ny=_ny, MAX_NUMBER_OF_CANDIDATES=MAX_NUMBER_OF_CANDIDATES)
+    # if len(pe) + len(pe2) > MAX_NUMBER_OF_CANDIDATES:
+    #     raise ValueError(f'number of photon hit candidates ({len(pe)+len(pe2)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES or `threshold`')
     
     # discriminate events that are too close together
-    double = []
-    for i, _a in enumerate(_pe):
-        for j, _b in enumerate(_pe[i+1:]):
-            if math.dist(_a, _b) < _cm_n:
-                double.append(i)
-                double.append(j+1)
-        # for j, _b in enumerate(_pe2):
-        #     if math.dist(_a, _b) < _cm_n:
-        #         double.append(i)
-    double = br.remove_duplicates(double)
+    # double = []
+    # for i, _a in enumerate(_pe):
+    #     for j, _b in enumerate(_pe[i+1:]):
+    #         if math.dist(_a, _b) < _cm_n:
+    #             double.append(i)
+    #             double.append(j+1)
+    #     # for j, _b in enumerate(_pe2):
+    #     #     if math.dist(_a, _b) < _cm_n:
+    #     #         double.append(i)
+    # double = br.remove_duplicates(double)
 
     # rebuild photon events list
-    pe2 = _pe2
-    pe  = br.PhotonEvents()
-    for i, _a in enumerate(_pe):
-        if i in double:
-            pe2.append(_a[0], _a[1])
-        else:
-            pe.append(_a[0], _a[1])     
+    # pe2 = _pe2
+    # pe  = br.PhotonEvents()
+    # for i, _a in enumerate(_pe):
+    #     if i in double:
+    #         pe2.append(_a[0], _a[1])
+    #     else:
+    #         pe.append(_a[0], _a[1])     
 
     # floor before calculating the center of mass
     if _cm_bkg == 'auto':
@@ -369,7 +469,7 @@ def centroid(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1
     x  = []
     y  = []
     for _pos in pe:
-        spot, _, _, _ = im.get_spot(y=_pos[1], x=_pos[0], n=_cm_n, coordinates='centers')
+        spot, _, _, _ = im.get_spot(y=_pos[1], x=_pos[0], nx=_cm_nx, ny=_cm_ny, coordinates='centers')
         
         # offset the spot to force all pixel values to be positive
         # this is a requirement for the weighted sum (center of mass) to work fine
@@ -391,9 +491,16 @@ def centroid(self, n, threshold, threshold2=None, _bkg=None, _square=False, _n=1
         # threshold should also be offset. I don't know.
         # but also, It does not make much sense that we have negative pixel values
 
-        _y, _x = spot.get_center_of_mass()
-        x.append(_x)
-        y.append(_y)
+        # it can happen that a spot only have zero pixel intensity
+        # we therefore, do not count these spots
+        # these spots can happen if, for example, one has noise and some pixels
+        # are "very" negative. When squaring it in the enhanced image, this 
+        # very negative pixels can be regarded as a candidate. We then exclude
+        # them here
+        if np.sum(spot.data.sum(axis=0)) != 0 and np.sum(spot.data.sum(axis=1)) != 0:
+            _y, _x = spot.get_center_of_mass()
+            x.append(_x)
+            y.append(_y)
 
     return br.PhotonEvents(x=x, y=y), pe2
 br.Image.centroid = centroid  

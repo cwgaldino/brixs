@@ -129,24 +129,24 @@ _pe1, _pe2, _, _ = get_photon_events(scan, index=index)
 pe = _pe1 + _pe2
 
 # enhance image
-im2 = im.enhance(_n)
+im2 = im.enhance(nx=_n, ny=_n)
 
 # simulated dark image (remove photon events and cosmic rays from random image from th same scan)
 d = read_rixs_image(scan, index=index+1)
 _pe1, _pe2, _, _ = get_photon_events(scan, index=index+1)
-d = d.patch([(y, x) for x, y in _pe1 + _pe2], n=6)  # remove photon events
-d, _ = d.find_and_patch(n=4, threshold=1e4, _bkg=None, _square=False, _n=1, _patch_size=4)  # remove cosmic rays
+d = d.patch([(y, x) for x, y in _pe1 + _pe2], nx=6, ny=6)  # remove photon events
+d, _ = d.find_and_patch(nx=4, ny=4, threshold=1e4, _bkg=None, _square=False, _nx=1, _ny=1, _patch_x_size=4, _patch_y_size=4)  # remove cosmic rays
 im3 = im - d
 
 # enhance image
-im4 = im3.enhance(_n, 0)
+im4 = im3.enhance(nx=_n, ny=_n, bkg=None)
 
 # detect cosmic rays from the raw image
-pec, _ = im.find_candidates(n=4, threshold=5e3, _bkg=None, _square=False, _n=1)
+pec, _ = im.find_candidates(nx=4, ny=4, threshold=5e3, _bkg=None, _square=False, _nx=1, _ny=1)
 
 # centroid from the raw image (removed cosmic events)
-temp = im.patch(pos=[(_[1], _[0]) for _ in pec], n=_n)
-peb, _ = temp.centroid(n=n, threshold=threshold, _bkg=None, _square=False, _n=1)
+temp = im.patch(pos=[(_[1], _[0]) for _ in pec], nx=_n, ny=_n)
+peb, _ = temp.centroid(nx=n, ny=n, threshold=threshold, _bkg=None, _square=False, _nx=1, _ny=1)
 
 # plot
 fig, axes = br.subplots(1, 4, sharex=True, sharey=True, figsize=(46, 12), layout='constrained')
@@ -176,9 +176,9 @@ scan = 100
 # scan = 124
 
 # parameters
-cosmic   = dict(n=6, threshold=5e3)
-centroid = dict(n=2, threshold=500)  # photon hit is assumed to excite at up to second neighbors
-enhance  = dict(n=20)
+cosmic   = dict(nx=6, ny=6, threshold=5e3)
+centroid = dict(nx=2, ny=2, threshold=500)  # photon hit is assumed to excite at up to second neighbors
+enhance  = dict(nx=20, ny=20)
 
 # read image, remove cosmic rays, and centroid
 ims = read_rixs_image(scan)
@@ -231,9 +231,9 @@ scan = 100
 # scan = 124
 
 # parameters
-cosmic   = dict(n=6, threshold=4e3)
-centroid = dict(n=2, threshold=260, _n=3)
-enhance  = dict(n=20)
+cosmic   = dict(nx=6, ny=6, threshold=4e3)
+centroid = dict(nx=2, ny=2, threshold=260, _nx=3, _ny=3)
+enhance  = dict(nx=20, ny=20)
 
 # read image, remove cosmic rays, and centroid
 ims = read_rixs_image(scan)
