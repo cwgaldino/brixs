@@ -320,7 +320,7 @@ def search(kwargs=None, folderpath=None):
         folderpath = br.finder.folderpath
     folderpath = Path(folderpath)
     assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
-    
+
     ##########
     # kwargs #
     ##########
@@ -360,9 +360,9 @@ def search(kwargs=None, folderpath=None):
             print(f'Loading data already processed: {search_result.name}')
 
         if 'Spectrum' in search_result.name:
-            return br.Spectrum(filepath=search_result)
+            return br.Spectrum(filepath=folderpath/search_result)
         elif 'PhotonEvents' in search_result.name:
-            return br.PhotonEvents(filepath=search_result)
+            return br.PhotonEvents(filepath=folderpath/search_result)
         elif 'Spectra' in search_result.name:
             split = search_result.name.split('_')
             start = int(split[2])
