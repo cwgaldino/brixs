@@ -11115,7 +11115,6 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         data = copy.deepcopy(self.data)
         return Dummy(data=data)
 
-
     def copy(self):
         """Return a copy of the object.
 
@@ -11150,7 +11149,152 @@ class Dummy(_BrixsObject, metaclass=_Meta):
     #############
     # modifiers #
     #############
-    pass
+    def set_shift(self, value):
+        """Calls set_shift for each object inside br.Dummy
+
+        Args:
+            value (number or list): value will be passed to set_shift. If list,
+                number of values must be the same as the length of br.Dummy
+
+        Returns:
+            :py:class:`Dummy`
+        """
+        ##############################
+        # check if value is a number #
+        ##############################
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        ##################################
+        # value must be the right length #
+        ##################################
+        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
+
+        ##############
+        # set values #
+        ##############
+        ss = self.copy()
+        for i, s in enumerate(self):
+            ss[i] = s.set_shift(value=value[i])
+
+        return ss
+
+    def set_calib(self, value):
+        """Calls set_calib for each object inside br.Dummy
+
+        Args:
+            value (number or list): value will be passed to set_calib. If list,
+                number of values must be the same as the length of br.Dummy
+
+        Returns:
+            :py:class:`Dummy`
+        """
+        ##############################
+        # check if value is a number #
+        ##############################
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+        
+        ##################################
+        # value must be the right length #
+        ##################################
+        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
+
+        ##############
+        # set values #
+        ##############
+        ss = self.copy()
+        for i, s in enumerate(self):
+            ss[i] = s.set_calib(value=value[i])
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        # ss._length       = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
+
+        # extra
+        for extra in settings._calib['Spectra']:
+            if hasattr(s, extra):
+                ss.__getattribute__(extra).set_shift(value)
+        
+        return ss
+
+    def set_factor(self, value):
+        """Calls set_factor for each object inside br.Dummy
+
+        Args:
+            value (number or list): value will be passed to set_calib. If list,
+                number of values must be the same as the length of br.Dummy
+
+        Returns:
+            :py:class:`Dummy`
+        """
+        ##############################
+        # check if value is a number #
+        ##############################
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        ##################################
+        # value must be the right length #
+        ##################################
+        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
+
+        ##############
+        # set values #
+        ##############
+        ss = self.copy()
+        for i, s in enumerate(self):
+            ss[i] = s.set_factor(value=value[i])
+
+        ##########################
+        # reset check attributes #
+        ##########################
+        # ss._length       = None
+        # ss._step         = None
+        # ss._x            = None
+        # ss._monotonicity = None
+
+        # extra
+        for extra in settings._factor['Spectra']:
+            if hasattr(s, extra):
+                ss.__getattribute__(extra).set_shift(value)
+
+        return ss
+
+    def set_offset(self, value):
+        """Calls set_offset for each object inside br.Dummy
+
+        Args:
+            value (number or list): value will be passed to set_calib. If list,
+                number of values must be the same as the length of br.Dummy
+
+        Returns:
+            :py:class:`Dummy`
+        """
+        ##############################
+        # check if value is a number #
+        ##############################
+        if isinstance(value, Iterable) == False:
+            value = [value]*len(self)
+
+        ##################################
+        # value must be the right length #
+        ##################################
+        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
+
+        ##############
+        # set values #
+        ##############
+        ss = self.copy()
+        for i, s in enumerate(self):
+            ss[i] = s.set_offset(value=value[i])
+
+        return ss
+
 
     ###############
     # modifiers 2 #
