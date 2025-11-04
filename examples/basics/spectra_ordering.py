@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-"""
+"""How to re-order Spectra"""
 
 # %% ========================== standard imports ========================= %% #
 import matplotlib.pyplot as plt
