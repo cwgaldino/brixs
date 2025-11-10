@@ -67,7 +67,7 @@ Copy methods:
     
 """
 
-# %% ------------------------- Standard Imports --------------------------- %% #
+# %% ------------------------- Standard Imports -------------------------- %% #
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
@@ -75,19 +75,19 @@ import warnings
 import bisect
 import copy
 
-# %% -------------------------- Special Imports --------------------------- %% #
+# %% -------------------------- Special Imports -------------------------- %% #
 from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy.lib.stride_tricks import sliding_window_view
 
-# %% ----------------------------- backpack ------------------------------- %% #
+# %% ----------------------------- backpack ------------------------------ %% #
 from .backpack import filemanip, arraymanip, figmanip, numanip, vectormanip, other
 
-# %% ------------------------------ settings ------------------------------ %% #
+# %% ------------------------------ settings ----------------------------- %% #
 from .config import settings
 # %%
 
-# %% ============================= support class ========================== %% #
+# %% =========================== support class =========================== %% #
 class _Meta(type):
     """Metaclass to facilitate creation of read-only and non-removable attributes."""
     def __new__(self, class_name, bases, attrs):
@@ -241,13 +241,54 @@ class _BrixsObject(object):
                 if _.startswith('_') == False]
                 #and _.endswith('_') == False]
     
+    ############################
+    # attrs that return a copy #
+    ############################
     def remove_attrs(self):
-        """Delete all user defined attrs."""
-        for attr in self.get_attrs():
-            self.__delattr__(attr)
+        """Delete all user defined attrs.
+        
+        Returns:
+            brixs object with removed attrs
+        """
 
+        s2 = self.copy()
+        for attr in self.get_attrs():
+            s2.__delattr__(attr)
+
+        return s2
+    
     def copy_attrs_from(self, s):
         """Copy user defined attributes from another brixs object.
+
+        Usage:
+            s3 = s2.copy_attrs_from(s)
+
+        Args:
+            s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
+                to copy user defined attributes from.
+        
+        Returns:
+            brixs object with copied attrs
+        """
+        # check type
+        if isinstance(s, Spectrum) or isinstance(s, Spectra) or isinstance(s, Image) or isinstance(s, PhotonEvents) or isinstance(s, Dummy):
+            pass
+        else:
+            raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
+
+        # transfer attrs
+        s2 = self.copy()
+        for attr in s.get_attrs():
+            value = copy.deepcopy(s.__getattribute__(attr))
+            s2.__setattr__(attr, value)
+
+        return s2
+    
+    def _copy_attrs_from(self, s):
+        """Copy user defined attributes from another brixs object.
+
+        Usage:
+            s1._copy_attrs_from(s)
 
         Args:
             s (brixs object): Either a Spectrum, Spectra, Image, or PhotonEvents
@@ -266,9 +307,11 @@ class _BrixsObject(object):
         for attr in s.get_attrs():
             value = copy.deepcopy(s.__getattribute__(attr))
             self.__setattr__(attr, value)
+
+        return 
 # %%
 
-# %% ========================= common support functions =================== %% #
+# %% ====================== common support functions ===================== %% #
 def get_functions():
     """return a list of methods available including hidden ones"""        
     methodList = []
@@ -439,7 +482,7 @@ def _str2attr(header, indentation=0, verbose=False):
     return output
 # %%
 
-# %% ====================== modified figure function ======================= %% #
+# %% ====================== modified figure function ===================== %% #
 def figure(*args, **kwargs):
     """same as br.figmanip.figure(), but the following br.settings affect figure:
 
@@ -580,7 +623,7 @@ def subplots(*args, **kwargs):
     return fig, axes
 # %%
 
-# %% ============================== Spectrum ============================== %% #
+# %% ============================= Spectrum ============================== %% #
 class Spectrum(_BrixsObject, metaclass=_Meta):
     """Returns a ``Spectrum`` object. 
 
@@ -595,8 +638,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             >>> s = br.Spectrum(x, y)
             >>> s = br.Spectrum(x=x, y=y)
             >>> s = br.Spectrum(y=y)
-            >>> s = br.Spectrum(filepath=<filepath>)
-            >>> s = br.Spectrum(filepath=<filepath>, delimiter=',')
+            >>> s = br.Spectrum().load(filepath=<filepath>)
+            >>> s = br.Spectrum().load(filepath=<filepath>, delimiter=',')
             >>>
             >>> print(s.get_core_attrs()) # print list of core attrs
             >>> print(s.get_attrs())      # print list of attrs
@@ -1069,29 +1112,37 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     # core methods #
     ################
     def append(self, x, y):
-        """add new data points"""
+        """return spectrum with added new data points
+        
+        Args:
+            x, y (number): number to be appended
+            
+        Returns:
+            Spectrum
+        """
         assert isinstance(x, Iterable) == False, 'x must be a number'
         try:
-            x + 3, 
+            x + 3.2, 
         except:
             raise ValueError('x must be a number')
         assert isinstance(y, Iterable) == False, 'y must be a number'
         try:
-            y + 3, 
+            y + 3.2, 
         except:
             raise ValueError('y must be a number')
 
         # append
-        self._x = np.append(self._x, x)
-        self._y = np.append(self._y, y)
+        s = self.copy()
+        s._x = np.append(self._x, x)
+        s._y = np.append(self._y, y)
 
         ##########################
         # reset check attributes #
         ##########################
-        self._step         = None
-        self._monotonicity = None
-        self._has_nan      = None
-        return
+        # self._step         = None
+        # self._monotonicity = None
+        # self._has_nan      = None
+        return s
     
     ########
     # copy #
@@ -1187,7 +1238,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         s = self._copy(limits=limits)
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
 
         # extra
         for extra in settings._copy['Spectrum']:
@@ -1332,7 +1383,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         return
 
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
-        """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
+        """Return spectrum with loaded data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Warning:
             This a very simple loading function that works well with column text
@@ -1364,7 +1415,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             usecols (tuple, optional): Default is (0, 1).
 
         Returns:
-            None
+            Spe trum
 
         See Also:
             :py:func:`Spectrum.save`
@@ -1390,6 +1441,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ########
         data = np.genfromtxt(Path(filepath), **kwargs)
 
+        s = Spectrum()
         if len(data) != 0:
             ##############
             # check data #
@@ -1401,26 +1453,26 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             ##########
             # assign #
             ##########
-            self._x = x
-            self._y = y
+            s._x = x
+            s._y = y
         else:
-            self._x = None
-            self._y = None
+            s._x = None
+            s._y = None
 
         ##########################
         # reset check attributes #
         ##########################
-        self._step         = None
-        self._monotonicity = None
-        self._has_nan      = None
+        # self._step         = None
+        # self._monotonicity = None
+        # self._has_nan      = None
 
         ###################
         # reset modifiers #
         ###################
-        self._calib  = 1
-        self._factor = 1
-        self._shift  = 0
-        self._offset = 0
+        # self._calib  = 1
+        # self._factor = 1
+        # self._shift  = 0
+        # self._offset = 0
 
         ###############
         # read header #
@@ -1440,14 +1492,16 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
                 # set attrs
                 for attr in attrs_dict:
-                    self.__setattr__(attr, attrs_dict[attr])
-        return
+                    s.__setattr__(attr, attrs_dict[attr])
+        return s
 
     #########
     # check #
     #########
     def check_nan(self):
         """Check if x or y have non-numeric (NaN) values
+
+        Result (True or False) is stored in s.has_nan attribute
         
         Returns:
             None
@@ -1613,7 +1667,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 duplicated datapoints are averaged.
 
             Returns:
-                None
+                Spectrum
             
             See Also:
                 :py:func:`Spectrum.check_monotonicity`
@@ -2128,7 +2182,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             _s = self._copy(limits=(xstart, xstop))
             ss_smooth_intervals.append(_s.smooth(n))
         s_smooth = ss_smooth_intervals.concatenate()
-        s_smooth.copy_attrs_from(self)
+        s_smooth._copy_attrs_from(self)
         return s_smooth
 
     def crop(self, start=None, stop=None):
@@ -2388,7 +2442,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.
 
         Usage:
-            >>> fit, popt, R2, f = polyfit(deg)
+            >>> out = polyfit(deg)
+            >>> out['fit']    # --> Spectrum
+            >>> out['popt']   # --> optimized parameters
+            >>> out['R2']     # --> R2 error [1 - (sum( (y-fit(x) )**2)  / sum( (y - mean_y )**2) )]
+            >>> out['model']  # --> function f(x) of the fitted spectrum
 
         Args:
             deg (int): degree of the fitting polynomial.
@@ -2401,17 +2459,17 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
         
         Returns:
-            fit (spectrum), popt, R2, f(x)
+            dictionary {fit, popt, R2, f(x)}
 
-            fit (spectrum): polynomial fit spectrum with 100x more intepolated points
+                fit (spectrum): polynomial fit spectrum with 100x more intepolated points
 
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
+                popt (np.array): 1D array of polynomial coefficients 
+                    (including coefficients equal to zero) from highest degree to 
+                    the constant term.
 
-            R2 (number): R2 error
+                R2 (number): R2 error
 
-            model (function): funcion f(x_centers)
+                model (function): funcion f(x_centers)
 
         .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
         """
@@ -2429,7 +2487,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         _x    = np.linspace(start, stop, len(x)*100)
         arr100 = Spectrum(x=_x, y=model(_x))
 
-        return arr100, popt, R2, model
+        return {'fit': arr100, 'popt': popt, 'R2': R2, 'model': model}
    
     def index(self, x, closest=True):
         """Return the index value for a given x.
@@ -2565,25 +2623,21 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
         return line[0]
 
-# %% =============================== Spectra ============================== %% #
+# %% ============================== Spectra ============================== %% #
 class Spectra(_BrixsObject, metaclass=_Meta):
     """Returns a ``spectra`` object.
 
     Args:
         data (list or array, optional): list of :py:class:`spectrum` objects.
-        folderpath (string or path, optional): folderpath with spectrum files.
-        filepath (str or Path, optional): filepath with multiple spectra to read.
-        **kwargs: kwargs are passed to :py:func:`Spectra.load` function or 
-            :py:func:`Spectra.load_from_single_file`
 
     Usage:        
             >>> ss = br.Spectra()
             >>> ss = br.Spectra([s1, s2, ...])
             >>> ss = br.Spectra(data=[s1, s2, ...])
-            >>> ss = br.Spectrum(folderpath=<folderpath>)
-            >>> ss = br.Spectrum(folderpath=<folderpath>, delimiter=',')
-            >>> ss = br.Spectrum(filepath=<filepath>)
-            >>> ss = br.Spectrum(filepath=<filepath>, delimiter=',')
+            >>> ss = br.Spectrum().load(folderpath=<folderpath>)
+            >>> ss = br.Spectrum().load(folderpath=<folderpath>, delimiter=',')
+            >>> ss = br.Spectrum().load_from_single_file(filepath=<filepath>)
+            >>> ss = br.Spectrum().load_from_single_file(filepath=<filepath>, delimiter=',')
             >>>
             >>> print(ss.get_core_attrs()) # print list of core attrs
             >>> print(ss.get_attrs())      # print list of attrs
@@ -2597,20 +2651,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 data (list): list of Spectrum objects
             
             *2. Check*
-                length (int): None or lenght of spectra if every spectrum has the 
-                    same lenght. Can only be modified by ss.check_lenght() method.
-                step (number): None or a number if the step between two data points 
-                    is the same through out the x vector for all spectra. Can only be modified by 
-                    s.check_step() method.
-                x (array): None or 1D array if every spectra has the same x vector.
-                    Can only be modifed by ss.check_same_x() method.
-                monotonicity (string): None if data is not monotonic or 'increasing'
-                    or 'decreasing' if every spectrum has the same monotonicity.
-                    Can only be modified by ss.check_monotonicity()
-                    method.
-                has_nan (bool): True if at least one spectrum has non-numeric
-                    (NaN) values in either x or y axis. Can only be modified
-                    by ss.check_nan().
+                None
 
             *3. Modifiers*
                 None
@@ -2621,10 +2662,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             *5. User*
                 anything that the user defined on the fly.        
     """
-    _read_only     = []#['step', 'length', 'x', 'monotonicity', 'has_nan']
+    _read_only     = []
     _non_removable = []
 
-    def __init__(self, data=None, folderpath=None, filepath=None, **kwargs):
+    def __init__(self, data=None):
         """Initialize the object instance"""
         ###########################
         # Initializing attributes #
@@ -2634,11 +2675,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         # check
         pass
-        # self.length       = None
-        # self.step         = None
-        # self.x            = None
-        # self.monotonicity = None
-        # self.has_nan      = None
 
         # modifiers
         pass
@@ -2655,10 +2691,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ################
         if data is not None:
             self.data = data
-        elif folderpath is not None:
-            self.load(folderpath=folderpath, **kwargs)
-        elif filepath is not None:
-            self.load_from_single_file(filepath=filepath, **kwargs)
         return 
 
     ###################
@@ -2711,7 +2743,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.shift = -s.shift
             s.shift = value[i]
-
     @shift.deleter
     def shift(self):
         raise AttributeError('Cannot delete object.')
@@ -2743,7 +2774,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.factor = 1/s.factor
             s.factor = value[i]
-
     @factor.deleter
     def factor(self):
         raise AttributeError('Cannot delete object.')
@@ -2759,7 +2789,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i, s in enumerate(self):
             s.offset = -s.offset
             s.offset = value[i]
-
     @offset.deleter
     def offset(self):
         raise AttributeError('Cannot delete object.')
@@ -2810,7 +2839,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             raise ValueError(f'value must be of type brixs.spectrum, not {type(value)}')
         self._data[item] = value
 
-
     def __len__(self):
         return len(self.data)
 
@@ -2828,8 +2856,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             >>> s2.a = 5
             >>> s3.a = 'g'
             >>> ss = br.Spectra(s1, s2, s3)
-            >>> ss.copy_attr_from_spectra('a')
-            >>> print(ss.a) # --> [2, 5, 'g']
+            >>> ss2 = ss.copy_attr_from_spectra('a')
+            >>> print(ss2.a) # --> [2, 5, 'g']
 
         Args:
             attr (str): spectrum attribute name. All spectra inside Spectra
@@ -2861,9 +2889,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Example:
             >>> ss.a = ['c', 'a', 'e', 'd', 'h', 'i']
             >>> ss.b = [ 3,   1,   5,   4,   8,   9]
-            >>> ss.reorder_by_attr(attr='b', attrs2reaorder='a')
-            >>> print(ss.b) --> [1, 3, 4, 5, 8, 9]
-            >>> print(ss.a) --> ['a', 'c', 'd', 'e', 'h', 'i']
+            >>> ss2 = ss.reorder_by_attr(attr='b', attrs2reorder='a')
+            >>> print(ss2.b) --> [1, 3, 4, 5, 8, 9]
+            >>> print(ss2.a) --> ['a', 'c', 'd', 'e', 'h', 'i']
     
         Args:
             attr (str): name of the reference attr. The attr must be a list of 
@@ -3017,7 +3045,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # new spectra #
         ###############
         ss = Spectra()
-        ss.copy_attrs_from(self)
+        ss._copy_attrs_from(self)
         if attrs2merge is not None:
             for attr in attrs2merge:
                 ss.__setattr__(attr, [])
@@ -3319,6 +3347,66 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     ################
     # core methods #
     ################
+    def _append(self, *args):
+        """Return Spectra with spectrum appended to the spectra list.
+
+        Usage:
+            >>> ss = br.Spectra()
+            >>> 
+            >>> ss = ss.append(s)
+            >>> ss = ss.append(s1, s2, s3)
+            >>> ss = ss.append([s1, s2, s3])
+
+        Args:
+            *args (Spectrum or list): Spectrum object to be added or
+                list of Spectrum.
+
+        Returns:
+            Spectra
+
+        See Also:
+            :py:func:`Spectra.remove`.
+        """
+        ###################################
+        # asserting validity of the input #
+        ###################################
+        error_message = 'Wrong input. Spectrum cannot be appended. Please, use one ' +\
+                        'of the examples below:\n' +\
+                        '\n' +\
+                        'ss = br.Spectra()\n' +\
+                        '\n' +\
+                        'ss.append(s)\n' +\
+                        'ss.append(s1, s2, ...)\n' +\
+                        'ss.append([s1, s2, ...])\n'
+        if args == ():
+            raise AttributeError(error_message)
+        
+        ###############
+        # create copy #
+        ###############
+        ss = self.copy()
+        
+        ################
+        # loading data #
+        ################        
+        if len(args) == 1:
+            if isinstance(args[0], Spectrum):
+                ss._data += [args[0]]
+            elif isinstance(args[0], Iterable):
+                for i, s in enumerate(args[0]):
+                    assert isinstance(s, Spectrum), f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}'
+                    ss._data += [s]
+            else:
+                raise AttributeError(error_message)
+        elif len(args)>1:
+            for i, s in enumerate(args):
+                assert isinstance(s, Spectrum), f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}'
+                ss._data += [s]
+        else:
+            raise AttributeError(error_message)
+
+        return ss
+        
     def append(self, *args):
         """Append spectrum to the spectrum list.
 
@@ -3379,12 +3467,14 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             idx (int): index of the spectrum.
 
         Returns:
-            None
+            Spectra
 
         See Also:
             :py:func:`Spectra.append`.
         """
-        del self._data[idx]
+        ss = self.copy()
+        del ss._data[idx]
+        return ss
 
     def reorder(self, i1, i2):
         """reorder spectra.
@@ -3393,22 +3483,25 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             i1, i2: Index of spectra to switch places.
 
         Returns:
-            None
+            Spectra object with i1 and i2 switched
         """
-        temp           = self[i1]
-        self._data[i1] = self[i2]
-        self._data[i2] = temp
+        ss = self.copy()
+        ss._data[i1] = self[i2]
+        ss._data[i2] = self[i1]
+        return ss
     
     def flip_order(self):
         """reorder spectra backwards:
 
-        If ss.data = [s1, s2, s3], then flip_order() would make it 
-        ss.data = [s3, s2, s1]
+        If ss.data = [s1, s2, s3], then ss2 = ss.flip_order() will make 
+        ss2.data = [s3, s2, s1]
 
         Returns:
-            None
+            Spectra with fliped order
         """
-        self._data = self._data[::-1]
+        ss = self.copy()
+        ss._data = ss._data[::-1]
+        return ss
 
     ########
     # copy #
@@ -3463,7 +3556,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 ss.append(s.copy(limits=limits))
         return ss
 
-
     def copy(self, limits=None):
         """Return a copy of the object with data contained in a range.
 
@@ -3487,7 +3579,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             :py:attr:`Spectra`
         """
         ss = self._copy(limits=limits)
-        ss.copy_attrs_from(self)
+        ss._copy_attrs_from(self)
 
         # extra
         for extra in settings._copy['Spectra']:
@@ -3624,7 +3716,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             usecols (tuple, optional): Default is (0, 1).
 
         Returns:
-            None
+            Spectra with loaded spectrum
 
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
@@ -3650,14 +3742,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ############
         # get data #
         ############
-        self._data = []
+        ss = Spectra()
         for i, filepath in enumerate(fl):
-            # if verbose: print(f'Loading: {folderpath}')
             if verbose: print(f'    {i+1}/{len(fl)}: {filepath.name}')
-            s = Spectrum()
-            s.load(filepath=filepath, only_data=only_data, **kwargs)
-            self.append(s)
-        # if verbose: print('Done!')
+            s = Spectrum().load(filepath=filepath, only_data=only_data, **kwargs)
+            ss.append(s)
+        return ss
 
     def save_all_single_file(self, filepath, number_of_decimal_places=None, only_data=False, limits=None, check_overwrite=False, verbose=False, **kwargs):
         r"""Save all Spectra in one single file. Wrapper for `numpy.savetxt()`_.
@@ -3834,7 +3924,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 usecols must point to the x axis.
             
         Returns:
-            None
+            Spectra with loaded data
 
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
@@ -3869,10 +3959,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########
         # assign #
         ##########
-        self._data = []
+        ss = Spectra()
         for i in range(ys.shape[1]):
             s = Spectrum(x=x, y=ys[:, i])
-            self.append(s)
+            ss.append(s)
 
         ###############
         # read header #
@@ -3892,8 +3982,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
                 # set attrs
                 for attr in attrs_dict:
-                    self.__setattr__(attr, attrs_dict[attr])
-        return
+                    ss.__setattr__(attr, attrs_dict[attr])
+        return ss
 
     #########
     # check #
@@ -3929,6 +4019,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         nan_places = {}
         for i, s in self:
             nan_places[i] = s.find_nan()
+        return nan_places
     
     def remove_nan(self):
         """remove data points (x, y) that contain non-numeric (NaN) values
@@ -4050,19 +4141,19 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             Otherwise, it raises an error.
 
             Args:
-                max_error (number, optional): percentage value (of the average x 
-                step) of the maximum allowed error. Default is 0.1 %.                
+                max_error (number, optional): percentage value 
+                (of the average x-step) of the maximum allowed error. 
+                Default is 0.1 %.                
 
             Note:
-
-                This method checks if the step between two data points is the 
+                This method checks if 1) the step between two data points is the 
                 same through out the x vector for each spectrum (vector 
                 uniformity). Step uniformity within each spectrum is verified by 
                 the following equation (see Spectrum.check_step()):
 
                     (max(steps) - min(steps))/np.mean(steps) * 100 < max_error
 
-                This method also checks if the step is the same between 
+                This method also checks 2) if the step is the same between 
                 different spectra using the follwing equation
 
                     (step[i]-step[i+1])/avg(step) * 100 < max_error
@@ -4126,7 +4217,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         Args:
             max_error (number, optional): percentage value (in terms of the
-                average x step) of the maximum allowed error. If None, the 
+                average x-step) of the maximum allowed error. If None, the 
                 Default value from settings will be used.
 
                 max(s[i].x - s[i+1].x)/avg(step) * 100 < max_error
@@ -4632,7 +4723,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             except AssertionError:
                 flag = True
                 _s   = Spectrum()
-                _s.copy_attrs_from(s)
+                _s._copy_attrs_from(s)
                 ss[i] = s
                 text += f'{i}: empty\n'
         if flag:
@@ -4678,7 +4769,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         x = np.concatenate([s.x for s in self.data])
         y = np.concatenate([s.y for s in self.data])
         s = Spectrum(x=x, y=y)
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
 
         return s
 
@@ -5042,7 +5133,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         for i in range(len(self)):
             y += ys[:, i]
         s = Spectrum(x=x, y=y)
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
 
         return s
 
@@ -5076,7 +5167,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             y += ys[:, i]
         y = y/len(self)
         s = Spectrum(x=x, y=y)
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
 
         return s
 
@@ -5125,7 +5216,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         #     y = centers
 
         # im = Image(data=ys)
-        # im.copy_attrs_from(self)
+        # im._copy_attrs_from(self)
         # im.x_centers = x
         # im.y_centers = y
 
@@ -5168,7 +5259,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # gather ys
         y, ys = self._gather_ys(limits=limits)
         im = Image(data=ys)
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
 
         if im.data is not None:
             im.x_centers = x_centers
@@ -5214,12 +5305,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         y, ys = self._gather_ys(limits=limits)
         if len(y) == 0:
             im = Image()
-            im.copy_attrs_from(self)
+            im._copy_attrs_from(self)
             return im
 
         ys = ys.transpose()
         im = Image(data=ys)
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
         im.x_centers = y
         im.y_centers = y_centers
 
@@ -5882,13 +5973,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         return temp
 
-# %% ================================ Image =============================== %% #
+# %% =============================== Image =============================== %% #
 class Image(_BrixsObject, metaclass=_Meta):
     """Returns a ``spectra`` object.
 
     Args:
         data (list or array, optional): list of :py:class:`spectrum` objects.
-        filepath (str or Path, optional): filepath.
         x_centers, y_centers: (list, optional): pixel center labels. `x_centers` 
             from left to right and `y_centers` from top to bottom.
         **kwargs: kwargs are passed to :py:func:`Image.load` function.
@@ -5898,8 +5988,10 @@ class Image(_BrixsObject, metaclass=_Meta):
             >>> im = br.Image(data)
             >>> im = br.Image(data=data)
             >>> im = br.Image(data=data, x_centers=x_centers, y_centers=y_centers)
-            >>> im = br.Image(filepath=<filepath>)
-            >>> im = br.Image(filepath=<filepath>, delimiter=',')
+            >>> im = br.Image().loadtxt(filepath=<filepath>)
+            >>> im = br.Image().loadtxt(filepath=<filepath>, delimiter=',')
+            >>> im = br.Image().loadtxt(filepath=<filepath>)
+            >>> im = br.Image().loadtxt(filepath=<filepath>, delimiter=',')
             >>>
             >>> print(im.get_core_attrs()) # print list of core attrs
             >>> print(im.get_attrs())      # print list of attrs
@@ -5954,7 +6046,7 @@ class Image(_BrixsObject, metaclass=_Meta):
     _read_only     = ['x_step', 'x_monotonicity', 'y_step', 'y_monotonicity', 'has_nan']
     _non_removable = []
     
-    def __init__(self, data=None, filepath=None, x_centers=None, y_centers=None, **kwargs):
+    def __init__(self, data=None, x_centers=None, y_centers=None):
         """Initialize the object instance"""
         ###########################
         # Initializing attributes #
@@ -5992,8 +6084,6 @@ class Image(_BrixsObject, metaclass=_Meta):
                 self.x_centers = x_centers
             if y_centers is not None:
                 self.y_centers = y_centers
-        elif filepath is not None:
-            self.loadtxt(filepath, **kwargs)
         return
 
     ###################
@@ -6399,7 +6489,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
 
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_centers = self.x_centers
         final._y_centers = self.y_centers
         final._x_edges   = self.x_edges
@@ -6425,7 +6515,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
 
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_centers = self.x_centers
         final._y_centers = self.y_centers
         final._x_edges   = self.x_edges
@@ -6451,7 +6541,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with Image')
         
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_centers = self.x_centers
         final._y_centers = self.y_centers
         final._x_edges   = self.x_edges
@@ -6478,7 +6568,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise ValueError(f'Cannot operate type {type(object)} with type Image')
         
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_centers = self.x_centers
         final._y_centers = self.y_centers
         final._x_edges   = self.x_edges
@@ -6524,7 +6614,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################################
         # assert that limits is Iterable #
         ##################################
-        assert isinstance(mask, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
+        assert isinstance(mask, Iterable), f'`mask` must be an Iterable, not {type(mask)}'
         
         ################
         # empty object #
@@ -6712,7 +6802,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ss = Spectra()
         for i in range(self.shape[0]):
             ss.append(Spectrum(x=self.x_centers, y=self.data[i, :]))
-        ss.copy_attrs_from(self)
+        ss._copy_attrs_from(self)
         return ss
     
     def get_columns(self, max_number_of_columns=100):
@@ -6743,7 +6833,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ss = Spectra()
         for i in range(self.shape[1]):
             ss.append(Spectrum(x=self.y_centers, y=self.data[:, i]))
-        ss.copy_attrs_from(self)
+        ss._copy_attrs_from(self)
         return ss
     
     def index2center(self, y, x):
@@ -6955,7 +7045,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             :py:attr:`Image`
         """
         im = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
 
         # extra
         for extra in settings._copy['Image']:
@@ -7039,7 +7129,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             **kwargs: kwargs are passed to ``np.load()`` that loads the data.
 
         Returns:
-            None
+            br.image
 
         See Also:
             :py:func:`Image.savenpy`
@@ -7061,7 +7151,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##########
         # assign #
         ##########
-        self.data = data
+        return Image(data=data)
 
     def savetiff(self, filepath, check_overwrite=False, verbose=False, **kwargs):
         """Save image as tiff. Wrapper for Wrapper for `plt.imsave()`_.
@@ -7262,7 +7352,7 @@ class Image(_BrixsObject, metaclass=_Meta):
                 from the header will be loaded too.
 
         Returns:
-            None
+            br.Image
 
         See Also:
             :py:func:`Image.save`
@@ -7290,7 +7380,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##########
         # assign #
         ##########
-        self.data = data
+        im = Image(data=data)
 
         ###############
         # read header #
@@ -7309,8 +7399,8 @@ class Image(_BrixsObject, metaclass=_Meta):
 
             # set attrs
             for attr in attrs_dict:
-                self.__setattr__(attr, attrs_dict[attr])
-        return
+                im.__setattr__(attr, attrs_dict[attr])
+        return im
     
     #########
     # check #
@@ -7318,6 +7408,8 @@ class Image(_BrixsObject, metaclass=_Meta):
     def check_nan(self):
         """Check if data have non-numeric (NaN) values
         
+        Result (True or False) is stored in im.has_nan attribute
+
         Returns:
             None
         """
@@ -7965,7 +8057,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
         im._x_step         = self.y_step
         im._y_step         = self.x_step
         im._x_monotonicity = self.y_monotonicity
@@ -8009,7 +8101,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
         im._x_step         = None
         im._y_step         = self.y_step
         im._x_monotonicity = None
@@ -8053,7 +8145,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
         im._x_step         = self.x_step
         im._y_step         = None
         im._x_monotonicity = self.x_monotonicity
@@ -8065,7 +8157,6 @@ class Image(_BrixsObject, metaclass=_Meta):
         im._x_edges         = copy.deepcopy(self.x_edges)
         im._y_edges         = None
         return im
-
 
     def binning(self, ncols=None, nrows=None):
         """Compute the 2D histogram of the data (binning of the data).
@@ -8126,7 +8217,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        reduced.copy_attrs_from(self)
+        reduced._copy_attrs_from(self)
         reduced._x_step         = None
         reduced._y_step         = None
         reduced._x_monotonicity = self.x_monotonicity
@@ -8139,7 +8230,6 @@ class Image(_BrixsObject, metaclass=_Meta):
         # reduced._y_edges         = None
         return reduced
     
-
     def moving_average_x(self, n):
         """Returns an Image object with moving average on rows (x direction).
 
@@ -8175,7 +8265,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_step         = None
         final._y_step         = self.y_step
         final._x_monotonicity = self.x_monotonicity
@@ -8223,7 +8313,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_step         = self.x_step
         final._y_step         = None
         final._x_monotonicity = self.x_monotonicity
@@ -8272,7 +8362,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        final.copy_attrs_from(self)
+        final._copy_attrs_from(self)
         final._x_step         = None
         final._y_step         = None
         final._x_monotonicity = self.x_monotonicity
@@ -8427,7 +8517,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##################
         # transfer attrs #
         ##################
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
  
         return s
 
@@ -8439,7 +8529,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         s = Spectrum(x=self.y_centers, y=np.sum(self._data, axis=1))
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
         return s
     
     def integrated_columns_vs_x_centers(self):
@@ -8449,7 +8539,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         s = Spectrum(x=self.x_centers, y=np.sum(self._data, axis=0))
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
         return s
     
     def calculate_spectrum(self, axis=1):
@@ -9450,7 +9540,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         
         return pos
 
-# %% ============================= PhotonEvents =========================== %% #
+# %% ============================ PhotonEvents =========================== %% #
 class PhotonEvents(_BrixsObject, metaclass=_Meta):
     """Returns a ``Photon events`` object.
 
@@ -9459,16 +9549,14 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         xlim, ylim (list, optional): two element tuple with min and max possible 
             x and y coordinates. Used for defining binning limits
              and for plotting.
-        filepath (str or Path, optional): filepath.
-        **kwargs: kwargs are passed to :py:func:`PhotonEvents.load` function.
 
     Usage:        
             >>> pe = br.PhotonEvents()
             >>> pe = br.PhotonEvents(x, y)
             >>> pe = br.PhotonEvents(x=x, y=y)
             >>> pe = br.PhotonEvents(x, y, xlim=(0, 10), ylim=(0, 10))
-            >>> pe = br.PhotonEvents(filepath=<filepath>)
-            >>> pe = br.PhotonEvents(filepath=<filepath>, delimiter=',')
+            >>> pe = br.PhotonEvents().load(filepath=<filepath>)
+            >>> pe = br.PhotonEvents().load(filepath=<filepath>, delimiter=',')
             >>>
             >>> print(pe.get_core_attrs()) # print list of core attrs
             >>> print(pe.get_attrs())      # print list of attrs
@@ -9759,7 +9847,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 final = PhotonEvents(x=self.x, y=self.y)
             else:
                 final = PhotonEvents(x=list(self.x) + list(object.x), y=list(self.y) + list(object.y))
-            final.copy_attrs_from(self)
+            final._copy_attrs_from(self)
 
             # fix limits
             try:
@@ -10074,7 +10162,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, attrs2crop=attrs2crop)
         if attrs2crop is not None:
             _attr2crop = {attr: pe.__getattribute__(attr) for attr in attrs2crop}
-        pe.copy_attrs_from(self)
+        pe._copy_attrs_from(self)
         if attrs2crop is not None:
             for attr in attrs2crop:
                 pe.__setattr__(attr, _attr2crop[attr])
@@ -10161,7 +10249,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
         # final
         pe = PhotonEvents(x=x, y=y, xlim=xlim, ylim=ylim)
-        pe.copy_attrs_from(self)
+        pe._copy_attrs_from(self)
         if attrs2clip is not None:
             for attr in _attrs2clip:
                 pe.__setattr__(attr, _attrs2clip[attr])
@@ -10307,7 +10395,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 from the header will be loaded too.
 
         Returns:
-            None
+            br.PhotonEvents
 
         .. _numpy.genfromtxt(): https://numpy.org/doc/stable/reference/generated/numpy.genfromtxt.html
         """
@@ -10332,17 +10420,18 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ##########
         # assign #
         ##########
+        pe = PhotonEvents()
         if len(data) != 0:
-            self._x = data[:, 0]
-            self._y = data[:, 1]
+            pe._x = data[:, 0]
+            pe._y = data[:, 1]
         else:
-            self._x = None
-            self._x = None
+            pe._x = None
+            pe._x = None
         
         ##########################
         # reset check attributes #
         ##########################
-        self._has_nan      = None
+        # pe._has_nan      = None
 
         ###############
         # read header #
@@ -10361,15 +10450,17 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
             # set attrs
             for attr in attrs_dict:
-                self.__setattr__(attr, attrs_dict[attr])
-        return
+                pe.__setattr__(attr, attrs_dict[attr])
+        return pe
     
     #########
     # check #
     #########
     def check_nan(self):
         """Check if x or y have non-numeric (NaN) values
-        
+
+        Result (True or False) is stored in im.has_nan attribute
+
         Returns:
             None
         """
@@ -10572,7 +10663,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         """
         # create new PhotonEvents with switched x and y
         pe = PhotonEvents(x=self.y, y=self.x)
-        pe.copy_attrs_from(self)
+        pe._copy_attrs_from(self)
         return pe
 
     def binning(self, ncols, nrows):
@@ -10603,7 +10694,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         im = Image(temp.transpose())
         im.x_edges = _x_edges
         im.y_edges = _y_edges
-        im.copy_attrs_from(self)
+        im._copy_attrs_from(self)
 
         return im
 
@@ -10621,7 +10712,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         """
         im = self.binning(ncols=1, nrows=nrows)
         s  = im.integrated_rows_vs_y_centers()
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
         return s
     
     def integrated_columns_vs_x_centers(self, ncols):
@@ -10635,7 +10726,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         """
         im = self.binning(ncols=ncols, nrows=1)
         s  = im.integrated_columns_vs_x_centers()
-        s.copy_attrs_from(self)
+        s._copy_attrs_from(self)
         return s
 
     def calculate_spectrum(self, nbins, axis=1):
@@ -11010,7 +11101,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                     ax.autoscale_view()
         return pos
 
-# %% ============================= Dummy ================================== %% #
+# %% =============================== Dummy =============================== %% #
 class Dummy(_BrixsObject, metaclass=_Meta):
     
     def __init__(self, data=None):
@@ -11126,7 +11217,7 @@ class Dummy(_BrixsObject, metaclass=_Meta):
             :py:attr:`Dummy`
         """
         dummy = self._copy()
-        dummy.copy_attrs_from(self)
+        dummy._copy_attrs_from(self)
 
         # extra
         for extra in settings._copy['Dummy']:
@@ -11313,7 +11404,7 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         """Tries to return object which is the sum of all objects in the list"""
         if isinstance(self[0], Image):
             im = Image(data=np.sum([_.data for _ in self], axis=0))
-            im.copy_attrs_from(self[0])
+            im._copy_attrs_from(self[0])
             return im
         else:
             obj = self[0]
