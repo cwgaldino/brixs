@@ -81,7 +81,7 @@ def _process(folderpath, sbins, calib=None, norm=True, start=0, stop=None, skip=
     #########
     # attrs #
     #########
-    s.copy_attrs_from(pe1)
+    s._copy_attrs_from(pe1)
     del s.ccd
     setattr(s, 'scan_type', 'rixs')
     

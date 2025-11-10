@@ -681,9 +681,9 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             ############
             # metadata #
             ############
-            ss.copy_attrs_from(br.Spectrum(filepath=fpath, usecols=[0, 1]))
+            ss._copy_attrs_from(br.Spectrum(filepath=fpath, usecols=[0, 1]))
             for s in ss:
-                s.copy_attrs_from(ss)
+                s._copy_attrs_from(ss)
             TEY.mode = 'TEY'
             TFY.mode = 'TFY'
             I0.mode  = 'I0'
