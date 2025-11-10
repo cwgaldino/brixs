@@ -360,26 +360,24 @@ def search(kwargs=None, folderpath=None):
             print(f'Loading data already processed: {search_result.name}')
 
         if 'Spectrum' in search_result.name:
-            return br.Spectrum(filepath=folderpath/search_result)
+            return br.Spectrum().load(filepath=folderpath/search_result)
         elif 'PhotonEvents' in search_result.name:
-            return br.PhotonEvents(filepath=folderpath/search_result)
+            return br.PhotonEvents().load(filepath=folderpath/search_result)
         elif 'Spectra' in search_result.name:
             split = search_result.name.split('_')
             start = int(split[2])
             stop  = int(split[3])
             ss = br.Spectra()
             for i in range(start, stop+1):
-                # folderpath = search_result.parent
                 filename = f'finderfile_Spectra_{i}_{stop}'
-                ss.append(br.Spectrum(filepath=folderpath/filename))
-            return ss
-        # elif hasattr(_s, 'brixs__finder__spectra__list__'):
-        #     ss = br.Spectra()
-        #     for filepath in _s.brixs__finder__spectra__list__:
-        #         ss.append(br.Spectrum(filepath=filepath))
-        #     del ss[0].brixs__finder__spectra__list__
+                ss.append(br.Spectrum().load(filepath=folderpath/filename))
+            
+            if hasattr(ss[0], 'spectra_attrs_123_finder_copy'):
+                for _attr in ss[0].spectra_attrs_123_finder_copy:
+                    ss.__setattr__(_attr, ss[0].spectra_attrs_123_finder_copy[_attr])
+            del ss[0].spectra_attrs_123_finder_copy
 
-        #     return ss
+            return ss
         else:
             pass
     else:
@@ -430,27 +428,9 @@ def save(obj, folderpath=None):
     f.close() 
     next_file_number = int(next_file_number) + 1
 
-    # with (folderpath/'_counter.txt')
-    # next_file_number = 
-    # index_of_saved_files = [int(filename.name.split('.')[0].split('_')[1]) for filename in br.filelist(folderpath, string='finderfile*.dat')]
-    # if len(index_of_saved_files) == 0: 
-    #     next_file_number = 0
-    # else:
-    #     next_file_number = int(max(index_of_saved_files) + 1)
-    # filename = f'finderfile_{next_file_number}.dat'
-
     ###############
     # save object #
     ###############
-    # if isinstance(obj, br.Spectrum) or isinstance(obj, br.PhotonEvents):# or isinstance(obj, br.Image):
-    #     obj.save(folderpath/filename)
-    # elif isinstance(obj, br.Spectra):
-    #     brixs__finder__spectra__list__ = [str(folderpath/f'finderfile_{next_file_number + i}.dat') for i in range(len(obj))]
-    #     obj[0].brixs__finder__spectra__list__ = brixs__finder__spectra__list__
-    #     obj[0].save(filepath=folderpath/filename)
-
-    #     for i, _s in enumerate(obj[1:]):
-    #         obj[0].save(filepath=brixs__finder__spectra__list__[i+1])
     if isinstance(obj, br.Spectrum):
         filename = f'finderfile_Spectrum_{next_file_number}'
         obj.save(folderpath/filename)
@@ -459,9 +439,14 @@ def save(obj, folderpath=None):
         obj.save(folderpath/filename)
     elif isinstance(obj, br.Spectra):
         filename = f'finderfile_Spectra_{next_file_number}_{next_file_number+len(obj)-1}'
-        # brixs__finder__spectra__list__ = [str(folderpath/f'finderfile_{next_file_number + i}.dat') for i in range(len(obj))]
-        # obj[0].brixs__finder__spectra__list__ = brixs__finder__spectra__list__
-        obj[0].save(filepath=folderpath/filename)
+        if len(obj) > 0:
+            if hasattr(obj[0], 'spectra_attrs_123_finder_copy') == False:
+                _attrsdict = {}
+                for _attr in obj.get_attrs():
+                    _attrsdict[_attr] = obj.__getattribute__(_attr)
+                obj[0].spectra_attrs_123_finder_copy = _attrsdict
+            obj[0].save(filepath=folderpath/filename)
+            del obj[0].spectra_attrs_123_finder_copy
 
         start = next_file_number
         for i, _s in enumerate(obj[1:]):
@@ -474,7 +459,6 @@ def save(obj, folderpath=None):
     # save string and filepath to finder file #
     ###########################################
     f = open(folderpath/'finder.txt', 'a')
-    # f.write(br.finder._search_string + '\n' + str(folderpath/filename) + '\n')
     f.write(br.finder._search_string + '\n' + str(filename) + '\n')
     f.close() 
 
