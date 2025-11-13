@@ -5957,14 +5957,14 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # plot #
         ########
         temp = [0]*len(self)
-        if sum(shift) > 0:
-            if sum(offset) > 0:
+        if abs(sum(shift)) > 0:
+            if abs(sum(offset)) > 0:
                 for i in range(len(self)):
                     temp[i] = self[i].set_shift(shift[i]).set_offset(offset[i]).plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
             else:
                 for i in range(len(self)):
                     temp[i] = self[i].set_shift(shift[i]).plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
-        elif sum(offset) > 0:
+        elif abs(sum(offset)) > 0:
             for i in range(len(self)):
                 temp[i] = self[i].set_offset(offset[i]).plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
         else:
