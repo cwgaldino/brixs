@@ -5778,10 +5778,19 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
+        
+        Warning:
+            calculating the y average does not require regular spacing between data points,
+            however, a different number o points between spectra can lead to 
+            wrong average values that cannot be compared between spectra reliabily.
+            To avoid this, this function will raise a error if x axis is not
+            the same for all spectra.
          
         Returns:
             list
         """
+
+        _ = self.check_same_x(max_error=0.1)
         return [s.calculate_y_average(limits=limits) for s in self]
 
     def polyfit(self, deg, limits=None):
