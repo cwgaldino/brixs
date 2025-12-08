@@ -19,7 +19,7 @@ sample  = 'align_rixs'
 dataset = 'align_0001'
 scans   = 125, 126
 
-and for the xmcd branch, the follwing scan have images,
+and for the xmcd branch, the following scan have images,
 sample  = 'sample2_xmcd'
 dataset = 'align_0002'
 scan    = 18, 19

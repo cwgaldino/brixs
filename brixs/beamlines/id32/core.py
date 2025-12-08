@@ -275,7 +275,7 @@ def list_available_metadata(TOP=None, sample=None, dataset=None, scan=None, file
 # %%
 
 # %% =============================== read ================================== %% #
-def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n', 'sam_n', 'mir_rixs'], detectors_xmcd_branch=['ifluo_n', 'it_n', 'i0_n_xmcd'], processed_rixs=True):
+def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n', 'sam_n', 'mir_rixs'], detectors_xmcd_branch=['ifluo_n', 'it_n', 'i0_n_xmcd'], processed_rixs=True, subscan='auto'):
     """return data from ID32 beamline
 
     Usage:
@@ -300,6 +300,12 @@ def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n
             will be pulled out from the processed data folder. If False, this
             function returns the detector image pulled out from the RAW folder.
             Default is True.
+        subscan (int or str, optional): if 'auto', it will select the appropriate
+            subscan for processed RIXS scan (subscan = 1 or 2). Subscan='auto'
+            corrects the bug where first scan in the processed data is saved in 
+            the subscan 2. For ascan, trigscan and amesh, subscan is always set 
+            to 1. For trigscan, additional metadata is also loaded from subscan
+            2. Default is 'auto'.
 
     Return:
         Returns a list of br.Spectrum objects (br.Spectra) if scan is `ascan` 
@@ -307,7 +313,7 @@ def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n
         following the order given in the arguments detectors_rixs_branch and 
         detectors_xmcd_branch.
 
-        Returns a list of br.Image objects if scan is `amesh`.Each iamge carry 
+        Returns a list of br.Image objects if scan is `amesh`.Each image carry 
         data from one defined detector following the order given in the 
         arguments detectors_rixs_branch and detectors_xmcd_branch.
         
@@ -361,7 +367,14 @@ def read(TOP, sample, dataset, scan, branch=None, detectors_rixs_branch=['dbig_n
                 # get rixs file from processed folder
                 filepath2 = Path(min([str(_) for _ in br.filelist(TOP/'PROCESSED_DATA'/sample/dataset, string='.spec') if _.is_file()], key=len))
                 sf2 = SpecFile(str(filepath2))
-                initial2 = sf2[str(scan+0.1)]
+                if subscan == 'auto':
+                    if str(scan + 0.2) in sf2:
+                        initial2 = sf2[str(scan + 0.2)]
+                    else:
+                        initial2 = sf2[str(scan + 0.1)]
+                else:
+                    assert br.is_integer(subscan) and subscan > 0, f'subscan must be a integer number higher than zero, not subscan={subscan}'
+                    initial2 = sf2[str(scan) + '.' + str(subscan)]
 
                 # spectrum
                 s = br.Spectrum(x=initial2.data_column_by_name("Energy (auto)"), 

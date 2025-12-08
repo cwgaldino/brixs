@@ -308,8 +308,8 @@ tey = ims[1].rotate('counterclockwise').set_factor(1e1)
 
 # plot for verification
 fig, axes = br.subplots(1, 2, wspace=0.4)
-tfy.pcolormesh(ax=axes[0], colorbar=True)
-tey.pcolormesh(ax=axes[1], colorbar=True)
+tfy.plot(ax=axes[0], colorbar=True)
+tey.plot(ax=axes[1], colorbar=True)
 for ax in axes:
     ax.set_xlabel('sample_x')
     ax.set_ylabel('sample_z')
@@ -625,11 +625,11 @@ im2.plot()
 
 # quickly recalculating curvature (see other examples)
 _im = im.crop(301, 1850, 800, 1500-1).floor(None, None, 1200, 1500).binning(10, 350)
-s, fit, popt, R2, model = _im.calculate_vertical_shift_curvature()
-im2 = im.set_vertical_shift_via_polyval(np.array(popt))
+s = _im.calculate_vertical_shift_curvature()
+im2 = im.set_vertical_shift_via_polyval(np.array(s.popt))
 br.figure()
 im.plot()
-fit.set_factor(-1).set_offset(1100).plot(color='red')
+s.fit.set_factor(-1).set_offset(1100).plot(color='red')
 
 br.figure()
 im2.plot()
@@ -739,14 +739,14 @@ scan    = 18
 ims = id32.read(TOP, sample, dataset, scan, processed_rixs=False)
 im = ims.calculate_sum().crop(None, None, 800, 1500).floor(None, None, 1100, 1500)
 
-s, fit, popt, R2, model = im.binning(14, None).calculate_vertical_shift_curvature()
-im2 = im.set_vertical_shift_via_polyval(np.array(popt))
+s = im.binning(14, None).calculate_vertical_shift_curvature()
+im2 = im.set_vertical_shift_via_polyval(np.array(s.popt))
 x = np.linspace(0, 1790, 2000)
 
 # plot for verification
 br.figure()
 im.plot()
-plt.plot(x, -np.polyval(popt, x)+1082, color='red')
+plt.plot(x, -np.polyval(s.popt, x)+1082, color='red')
 
 br.figure()
 im2.plot()
