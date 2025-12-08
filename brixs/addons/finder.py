@@ -140,7 +140,7 @@ the function as they need to be included manually
 >>> fact they are not, therefore, the function runs again.
 
 
-3. watch out for function that calls finder multiple times
+3. watch out for functions that calls finder multiple times
 
 >>> def process1(a, b):
 >>>  
@@ -169,7 +169,7 @@ the function as they need to be included manually
 >>>     
 >>>     return s
 
-So when you run process2(), the function br.finder.search() will set up the 
+because when you run process2(), the function br.finder.search() will set up the 
 variable br.finder._search_string. However, when you run process1(), _search_string 
 will be modified by the br.finder.search() inside process1(). This way, the finder
 will work well for process1(), but at the end of process1() it will save the file
