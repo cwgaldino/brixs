@@ -531,7 +531,9 @@ def alignment(folderpath, scans, atype, sbins=2000, calib=None, norm=False, star
         for i in range(2):
             si[i] = tmp['ss1'][i]
             ssi[i].append(si[i])
-            fit, popt, R2, model = si[i].fit_peak(fixed_m=0, asymmetry=False, limits=limits)
+            _result = si[i].fit_peak(fixed_m=0, asymmetry=False, limits=limits)
+            fit = _result['fit']
+            popt = _result['popt']
             fiti[i].append(fit)
             popti[i].append(popt)
         if atype != 'external':
@@ -736,7 +738,9 @@ def curvature(folderpath, ccd, ncols=10, nrows=1000, deg=2, ylimits=None, xlimit
     # calculate shifts #
     ####################
     if popt is None:
-        s, fit, popt, R2, model = pe.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode='cc', ylimits=ylimits, limit_size=1000)
+        s= pe.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode='cc', ylimits=ylimits, limit_size=1000)
+        fit = s.fit
+        popt = s.popt
         if xlimits is not None:
             fit = fit.crop(xlimits[0], xlimits[1])
         

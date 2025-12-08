@@ -5412,7 +5412,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             # check if fitting was imported
             if hasattr(self, 'fit_peak') == False and callable(self.fit_peak) == False:
                 raise ValueError('cannot calculate shifts via `peak` because fitting functions are not imported\nPlease import fitting function via `import brixs.addons.fitting`')
-            fit, popt, err, fs = self.fit_peak(limits=limits, **kwargs)
+            _result = self.fit_peak(limits=limits, **kwargs)
+            popt = _result['popt']
             values = np.array([_[1] for _ in popt])
             values = -values + values[0]
         else:
@@ -5572,7 +5573,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             # check if fitting was imported
             if hasattr(self, 'fit_peak') == False and callable(self.fit_peak) == False:
                 raise ValueError('cannot calculate shifts via `peaks` because fitting functions are not imported\nPlease import fitting function via `import brixs.addons.fitting`')
-            fit, popt, err, fs = self.fit_peak(limits=limits, **kwargs)
+            _result = self.fit_peak(limits=limits, **kwargs)
+            popt = _result['popt']
             values = np.array([_[0] for _ in popt])
             values = -values + values[0]
         else:
@@ -5673,14 +5675,13 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         x = self.calculate_shift(mode=mode, limits=limits, **kwargs)
 
         # return
-        final = Spectrum(x=-np.array(x), y=values)
-        arr100, popt, R2, model = final.polyfit(deg=deg)
-        final.fit       = arr100
-        final.popt      = popt
-        final.model     = model
-        final.R2        = R2
+        final  = Spectrum(x=-np.array(x), y=values)
+        result = final.polyfit(deg=deg)
+        final.fit   = result['fit']
+        final.popt  = result['popt']
+        final.model = result['model']
+        final.R2    = result['R2']
         return final
-
 
     def calculate_area(self, limits=None):
         """Returns a list of the calculated area under the curve for each spectrum. Wrapper for `numpy.trapz()`_.
@@ -5807,20 +5808,31 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
          
         Returns:
-            popt, f(x), R2
-            list with polynomial coefficients, highest power first.
-            list with Model function f(x).
-            list with R2.
+            dictionary {fit, popt, R2, f(x)}
+
+                fit (spectrum): polynomial fit spectrum with 100x more intepolated points
+
+                popt (np.array): 1D array of polynomial coefficients 
+                    (including coefficients equal to zero) from highest degree to 
+                    the constant term.
+
+                R2 (number): R2 error
+
+                model (function): funcion f(x_centers)
 
         .. _numpy.polyfit(): https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
         """
         popt  = [0]*len(self)
         model = [0]*len(self)
+        fit   = [0]*len(self)
         R2    = [0]*len(self)
         for i in range(len(self)):
-            popt[i], model[i], R2[i] = self[i].polyfit(deg=deg, limits=limits)
-
-        return popt, model, R2
+            _result = self[i].polyfit(deg=deg, limits=limits)
+            fit[i]   = _result['fit']
+            popt[i]  = _result['popt']
+            model[i] = _result['model']
+            R2[i]    = _result['R2']
+        return {'fit': fit, 'popt': popt, 'R2': R2, 'model': model}
 
     ############
     # composed #
@@ -8699,27 +8711,30 @@ class Image(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs x centers
+            Spectrum: spectrum with shift values vs x centers with the following
+                attributes:
             
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+                    s.fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
 
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
+                    s.popt (np.array): 1D array of polynomial coefficients 
+                        (including coefficients equal to zero) from highest degree to 
+                        the constant term.
 
-            R2 (number): R2 error
+                    s.R2 (number): R2 error
 
-            model (function): funcion f(x_centers)
+                    s.model (function): funcion f(x_centers)
         """
         im = self.copy()
         values = im.calculate_vertical_shift(mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
 
         # calculate poly
-        s = Spectrum(x=self.x_centers, y=values)
-        fit, popt, R2, model = s.polyfit(deg=deg)
-        return s, fit, popt, R2, model
+        final = Spectrum(x=self.x_centers, y=values)
+        result = final.polyfit(deg=deg)
+        final.fit   = result['fit']
+        final.popt  = result['popt']
+        final.model = result['model']
+        final.R2    = result['R2']
+        return final
     
     def calculate_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=100, **kwargs):
         """Calculate horizontal shift values to fix curvature.
@@ -8760,27 +8775,30 @@ class Image(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs y centers
+            Spectrum: spectrum with shift values vs y centers with the following
+                attributes:
             
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+                    s.fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
 
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
+                    s.popt (np.array): 1D array of polynomial coefficients 
+                        (including coefficients equal to zero) from highest degree to 
+                        the constant term.
 
-            R2 (number): R2 error
+                    s.R2 (number): R2 error
 
-            model (function): funcion f(y_centers)
+                    s.model (function): funcion f(y_centers)
         """
         im = self.copy()
         values = im.calculate_horizontal_shift(mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
 
         # calculate poly
-        s = Spectrum(x=self.y_centers, y=values)
-        fit, popt, R2, model = s.polyfit(deg=deg)
-        return s, fit, popt, R2, model
+        final = Spectrum(x=self.y_centers, y=values)
+        result = final.polyfit(deg=deg)
+        final.fit   = result['fit']
+        final.popt  = result['popt']
+        final.model = result['model']
+        final.R2    = result['R2']
+        return final
     
 
     def fix_vertical_shift_curvature(self, deg=2, mode='cc', ylimits=None, limit_size=100, **kwargs):
@@ -8817,23 +8835,11 @@ class Image(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs x centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(x_centers)
+            Image
         """
-        s, fit, popt, R2, model = self.calculate_vertical_shift_curvature(deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
+        _result = self.calculate_vertical_shift_curvature(deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
 
-        return self.set_vertical_shift_via_polyval(popt) 
+        return self.set_vertical_shift_via_polyval(_result['popt']) 
     
     def fix_horizontal_shift_curvature(self, deg=2, mode='cc', xlimits=None, limit_size=100, **kwargs):
         """Roll row of pixels to fix curvature.
@@ -8869,23 +8875,11 @@ class Image(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs y centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(y_centers)
+            Image
         """
-        s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
+        _result = self.calculate_horizontal_shift_curvature(deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
 
-        return self.set_horizontal_shift_via_polyval(popt) 
+        return self.set_horizontal_shift_via_polyval(_result['popt']) 
 
     
     def get_spot(self, y, x, ny, nx, coordinates='centers'):
@@ -10882,19 +10876,18 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs x centers
+            Spectrum: spectrum with shift values vs x centers with the following
+                attributes:
             
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+                    s.fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
 
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
+                    s.popt (np.array): 1D array of polynomial coefficients 
+                        (including coefficients equal to zero) from highest degree to 
+                        the constant term.
 
-            R2 (number): R2 error
+                    s.R2 (number): R2 error
 
-            model (function): funcion f(x_centers)
+                    s.model (function): funcion f(x_centers)
         """
         im = self.binning(ncols=ncols, nrows=nrows)
         return im.calculate_vertical_shift_curvature(deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size, **kwargs)
@@ -10939,19 +10932,18 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs y centers
+            Spectrum: spectrum with shift values vs y centers with the following 
+                attributes:
             
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
+                    s.fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
 
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
+                    s.popt (np.array): 1D array of polynomial coefficients 
+                        (including coefficients equal to zero) from highest degree to 
+                        the constant term.
 
-            R2 (number): R2 error
+                    s.R2 (number): R2 error
 
-            model (function): funcion f(y_centers)
+                    s.model (function): funcion f(y_centers)
         """
         im = self.binning(ncols=ncols, nrows=nrows)
         return im.calculate_horizontal_shift_curvature(deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size, **kwargs)
@@ -10992,22 +10984,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs x centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(x_centers)
+            PhotonEvents
         """   
-        s, fit, popt, R2, model = self.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size)
-        return self.set_vertical_shift_via_polyval(p=popt)
+        _result = self.calculate_vertical_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode=mode, ylimits=ylimits, limit_size=limit_size)
+        return self.set_vertical_shift_via_polyval(p=_result['popt'])
 
     def fix_horizontal_shift_curvature(self, ncols, nrows, deg=2, mode='cc', xlimits=None, limit_size=1000, **kwargs):
         """shift photon events horizontally to fix curvature.
@@ -11044,22 +11024,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 kwargs to be passed to ss.fit_peak() function when `mode='peak'`
 
         Returns:
-            s, fit, popt, R2, model
-
-            s (spectrum): spectrum with shift values vs y centers
-            
-            fit (spectrum): polynomial fit spectrum of s with 100x more intepolated points
-
-            popt (np.array): 1D array of polynomial coefficients 
-                (including coefficients equal to zero) from highest degree to 
-                the constant term.
-
-            R2 (number): R2 error
-
-            model (function): funcion f(y_centers)
+            PhotonEvents
         """   
-        s, fit, popt, R2, model = self.calculate_horizontal_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size)
-        return self.set_horizontal_shift_via_polyval(p=popt)
+        _result = self.calculate_horizontal_shift_curvature(ncols=ncols, nrows=nrows, deg=deg, mode=mode, xlimits=xlimits, limit_size=limit_size)
+        return self.set_horizontal_shift_via_polyval(p=_result['popt'])
 
     ##########################        
     # plot and visualization #

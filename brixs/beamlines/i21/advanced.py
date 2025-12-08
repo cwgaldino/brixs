@@ -928,7 +928,9 @@ def verify_curv(scan, folderpath, popt=None, ncols=16,
         values = ss.calculate_shift(mode='cc')
 
         s = br.Spectrum(x=reduced.x_centers, y=values)
-        fit, popt, R2, model = s.polyfit(deg=deg)             
+        polyfit = s.polyfit(deg=deg)
+        fit = polyfit['fit']             
+        popt = polyfit['popt']             
     else:
         reduced = im
         fit = br.Spectrum(x=im.x_centers, y=np.polyval(popt, im.x_centers))

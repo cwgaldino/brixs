@@ -15,7 +15,7 @@ from brixs.beamlines.veritas.core import read
 # %%
 
 # %% ============================= RIXS =================================== %% #
-def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv=None, curv_nbins=(20, 1000), sbins=1200, calib=None):
+def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv=None, curv_nbins=(20, 1000), sbins=1200, calib=None, verbose=True):
     """internal process function.
 
     For a complete description of this function, Please refer to 
@@ -31,14 +31,15 @@ def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, 
     #############
     # read file #
     #############
-    pe = read(filepath=filepath, scan=scan)
+    _pe = read(filepath=filepath, scan=scan)
 
     ###############
     # time cutoff #
     ###############
     if tcutoff is not None:
-        pe, cutoff = pe.apply_time_cutoff(value=tcutoff)
+        pe, cutoff = _pe.apply_time_cutoff(value=tcutoff)
     else:
+        pe = _pe
         cutoff = None
 
     ########
@@ -70,6 +71,7 @@ def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, 
     # time rejected photons #
     #########################
     pe3, bad = pe2.apply_tmask(tmask=tmask)
+    pe3.mask = copy.deepcopy(mask)
 
     # curvature
     if curv is not None:
@@ -107,11 +109,14 @@ def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, 
 
     # normalization
     s = s.set_factor(1/sum([m[3]-m[2] for m in mask]))
-    if s.exposure_time > 0:
-        s = s.set_factor(1/s.exposure_time)
-    else:
-        pass
-        # print(f'Exposure time not found for scan {scan}. Skipping exposure time normalization')
+    try:
+        if _pe.exposure_time > 0:
+            s = s.set_factor(1/_pe.exposure_time)
+        else:
+            pass
+            # 
+    except AttributeError:
+        if verbose: print(f'Exposure time not found for scan {scan}. Skipping exposure time normalization')
     s = s.set_factor(sbins)
     # s = s.set_factor(1000)
         
@@ -119,6 +124,10 @@ def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, 
     if calib is not None:
         s.calib = calib
         # s.shift = -s.E
+
+    # recover attrs
+    for attr in _pe.get_attrs():
+        s.__setattr__(attr, _pe.__getattribute__(attr))
 
     return {'pe':pe, 'cutoff':cutoff, 'pe2':pe2, 
             'time_bunch_histogram':time_bunch_histogram, 
@@ -132,7 +141,7 @@ def _process(scan, filepath, mask=None, tcutoff=3e7, tnbins=10000, period=1458, 
             'curv_fit':fit,
             's':s}
 
-def verify(scan, filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv=None, curv_nbins=(20, 1000), sbins=1200, calib=None, figsize=(12, 4)):
+def verify(scan, filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv=None, curv_nbins=(20, 1000), sbins=1200, calib=None, figsize=(12, 4), verbose=True):
     """Open a figure with step-by-step rixs data reduction
 
     For a complete description of this function, Please refer to 
@@ -142,7 +151,7 @@ def verify(scan, filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=
         dictionary
     """
     ##### process ######
-    d = _process(filepath=filepath, scan=scan, mask=mask, tcutoff=tcutoff, tnbins=tnbins, period=period, offset=offset, twidth=twidth, tcenter=tcenter, curv=curv, curv_nbins=curv_nbins, sbins=sbins, calib=calib)
+    d = _process(filepath=filepath, scan=scan, mask=mask, tcutoff=tcutoff, tnbins=tnbins, period=period, offset=offset, twidth=twidth, tcenter=tcenter, curv=curv, curv_nbins=curv_nbins, sbins=sbins, calib=calib, verbose=verbose)
     pe                   = d['pe']
     cutoff               = d['cutoff']
     pe2                  = d['pe2']
@@ -267,7 +276,7 @@ def verify(scan, filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=
 
     return {'pe':pe, 'cutoff':cutoff, 'pe2':pe2, 'time_bunch_histogram':time_bunch_histogram, 'folded_time':folded_time, 'tmask':tmask, 'folded_tmask':folded_tmask, 'bad':bad, 'pe3':pe3, 'pe4':pe4, 'curv':curv, 's':s}
 
-def process(scan,filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv=None, curv_nbins=(20, 1000), sbins=1200, calib=None):
+def process(scan,filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', curv=None, curv_nbins=(20, 1000), sbins=1200, calib=None, verbose=True):
     """return processed rixs spectrum
 
     For a complete description of this function, Please refer to 
@@ -276,7 +285,7 @@ def process(scan,filepath, mask, tcutoff=3e7, tnbins=10000, period=1458, offset=
     Returns:
         spectrum
     """
-    d = _process(filepath=filepath, scan=scan, mask=mask, tcutoff=tcutoff, tnbins=tnbins, period=period, offset=offset, twidth=twidth, tcenter=tcenter, curv=curv, curv_nbins=curv_nbins, sbins=sbins, calib=calib)
+    d = _process(filepath=filepath, scan=scan, mask=mask, tcutoff=tcutoff, tnbins=tnbins, period=period, offset=offset, twidth=twidth, tcenter=tcenter, curv=curv, curv_nbins=curv_nbins, sbins=sbins, calib=calib, verbose=verbose)
     return d['s']
 # %%
 
@@ -384,7 +393,8 @@ def calculate_folded_tmask_and_tmask(folded_time, time_bunch_histogram, w=300, c
         # check if fitting was imported
         if hasattr(folded_time, 'fit_peak') == False and callable(folded_time.fit_peak) == False:
             raise ValueError('cannot calculate shifts via `peaks` because fitting functions are not imported\nPlease import fitting function via `import brixs.addons.fitting`')
-        fit, popt, err, f = folded_time.fit_peak(fixed_m=0)
+        _result = folded_time.fit_peak(fixed_m=0)
+        popt = _result['popt']
         c = popt[1]
     elif c == 'max':
         c = folded_time.x[np.argmax(folded_time.y)]
@@ -499,7 +509,9 @@ def _curvature_correction_with_broken_intervals(self, curv_nbins):
         ss = ss.interp()
     values = ss.calculate_shift(mode='cc')
     _s = br.Spectrum(y_centers, values)
-    fit, popt, R2, model = _s.polyfit(deg=2)
+    _result = _s.polyfit(deg=2)
+    fit = _result['fit']
+    popt = _result['popt']
     curv = popt
 
     return fit, curv
@@ -570,9 +582,9 @@ def _get_filtered_spectra(self, mask, axis=0):
     return filtered
 br.Image.get_filtered_spectra = _get_filtered_spectra
 
-def verify_curvature_correction(scan, filepath, nbins=(20, 1000), axis=0, mask=None, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', figsize=(12, 4)):
+def verify_curvature_correction(scan, filepath, nbins=(20, 1000), axis=0, mask=None, tcutoff=3e7, tnbins=10000, period=1458, offset=None, twidth=320, tcenter='max', figsize=(12, 4), verbose=True):
     
-    d = _process(filepath=filepath, scan=scan, mask=mask, tcutoff=tcutoff, tnbins=tnbins, period=period, offset=offset, twidth=twidth, tcenter=tcenter, curv=None)
+    d = _process(filepath=filepath, scan=scan, mask=mask, tcutoff=tcutoff, tnbins=tnbins, period=period, offset=offset, twidth=twidth, tcenter=tcenter, curv=None, verbose=verbose)
     pe3 = d['pe3']
 
     # initiate figure
@@ -593,7 +605,10 @@ def verify_curvature_correction(scan, filepath, nbins=(20, 1000), axis=0, mask=N
 
     # fit shifts
     s = br.Spectrum(x=ss.centers, y=calculated_shift)
-    fit, curv, R2, model = s.polyfit(2)
+    _result = s.polyfit(2)
+    fit   = _result['fit']
+    curv  = _result['popt']
+    model = _result['model']
     # print(f'curv = {list(popt)}')
     x   = np.linspace(min(pe3.x), max(pe3.x), 100)
     fit = br.Spectrum(x=x, y=model(x))
@@ -616,10 +631,14 @@ def verify_curvature_correction(scan, filepath, nbins=(20, 1000), axis=0, mask=N
 
     # get max and min y (makes plot nicer)
     if axis == 0:
-        _, popt, _, model = ss[0].fit_peak()
+        _result = ss[0].fit_peak()
+        popt = _result['popt']
+        model = _result['model']
         xmin = popt[1] - popt[2]*5
 
-        _, popt, _, model = ss[-1].fit_peak()
+        _result = ss[-1].fit_peak()
+        popt = _result['popt']
+        model = _result['model']
         xmax = popt[1] + popt[2]*5
         for i, ax in enumerate(axes):
             ax.set_xlim(xmin, xmax)
@@ -627,10 +646,14 @@ def verify_curvature_correction(scan, filepath, nbins=(20, 1000), axis=0, mask=N
                 ax.set_ylim(min(pe3.y), max(pe3.y))
     else:
         cols2 = im.columns
-        _, popt, _, model = cols2[0].fit_peak()
+        _result = cols2[0].fit_peak()
+        popt = _result['popt']
+        model = _result['model']
         ymin = popt[1] - popt[2]*5
 
-        _, popt, _, model = cols2[-1].fit_peak()
+        _result = cols2[-1].fit_peak()
+        popt = _result['popt']
+        model = _result['model']
         ymax = popt[1] + popt[2]*5
         for ax in axes:
             ax.set_ylim(ymin, ymax)

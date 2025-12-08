@@ -156,20 +156,16 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
             returned will be the sum of the ``w`` of the first and second half.
 
     Returns:
-        fit, popt, sigma, model
+        dictionary {fit, popt, sigma, model}
 
-        fit:
-            2 column (x, y) array with "Smoothed" fitted peak (array length 100 bigger than input x, y).
-        popt:
-            An array with the optimized parameters.
-                if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
-                if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
-                if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
-                if asymmetry=False, fixed_m=True: amp, c, fwhm, offset
-        sigma
-            One standard deviation errors on the parameters
-        model
-            Peak function -> model(x)
+        fit: 2 column (x, y) array with "Smoothed" fitted peak (array length 100 bigger than input x, y).
+        popt: An array with the optimized parameters.
+            if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
+            if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
+            if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
+            if asymmetry=False, fixed_m=True: amp, c, fwhm, offset
+        sigma: One standard deviation errors on the parameters
+        model: Peak function -> model(x)
     """
         # .. image:: _static/peak_fit.png
         #     :width: 600
@@ -245,7 +241,7 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     #     else:
     #         popt_2 = (popt[0], popt[1], popt[2], popt[-1])
 
-    return arr100, popt, err, lambda x: function2fit(x, *popt)
+    return {'fit':arr100, 'popt':popt, 'sigma':err, 'model':lambda x: function2fit(x, *popt)}
 
 # %% ====================== Spectrum peak fitting ========================= %% #
 def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, limits=None):     
@@ -290,14 +286,16 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
             the minimum or maximum x value of the data.
 
     Returns:
-        1) Spectrum with fitted peak (array length 100 bigger than original spectrum).
-        2) An array with the optimized parameters.
+        Dictionary {fit, popt, sigma, model}
+
+        1) fit: Spectrum with fitted peak (array length 100 bigger than original spectrum).
+        2) popt: An array with the optimized parameters.
             if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
             if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
             if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
             if asymmetry=False, fixed_m=True: amp, c, fwhm, offset
-        3) One standard deviation errors on the parameters
-        4) Peak function
+        3) sigma: One standard deviation errors on the parameters
+        4) model: Peak function
     """
     if limits is None:
         x0 = self.x
@@ -337,10 +335,10 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
     if w == 0:
         w = 0.1*(max(self.x)-min(self.x))
 
-    arr100, popt, err, f = fit_peak(x, y, guess_c=c, guess_A=amp, guess_w=w, guess_offset=0, fixed_m=fixed_m, asymmetry=asymmetry)
-    s = br.Spectrum(x=arr100[:, 0], y=arr100[:, 1])
+    result = fit_peak(x, y, guess_c=c, guess_A=amp, guess_w=w, guess_offset=0, fixed_m=fixed_m, asymmetry=asymmetry)
+    s = br.Spectrum(x=result['fit'][:, 0], y=result['fit'][:, 1])
     s.copy_attrs_from(self)
-    return s, popt, err, f
+    return {'fit':s, 'popt':result['popt'], 'sigma':result['sigma'], 'model':result['model']}
 br.Spectrum.fit_peak = _fit_peak
 
 # %% ======================= Spectra peak fitting ========================= %% #
@@ -386,27 +384,29 @@ def _fit_peak_spectra(self, guess_c=None, guess_A=None, guess_w=None, guess_offs
             the minimum or maximum x value of the data.
 
     Returns:
-        1) Spectra with every fitted peak (arrays have length 100 bigger than input).
-        2) List of arrays with the optimized parameters.
+        Dictionary {fit, popt, sigma, model}
+
+        1) fit: Spectra with every fitted peak (arrays have length 100 bigger than input).
+        2) popt: List of arrays with the optimized parameters.
             if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
             if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
             if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
             if asymmetry=False, fixed_m=True: amp, c, fwhm, offset
-        3) list of one-standard deviation errors on the parameters
-        4) Peak functions
+        3) sigma: list of one-standard deviation errors on the parameters
+        4) model: Peak functions
     """
     ss   = br.Spectra()
     ss.copy_attrs_from(self)
-    popt = []
-    err  = []
-    f    = []
+    popt  = []
+    sigma = []
+    model = []
     for s in self:
-        fit, _popt, _err, _f = s.fit_peak(guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=guess_offset, fixed_m=fixed_m, moving_average_window=moving_average_window, asymmetry=asymmetry, limits=limits)
-        ss.append(fit)
-        popt.append(_popt)
-        err.append(_err)
-        f.append(_f)
-    return ss, popt, err, f
+        result = s.fit_peak(guess_c=guess_c, guess_A=guess_A, guess_w=guess_w, guess_offset=guess_offset, fixed_m=fixed_m, moving_average_window=moving_average_window, asymmetry=asymmetry, limits=limits)
+        ss.append(result['fit'])
+        popt.append(result['popt'])
+        sigma.append(result['sigma'])
+        model.append(result['model'])
+    return {'fit':ss, 'popt':popt, 'sigma':sigma, 'model':model}
 br.Spectra.fit_peak = _fit_peak_spectra
 
 # %% ====================== basic model functions ========================= %% #

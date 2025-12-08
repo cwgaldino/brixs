@@ -170,8 +170,8 @@ centers = [s.x[_] for _ in temp]
 # fit peaks to get accurate peak centers
 final = []
 for center in centers:
-    fit, popt, sigma, model = s.fit_peak(limits=(center-200, center+200))
-    final.append(popt[1])
+    _result = s.fit_peak(limits=(center-200, center+200))
+    final.append(_result['popt'][1])
 
 # plot for verification
 br.figure()
@@ -181,13 +181,13 @@ br.labels.rixs()
 
 # calibration value
 s = br.Spectrum(x=final, y=energies)
-fit, popt, r2, model = s.polyfit(deg=1)
-print('calib = ', popt[0])
+polyfit = s.polyfit(deg=1)
+print('calib = ', polyfit['popt'][0])
 
 # plot for verification
 br.figure()
 s.plot(marker='o', color='black')
-fit.plot(color='red')
+polyfit['fit'].plot(color='red')
 plt.xlabel('centers')
 plt.ylabel('photon energy')
 # %%
