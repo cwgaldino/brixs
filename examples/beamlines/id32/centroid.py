@@ -307,7 +307,8 @@ s4 = id32.process(TOP, sample, dataset, scan, nbins=nbins, curv=curv, calib=cali
 ss = br.Spectra((s1, s2, s3, s4))
 for i, s in enumerate(ss):
     s = s.set_factor(1/max(s))
-    smooth, popt, err, f = s.set_shift(-9.48).fit_peak(guess_A=1, guess_c=0, guess_w=0.04, fixed_m=0)
+    _result = s.set_shift(-9.48).fit_peak(guess_A=1, guess_c=0, guess_w=0.04, fixed_m=0)
+    popt = _result['popt']
     s = s.set_shift(-9.48-popt[1])
     ss[i] = s
 
