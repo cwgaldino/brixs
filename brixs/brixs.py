@@ -5922,7 +5922,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 _label = kwargs.pop('labels')
 
             if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
-                assert len(_label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of labels: {len(label)}\nnumber of spectra: {len(self)}'
+                assert len(_label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of labels: {len(_label)}\nnumber of spectra: {len(self)}'
                 label = _label
             else:
                 label = [_label]*len(self)
