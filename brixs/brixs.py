@@ -4499,11 +4499,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if isinstance(p, Iterable) == False:
             p = [p]*len(self)
 
-        ##################################
-        # value must be the right length #
-        ##################################
-        assert len(p) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
         ##############
         # set values #
         ##############
@@ -4536,11 +4531,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##############################
         if isinstance(f, Iterable) == False:
             f = [f]*len(self)
-
-        ##################################
-        # value must be the right length #
-        ##################################
-        assert len(f) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
 
         ##############
         # set values #
@@ -5248,7 +5238,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         # check centers
         if x_centers is not None:
-            assert len(x_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
+            assert len(x_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(x_centers)}\nnumber of spectra: {len(self)}'
 
         # check if array is monotonic
         # This is necessary because the way images are plotted
@@ -5293,7 +5283,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         # check centers
         if y_centers is not None:
-            assert len(y_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(centers)}\nnumber of spectra: {len(self)}'
+            assert len(y_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(y_centers)}\nnumber of spectra: {len(self)}'
 
         # check if array is monotonic
         # This is necessary because the way images are plotted
@@ -9554,16 +9544,16 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
              and for plotting.
 
     Usage:        
-            >>> pe = br.PhotonEvents()
-            >>> pe = br.PhotonEvents(x, y)
-            >>> pe = br.PhotonEvents(x=x, y=y)
-            >>> pe = br.PhotonEvents(x, y, xlim=(0, 10), ylim=(0, 10))
-            >>> pe = br.PhotonEvents().load(filepath=<filepath>)
-            >>> pe = br.PhotonEvents().load(filepath=<filepath>, delimiter=',')
-            >>>
-            >>> print(pe.get_core_attrs()) # print list of core attrs
-            >>> print(pe.get_attrs())      # print list of attrs
-            >>> print(pe.get_methods())    # print list of methods available
+        >>> pe = br.PhotonEvents()
+        >>> pe = br.PhotonEvents(x, y)
+        >>> pe = br.PhotonEvents(x=x, y=y)
+        >>> pe = br.PhotonEvents(x, y, xlim=(0, 10), ylim=(0, 10))
+        >>> pe = br.PhotonEvents().load(filepath=<filepath>)
+        >>> pe = br.PhotonEvents().load(filepath=<filepath>, delimiter=',')
+        >>>
+        >>> print(pe.get_core_attrs()) # print list of core attrs
+        >>> print(pe.get_attrs())      # print list of attrs
+        >>> print(pe.get_methods())    # print list of methods available
 
     Attributes:
         Every BRIXS object has 5 types of attributes: 
@@ -9948,7 +9938,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ################################
         # assert that mask is Iterable #
         ################################
-        assert isinstance(mask, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
+        assert isinstance(mask, Iterable), f'`limits` must be an Iterable, not {type(mask)}'
         
         ################
         # empty object #

@@ -412,7 +412,7 @@ brixs.crystal
 brixs.beamlines
 ================================
 
-Some modules here might require 
+Some modules here might require
 
 - h5py
 
