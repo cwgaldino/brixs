@@ -8,6 +8,9 @@ https://1drv.ms/f/c/6666810d266a3cc9/EjNzJssVTWhFqAOx0-nDCxoBSNt2cvvF8zqOmNdx_zz
 Note that some less important files have been removed from this example data to
 make the folder lighter and easier to download.
 
+WARNING: THIS LINK IS TEMPORARILY DISABLED. THE EXAMPLE DATA WILL BE AVAILABLE
+AGAIN SOON.
+
 the images from the detector are large. Therefore, the example data only
 has images for a few selected spectra
 for the rixs branch, the following scans have images,
