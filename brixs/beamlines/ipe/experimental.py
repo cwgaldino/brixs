@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Experimental functions for IPE beamline"""
+from collections.abc import Iterable
+import matplotlib.pyplot as plt
+from pathlib import Path
+import numpy as np
+import matplotlib
 
+import brixs as br
+from brixs.beamlines.ipe.core import read, _process
 
 # %% =========================== fancy plot =============================== %% #
 def _plotall(filepath, scan, axes=None, set_window_size=True):
