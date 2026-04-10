@@ -198,11 +198,11 @@ IBIRA = Path('/ibira/lnls/beamlines/ipe/proposals')
 # %% -------------------------- uno definitions --------------------------- %% #
 def get_current_document():
     """Return document object"""
-    return XSCRIPTCONTEXT.getDocument()
+    return XSCRIPTCONTEXT.getDocument() # type: ignore
 
 def get_current_selection():
     """return a cell or range object"""
-    desktop = XSCRIPTCONTEXT.getDesktop()
+    desktop = XSCRIPTCONTEXT.getDesktop() # type: ignore
     return desktop.CurrentComponent.CurrentController.getSelection()
 # %%
 
@@ -477,7 +477,7 @@ xas_attrs = ['scan', 'scan_type', 'detectors', 'start_time', 'end_time']
 def empty_sheet(*args, **kwargs):
     """Create new template spreadsheet"""
     # Get the current document
-    doc = XSCRIPTCONTEXT.getDocument()
+    doc = XSCRIPTCONTEXT.getDocument() # type: ignore
     
     # lock undo
     lock_undo(doc)
