@@ -133,7 +133,7 @@ def _voigt_fwhm(x, amp, c, w, m):
 
     return amp*(m*lorentz + (1-m)*gauss)
 
-def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False):
+def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=0, asymmetry=False):
     r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
 
     .. math:: y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
@@ -150,7 +150,7 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         guess_offset (float or int, optional): guess Offset. If None, it will be guessed as zero [0].
         fixed_m (False or number): Factor from 1 to 0 of the lorentzian amount.
             If False, ``m`` will be a fitting parameter. If
-            ``fixed_m=<number>``, ``<number>`` will be used for ``m``.
+            ``fixed_m=<number>``, ``<number>`` will be used for ``m``. Default is 0.
         asymmetry (Bool, optional). If True, peak asymmetry is taken into account by fitting first
             half of the peak with a different ``w`` and ``m`` than the second half. The optimal ``w`` parameter
             returned will be the sum of the ``w`` of the first and second half.
@@ -159,7 +159,7 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
         dictionary {fit, popt, sigma, model}
 
         fit: 2 column (x, y) array with "Smoothed" fitted peak (array length 100 bigger than input x, y).
-        popt: An array with the optimized parameters.
+        popt: An dict with the optimized parameters.
             if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
             if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
             if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
@@ -229,17 +229,17 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
     arr100[:, 0] = np.linspace(x[0], x[-1], 100*len(x))
     arr100[:, 1] = function2fit(arr100[:, 0],  *popt)
 
-    # if fixed_m == False and type(fixed_m)==bool:
-    #     if asymmetry:
-    #         popt_2 = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5])
-    #     else:
-    #         popt_2 = (popt[0], popt[1], popt[2], popt[3], popt[4])
-    # else:
-    #
-    #     if asymmetry:
-    #         popt_2 = (popt[0], popt[1], popt[2], popt[4], popt[-1])
-    #     else:
-    #         popt_2 = (popt[0], popt[1], popt[2], popt[-1])
+    # make popt a dictionary
+    if asymmetry:
+        if fixed_m:
+            popt = {'amp': popt[0], 'c': popt[1], 'fwhm1': popt[2], 'fwhm2': popt[3], 'offset': popt[4]}
+        else:
+            popt = {'amp': popt[0], 'c': popt[1], 'fwhm1': popt[2], 'm1': popt[3], 'fwhm2': popt[4], 'm2': popt[5], 'offset': popt[6]}
+    else:
+        if fixed_m:
+            popt = {'amp': popt[0], 'c': popt[1], 'fwhm': popt[2], 'offset': popt[3]}
+        else:
+            popt = {'amp': popt[0], 'c': popt[1], 'fwhm': popt[2], 'm': popt[3], 'offset': popt[4]}
 
     return {'fit':arr100, 'popt':popt, 'sigma':err, 'model':lambda x: function2fit(x, *popt)}
 
@@ -342,7 +342,7 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
 br.Spectrum.fit_peak = _fit_peak
 
 # %% ======================= Spectra peak fitting ========================= %% #
-def _fit_peak_spectra(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=False, asymmetry=False, moving_average_window=1, limits=None):     
+def _fit_peak_spectra(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fixed_m=0, asymmetry=False, moving_average_window=1, limits=None):     
     r"""Simple peak fit function. Data is fitted with a pseudo-voigt curve.
 
     .. math:: y(x) = A \left[ m \frac{w^2}{w^2 + (x-c)^2}   + (1-m) e^{-\frac{4 \ln(2) (x-c)^2}{w^2}} \right]
@@ -374,6 +374,7 @@ def _fit_peak_spectra(self, guess_c=None, guess_A=None, guess_w=None, guess_offs
         fixed_m (False or number): Factor from 1 to 0 of the lorentzian amount.
             If False, ``m`` will be a fitting parameter. If
             ``fixed_m=<number>``, ``<number>`` will be used for ``m``.
+            Default is 0.
         asymmetry (Bool, optional). If True, peak asymmetry is taken into account by fitting first
             half of the peak with a different ``w`` and ``m`` than the second half. The optimal ``w`` parameter
             returned will be the sum of the ``w`` of the first and second half.
@@ -387,7 +388,7 @@ def _fit_peak_spectra(self, guess_c=None, guess_A=None, guess_w=None, guess_offs
         Dictionary {fit, popt, sigma, model}
 
         1) fit: Spectra with every fitted peak (arrays have length 100 bigger than input).
-        2) popt: List of arrays with the optimized parameters.
+        2) popt: dict with the optimized parameters.
             if asymmetry=True, fixed_m=False: amp, c, fwhm1, m1, fwhm2, m2, offset
             if asymmetry=True, fixed_m=True: amp, c, fwhm1, fwhm2, offset
             if asymmetry=False, fixed_m=False: amp, c, fwhm, m, offset
