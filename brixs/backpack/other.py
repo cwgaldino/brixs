@@ -7,6 +7,7 @@ import subprocess
 import platform
 import time
 import sys
+import os
 
 # %% -------------------------- operating system ------------------------ %% #
 def operating_system():
@@ -27,9 +28,16 @@ def operating_system():
     else:
         raise ValueError('OS not recognized')
 
+def is_jupyter():
+    if 'JPY_PARENT_PID' in os.environ:
+        return True
+    else:
+        return False
+
 is_windows = operating_system() == 'windows'
 is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
+is_jupyter = is_jupyter()
 
 # %% ============================== query ================================= %% #
 def query(question, default="yes"):
