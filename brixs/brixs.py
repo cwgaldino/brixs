@@ -2532,7 +2532,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     # plot and visualization #
     ##########################        
     def plot(self, ax=None, smooth=1, label=None, limits=None, switch_xy=False, verbose=True, **kwargs):
-        """Plot spectrum. Wrapper for `matplotlib.pyplot.plot()`_.
+        """Plot spectrum. Equivalent to plt.plot(s.x, s.y).
+        
+        Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
             If `label` is `None` and if spectrum have attr 
@@ -5850,7 +5852,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     # plot and visualization #
     ##########################  
     def plot(self, ax=None, smooth=1, limits=None, switch_xy=False, vi=0, hi=0, pvi=0, phi=0, verbose=True, **kwargs):
-        """Plot spectra. Wrapper for `matplotlib.pyplot.plot()`_.
+        """Plot spectra. Equivalent to plt.plot(ss[i].x, ss[i].y).
+        
+        Wrapper for `matplotlib.pyplot.plot()`_.
 
         Note:
             If `label` is `None` and if spectrum inside spectra have attr 
@@ -9026,7 +9030,11 @@ class Image(_BrixsObject, metaclass=_Meta):
     # plot and visualization #
     ########################## 
     def pcolorfast(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
-        """Fast alternative to im.pcolormesh. Wrapper for `ax.pcolorfast()`_.
+        """Fast alternative to im.pcolormesh. 
+
+        Equivalent to plt.pcolorfast(s.data)
+    
+        Wrapper for `ax.pcolorfast()`_.
 
         If x_edges and y_edges are not defined and x_centers and y_centers have 
             irregular pixel separation, pcolormesh does its best to defined pixel 
@@ -9144,7 +9152,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         return pos
         
     def pcolormesh(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, **kwargs):
-        """Display data as a mesh. Wrapper for `matplotlib.pyplot.pcolormesh()`_.
+        """Display data as a mesh.         
+        
+        Equivalent to plt.pcolormesh(s.data).
+
+        Wrapper for `matplotlib.pyplot.pcolormesh()`_.
 
         If x_edges and y_edges are not defined and x_centers and y_centers have 
             irregular pixel separation, pcolormesh does its best to defined pixel 
@@ -9277,7 +9289,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         return pos
         
     def imshow(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
-        """Display data as an image in terms of pixels. Wrapper for `matplotlib.pyplot.imshow()`_.
+        """Display data as an image in terms of pixels. Equivalent to plt.imshow(s.data).
+
+        Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
             Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh().
@@ -9379,7 +9393,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         return pos
     
     def plot(self, ax=None, x_start=None, x_stop=None, y_start=None, y_stop=None, colorbar=False, origin='upper', verbose=True, **kwargs):
-        """Display data as an image with axis based on x and y centers. Wrapper for `matplotlib.pyplot.imshow()`_.
+        """Display data as an image with axis based on x and y centers. 
+        
+        Equivalent to plt.imshow(s.data).
+        
+        Wrapper for `matplotlib.pyplot.imshow()`_.
 
         Warning:
             Pixels are squares. For irregular pixel row/columns, see Image.pcolormesh()
@@ -11023,7 +11041,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     # plot and visualization #
     ##########################     
     def plot(self, ax=None, s=0.1, show_limits=False, x_start=None, x_stop=None, y_start=None, y_stop=None, **kwargs):
-        """Display data as an image. Wrapper for `matplotlib.pyplot.scatter()`_.
+        """Display data as an image. 
+        
+        Equivalent to plt.scatter(pe.x, pe.y)
+
+        Wrapper for `matplotlib.pyplot.scatter()`_.
 
         Args:
             ax (matplotlib.axes, optional): axes for plotting on.
