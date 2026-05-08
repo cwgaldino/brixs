@@ -16,7 +16,6 @@ import matplotlib
 from matplotlib.pyplot import get_current_fig_manager as _get_current_fig_manager
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib import colormaps
 from collections.abc import Iterable
@@ -24,6 +23,7 @@ from cycler import cycler
 
 # %% -------------------------- operating system -------------------------- %% #
 import platform
+import os
 def _operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
     system = platform.system().lower()
@@ -39,9 +39,25 @@ def _operating_system():
     else:
         raise ValueError('OS not recognized')
 
+def is_jupyter():
+    if 'JPY_PARENT_PID' in os.environ:
+        return True
+    else:
+        return False
+
 is_windows = _operating_system() == 'windows'
 is_linux   = _operating_system() == 'linux'
 is_mac     = _operating_system() == 'mac'
+is_jupyter = is_jupyter()
+
+# if jupyter notebook, import things for _copy2clipboard(), figure(), and subplots()
+if is_jupyter:
+    try:
+        from IPython.display import display, Javascript
+        import json
+        import ipywidgets as widgets
+    except:
+        pass
 
 # %% --------------- supporting functions from numanip -------------------- %% #
 # backpack developers note --> if these function change, it needs to be copied to numanip.py
@@ -240,7 +256,14 @@ def _copy2clipboard(txt):
 
     on linux it uses ``xclip`` package (``sudo apt install xclip``).
     """
-    if is_windows:
+    if is_jupyter:
+        # This JS runs in your browser, not on the server
+        try:
+            js = f"navigator.clipboard.writeText({json.dumps(txt)});"
+            display(Javascript(js))
+        except:
+            pass
+    elif is_windows:
         try:
             # cmd='echo ' + txt.strip() + ' | clip'
             cmd=f'echo|set /p={txt.strip()}| clip'
@@ -570,7 +593,15 @@ def figure(*args, **kwargs):
         kwargs['figsize'] = (cm2inch(kwargs['figsize'][0])[0], cm2inch(kwargs['figsize'][1])[0])
 
     # initialize figure
-    fig = plt.figure(*args, **kwargs)
+    if is_jupyter:
+        if matplotlib.is_interactive():
+            plt.ioff()
+            fig = plt.figure(*args, **kwargs)
+            plt.ion()
+            fig.output = widgets.Output()
+            display(fig.canvas, fig.output)
+    else:
+        fig = plt.figure(*args, **kwargs)
 
     # event callbacks
     fig = _set_figure_methods(fig)
@@ -660,12 +691,16 @@ def _onclick(event):
     # middle click #
     ###############
     elif event.button == 2:
-        w, h = plt.gcf().get_size_inches()
+        _fig = plt.gcf()
 
-        x = event.x/(w*100)
-        y = event.y/(h*100)
+        w, h = _fig.get_size_inches()
+        inv = _fig.dpi_scale_trans.inverted()
 
-        _copy2clipboard(str([x, y]))
+        _x, _y = inv.transform((event.x, event.y))
+        x = _x/w
+        y = _y/h
+
+        _copy2clipboard(str([float(x), float(y)]))
 
         # # get variables        
         # global onclick_fig_format, onclick_resolution, onclick_folder
@@ -718,16 +753,24 @@ def _onclick(event):
                 elif r21 >= 1 and r21 < 2:
                     n = 4
                 elif r21 >= 2 and r21 < 100:
-                    n = 2
+                    n = 3
                 elif r21 >= 100 and r21 < 800:
-                    n = 1
+                    n = 2
                 elif r21 >= 800:
-                    n = 0
+                    n = 1
                 
                 final = round(event.ydata, n)
                 if n == 0:
                     final = int(final)
-                _copy2clipboard(str(final))
+                
+                if is_jupyter:                 
+                    js = f"navigator.clipboard.writeText({json.dumps(str(final))});"      
+                    output = event.canvas.figure.output
+                    with output:
+                        display(Javascript(js))
+                        output.clear_output()
+                else:
+                    _copy2clipboard(str(final))
                 # print('y coordinate copied to clipboard')
             except TypeError:
                 pass
@@ -735,6 +778,7 @@ def _onclick(event):
     # left click #
     ###############
     elif event.button == 1:
+        
         ax = event.inaxes
         if ax is not None: # check if mouse is over an axes
             try:
@@ -757,20 +801,29 @@ def _onclick(event):
                 elif r21 >= 1 and r21 < 2:
                     n = 4
                 elif r21 >= 2 and r21 < 100:
-                    n = 2
+                    n = 3
                 elif r21 >= 100 and r21 < 800:
-                    n = 1
+                    n = 2
                 elif r21 >= 800:
-                    n = 0
+                    n = 1
 
                 final = round(event.xdata, n)
                 if n == 0:
                     final = int(final)
-                _copy2clipboard(str(final))
+                
+                if is_jupyter:                 
+                    js = f"navigator.clipboard.writeText({json.dumps(str(final))});"      
+                    output = event.canvas.figure.output
+                    with output:
+                        display(Javascript(js))
+                        output.clear_output()
+                else:
+                    _copy2clipboard(str(final))
                 # print('x coordinate copied to clipboard')
             except TypeError:
                 pass
-   
+    return
+
 def _grid(self, visible=None):
     """show figure grid (not be confused with axes grid)"""
     if visible is None:
@@ -979,11 +1032,23 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
     ############
     # subplots #
     ############
-    fig, _axes = plt.subplots(nrows, ncols, 
-                              sharex=sharex,
-                              sharey=sharey,
-                              layout=layout,
-                              gridspec_kw=gridspec_kw, **fig_kw)
+    if is_jupyter:
+        if matplotlib.is_interactive():
+            plt.ioff()
+            fig, _axes = plt.subplots(nrows, ncols, 
+                                sharex=sharex,
+                                sharey=sharey,
+                                layout=layout,
+                                gridspec_kw=gridspec_kw, **fig_kw)
+            plt.ion()
+            fig.output = widgets.Output()
+            display(fig.canvas, fig.output)
+    else:
+        fig, _axes = plt.subplots(nrows, ncols, 
+                                sharex=sharex,
+                                sharey=sharey,
+                                layout=layout,
+                                gridspec_kw=gridspec_kw, **fig_kw)
     fig = _set_figure_methods(fig)
 
     #################
@@ -1356,7 +1421,7 @@ def _rtext(self, x, s, yoffset=0, xoffset=0, copy_color=False, **kwargs):
     .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
     """
     return rtext(x=x, s=s, yoffset=yoffset, xoffset=xoffset, ax=self, copy_color=copy_color, **kwargs)
-mpl.axes.Axes.rtext = _rtext
+matplotlib.axes.Axes.rtext = _rtext
 
 def _ltext(self, x, s, yoffset=0, xoffset=0, copy_color=False, **kwargs):
     """Create text at x coordinate on the left side of the last curve plotted
@@ -1375,7 +1440,7 @@ def _ltext(self, x, s, yoffset=0, xoffset=0, copy_color=False, **kwargs):
     .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
     """
     return ltext(x=x, s=s, yoffset=yoffset, xoffset=xoffset, ax=self, copy_color=copy_color, **kwargs)
-mpl.axes.Axes.ltext = _ltext
+matplotlib.axes.Axes.ltext = _ltext
 
 def _note(self, s, loc='upper left', x=None, y=None, **kwargs):
     """Write text to a pre-defined locations. Wrapper for `plt.text()`_.
@@ -1400,7 +1465,7 @@ def _note(self, s, loc='upper left', x=None, y=None, **kwargs):
     .. _plt.text(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html
     """
     return note(s=s, loc=loc, x=x, y=y, ax=self, **kwargs)
-mpl.axes.Axes.note = _note
+matplotlib.axes.Axes.note = _note
 # %%
 
 # %% ================================= label ============================== %% #
@@ -1408,13 +1473,13 @@ def remove_xlabel(ax):
     """remove xlabel from axes"""
     ax.set_xlabel('')
     return
-mpl.axes.Axes.remove_xlabel = remove_xlabel
+matplotlib.axes.Axes.remove_xlabel = remove_xlabel
 
 def remove_ylabel(ax):
     """remove ylabel from axes"""
     ax.set_ylabel('')
     return
-mpl.axes.Axes.remove_ylabel = remove_ylabel
+matplotlib.axes.Axes.remove_ylabel = remove_ylabel
 # %%
 
 # %% ================================= axes =============================== %% #
@@ -1474,7 +1539,7 @@ def _mergewith(self, ax):
         merged axes object
     """
     return merge_axes(self, ax)
-mpl.axes.Axes.mergewith = _mergewith
+matplotlib.axes.Axes.mergewith = _mergewith
 
 def add_lspace(value, ax=None):
     """add space to the left of an axes
@@ -1640,7 +1705,7 @@ def _add_lspace(self, value):
         None
     """
     return add_lspace(value=value, ax=self)
-mpl.axes.Axes.add_lspace = _add_lspace
+matplotlib.axes.Axes.add_lspace = _add_lspace
 
 def _add_rspace(self, value):
     """add space to the right of an axes
@@ -1652,7 +1717,7 @@ def _add_rspace(self, value):
         None
     """
     return add_rspace(value=value, ax=self)
-mpl.axes.Axes.add_rspace = _add_rspace
+matplotlib.axes.Axes.add_rspace = _add_rspace
 
 def _add_tspace(self, value):
     """add space to the top of an axes
@@ -1664,7 +1729,7 @@ def _add_tspace(self, value):
         None
     """
     return add_tspace(value=value, ax=self)
-mpl.axes.Axes.add_tspace = _add_tspace
+matplotlib.axes.Axes.add_tspace = _add_tspace
 
 def _add_bspace(self, value):
     """add space to the bottom of an axes
@@ -1676,7 +1741,7 @@ def _add_bspace(self, value):
         None
     """
     return add_bspace(value=value, ax=self)
-mpl.axes.Axes.add_bspace = _add_bspace
+matplotlib.axes.Axes.add_bspace = _add_bspace
 
 def _xmove(self, value):
     """move axes in the x direction
@@ -1690,7 +1755,7 @@ def _xmove(self, value):
         None
     """
     return xmove(value=value, ax=self)
-mpl.axes.Axes.xmove = _xmove
+matplotlib.axes.Axes.xmove = _xmove
 
 def _ymove(self, value):
     """move axes in the y direction
@@ -1704,7 +1769,7 @@ def _ymove(self, value):
         None
     """
     return ymove(value=value, ax=self)
-mpl.axes.Axes.ymove = _ymove
+matplotlib.axes.Axes.ymove = _ymove
 # %%
 
 # %% ================================= ticks ============================== %% #
@@ -2226,7 +2291,7 @@ def _get_xticks_showing(self):
         list
     """
     return get_xticks_showing(self)
-mpl.axes.Axes.get_xticks_showing = _get_xticks_showing
+matplotlib.axes.Axes.get_xticks_showing = _get_xticks_showing
 
 def _get_yticks_showing(self):
     """get y ticks that are sowing in a plot
@@ -2235,7 +2300,7 @@ def _get_yticks_showing(self):
         list
     """
     return get_yticks_showing(self)
-mpl.axes.Axes.get_yticks_showing = _get_yticks_showing
+matplotlib.axes.Axes.get_yticks_showing = _get_yticks_showing
 
 
 
@@ -2246,7 +2311,7 @@ def _remove_xticklabels(self):
         None
     """
     return remove_xticklabels(self)
-mpl.axes.Axes.remove_xticklabels = _remove_xticklabels
+matplotlib.axes.Axes.remove_xticklabels = _remove_xticklabels
 
 def _remove_yticklabels(self):
     """remove/hide y tick labels from axes
@@ -2255,7 +2320,7 @@ def _remove_yticklabels(self):
         None
     """
     return remove_yticklabels(self)
-mpl.axes.Axes.remove_yticklabels = _remove_yticklabels
+matplotlib.axes.Axes.remove_yticklabels = _remove_yticklabels
 
 def _hide_xticklabels(self):
     """remove/hide x tick labels from axes
@@ -2264,7 +2329,7 @@ def _hide_xticklabels(self):
         None
     """
     return hide_xticklabels(self)
-mpl.axes.Axes.hide_xticklabels = _hide_xticklabels
+matplotlib.axes.Axes.hide_xticklabels = _hide_xticklabels
 
 def _hide_yticklabels(self):
     """remove/hide y tick labels from axes
@@ -2273,7 +2338,7 @@ def _hide_yticklabels(self):
         None
     """
     return hide_yticklabels(self)
-mpl.axes.Axes.hide_yticklabels = _hide_yticklabels
+matplotlib.axes.Axes.hide_yticklabels = _hide_yticklabels
 
 def _show_ticklabels(self, left=None, right=None, bottom=None, top=None):
     """show tick labels in axes
@@ -2288,7 +2353,7 @@ def _show_ticklabels(self, left=None, right=None, bottom=None, top=None):
         None
     """
     return show_ticklabels(ax=self, left=left, right=right, bottom=bottom, top=top)
-mpl.axes.Axes.show_ticklabels = _show_ticklabels
+matplotlib.axes.Axes.show_ticklabels = _show_ticklabels
 
 
 
@@ -2357,7 +2422,7 @@ def _set_xticks(self, start=None, stop=None, nticks=None, step=None, ticks=None,
     .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
     """
     return set_xticks(ax=self, start=start, stop=stop, nticks=nticks, step=step, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_step=minor_step, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
-mpl.axes.Axes.xticks = _set_xticks
+matplotlib.axes.Axes.xticks = _set_xticks
 
 def _set_yticks(self, start=None, stop=None, nticks=None, step=None, ticks=None, labels=None, pad=None, n_minor_ticks=None, minor_step=None, minor_ticks=None, fontproperties=None, **kwargs):
     """Set y ticks of a plot.
@@ -2424,7 +2489,7 @@ def _set_yticks(self, start=None, stop=None, nticks=None, step=None, ticks=None,
     .. _ax.tick_params(): https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.tick_params.html
     """
     return set_yticks(ax=self, start=start, stop=stop, nticks=nticks, step=step, ticks=ticks, labels=labels, pad=pad, n_minor_ticks=n_minor_ticks, minor_step=minor_step, minor_ticks=minor_ticks, fontproperties=fontproperties, **kwargs)
-mpl.axes.Axes.yticks = _set_yticks
+matplotlib.axes.Axes.yticks = _set_yticks
 # %%
 
 # %% ============================= legend ================================= %% #
@@ -2510,7 +2575,7 @@ def _leg(self, *args, **kwargs):
     """
     kwargs['ax'] = self
     leg(*args, **kwargs)
-mpl.axes.Axes.leg = _leg
+matplotlib.axes.Axes.leg = _leg
 # %%
 
 # %% ================================ rectangle =========================== %% #
@@ -2591,7 +2656,7 @@ def _rectangle(self, xlim, ylim, **kwargs):
     .. _plt.Rectangle(): https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html#matplotlib.patches.Rectangle
     """
     return rectangle(xlim=xlim, ylim=ylim, ax=self, **kwargs)
-mpl.axes.Axes.rectangle = _rectangle
+matplotlib.axes.Axes.rectangle = _rectangle
 # %%
 
 # %% ================================== zoom ============================== %% #
@@ -2652,7 +2717,7 @@ def _zoom(self, start, stop, ymargin=5):
             plot in percentage of the y data range.
     """
     zoom(start=start, stop=stop, ax=self, ymargin=ymargin)
-mpl.axes.Axes.zoom = _zoom
+matplotlib.axes.Axes.zoom = _zoom
 # %%
 
 # %% ================================= inset ============================== %% #
@@ -2797,7 +2862,7 @@ def _inset(self, xlim, ylim, xticks_kwargs=None, yticks_kwargs=None, rect=True, 
         inset axes object
     """
     return inset(xlim=xlim, ylim=ylim, ax=self, xticks_kwargs=xticks_kwargs, yticks_kwargs=yticks_kwargs, rect=rect, rect_xlim=rect_xlim, rect_ylim=rect_ylim, ax2putinset=ax2putinset, **kwargs)
-mpl.axes.Axes.inset = _inset
+matplotlib.axes.Axes.inset = _inset
 # %%
 
 # %% ======================== units and conversion ======================== %% #
@@ -2876,7 +2941,7 @@ def rgb2hex(rgb, max_rgb_value=1):
     """
     if max(rgb) > max_rgb_value:
         raise ValueError(f'rgb={rgb} maximum value is bigger than max_rgb_value.')
-    return mpl.colors.to_hex([x/max_rgb_value for x in rgb])
+    return matplotlib.colors.to_hex([x/max_rgb_value for x in rgb])
 
 def hex2rgb(string, max_rgb_value=1):
     """Return rgb value.
@@ -2888,7 +2953,7 @@ def hex2rgb(string, max_rgb_value=1):
     Returns:
         rgb value (tuple)
     """
-    return [x*max_rgb_value for x in mpl.colors.to_rgb(string)]
+    return [x*max_rgb_value for x in matplotlib.colors.to_rgb(string)]
 # %%
 
 # %% ================================= lines ============================== %% #
@@ -3115,7 +3180,7 @@ def _axvlines(self, x, ymin=None, ymax=None, **kwargs):
     .. _plt.vlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.vlines.html
     """
     return axvlines(x=x, ymin=ymin, ymax=ymax, ax=self, **kwargs)
-mpl.axes.Axes.axvlines = _axvlines
+matplotlib.axes.Axes.axvlines = _axvlines
 
 def _axhlines(self, y, xmin=None, xmax=None, **kwargs):
     """draw horizontal lines. Wrapper for `plt.hlines()`_ and `plt.axhline()`_
@@ -3143,7 +3208,7 @@ def _axhlines(self, y, xmin=None, xmax=None, **kwargs):
     .. _plt.hlines(): https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.hlines.html
     """
     return axhlines(y=y, xmin=xmin, xmax=xmax, ax=self, **kwargs)
-mpl.axes.Axes.axhlines = _axhlines
+matplotlib.axes.Axes.axhlines = _axhlines
 # %%
 
 # %% =============================== Gradient ============================= %% #

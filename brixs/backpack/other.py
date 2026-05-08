@@ -39,6 +39,14 @@ is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
 is_jupyter = is_jupyter()
 
+# if jupyter notebook, import things for copy2clipboard() 
+if is_jupyter:
+    try:
+        from IPython.display import display, Javascript
+        import json
+    except:
+        pass
+
 # %% ============================== query ================================= %% #
 def query(question, default="yes"):
     """Ask a yes/no question and return answer.
@@ -163,7 +171,14 @@ def copy2clipboard(txt):
     # backpack developers note!!!!
     # if this function changes, it needs to be copied to these files: figmanip
 
-    if is_windows:
+    if is_jupyter:
+        # This JS runs in your browser, not on the server
+        try:
+            js = f"navigator.clipboard.writeText({json.dumps(txt)});"
+            display(Javascript(js))
+        except:
+            pass
+    elif is_windows:
         # cmd='echo ' + txt.strip() + ' | clip'
         cmd=f'echo|set /p={txt.strip()}| clip'
         # cmd='echo ' + txt.strip() + '| Set-Clipboard -Value {$_.Trim()}'
