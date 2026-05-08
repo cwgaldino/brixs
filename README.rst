@@ -6,6 +6,8 @@ BRIXS is an object-oriented (OO) python package for processing/analysis of XAS a
 
 .. Click here `https://cwgaldino.github.io/brixs/ <https://cwgaldino.github.io/brixs/>`_ for brixs documentation.
 
+NOTE: Examples in the examples folder are being revised and new examples are being added.
+
 ##########################################################
 Installation
 ##########################################################
@@ -415,4 +417,17 @@ brixs.beamlines
 Some modules here might require
 
 - h5py
+
+================================
+brixs.backpack.figmanip
+================================
+
+`br.figure()` and `br.subplot()` has a mouse callback implemented where if you 
+click on a axes, it send the x value or the y value of the cursor position
+to the clipboard (left click = x value, right click = y value).
+
+On linux, this functionality uses ``xclip`` package (``sudo apt install xclip``)
+On mac, it uses `pbcopy`, which should be installed by default.
+On Windows, it uses `clip`, which should also be installed by default.
+On Jupyter notebooks, it requires `IPython` and `ipywidgets`.
 
