@@ -2,32 +2,6 @@
 # -*- coding: utf-8 -*-
 """Advanced functions for I21 beamline
 
-
-
-Help:
-    import brixs.beamlines.i21 as i21
-
-    # read files
-    im, ims = i21.read(scan, folderpath)              # For rixs scans
-    diff1, TEY, TFY, I0 = i21.read(scan, folderpath)  # For xas and line scans
-    
-    # return spectrum for rixs scan
-    s = i21.process(scan, folderpath, ...)            
-    
-    # plot quick verification plot (returns dict. with data from all steps)
-    steps = i21.verify(scan, folderpath, ...)         
-    
-    # plot quick verification window for checking dark image subtraction
-    darkoffset = i21.verify_dark(scan, folderpath, ...)
-
-    # plot quick verification window for checking curvature correction
-    curv = i21.verify_curv(scan, folderpath, ...)
-
-    # returns images from 2D mesh scans
-    diff1, TEY, TFY, I0 = i21.mesh(scans, folderpath, motor_scanned='z')
-
-    
-
 Todo:
     * implement 'auto' for darkfactor in _process()
 """
@@ -41,58 +15,56 @@ import matplotlib
 
 # %% =============================== brixs =============================== %% #
 import brixs as br
-from brixs.beamlines.i21.core import scanlist, _read, _read_xas, _read_line
+from brixs.beamlines.i21.core import scanlist, readrixs, readxas, readline, settings
 # %%
 
 # %% Read
-def read(scan, folderpath, verbose=False):
-    """return rixs image, xas, or linescan data from I21 (nxs file)
-    
-    Args:
-        scan (int): scan number.
-        folderpath (str or path): folderpath where .nxs files are stored.
-        verbose (bool, optional): if True, print error message when metadata 
-            cannot be retrieved. Default is False.
-    
-    Returns:
-        If RIXS: im, ims (summed up final br.Image object and list with 
-            individual images)
-        If XAS or linescan: diff1, TEY, TFY, I0 (spectra for each detector)
-    """
-    filepath = Path(folderpath)/ ('i21-' + str(scan) + '.nxs')
-    assert filepath.is_file(), f'cannot find scan {scan} inside folder' + '\n' + f'{folderpath}'
+def read(scan=None, start=0, stop=None, verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
+    """Returns data from nexus file
 
+    Args:
+        scan (int, optional): scan number
+        start, stop (int, optional): [Only for rixs scans]
+            start and stop index number for images to 
+            load. If stop is None, it will get all images. Use this for loading
+            scans with large number of images. Start is INCLUSIVE. Stop is 
+            EXCLUSIVE. Default is start=0 and stop=None
+        verbose (bool, optional): if True, prints the name of metadata is could
+            not load. Default is False.
+        folderpath, prefix, filepath (str or Path, optional): use this to 
+            overwrite i21.settings (FOLDERPATH, PREFIX), or use filepath to 
+            directly give the path to a nexus file.
+
+    Returns:
+        For rixs:
+            dict: im (summed frames), ims (individual frames)
+        For xas:
+            dict: diff1, fy2, draincurrent, i0
+        For line scans:
+            dict: diff1, fy2, draincurrent, i0
+    """
     try:  # try reading as RIXS scan
-        im, ims = _read(filepath)
-        im.scan = scan
-        for _im in ims:
-            _im.scan = scan
-        return im, ims
+        return readrixs(scan=scan, start=start, stop=stop, verbose=verbose, folderpath=folderpath, prefix=prefix, filepath=filepath)
     except KeyError:
         pass
 
     try:  # try reading as XAS scan
-        diff1, TEY, TFY, I0 = _read_xas(filepath)
-        for _s in (diff1, TEY, TFY, I0):
-            _s.scan = scan
-        return diff1, TEY, TFY, I0
+        return readxas(scan=scan, verbose=verbose, folderpath=folderpath, prefix=prefix, filepath=filepath)
     except KeyError:
         pass
 
     try:  # try reading as line scan
-        diff1, TEY, TFY, I0 = _read_line(filepath)
-        for _s in (diff1, TEY, TFY, I0):
-            _s.scan = scan
-        return diff1, TEY, TFY, I0
+        return readline(scan=scan, verbose=verbose, folderpath=folderpath, prefix=prefix, filepath=filepath)
     except Exception as e:
         raise ValueError('Cannot read scan.\n' + e)
 
     return
 
 # %% Process
-def _process(scan, folderpath, dark=None, darkfactor=1, darkoffset=0, curv=None,
+def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset='auto', slope=None,
              norm_i0=False, norm_exposure=True, norm_eslit=False, calib=None, 
-             x_start=None, x_stop=None, y_start=None, y_stop=None, verbose=False):
+             x_start=None, x_stop=None, y_start=None, y_stop=None, verbose=False,
+             folderpath='auto', prefix='auto', filepath='auto'):
     """Returns dict. with data from all processing steps from images.
 
                                       d0* ---(crop, norm)---> d1
@@ -120,7 +92,11 @@ def _process(scan, folderpath, dark=None, darkfactor=1, darkoffset=0, curv=None,
     
     Args:
         scan (int or br.Image): scan number or image.
-        folderpath (str or path): folderpath where .nxs files are stored.
+        start, stop (int, optional): [Only for rixs scans]
+            start and stop index number for images to 
+            load. If stop is None, it will get all images. Use this for loading
+            scans with large number of images. Start is INCLUSIVE. Stop is 
+            EXCLUSIVE. Default is start=0 and stop=None
         dark (int or Image): dark image is loaded, crop, normalized and
             subtracted from scan. If dark is an br.Image object is
             subtracted (without normalization) directly from scan. Dark image is 
@@ -137,11 +113,7 @@ def _process(scan, folderpath, dark=None, darkfactor=1, darkoffset=0, curv=None,
             if darkoffset='auto', a suitable value will be found as to match
             the average intensity of pixel row integration between y=1500 and 
             y=1800 of the scan and dark image.
-        curv (None or list): if not None, curv must be 1D array of polynomial 
-            coefficients (including coefficients equal to zero) from 
-            highest degree to the constant term 
-                
-                [f(x_centers) = curv[n]*x**n + curv[n-1]*x**n-1 + ... + curv[0]]
+        slope (None or list): must be number or auto.
         norm_i0 (True, optional): if True, image intensity is normalized by
             I0. Default is False.
         norm_exposure (True, optional): if True, image intensity is 
@@ -156,20 +128,27 @@ def _process(scan, folderpath, dark=None, darkfactor=1, darkoffset=0, curv=None,
         verbose (bool, optional): if True, a message will print after each
             processing step, also a error message will be printed when 
             metadata cannot be retrieved. Default is False.
+        folderpath, prefix, filepath (str or Path, optional): use this to 
+            overwrite i21.settings (FOLDERPATH, PREFIX), or use filepath to 
+            directly give the path to a nexus file.
         
     Returns:
         dict {im0, ims0, im1, ims1, d0, d1, im2, ims2, im3, ims3, s, ss}
     """
+    if slope == 'auto': slope = settings.SLOPE
+    if calib == 'auto': calib = settings.CALIB
+
+
     # get data
     if verbose: print('read')
     if isinstance(scan, br.Image):
         im0  = scan
         ims0 = scan
     else:
-        a = read(scan=scan, folderpath=folderpath, verbose=verbose)
-        if a[0].type == 'XAS':  raise ValueError('process() is only for RIXS. This is XAS scan')
-        if a[0].type == 'line': raise ValueError('process() is only for RIXS. This is line scan')
-        im0, ims0 = a
+        a = readrixs(scan=scan, start=start, stop=stop, verbose=verbose, folderpath=folderpath, prefix=prefix, filepath=filepath)
+        if 'diff1' in a:  raise ValueError('process() is only for RIXS. This is XAS or linescan')
+        im0 = a['im']
+        ims0 = a['ims']
 
     # crop and normalization (number of images, image size)
     if verbose: print('crop')
@@ -263,13 +242,13 @@ def _process(scan, folderpath, dark=None, darkfactor=1, darkoffset=0, curv=None,
         ims2 = ims1.copy()
 
     # curvature correction
-    if verbose: print('curv')
-    if curv is not None:
-        im3 = im2.set_vertical_shift_via_polyval(p=curv)
+    if verbose: print('slope')
+    if slope is not None:
+        im3 = im2.set_vertical_shift_via_polyval(p=[-slope, 0])
 
         ims3 = ims2.copy()
         for i, _im in enumerate(ims2):
-            ims3[i] = _im.set_vertical_shift_via_polyval(p=curv)
+            ims3[i] = _im.set_vertical_shift_via_polyval(p=[-slope, 0])
     else:
         im3  = im2.copy()
         ims3 = ims2.copy()
@@ -303,12 +282,13 @@ def _process(scan, folderpath, dark=None, darkfactor=1, darkoffset=0, curv=None,
             'im3':im3, 'ims3':ims3,
             's':s, 'ss':ss}
 
-def process(scan, folderpath, 
-            dark=None, darkfactor=1, darkoffset=0, 
-            curv=None, calib=None,
+def process(scan, start=0, stop=None,  
+            dark=None, darkfactor=1, darkoffset='auto', 
+            slope='auto', calib='auto',
             norm_i0=False, norm_exposure=True, norm_eslit=False,  
             x_start=None, x_stop=None, y_start=None, y_stop=None, 
-            verbose=False):
+            verbose=False,
+            folderpath='auto', prefix='auto', filepath='auto'):
     """Returns RIXS spectrum from detector image.
 
                                       d0* ---(crop, norm)---> d1
@@ -342,11 +322,7 @@ def process(scan, folderpath,
             if darkoffset='auto', a suitable value will be found as to match
             the average intensity of pixel row integration between y=1500 and 
             y=1800 of the scan and dark image.
-        curv (None or list): if not None, curv must be 1D array of polynomial 
-            coefficients (including coefficients equal to zero) from 
-            highest degree to the constant term 
-                
-                [f(x_centers) = curv[n]*x**n + curv[n-1]*x**n-1 + ... + curv[0]]
+        slope (None or list): must be number or auto.
         calib (number, optional): if not None, the x axis of the final spectrum
             is multipled by calib. This number must have unit of eV/pixel.
         norm_i0 (True, optional): if True, image intensity is normalized by
@@ -365,15 +341,21 @@ def process(scan, folderpath,
     Returns:
         dict {im0, ims0, im1, ims1, d0, d1, im2, ims2, im3, ims3, s, ss}
     """
-    return _process(scan=scan, folderpath=folderpath, dark=dark, darkfactor=darkfactor, darkoffset=darkoffset, curv=curv, norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, calib=calib, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, verbose=verbose)['s']
+    return _process(scan=scan, start=start, stop=stop,  
+                    dark=dark, darkfactor=darkfactor, darkoffset=darkoffset, 
+                    slope=slope, calib=calib, 
+                    norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, 
+                    x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, 
+                    verbose=verbose, folderpath=folderpath, prefix=prefix, filepath=filepath)['s']
 
 # %% Verify
-def verify(scan, folderpath, 
-           dark=None, darkfactor=1, darkoffset=0, 
+def verify(scan=None, start=0, stop=None, 
+           dark=None, darkfactor=1, darkoffset='auto', 
            curv=None, calib=None, 
            norm_i0=False, norm_exposure=True, norm_eslit=False, 
            x_start=None, x_stop=None, y_start=None, y_stop=None, 
-           verbose=False):
+           verbose=False,
+            folderpath='auto', prefix='auto', filepath='auto'):
     """Returns a dict. with data from every processing step and opens a figure with all images
 
     Note:
@@ -436,12 +418,13 @@ def verify(scan, folderpath,
     ################
     # process data #
     ################
-    data = _process(scan=scan, folderpath=folderpath, dark=dark, 
+    data = _process(scan=scan, start=start, stop=stop,  dark=dark, 
                     darkfactor=darkfactor, darkoffset=darkoffset, curv=curv, 
                     norm_i0=norm_i0, norm_exposure=norm_exposure, 
                     norm_eslit=norm_eslit, calib=calib, 
                     x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop,
-                    verbose=verbose)
+                    verbose=verbose,
+             folderpath=folderpath, prefix=prefix, filepath=filepath)
 
     im  = data['im3']
     ims = data['ims3']
@@ -597,11 +580,11 @@ def verify(scan, folderpath,
     return data
 
 # %% verify dark
-def verify_dark(scan, folderpath, 
+def verify_dark(scan, start=0, stop=None,
                 dark=None, darkfactor=1, darkoffset='auto', 
                 norm_i0=False, norm_exposure=True, norm_eslit=False, 
                 x_start=None, x_stop=None, y_start=None, y_stop=None, 
-                verbose=False):
+                verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
     """Opens a figure comparing images with dark image
     
     Note:
@@ -652,8 +635,15 @@ def verify_dark(scan, folderpath,
     ################
     # process data #
     ################
-    data = _process(scan=scan, folderpath=folderpath, dark=dark, darkfactor=1, darkoffset=0, curv=None, norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, calib=None, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
-    
+    # data = _process(scan=scan, folderpath=folderpath, dark=dark, darkfactor=1, darkoffset=0, curv=None, norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, calib=None, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
+    data = _process(scan=scan, start=start, stop=stop,  dark=dark, 
+                    darkfactor=darkfactor, darkoffset=darkoffset, curv=None, 
+                    norm_i0=norm_i0, norm_exposure=norm_exposure, 
+                    norm_eslit=norm_eslit, calib=None, 
+                    x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop,
+                    verbose=verbose,
+                    folderpath=folderpath, prefix=prefix, filepath=filepath)
+
     im   = data['im1']
     ims  = data['ims1']
     # s    = data['s']
@@ -836,11 +826,12 @@ def verify_dark(scan, folderpath,
     return darkoffset
 
 # %% verify curvature correction
-def verify_curv(scan, folderpath, popt=None, ncols=16, 
-                nrows=None, dark=None, darkfactor=1, darkoffset=0, 
+def verify_curv(scan, start=0, stop=None, popt=None, ncols=16, 
+                nrows=None, dark=None, darkfactor=1, darkoffset='auto', 
                 norm_i0=False, norm_exposure=True, norm_eslit=False, 
                 x_start=None, x_stop=None, y_start=None, y_stop=None, 
-                deg=2, ):
+                deg=2,
+                folderpath='auto', prefix='auto', filepath='auto' ):
     """Returns a dict. with data from every processing step and opens a figure with all images
     
     Note:
@@ -908,12 +899,21 @@ def verify_curv(scan, folderpath, popt=None, ncols=16,
     ################
     # process data #
     ################
-    data = _process(scan=scan, folderpath=folderpath, 
-                    dark=dark, darkfactor=darkfactor, darkoffset=darkoffset, 
-                    norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, 
-                    x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, 
-                    curv=None, calib=None)
-    
+    # data = _process(scan=scan, start=start, stop=stop,  
+    #                 dark=dark, darkfactor=darkfactor, darkoffset=darkoffset, 
+    #                 norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, 
+    #                 x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, 
+    #                 curv=None, calib=None,
+    #          folderpath=folderpath, prefix=prefix, filepath=filepath
+    #          )
+    data = _process(scan=scan, start=start, stop=stop,  dark=dark, 
+                    darkfactor=darkfactor, darkoffset=darkoffset, curv=None, 
+                    norm_i0=norm_i0, norm_exposure=norm_exposure, 
+                    norm_eslit=norm_eslit, calib=None, 
+                    x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop,
+             folderpath=folderpath, prefix=prefix, filepath=filepath)
+
+
     im = data['im2']
     
     # if polynomial parameters are not given, calculate curvature
@@ -1000,40 +1000,27 @@ def verify_curv(scan, folderpath, popt=None, ncols=16,
 # %%
 
 # %% mesh scan
-def mesh(scans, folderpath, motor_scanned='z'):
-    """Returns images for diff1, TEY, TFY
-
-    Warning:
-        Scanned motor must be z, i.e., change y and scan z. Other motor 
-        combinations can be implemented in the future.
-
-    Note:
-        linecuts can be accessed via 'ss' attribute, i.e., TEY.ss. For
-        scanned motor z, each spectrum will be a z scan.
-
-    Args:
-        scans (list): ordered list with scan number
-        folderpath (str or path): folderpath where .nxs files are stored.
-        motor_scanned (str, optional): as for now, only 'z' is possible.
-    
-    Returns:
-        diff1, TEY, TFY, I0
+def mesh(scans, motor_scanned='z', folderpath='auto', prefix='auto', filepath='auto'):
+    """return image
     """
-    sss = [br.Spectra(), br.Spectra(), br.Spectra(), br.Spectra()]
-    ims = [br.Image(), br.Image(), br.Image(), br.Image()]
+    # load data
+    data = {}
     for scan in scans:
-        _diff1, _TEY, _TFY, _I0 = read(scan=scan, folderpath=folderpath)
-        sss[0].append(_diff1)
-        sss[1].append(_TEY)
-        sss[2].append(_TFY)
-        sss[3].append(_I0)
-    for i in range(4):
+        _data = readline(scan=scan, folderpath=folderpath, prefix=prefix, filepath=filepath)
+        for det in _data:
+            if det not in data:
+                data[det] = br.Spectra()
+            data[det].append(_data[det])
+
+    # build image
+    final = {}
+    for det in data:
         try:
-            ims[i] = sss[i].interp().stack_spectra_as_columns()
-            ims[i].x_centers = [s.sample_y for s in sss[i]]
-            ims[i].ss = sss[i]
+            final[det] = data[det].interp().stack_spectra_as_columns()
+            final[det].x_centers = [s.metadata['manipulator']['y'] for s in data[det]]
+            final[det].ss = data[det]
         except TypeError:
             pass
 
-    return ims
+    return final
 # %%
