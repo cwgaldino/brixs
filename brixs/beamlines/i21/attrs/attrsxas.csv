@@ -8,9 +8,9 @@ end_time,         general, datetime, entry/end_time
 finished,         general, bool,     entry/diamond_scan/scan_finished
 scan,             general, int,      entry/diamond_scan/entry_identifier
 
-x,   manipulator, number, entry/instrument/manipulator/x
-y,   manipulator, number, entry/instrument/manipulator/y
-z,   manipulator, number, entry/instrument/manipulator/z
+x,   manipulator, float, entry/instrument/manipulator/x
+y,   manipulator, float, entry/instrument/manipulator/y
+z,   manipulator, float, entry/instrument/manipulator/z
 tth, manipulator, round2, entry/instrument/spectrometer/armtth
 chi, manipulator, round2, entry/instrument/manipulator/chi                                                                       
 phi, manipulator, round2, entry/instrument/manipulator/phi                                                                         
@@ -21,20 +21,7 @@ pol,       instrument, string, entry/instrument/id/polarisation
 exit_slit, instrument, round2, entry/instrument/s5/v1_gap
 
 T,          sample, round2, entry/instrument/lakeshore336/sample                                               
-sample, T_setpoint, sample, round2, entry/instrument/lakeshore336/demand                                                 
+T_setpoint, sample, round2, entry/instrument/lakeshore336/demand                                                 
 
 # andor
-count_time, andor, round, entry/instrument/andor/count_time
-
-# maranax
-count_time,          maranax, string, entry/instrument/maranax/count_time
-readout_rate,        maranax, string, entry/instrument/maranax/maranax_settings/readout_rate
-preamp_gain,         maranax, string, entry/instrument/maranax/maranax_settings/preamp_gain
-pixel_encoding,      maranax, string, entry/instrument/maranax/maranax_settings/pixel_encoding
-overlap_acquisition, maranax, string, entry/instrument/maranax/maranax_settings/overlap_acquisition
-noise_filter,        maranax, string, entry/instrument/maranax/maranax_settings/noise_filter
-data_type,           maranax, string, entry/instrument/maranax/maranax_settings/data_type
-color_mode,          maranax, string, entry/instrument/maranax/maranax_settings/color_mode
-a3_shutter_mode,     maranax, string, entry/instrument/maranax/maranax_settings/a3_shutter_mode
-binning_x,           maranax, string, entry/instrument/maranax/maranax_settings/binning_x
-binning_y,           maranax, string, entry/instrument/maranax/maranax_settings/binning_y
+count_time, andor, list_float, entry/instrument/andor/count_time

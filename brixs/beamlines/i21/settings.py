@@ -67,9 +67,6 @@ class _settings():
         return self._SLOPE
     @SLOPE.setter
     def SLOPE(self, value):
-        _text = 'Invalid slope value\n' +\
-                'SLOPE must be list'
-        assert isinstance(value, Iterable), _text
         self._SLOPE = value
     @SLOPE.deleter
     def SLOPE(self):

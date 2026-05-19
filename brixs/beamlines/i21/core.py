@@ -115,12 +115,16 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
                 if key not in metadata:
                     metadata[key] = {}
                 try: 
+                    if proc == 'raw':            _value = f[address][()]
                     if proc == 'string':         _value = f[address][()].decode("utf-8")
                     if proc == 'int':            _value = int(f[address][()])
-                    if proc == 'number':         _value = f[address][()]
+                    if proc == 'float':          _value = float(f[address][()])
                     if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
                     if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
                     if proc == 'bool':           _value = f[address][()][0] == 1
+                    if proc == 'list_int':       _value = str([int(_) for _ in f[address][()]])
+                    if proc == 'list_float':     _value = str([float(_) for _ in f[address][()]])
+                    if proc == 'list_bool':      _value = str([bool(_ == 1) for _ in f[address][()]])
                 except Exception as e:
                     if verbose: print(e)
                     _value = None
@@ -192,12 +196,16 @@ def readxas(scan=None, verbose=False, folderpath='auto', prefix='auto', filepath
                 if key not in metadata:
                     metadata[key] = {}
                 try: 
+                    if proc == 'raw':            _value = f[address][()]
                     if proc == 'string':         _value = f[address][()].decode("utf-8")
                     if proc == 'int':            _value = int(f[address][()])
-                    if proc == 'number':         _value = f[address][()]
+                    if proc == 'float':          _value = float(f[address][()])
                     if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
                     if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
                     if proc == 'bool':           _value = f[address][()][0] == 1
+                    if proc == 'list_int':       _value = str([int(_) for _ in f[address][()]])
+                    if proc == 'list_float':     _value = str([float(_) for _ in f[address][()]])
+                    if proc == 'list_bool':      _value = str([bool(_ == 1) for _ in f[address][()]])
                 except Exception as e:
                     if verbose: print(e)
                     _value = None
@@ -268,12 +276,17 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
                 if key not in metadata:
                     metadata[key] = {}
                 try: 
+                    if proc == 'raw':            _value = f[address][()]
                     if proc == 'string':         _value = f[address][()].decode("utf-8")
                     if proc == 'int':            _value = int(f[address][()])
-                    if proc == 'number':         _value = f[address][()]
+                    if proc == 'float':          _value = float(f[address][()])
                     if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
                     if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
                     if proc == 'bool':           _value = f[address][()][0] == 1
+                    if proc == 'list_int':       _value = str([int(_) for _ in f[address][()]])
+                    if proc == 'list_float':     _value = str([float(_) for _ in f[address][()]])
+                    if proc == 'list_bool':      _value = str([bool(_ == 1) for _ in f[address][()]])
+
                 except Exception as e:
                     if verbose: print(e)
                     _value = None

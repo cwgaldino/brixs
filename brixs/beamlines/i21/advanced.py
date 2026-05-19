@@ -62,7 +62,7 @@ def read(scan=None, start=0, stop=None, verbose=False, folderpath='auto', prefix
 
 # %% Process
 def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset='auto', slope=None,
-             norm_i0=False, norm_exposure=True, norm_eslit=False, calib=None, 
+             norm_exposure=True, norm_i0=False, norm_eslit=False, calib=None, 
              x_start=None, x_stop=None, y_start=None, y_stop=None, verbose=False,
              folderpath='auto', prefix='auto', filepath='auto'):
     """Returns dict. with data from all processing steps from images.
@@ -138,7 +138,6 @@ def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset=
     if slope == 'auto': slope = settings.SLOPE
     if calib == 'auto': calib = settings.CALIB
 
-
     # get data
     if verbose: print('read')
     if isinstance(scan, br.Image):
@@ -166,14 +165,14 @@ def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset=
     im1  = im0.copy()
     if norm_i0:   
         try:
-            im1 = im1.set_factor(1/np.average(im1.i0))
+            im1 = im1.set_factor(1/np.average(im1.metadata['instrument']['i0']))
         except AttributeError:
             print(f'm4c1 does not seem to be recorded for scan {scan}. Cannot normalize by i0. If you want to get rid of this warn, set norm_i0=False')
         except TypeError:
             print(f'm4c1 does not seem to be recorded for scan {scan}. Cannot normalize by i0. If you want to get rid of this warn, set norm_i0=False')
     if norm_exposure:
         try:
-            im1 = im1.set_factor(1/np.sum(im1.exposure_time))
+            im1 = im1.set_factor(1/np.sum(im1.metadata['andor']['count_time']))
         except AttributeError:
             print(f'exposure_time does not seem to be recorded for scan {scan}. Cannot normalize by exposure_time. If you want to get rid of this warn, set norm_exposure=False')
     if norm_eslit:
@@ -185,9 +184,9 @@ def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset=
     for i, _im in enumerate(ims0):
         ims1[i] = ims0[i].copy()
         if norm_i0:
-            ims1[i] = ims1[i].set_factor(1/np.sum(ims1[i].i0[i]))
+            ims1[i] = ims1[i].set_factor(1/np.sum(im1.metadata['instrument']['i0'][i]))
         if norm_exposure:
-            ims1[i] = ims1[i].set_factor(1/np.sum(ims1[i].exposure_time))
+            ims1[i] = ims1[i].set_factor(1/np.sum(im1.metadata['andor']['count_time'][i]))
         if norm_eslit:
             ims1[i] = ims1[i].set_factor(1/np.sum(ims1[i].exit_slit))
 
@@ -199,7 +198,8 @@ def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset=
             d0  = None
             d1 = dark.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
         else:
-            d0, _ = read(scan=dark, folderpath=folderpath, verbose=verbose)
+            temp = readrixs(scan=dark, folderpath=folderpath, prefix=prefix, filepath=filepath, verbose=verbose)
+            d0 = temp['im']
             if x_start is not None or x_stop is not None or y_start is not None or y_stop is not None:
                 length_before = d0.shape[1]
                 d0 = d0.crop(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
@@ -207,14 +207,14 @@ def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset=
             d1 = d0.copy()
             if norm_i0:
                 try:
-                    d1 = d1.set_factor(1/np.average(d0.i0))
+                    d1 = d1.set_factor(1/np.average(d0.metadata['instrument']['i0']))
                 except TypeError:
                     # if i0 haven't been measured for dark image, use the i0 from scan
-                    d1 = d1.set_factor(1/np.average(im1.i0))
+                    d1 = d1.set_factor(1/np.average(im1.metadata['instrument']['i0']))
                 except AttributeError:
-                    d1 = d1.set_factor(1/np.average(im1.i0))
+                    d1 = d1.set_factor(1/np.average(im1.metadata['instrument']['i0']))
             if norm_exposure:
-                d1 = d1.set_factor(1/np.sum(d0.exposure_time))
+                d1 = d1.set_factor(1/np.sum(d0.metadata['andor']['count_time']))
             if norm_eslit:
                 d1 = d1.set_factor(1/np.sum(d0.exit_slit))
     else:
@@ -284,8 +284,8 @@ def _process(scan=None, start=0, stop=None, dark=None, darkfactor=1, darkoffset=
 
 def process(scan, start=0, stop=None,  
             dark=None, darkfactor=1, darkoffset='auto', 
-            slope='auto', calib='auto',
-            norm_i0=False, norm_exposure=True, norm_eslit=False,  
+            slope='auto', calib='auto', norm_exposure=True,
+            norm_i0=False, norm_eslit=False,  
             x_start=None, x_stop=None, y_start=None, y_stop=None, 
             verbose=False,
             folderpath='auto', prefix='auto', filepath='auto'):
@@ -343,16 +343,16 @@ def process(scan, start=0, stop=None,
     """
     return _process(scan=scan, start=start, stop=stop,  
                     dark=dark, darkfactor=darkfactor, darkoffset=darkoffset, 
-                    slope=slope, calib=calib, 
-                    norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, 
+                    slope=slope, calib=calib, norm_exposure=norm_exposure,
+                    norm_i0=norm_i0, norm_eslit=norm_eslit, 
                     x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, 
                     verbose=verbose, folderpath=folderpath, prefix=prefix, filepath=filepath)['s']
 
 # %% Verify
 def verify(scan=None, start=0, stop=None, 
            dark=None, darkfactor=1, darkoffset='auto', 
-           curv=None, calib=None, 
-           norm_i0=False, norm_exposure=True, norm_eslit=False, 
+           slope=None, calib=None, norm_exposure=True,
+           norm_i0=False, norm_eslit=False, 
            x_start=None, x_stop=None, y_start=None, y_stop=None, 
            verbose=False,
             folderpath='auto', prefix='auto', filepath='auto'):
@@ -419,8 +419,8 @@ def verify(scan=None, start=0, stop=None,
     # process data #
     ################
     data = _process(scan=scan, start=start, stop=stop,  dark=dark, 
-                    darkfactor=darkfactor, darkoffset=darkoffset, curv=curv, 
-                    norm_i0=norm_i0, norm_exposure=norm_exposure, 
+                    darkfactor=darkfactor, darkoffset=darkoffset, slope=slope, 
+                    norm_i0=norm_i0, norm_exposure=norm_exposure,
                     norm_eslit=norm_eslit, calib=calib, 
                     x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop,
                     verbose=verbose,
@@ -582,7 +582,7 @@ def verify(scan=None, start=0, stop=None,
 # %% verify dark
 def verify_dark(scan, start=0, stop=None,
                 dark=None, darkfactor=1, darkoffset='auto', 
-                norm_i0=False, norm_exposure=True, norm_eslit=False, 
+                norm_i0=False, norm_eslit=False, norm_exposure=True,
                 x_start=None, x_stop=None, y_start=None, y_stop=None, 
                 verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
     """Opens a figure comparing images with dark image
@@ -637,8 +637,8 @@ def verify_dark(scan, start=0, stop=None,
     ################
     # data = _process(scan=scan, folderpath=folderpath, dark=dark, darkfactor=1, darkoffset=0, curv=None, norm_i0=norm_i0, norm_exposure=norm_exposure, norm_eslit=norm_eslit, calib=None, x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop)
     data = _process(scan=scan, start=start, stop=stop,  dark=dark, 
-                    darkfactor=darkfactor, darkoffset=darkoffset, curv=None, 
-                    norm_i0=norm_i0, norm_exposure=norm_exposure, 
+                    darkfactor=darkfactor, darkoffset=darkoffset, slope=None, 
+                    norm_i0=norm_i0, norm_exposure=norm_exposure,
                     norm_eslit=norm_eslit, calib=None, 
                     x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop,
                     verbose=verbose,
@@ -828,7 +828,7 @@ def verify_dark(scan, start=0, stop=None,
 # %% verify curvature correction
 def verify_curv(scan, start=0, stop=None, popt=None, ncols=16, 
                 nrows=None, dark=None, darkfactor=1, darkoffset='auto', 
-                norm_i0=False, norm_exposure=True, norm_eslit=False, 
+                norm_i0=False, norm_eslit=False, norm_exposure=True,
                 x_start=None, x_stop=None, y_start=None, y_stop=None, 
                 deg=2,
                 folderpath='auto', prefix='auto', filepath='auto' ):
@@ -907,8 +907,8 @@ def verify_curv(scan, start=0, stop=None, popt=None, ncols=16,
     #          folderpath=folderpath, prefix=prefix, filepath=filepath
     #          )
     data = _process(scan=scan, start=start, stop=stop,  dark=dark, 
-                    darkfactor=darkfactor, darkoffset=darkoffset, curv=None, 
-                    norm_i0=norm_i0, norm_exposure=norm_exposure, 
+                    darkfactor=darkfactor, darkoffset=darkoffset, slope=None, 
+                    norm_i0=norm_i0, norm_exposure=norm_exposure,
                     norm_eslit=norm_eslit, calib=None, 
                     x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop,
              folderpath=folderpath, prefix=prefix, filepath=filepath)
