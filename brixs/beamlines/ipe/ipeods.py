@@ -198,17 +198,17 @@ IBIRA = Path('/ibira/lnls/beamlines/ipe/proposals')
 # %% -------------------------- uno definitions --------------------------- %% #
 def get_current_document():
     """Return document object"""
-    return XSCRIPTCONTEXT.getDocument()
+    return XSCRIPTCONTEXT.getDocument() # type: ignore
 
 def get_current_selection():
     """return a cell or range object"""
-    desktop = XSCRIPTCONTEXT.getDesktop()
+    desktop = XSCRIPTCONTEXT.getDesktop() # type: ignore
     return desktop.CurrentComponent.CurrentController.getSelection()
 # %%
 
 # %% --------------------------- test functions --------------------------- %% #
 def test(*args, **kwargs):
-    msgbox('test 1')
+    msgbox(sys.version)
 
 def test_brixs(*args, **kwargs):
     msgbox(brixs.__file__)
@@ -423,6 +423,40 @@ def _check_settings(settings):
     return values
 # %%
 
+def _normalize(value):
+    # numpy scalar → Python scalar
+    if isinstance(value, np.generic):
+        return value.item()
+
+    # numpy array
+    if isinstance(value, np.ndarray):
+        # array de tamanho 1 → converte
+        if value.size == 1:
+            return _normalize(value.item())
+        # se tiver 2 elementos e último for número
+        if value.size == 2:
+            last = value[-1]
+            if isinstance(last, (int, float, np.number)):
+                return float(np.median(value))
+            elif isinstance(last, (bytes, np.bytes_)):
+                return value[0].decode('utf-8')
+            elif isinstance(last, str):
+                return last
+        # fallback: usa o último elemento
+        return _normalize(value[-1])
+
+    # list/tuple
+    if isinstance(value, (list, tuple, datetime.datetime)):
+        return str(value)
+    
+    if br.is_number(value):
+        value = float(value)
+        
+    if value is None:
+        value = 'None'
+
+    return value
+
 # ============================================================================ #
 # ============================= MACRO - IPE ================================== #
 # %% ====================================================================== %% #
@@ -443,7 +477,7 @@ xas_attrs = ['scan', 'scan_type', 'detectors', 'start_time', 'end_time']
 def empty_sheet(*args, **kwargs):
     """Create new template spreadsheet"""
     # Get the current document
-    doc = XSCRIPTCONTEXT.getDocument()
+    doc = XSCRIPTCONTEXT.getDocument() # type: ignore
     
     # lock undo
     lock_undo(doc)
@@ -573,7 +607,7 @@ def empty_sheet(*args, **kwargs):
         for sheet in [xas, ascan, mesh]:
             final = ['comments', 'error'] + xas_attrs + ['']
             set_row_data(sheet, 0, final)
-            set_row_data(sheet, 1, final[2:-1], start_col=2)
+            set_row_data(sheet, 1, final[1:-1], start_col=1)
 
             cells = get_cells(sheet, position=(0, 0, len(final)+2, 0))
             set_property_value(cells, 'CharWeight', 200)
@@ -633,10 +667,10 @@ def update(*args, **kwargs):
     # METADATA #
     ############
     folders = [
-        IBIRA/values['Proposal']/f'data/RIXS/SPE',
-        IBIRA/values['Proposal']/f'proc/DATA/XAS',
-        IBIRA/values['Proposal']/f'proc/DATA/ASCAN',
-        IBIRA/values['Proposal']/f'proc/DATA/MESH'
+        IBIRA/values['Proposal']/f'data/RIXS/SPE/',
+        IBIRA/values['Proposal']/f'data/XAS/',
+        IBIRA/values['Proposal']/f'data/ASCAN/',
+        IBIRA/values['Proposal']/f'data/MESH/'
     ]
 
     for i, folderpath in enumerate(folders):
@@ -680,31 +714,10 @@ def update(*args, **kwargs):
                 try:
                     pe1 = ipe.read(scanlist[scan], verbose=False)[0]
                     # sort attrs
-                    for col, attr in enumerate(header):                        
+                    for col, attr in enumerate(header):
                         if attr != '' and attr != 'comments':
                             if hasattr(pe1, attr):
-                                value = getattr(pe1, attr)
-                                # if i==2 and attr=='EPOCH': msgbox(str(type(getattr(pe1, attr))))
-                                if isinstance(value, datetime.datetime):
-                                    value = str(value) 
-                                elif isinstance(value, np.ndarray) and i > 0:
-                                    if len(value) == 2:
-                                        if isinstance(value[-1], (int, float, np.float64)):
-                                            value = np.median(value)
-                                        elif isinstance(value[-1], (bytes, np.byte, str)):
-                                            value = value[0].decode('utf-8')
-                                    elif len(value) > 2:
-                                        value = value[-1]
-                                    else:
-                                        value = str(value)
-                                elif isinstance(value, list) or isinstance(value, tuple):
-                                    value = str(value)
-                                elif br.is_number(value):
-                                    value = float(value)
-                                elif value is None:
-                                    value = 'None'
-                                # else:
-                                #     value = str(value)
+                                value = _normalize(getattr(pe1, attr))
                                 lock_undo(doc)
                                 set_cells_data(sheet, (col, row), value)
                                 unlock_undo(doc)
@@ -765,11 +778,11 @@ def load(*args, **kwargs):
     # get settings from settings sheet
     values = _check_settings(settings)
     
-    # SCANS
+    # XAS, ASCAN, MESH
     folders = [
-        IBIRA/values['Proposal']/f'proc/DATA/XAS/',
-        IBIRA/values['Proposal']/f'proc/DATA/ASCAN/',
-        IBIRA/values['Proposal']/f'proc/DATA/MESH/'
+        IBIRA/values['Proposal']/f'data/XAS/',
+        IBIRA/values['Proposal']/f'data/ASCAN/',
+        IBIRA/values['Proposal']/f'data/MESH/'
         ]
     
     sheets = [xas, ascan, mesh]
@@ -813,31 +826,34 @@ def load(*args, **kwargs):
             pass
     
     # RIXS
-    fpath = IBIRA/values['Proposal']/f'data/RIXS/SPE/'
-    scan = str(list(ipe.scanlist(folderpath=fpath))[-1]).zfill(4)
-    pe1 = ipe.read(fpath/f'{scan}/', verbose=False)[0]
-    
-    full_attrs = pe1.get_attrs()
-    header = ['comments', 'error', 'scan']
-    new_attrs = [item for item in full_attrs if not any(item.endswith(suffix) for suffix in ('_min', '_max', '_sigma')) and item not in header]
-    
-    final = header + new_attrs + ['modified_date']
-    set_row_data(rixs, 0, final)
-    set_row_data(rixs, 1, final[1:-1], start_col=1)
-    
-    cells = get_cells(rixs, position=(0, 0, len(final)+2, 0))
-    set_property_value(cells, 'CharWeight', 200)
-    set_property_value(cells, 'CharHeight', 12)
-    set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+    try:
+        fpath = IBIRA/values['Proposal']/f'data/RIXS/SPE/'
+        scan = str(list(ipe.scanlist(folderpath=fpath))[-1]).zfill(4)
+        pe1 = ipe.read(fpath/f'{scan}/', verbose=False)[0]
+        
+        full_attrs = pe1.get_attrs()
+        header = ['comments', 'error', 'scan']
+        new_attrs = [item for item in full_attrs if not any(item.endswith(suffix) for suffix in ('_min', '_max', '_sigma')) and item not in header]
+        
+        final = header + new_attrs + ['modified_date']
+        set_row_data(rixs, 0, final)
+        set_row_data(rixs, 1, final[1:-1], start_col=1)
+        
+        cells = get_cells(rixs, position=(0, 0, len(final)+2, 0))
+        set_property_value(cells, 'CharWeight', 200)
+        set_property_value(cells, 'CharHeight', 12)
+        set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
 
-    cells = get_cells(rixs, position=(0, 1, len(final)+2, 1))
-    set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
-    set_border(cells, 'bottom', OuterLineWidth=40, LineWidth=40)
+        cells = get_cells(rixs, position=(0, 1, len(final)+2, 1))
+        set_property_value(cells, 'CellBackColor', colors['light_grey_2'])
+        set_border(cells, 'bottom', OuterLineWidth=40, LineWidth=40)
 
-    row = get_row(rixs, 0)
-    set_width(row, 'optimal')
-    for col in row.Columns:
-        set_width(col, get_width(col)*1.1)
+        row = get_row(rixs, 0)
+        set_width(row, 'optimal')
+        for col in row.Columns:
+            set_width(col, get_width(col)*1.1)
+    except:
+        pass
     
     # Update
     # set_cells_data(settings, 'B3', 'yes')
