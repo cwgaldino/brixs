@@ -231,15 +231,15 @@ def fit_peak(x, y, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fix
 
     # make popt a dictionary
     if asymmetry:
-        if fixed_m:
-            popt = {'amp': popt[0], 'c': popt[1], 'fwhm1': popt[2], 'fwhm2': popt[3], 'offset': popt[4]}
-        else:
+        if fixed_m == False and type(fixed_m)==bool:
             popt = {'amp': popt[0], 'c': popt[1], 'fwhm1': popt[2], 'm1': popt[3], 'fwhm2': popt[4], 'm2': popt[5], 'offset': popt[6]}
-    else:
-        if fixed_m:
-            popt = {'amp': popt[0], 'c': popt[1], 'fwhm': popt[2], 'offset': popt[3]}
         else:
+            popt = {'amp': popt[0], 'c': popt[1], 'fwhm1': popt[2], 'fwhm2': popt[3], 'offset': popt[4]}
+    else:
+        if fixed_m == False and type(fixed_m)==bool:
             popt = {'amp': popt[0], 'c': popt[1], 'fwhm': popt[2], 'm': popt[3], 'offset': popt[4]}
+        else:
+            popt = {'amp': popt[0], 'c': popt[1], 'fwhm': popt[2], 'offset': popt[3]}
 
     return {'fit':arr100, 'popt':popt, 'sigma':err, 'model':lambda x: function2fit(x, *popt)}
 
