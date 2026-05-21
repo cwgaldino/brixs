@@ -3,6 +3,7 @@
 """Useful functions for everyday use ---> Matplotlib figures"""
 
 # %% ------------------------- Standard Imports --------------------------- %% #
+import cmd
 from string import ascii_lowercase
 from types import MethodType
 from pathlib import Path
@@ -251,6 +252,8 @@ def _extract(x, y, ranges, invert=False):
 
 # %% ---------------- supporting functions from query --------------------- %% #
 import subprocess
+import tempfile
+import io 
 def _copy2clipboard(txt):
     """Copy text to clipboard.
 
@@ -283,10 +286,35 @@ def _copy2clipboard(txt):
             pass
     elif is_mac:
         try:
-            cmd='echo '+ txt.strip() + ' | pbcopy'
+            # cmd='echo '+ txt.strip() + ' | pbcopy'
+            # subprocess.check_call(cmd, shell=True)
+            cmd = 'printf %s ' + txt.strip() + ' | pbcopy'
             subprocess.check_call(cmd, shell=True)
         except:
             pass
+    return
+
+def _figure2clipboard(dpi=300):
+    if is_jupyter:
+        pass
+    elif is_windows:
+        pass
+    elif is_linux:
+        pass
+    elif is_mac:
+        # save temporary file
+        buf = io.BytesIO()
+        plt.savefig(buf, format="jpg", dpi=dpi)
+        fp = tempfile.NamedTemporaryFile() 
+        with open(f"{fp.name}", "wb") as ff:
+            ff.write(buf.getvalue()) 
+        buf.close()
+
+        # copy file to clipboard
+        subprocess.check_call(['osascript', '-e', f'set the clipboard to (read (POSIX file "{fp.name}") as JPEG picture)'])
+
+        # delete temporary file
+        fp.close()
     return
 # %%
 
@@ -612,6 +640,7 @@ def _set_figure_methods(fig):
 
     #  mouse events
     cid1 = fig.canvas.mpl_connect('button_press_event', _onclick)
+    cid2 = fig.canvas.mpl_connect('key_press_event', _onkey)
     # cid2 = fig.canvas.mpl_connect('resize_event', _onmove)
 
     # grid function
@@ -647,7 +676,8 @@ def _onclick(event):
     """This function is called every time a mouse key is pressed over a figure.
 
     Middle click:
-        prints cursor position in terms of figure coordinates.
+        prints cursor position in terms of figure coordinates from 0 to 1, where
+        (0, 0) is the bottom left corner of the figure.
     Right click:
         x value is copied to the clipboard.
     Left click OR (y + Right click):
@@ -822,6 +852,20 @@ def _onclick(event):
                 # print('x coordinate copied to clipboard')
             except TypeError:
                 pass
+    return
+
+def _onkey(event):
+    """
+    """
+    # print('you pressed', event.key)
+    
+    ############################################
+    # ctrl+c or cmd+c: copy image to clipboard #
+    ############################################
+    if event.key == 'cmd+c' or event.key == 'ctrl+c':
+        _figure2clipboard(dpi=300)
+        pass
+
     return
 
 def _grid(self, visible=None):

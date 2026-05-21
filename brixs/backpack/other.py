@@ -191,7 +191,9 @@ def copy2clipboard(txt):
         with subprocess.Popen(['xclip','-selection', 'clipboard'], stdin=subprocess.PIPE) as pipe:
             pipe.communicate(input=txt.strip().encode('utf-8'))
     elif is_mac:
-        cmd='echo '+ txt.strip() + ' | pbcopy'
+        # cmd='echo '+ txt.strip() + ' | pbcopy'
+        # subprocess.check_call(cmd, shell=True)
+        cmd = 'printf %s ' + txt.strip() + ' | pbcopy'
         subprocess.check_call(cmd, shell=True)
     return
 
@@ -201,7 +203,8 @@ def svg2clipboard(filepath):
     Warning:
         Only implemented on Linux.
 
-    On linux it uses ``xsel`` package (``sudo apt-get install -y xsel``)."""
+    On linux it uses ``xsel`` package (``sudo apt-get install -y xsel``).
+    """
     if is_windows:
         raise NotImplementedError('This function is not implemented on Windows yet.')
     elif is_linux:
