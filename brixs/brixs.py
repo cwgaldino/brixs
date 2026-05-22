@@ -6384,8 +6384,8 @@ class Image(_BrixsObject, metaclass=_Meta):
                     y_start = item[0].start
                     y_stop  = item[0].stop
                 else:
-                    x_start = item[0]
-                    x_stop = item[0]
+                    y_start = item[0]
+                    y_stop  = item[0]
                 if isinstance(item[1], slice):
                     x_start = item[1].start
                     x_stop  = item[1].stop
@@ -7006,6 +7006,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         im = Image(data=data[_y_start:_y_stop, _x_start:_x_stop])
         im.x_centers = self.x_centers[_x_start:_x_stop]
         im.y_centers = self.y_centers[_y_start:_y_stop]
+
+        if 0 in im.shape:
+            raise ValueError(f'Croped image has 0 columns or rows (shape = {im.shape}). Note that x_start, x_stop, y_start and y_stop are in terms of x_centers and y_centers, not pixel index.')
  
         # edges y
         if self.y_edges is not None:
@@ -8174,7 +8177,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         return im
 
     def binning(self, ncols=None, nrows=None):
-        """Compute the 2D histogram of the data (binning of the data).
+        """Compute the 2D histogram of the data (binning of the data - sum pixels).
 
         Args:
             ncols, nrows (int or None, optional): number of columns and rows of the returned Image.
