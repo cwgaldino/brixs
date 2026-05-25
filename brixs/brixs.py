@@ -400,9 +400,9 @@ def _attr2str(attrs_dict, verbose):
                 x = list(attrs_dict[name].x)
                 y = list(attrs_dict[name].y)
                 final.append(f'{name}: ' + f'PhotonEvents(x={x}, y={y})')
-            ######################
-            # type: PhotonEvents #
-            ######################
+            ###############
+            # type: Image #
+            ###############
             elif isinstance(attrs_dict[name], Image):
                 _data = [list(_) for _ in attrs_dict[name].data]
                 final.append(f'{name}: ' + f'Image(data={_data})')
@@ -424,6 +424,17 @@ def _attr2str(attrs_dict, verbose):
                 if tosave[-1] == '\n':
                     tosave = tosave[:-1]
                 final.append(f'{name}: {tosave}')
+            ##############
+            # type: Bool #
+            ##############
+            elif isinstance(attrs_dict[name], bool):
+                if attrs_dict[name] == False:
+                    final.append(f'{name}: False')
+                elif attrs_dict[name] == True:
+                    final.append(f'{name}: True')
+            #########################
+            # type: everything else #
+            #########################
             else:
                 temp2 = str(attrs_dict[name]).replace('\n','\\n')
                 final.append(f'{name}: \"{temp2}\"')
@@ -1372,7 +1383,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                     kwargs['header'] = header
                 elif kwargs['header'][-1] != '\n':
                     kwargs['header'] += '\n'
-        
+
         ########
         # save #
         ########
@@ -1493,6 +1504,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 # set attrs
                 for attr in attrs_dict:
                     s.__setattr__(attr, attrs_dict[attr])
+                
         return s
 
     #########
@@ -7075,11 +7087,12 @@ class Image(_BrixsObject, metaclass=_Meta):
     #################
     # save and load #
     #################
-    def savenpy(self, filepath, check_overwrite=False, verbose=False, **kwargs):
+    def savenpy(self, filepath, check_overwrite=False, **kwargs):
         """Save image as numpy binary (.npy). Wrapper for Wrapper for `np.save()`_.
 
         Warning:
-            metadata is not saved to file
+            Metadata is not saved to file.
+            Suffix .npy is added automatically from numpy
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -7087,7 +7100,6 @@ class Image(_BrixsObject, metaclass=_Meta):
                 compressed gzip format.
             check_overwrite (bool, optional): if True, it will check if file exists
                 and ask if user wants to overwrite file.
-            verbose (bool, optional): turn verbose on and off. Default is `False`.
             **kwargs: kwargs are passed to ``np.save()`` that saves the data.
 
         Returns:
@@ -7128,13 +7140,13 @@ class Image(_BrixsObject, metaclass=_Meta):
         ########
         # save #
         ########
-        np.save(Path(filepath).with_suffix('.npy'), self._data, **kwargs)
+        np.save(Path(filepath), self._data, **kwargs)
 
-    def loadnpy(self, filepath, verbose=False, **kwargs):
+    def loadnpy(self, filepath, **kwargs):
         """Load data from a numpy binary file (.npy). Wrapper for `np.load()`_.
 
         Warning:
-            metadata is not saved to file
+            Metadata is not saved to file
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -7142,8 +7154,6 @@ class Image(_BrixsObject, metaclass=_Meta):
                 decompressed. Last used filepath is saved to im.filepath.
             only_data (bool, optional): If True, header and footer are ignored and
                 only data is loaded.
-            verbose (book, optional): Default is False. If True, it will print
-                an warning when attributes cannot be loaded from the file.
             **kwargs: kwargs are passed to ``np.load()`` that loads the data.
 
         Returns:
@@ -7171,11 +7181,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##########
         return Image(data=data)
 
-    def savetiff(self, filepath, check_overwrite=False, verbose=False, **kwargs):
-        """Save image as tiff. Wrapper for Wrapper for `plt.imsave()`_.
+    def _savetiff(self, filepath, check_overwrite=False, **kwargs):
+        """[experimental - do not use] Save image as tiff. Wrapper for Wrapper for `plt.imsave()`_.
 
         Warning:
-            metadata is not saved to file
+            Metadata is not saved to file
 
         Args:
             filepath (string or path object, optional): filepath or file handle.
@@ -7183,7 +7193,6 @@ class Image(_BrixsObject, metaclass=_Meta):
                 compressed gzip format.
             check_overwrite (bool, optional): if True, it will check if file exists
                 and ask if user wants to overwrite file.
-            verbose (bool, optional): turn verbose on and off. Default is `False`.
             **kwargs: kwargs are passed to ``plt.imsave()`` that saves the data.
 
         Returns:
@@ -7199,6 +7208,10 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##############################
         if 'folderpath' in kwargs:
             raise ValueError('folderpath is not a valid parameter.\nPlease, use filepath')
+        # if 'format'in kwargs:
+        #     if kwargs['format'] != 'tiff':
+        #         raise ValueError(f'format=`{kwargs['format']}` is invalid. Format cannot be modified. Image is always saved as tiff.')
+        kwargs['format'] = 'tiff'
         
         ######################################
         # check if filepath points to a file #
@@ -7224,7 +7237,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ########
         # save #
         ########
-        plt.imsave(Path(filepath).with_suffix('.tiff'), self._data, **kwargs)
+        plt.imsave(Path(filepath), self._data, **kwargs)
 
     def savetxt(self, filepath, only_data=False,  check_overwrite=False, verbose=False, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
