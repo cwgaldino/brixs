@@ -55,7 +55,7 @@ one needs to use method 2. See below.
 >>>
 >>> def processing_function(a, b, c):
 >>>
->>>     br.finder.kwargs = vars()
+>>>     br.finder.kwargs = vars()  # gets all variables defined inside the function up to that moment
 >>>     s = br.finder.search()
 >>>     if s != False:
 >>>         return s
@@ -188,6 +188,30 @@ process2() and again manually feed it to br.finder.save() in process2(). See bel
 >>>
 >>>     s = process1(a, b)
 >>>     s = <do something else with s, c, and d>
+>>>
+>>>     br.finder._search_string = _search_string
+>>>     br.finder.save(s)
+>>>    
+>>>     return s
+
+Note that if finder is called explicitally more than once inside a function,
+than one must not use vars() in the second call, as vars() may get variables 
+that are not desired for the finder search. 
+
+>>> def process2(a, b, c, d):
+>>>
+>>>     br.finder.kwargs = vars()
+>>>     s = br.finder.search()
+>>>     _search_string = br.finder._search_string
+>>>     if s != False:
+>>>         return s
+>>>
+>>>     br.finder.kwargs = vars()
+>>>     del br.finder.kwargs['_search_string']
+>>>     s2 = br.finder.search()
+>>>     if s2 == False:
+>>>         s2 = process1(a, b)
+>>>     s = <do something else with s2, c, and d>
 >>>
 >>>     br.finder._search_string = _search_string
 >>>     br.finder.save(s)
@@ -378,6 +402,9 @@ def search(kwargs=None, folderpath=None):
             del ss[0].spectra_attrs_123_finder_copy
 
             return ss
+        elif 'Image' in search_result.name:
+            im = br.Image().loadnpy(filepath=folderpath/search_result, allow_pickle=False)
+            return im.copy_attrs_from(br.Spectrum().load(filepath=folderpath/(str(search_result)+'_metadata')))
         else:
             pass
     else:
@@ -434,7 +461,7 @@ def save(obj, folderpath=None):
     if isinstance(obj, br.Spectrum):
         filename = f'finderfile_Spectrum_{next_file_number}'
         obj.save(folderpath/filename)
-    if isinstance(obj, br.PhotonEvents):
+    elif isinstance(obj, br.PhotonEvents):
         filename = f'finderfile_PhotonEvents_{next_file_number}'
         obj.save(folderpath/filename)
     elif isinstance(obj, br.Spectra):
@@ -453,12 +480,20 @@ def save(obj, folderpath=None):
             next_file_number += 1
             _filename = f'finderfile_Spectra_{next_file_number}_{start+len(obj)-1}'
             _s.save(filepath=folderpath/_filename)
-
+    elif isinstance(obj, br.Image):
+        filename = f'finderfile_Image_{next_file_number}.npy'
+        obj.savenpy(filepath=folderpath/filename, allow_pickle=False)
+        br.Spectrum(y=[1,2,3]).copy_attrs_from(obj).save(folderpath/f'finderfile_Image_{next_file_number}.npy_metadata')
+    else:
+        filename = f'finderfile_Generic_{next_file_number}'
+        obj.save(folderpath/filename)
 
     ###########################################
     # save string and filepath to finder file #
     ###########################################
     f = open(folderpath/'finder.txt', 'a')
+    if br.finder._search_string is None:
+        raise ValueError('It seems like `search string`is None. Which means that probably br.finder.kwargs has not been set correctly, or finder is being called multiple times inside the same function [See finder.py docstring for quick example on how to fix that]')
     f.write(br.finder._search_string + '\n' + str(filename) + '\n')
     f.close() 
 
