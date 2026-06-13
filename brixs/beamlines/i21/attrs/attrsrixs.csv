@@ -19,7 +19,7 @@ th,  manipulator, round2, entry/instrument/manipulator/th
 E,         instrument, round2, entry/sample/beam/incident_energy
 pol,       instrument, string, entry/instrument/id/polarisation
 exit_slit, instrument, round2, entry/instrument/s5/v1_gap
-i0,        instrument, float, entry/m4c1/m4c1
+i0,        instrument, list_float, entry/m4c1/m4c1 
 
 T,          sample, round2, entry/instrument/lakeshore336/sample                                               
 T_setpoint, sample, round2, entry/instrument/lakeshore336/demand                                                 
@@ -28,14 +28,14 @@ T_setpoint, sample, round2, entry/instrument/lakeshore336/demand
 count_time, andor, list_float, entry/instrument/andor/count_time
 
 # maranax
-count_time,          maranax, string, entry/instrument/maranax/count_time
-readout_rate,        maranax, string, entry/instrument/maranax/maranax_settings/readout_rate
-preamp_gain,         maranax, string, entry/instrument/maranax/maranax_settings/preamp_gain
-pixel_encoding,      maranax, string, entry/instrument/maranax/maranax_settings/pixel_encoding
-overlap_acquisition, maranax, string, entry/instrument/maranax/maranax_settings/overlap_acquisition
-noise_filter,        maranax, string, entry/instrument/maranax/maranax_settings/noise_filter
-data_type,           maranax, string, entry/instrument/maranax/maranax_settings/data_type
-color_mode,          maranax, string, entry/instrument/maranax/maranax_settings/color_mode
-a3_shutter_mode,     maranax, string, entry/instrument/maranax/maranax_settings/a3_shutter_mode
-binning_x,           maranax, string, entry/instrument/maranax/maranax_settings/binning_x
-binning_y,           maranax, string, entry/instrument/maranax/maranax_settings/binning_y
+# count_time,          maranax, string, entry/instrument/maranax/count_time
+# readout_rate,        maranax, string, entry/instrument/maranax/maranax_settings/readout_rate
+# preamp_gain,         maranax, string, entry/instrument/maranax/maranax_settings/preamp_gain
+# pixel_encoding,      maranax, string, entry/instrument/maranax/maranax_settings/pixel_encoding
+# overlap_acquisition, maranax, string, entry/instrument/maranax/maranax_settings/overlap_acquisition
+# noise_filter,        maranax, string, entry/instrument/maranax/maranax_settings/noise_filter
+# data_type,           maranax, string, entry/instrument/maranax/maranax_settings/data_type
+# color_mode,          maranax, string, entry/instrument/maranax/maranax_settings/color_mode
+# a3_shutter_mode,     maranax, string, entry/instrument/maranax/maranax_settings/a3_shutter_mode
+# binning_x,           maranax, string, entry/instrument/maranax/maranax_settings/binning_x
+# binning_y,           maranax, string, entry/instrument/maranax/maranax_settings/binning_y

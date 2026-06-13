@@ -33,9 +33,70 @@ def scanlist(folderpath='auto'):
     return br.parsed_filelist(folderpath, string='*.nxs', ref=1, return_type='dict')
 # %%
 
+# %% ============================= metadata ============================== %% #
+def get_metadata(scan, verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
+
+    # get filepath
+    if prefix     == 'auto': prefix     = settings.PREFIX
+    if folderpath == 'auto': folderpath = settings.FOLDERPATH
+    if filepath   == 'auto': filepath   = folderpath/ (prefix + str(scan) + '.nxs')       
+
+    with h5py.File(Path(filepath), 'r', libver='latest', swmr=True) as f:
+
+        # check if rixs
+        if "/entry/andor" in f or "/entry/maranax" in f:
+            exp = 'rixs'
+        else:
+            exp = 'xas'
+        
+        # get metadata
+        metadata = _get_metadata(f, exp=exp, verbose=verbose)
+    return metadata
+
+def _get_metadata(f, exp, verbose=False):
+    """returns a dictionary with metadata from h5 file
+
+    Args:
+        f (h5py handler): h5 file handler
+        exp (str): 'rixs', 'xas', or 'linescan' 
+        verbose (bool, optional): if True, prints the name of metadata is could
+            not load. Default is False.
+
+    Returns:
+        dict
+    """
+    assert exp in ('rixs', 'xas', 'linescan')
+    metadata = {}
+    for name in settings.METADATA[exp]:
+        key     = settings.METADATA[exp][name][0]
+        proc    = settings.METADATA[exp][name][1]
+        address = settings.METADATA[exp][name][2]                
+        if key not in metadata:
+            metadata[key] = {}
+        try: 
+            if proc == 'raw':            _value = f[address][()]
+            if proc == 'string':         _value = f[address][()].decode("utf-8")
+            if proc == 'int':            _value = int(f[address][()])
+            if proc == 'float':          _value = float(f[address][()])
+            if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
+            if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
+            if proc == 'bool':           _value = f[address][()][0] == 1
+            if proc == 'list_int':       _value = [int(_) for _ in f[address][()]]
+            if proc == 'list_float':     _value = [float(_) for _ in f[address][()]]
+            if proc == 'list_bool':      _value = [bool(_ == 1) for _ in f[address][()]]
+            if proc == 'list_str':       _value = [str(_) for _ in f[address][()]]
+        except Exception as e:
+            if verbose: print(name, ':', e)
+            _value = None
+        metadata[key][name] = _value
+    return metadata
+
+
 # %% ============================== readrixs ============================= %% #
 def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
     """Returns data from nexus file containing rixs data
+
+    i21.settings.METADATA['rixs'] defines the metadata to be imported.
 
     Args:
         scan (int, optional): scan number
@@ -106,30 +167,7 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
         im = br.Image(data)
 
         # get attrs
-        metadata = {}
-        if True:
-            for name in settings.METADATA['rixs']:
-                key     = settings.METADATA['rixs'][name][0]
-                proc    = settings.METADATA['rixs'][name][1]
-                address = settings.METADATA['rixs'][name][2]                
-                if key not in metadata:
-                    metadata[key] = {}
-                try: 
-                    if proc == 'raw':            _value = f[address][()]
-                    if proc == 'string':         _value = f[address][()].decode("utf-8")
-                    if proc == 'int':            _value = int(f[address][()])
-                    if proc == 'float':          _value = float(f[address][()])
-                    if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
-                    if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
-                    if proc == 'bool':           _value = f[address][()][0] == 1
-                    if proc == 'list_int':       _value = str([int(_) for _ in f[address][()]])
-                    if proc == 'list_float':     _value = str([float(_) for _ in f[address][()]])
-                    if proc == 'list_bool':      _value = str([bool(_ == 1) for _ in f[address][()]])
-                except Exception as e:
-                    if verbose: print(e)
-                    _value = None
-                metadata[key][name] = _value
-        im.metadata   = metadata
+        im.metadata   = _get_metadata(f, exp='rixs', verbose=verbose)
         im.isfinished = isfinished
         im.nexpected  = expected_number_of_images
         im.scan = scan
@@ -141,6 +179,8 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
 def readxas(scan=None, verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
     """Returns data from nexus file containing rixs data
 
+    i21.settings.METADATA['xas'] defines the metadata to be imported.
+    
     Args:
         scan (int, optional): scan number
         verbose (bool, optional): if True, prints the name of metadata is could
@@ -187,29 +227,7 @@ def readxas(scan=None, verbose=False, folderpath='auto', prefix='auto', filepath
             if verbose: print(e)
         
         # get attrs
-        metadata = {}
-        if True:
-            for name in settings.METADATA['xas']:
-                key     = settings.METADATA['xas'][name][0]
-                proc    = settings.METADATA['xas'][name][1]
-                address = settings.METADATA['xas'][name][2]                
-                if key not in metadata:
-                    metadata[key] = {}
-                try: 
-                    if proc == 'raw':            _value = f[address][()]
-                    if proc == 'string':         _value = f[address][()].decode("utf-8")
-                    if proc == 'int':            _value = int(f[address][()])
-                    if proc == 'float':          _value = float(f[address][()])
-                    if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
-                    if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
-                    if proc == 'bool':           _value = f[address][()][0] == 1
-                    if proc == 'list_int':       _value = str([int(_) for _ in f[address][()]])
-                    if proc == 'list_float':     _value = str([float(_) for _ in f[address][()]])
-                    if proc == 'list_bool':      _value = str([bool(_ == 1) for _ in f[address][()]])
-                except Exception as e:
-                    if verbose: print(e)
-                    _value = None
-                metadata[key][name] = _value
+        metadata = _get_metadata(f, exp='xas', verbose=verbose)
         for key in data:
             data[key].metadata = metadata
             data[key].scan = scan
@@ -220,6 +238,8 @@ def readxas(scan=None, verbose=False, folderpath='auto', prefix='auto', filepath
 # %% ============================ readlinescan =========================== %% #
 def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepath='auto'):
     """Returns data from nexus file containing rixs data
+
+    i21.settings.METADATA['xas'] defines the metadata to be imported.
 
     Args:
         scan (int, optional): scan number
@@ -267,30 +287,7 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
                     pass
         
         # get attrs
-        metadata = {}
-        if True:
-            for name in settings.METADATA['xas']:
-                key     = settings.METADATA['xas'][name][0]
-                proc    = settings.METADATA['xas'][name][1]
-                address = settings.METADATA['xas'][name][2]                
-                if key not in metadata:
-                    metadata[key] = {}
-                try: 
-                    if proc == 'raw':            _value = f[address][()]
-                    if proc == 'string':         _value = f[address][()].decode("utf-8")
-                    if proc == 'int':            _value = int(f[address][()])
-                    if proc == 'float':          _value = float(f[address][()])
-                    if proc.startswith('round'): _value = round(f[address][()], int(proc.split('round')[1]))
-                    if proc == 'datetime':       _value = _str2datetime(f[address][()].decode("utf-8"))
-                    if proc == 'bool':           _value = f[address][()][0] == 1
-                    if proc == 'list_int':       _value = str([int(_) for _ in f[address][()]])
-                    if proc == 'list_float':     _value = str([float(_) for _ in f[address][()]])
-                    if proc == 'list_bool':      _value = str([bool(_ == 1) for _ in f[address][()]])
-
-                except Exception as e:
-                    if verbose: print(e)
-                    _value = None
-                metadata[key][name] = _value
+        metadata = _get_metadata(f, exp='xas', verbose=verbose)
         for key in data:
             data[key].metadata = metadata
             data[key].scan = scan
