@@ -7317,7 +7317,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         # kwargs #
         ##########
         if 'fmt' not in kwargs: # pick best format
-            if self._data != [] and self._data is not None:
+            if len(self._data.shape) > 1 and self._data is not None:
                 decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self._data)])
                 kwargs['fmt'] = f'%.{decimal}f'
         kwargs.setdefault('delimiter', ', ')
@@ -8509,38 +8509,57 @@ class Image(_BrixsObject, metaclass=_Meta):
         return im2
     
 
-    def calculate_histogram(self, nbins=None):
+    def calculate_histogram(self, nbins=None, start=None, stop=None):
         """Compute the intensity histogram of the data. Wrapper for `numpy.histogram()`_.
 
         Args:
-            nbins (int, optional): number of bins. If not specified, it will
+            nbins (int, optional): number of bins. If None, it will
                 be set to 1000. If 1000 is too high (maximum value of the histogram
                 is less than 5 % of the total integrated intensity) bins will be
                 reduced 10 by 10 until the criteria is satisfied or until nbins 
-                = 50.
+                = 50. If nbins is an int, it defines the number of equal-width 
+                bins in the given range (10, by default). If bins is a 
+                sequence, it defines a monotonically increasing array of bin 
+                edges, including the rightmost edge, allowing for non-uniform 
+                bin widths. If bins is a string, it defines the method used to 
+                calculate the optimal bin width: 
+                
+                    `auto`: Minimum bin width between the 'sturges' and 'fd' 
+                    estimators. Provides good all-around performance.
+
+                    `sqrt`: Square root (of data size) estimator, used by 
+                    Excel and other programs for its speed and simplicity.
 
         Returns
             brixs.Spectrum
 
         .. _numpy.histogram(): https://numpy.org/doc/stable/reference/generated/numpy.histogram.html
         """
+        if start is None:
+            start = self.min()
+        if stop is None:
+            stop = self.max()
+            
         if nbins is None:
             nbins = 1000
             _flat  = arraymanip.flatten(self._data)
             flat = _flat[~np.isnan(_flat)]
 
-            hist, bin_edges = np.histogram(flat, bins=nbins)
+            hist, bin_edges = np.histogram(flat, bins=nbins, range=(start, stop))
             while max(hist) < self.shape[0]*self.shape[1]*0.05:
                 nbins -= 10
-                hist, bin_edges = np.histogram(flat, bins=nbins)
+                hist, bin_edges = np.histogram(flat, bins=nbins, range=(start, stop))
                 if nbins < 50:
                     break
         elif numanip.is_integer(nbins):
             _flat  = arraymanip.flatten(self._data)
             flat = _flat[~np.isnan(_flat)]
-            hist, bin_edges = np.histogram(flat, bins=int(nbins))
+            hist, bin_edges = np.histogram(flat, bins=int(nbins), range=(start, stop))
         else:
-            raise TypeError('nbins must be a integer')
+            _flat  = arraymanip.flatten(self._data)
+            flat = _flat[~np.isnan(_flat)]
+            hist, bin_edges = np.histogram(flat, bins=nbins, range=(start, stop))
+            # raise TypeError('nbins must be a integer')
 
         x = arraymanip.moving_average(bin_edges, 2)
         s = Spectrum(x=x, y=hist)
@@ -10286,7 +10305,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     #################
     # save and load #
     #################
-    def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=False, **kwargs):
+    def save(self, filepath=None, only_data=False, check_overwrite=False, verbose=True, **kwargs):
         r"""Save data to a text file. Wrapper for `numpy.savetxt()`_.
 
         Warning:
@@ -10399,7 +10418,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             np.savetxt(Path(filepath), self.data, **kwargs)
         return 
     
-    def load(self, filepath, only_data=False, verbose=False, **kwargs):
+    def load(self, filepath, only_data=False, verbose=True, **kwargs):
         """Load data from a text file. Wrapper for `numpy.genfromtxt()`_.
 
         Args:
@@ -10442,15 +10461,28 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ########
         # read #
         ########
-        data = np.genfromtxt(Path(filepath), **kwargs)
+        if verbose:
+                data = np.genfromtxt(Path(filepath), **kwargs)
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                data = np.genfromtxt(Path(filepath), **kwargs)
 
         ##########
         # assign #
         ##########
         pe = PhotonEvents()
         if len(data) != 0:
-            pe._x = data[:, 0]
-            pe._y = data[:, 1]
+            if len(data) == 2:  # this is necessary for empty files and files with one photon event
+                if isinstance(data[0], Iterable):
+                    pe._x = data[:, 0]
+                    pe._y = data[:, 1]
+                else:
+                    pe._x = np.array([data[0], ])
+                    pe._y = np.array([data[1], ])
+            else:
+                pe._x = data[:, 0]
+                pe._y = data[:, 1]
         else:
             pe._x = None
             pe._x = None
