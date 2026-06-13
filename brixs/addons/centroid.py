@@ -409,7 +409,7 @@ br.Image.find_and_patch = find_and_patch
 # %%
 
 # %% ============================ centroid =============================== %% #
-def centroid(self, nx, ny, threshold, threshold2=None, _bkg=None, _square=False, _nx=None, _ny=None, _cm_bkg='auto', _cm_nx='auto', _cm_ny='auto', _cm_spot_zero_type='zero', MAX_NUMBER_OF_CANDIDATES=1000):
+def centroid(self, nx, ny, threshold, threshold2=None, _bkg=None, _square=False, _nx=None, _ny=None, _cm_bkg=None, _cm_nx='auto', _cm_ny='auto', _cm_spot_zero_type='zero', MAX_NUMBER_OF_CANDIDATES=1000):
     """Returns a list of photon hits defined by a threshold in a enhanced image
 
     For a complete description of this function, Please refer to 
@@ -476,10 +476,6 @@ def centroid(self, nx, ny, threshold, threshold2=None, _bkg=None, _square=False,
         # if one mixes negative and positive weights, than the sum of the weights may
         # be zero (or close to zero) and the weighted average x and/or y positions 
         # are wrong
-        # vmin = np.min(spot)
-        # vmax = np.max(spot)
-        # if vmin < 0 and vmax > 0:
-        #     spot = spot - vmin
         if _cm_spot_zero_type == 'zero':
             spot.data[spot.data < 0] = 0
         else:
@@ -489,7 +485,8 @@ def centroid(self, nx, ny, threshold, threshold2=None, _bkg=None, _square=False,
                 spot = spot - vmin
         # I still don't like this, if we are putting an offset in the spot, I think the 
         # threshold should also be offset. I don't know.
-        # but also, It does not make much sense that we have negative pixel values
+        # but also, the image should not have have negative pixel values to start
+        # with
 
         # it can happen that a spot only have zero pixel intensity
         # we therefore, do not count these spots
