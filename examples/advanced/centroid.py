@@ -55,10 +55,11 @@ the centroid method,
             subtracted by _cm_bkg before calculating the center of masses.
             If _cm_bkg='auto', _cm_bkg will be defined so the average of the whole 
             image is zero. If _cm_bkg is None, no offsetting of the image is 
-            applied. Default is None. Note that _cm_bkg = 0 implies no 
+            applied. Note that _cm_bkg = 0 implies no 
             flooring before calculating center of mass (same as _cm_bkg=None). 
             Note that, center of mass calculation can yield less precise 
-            results if image is not floored and _cm_bkg >> n.
+            results if image is not floored and _cm_bkg >> n. For most cases, 
+            None is recommended (I think). Default is None.
         _cm_nx, _cm_ny (int): Use this to overwrite the number of neighbors when
             calculating the center of mass of a photon hit candidate, e.g., if 
             _cm_n=1, only first neighbors. If 'auto', 
