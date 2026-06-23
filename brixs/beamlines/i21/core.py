@@ -130,6 +130,10 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
         detector = None
         if "/entry/andor" in f:
             detector = 'andor'
+        elif "/entry/Polandor_V" in f:
+            detector = 'Polandor_V'
+        elif "/entry/Polandor_H" in f:
+            detector = 'Polandor_H'
         elif "/entry/maranax" in f:
             detector = 'maranax'
         else:
@@ -271,14 +275,14 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
             try:
                 if f'entry/{det}_i' in f:
                     name = list(f[f'entry/{det}_i'].keys())
-                    name.remove('{det}_i')
+                    name.remove(f'{det}_i')
                     name = name[0]
                     data[det_name[det]] = br.Spectrum(x=f[f'entry/{det}_i/{name}'][()], y=f[f'entry/{det}_i/{det}_i'][()])
             except:
                 pass
 
         # for scan y -2.9 3.1 0.1 diff1 fy2 draincurrent
-        if f'entry/diff1' in f:
+        if f'entry/diff1' in f or f'entry/fy2' in f or f'entry/draincurrent' in f:
             name = [item for item in list(f['entry/diff1'].keys()) if item not in dets][0]
             for det in dets:
                 try:
