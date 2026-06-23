@@ -223,7 +223,6 @@ def verify(folderpath, sbins, calib=None, norm=True, **kwargs):
     # Inverter o eixo Y no axes[0]
     axes[0].invert_yaxis()
     axes[2].invert_yaxis()
-    axes[4].invert_yaxis()
 
     # plot initial spectra (axes 1)
     pes1[0].integrated_rows_vs_y_centers(nrows=sbins).switch_xy().plot(ax=axes[1])

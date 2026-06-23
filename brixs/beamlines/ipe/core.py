@@ -213,6 +213,64 @@ h['exposure']         = 'entry/instrument/bluesky/metadata/exposure'
 
 h = _attrs['mesh']['bool']
 h['snake']            = 'entry/instrument/bluesky/metadata/snake'
+
+# %% ========================== ascan by hw metadata ============================ %% #
+_attrs['ascan_by_hw'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
+
+h = _attrs['ascan_by_hw']['ignore']
+h['modified_date']    = ''
+h['error']            = ''
+
+h = _attrs['ascan_by_hw']['string']
+h['motors']           = 'entry/instrument/bluesky/metadata/motors'
+h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
+h['start_time']       = 'entry/instrument/bluesky/metadata/start_time'
+h['end_time']         = 'entry/instrument/bluesky/metadata/end_time'
+
+
+h = _attrs['ascan_by_hw']['raw']
+h['duration']         = 'entry/instrument/bluesky/metadata/duration'
+h['start_x']          = 'entry/instrument/bluesky/metadata/start1'
+h['stop_x']           = 'entry/instrument/bluesky/metadata/stop1'
+h['step_x']           = 'entry/instrument/bluesky/metadata/step1'
+h['nstep_x']          = 'entry/instrument/bluesky/metadata/nstep1'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+h['exposure']         = 'entry/instrument/bluesky/metadata/exposure'
+
+h = _attrs['ascan_by_hw']['bool']
+
+# %% ========================== mesh by hw metadata ============================ %% #
+_attrs['mesh_by_hw'] = {'ignore': {}, 'raw':{}, 'string': {}, 'bool': {}}
+
+h = _attrs['mesh_by_hw']['ignore']
+h['modified_date']    = ''
+h['motors']           = ''
+h['error']            = ''
+
+h = _attrs['mesh_by_hw']['string']
+h['motors']           = 'entry/instrument/bluesky/metadata/motors'
+h['detectors']        = 'entry/instrument/bluesky/metadata/detectors'
+h['scan_type']        = 'entry/instrument/bluesky/metadata/scan_type'
+
+h = _attrs['mesh_by_hw']['raw']
+h['duration']         = 'entry/instrument/bluesky/metadata/duration'
+h['num_points']       = 'entry/instrument/bluesky/metadata/num_points'
+h['proposal']         = 'entry/instrument/bluesky/metadata/proposal'
+h['start_x']          = 'entry/instrument/bluesky/metadata/start1'
+h['stop_x']           = 'entry/instrument/bluesky/metadata/stop1'
+h['step_x']           = 'entry/instrument/bluesky/metadata/step1'
+h['nstep_x']          = 'entry/instrument/bluesky/metadata/nstep1'
+h['motor_x']          = 'entry/instrument/bluesky/metadata/motor1'
+h['start_y']          = 'entry/instrument/bluesky/metadata/start2'
+h['stop_y']           = 'entry/instrument/bluesky/metadata/stop2'
+h['step_y']           = 'entry/instrument/bluesky/metadata/step2'
+h['nstep_y']          = 'entry/instrument/bluesky/metadata/nstep2'
+h['motor_y']          = 'entry/instrument/bluesky/metadata/motor2'
+h['scan']             = 'entry/instrument/bluesky/metadata/scan'
+h['exposure']         = 'entry/instrument/bluesky/metadata/exposure'
+
+h = _attrs['mesh_by_hw']['bool']
 # %%
 
 # %% ========================= read (RIXS and XAS) ======================== %% #
@@ -432,8 +490,16 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             #################
             # get scan type #
             #################
-            scan_type = f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8")
-            plan_name = f['entry/instrument/bluesky/plan_name'][()].decode("utf-8")
+            if "entry/plan_name" in f:
+                scan_type = f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8")
+                plan_name = f['entry/instrument/bluesky/plan_name'][()].decode("utf-8")
+            elif "entry/instrument/bluesky/metadata/scan_type" in f:
+                if '_hw' in f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8"):
+                    scan_type = f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8")
+                    plan_name = f['entry/instrument/bluesky/metadata/scan_type'][()].decode("utf-8")
+                
+            else:
+                raise ValueError('not able to identify scan type. File corrupted')
             
             #########
             # attrs #
@@ -498,7 +564,7 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             #########
             # ascan #
             #########
-            if scan_type == 'ascan':
+            if scan_type == 'ascan' or scan_type == 'ascan_by_hw':
                 assert len(motors) == 1, f'number of motors ({len(motors)}) is not compatible with scan type (ascan)'
                 if 'main_motor' in metadata:
                     x = _motors[metadata['main_motor']]
@@ -513,24 +579,31 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
             # a2scan #
             ##########
             if scan_type == 'a2scan':
-                raise NotImplmentedError('read a2scan not implemented')
+                raise NotImplementedError('read a2scan not implemented')
 
             ##########
             # a3scan #
             ##########
             elif scan_type == 'a3scan':
-                raise NotImplmentedError('read a2scan not implemented')
+                raise NotImplementedError('read a3scan not implemented')
 
             ########
             # mesh #
             ########
-            elif scan_type == 'mesh':
+            elif scan_type == 'mesh' or scan_type == 'mesh_by_hw':
                 assert len(motors) == 2, f'number of motors ({len(motors)}) is not compatible with scan type (mesh)'
                 ss = br.Dummy()
                 # getting snaking attr
-                snake = metadata['snaking'].split('\n')[1:-1]
-                metadata['snake'] = [m[2:]=='true' for m in snake]
-                metadata['snaking'] = [m[2:]=='true' for m in snake]
+                if scan_type == 'mesh':
+                    snake = metadata['snaking'].split('\n')[1:-1]
+                    metadata['snake'] = [m[2:]=='true' for m in snake]
+                    metadata['snaking'] = [m[2:]=='true' for m in snake]
+                elif scan_type == 'mesh_by_hw':
+                    snake = [False, True]
+                    metadata['snake'] = snake
+                    metadata['snaking'] = snake
+                    metadata['motor_x'] = f"RIXS_{metadata['motor_x'].decode('utf-8').upper()}"
+                    metadata['motor_y'] = f"RIXS_{metadata['motor_y'].decode('utf-8').upper()}"
 
                 # find `x` motor points
                 afinal = np.linspace(metadata['start_x'], metadata['stop_x'], metadata['nstep_x'])
@@ -572,11 +645,9 @@ def read(fpath, verbose=True, start=0, stop=None, skip=[], curv=True):
                     key = motor + '_setpoint'
                     if key in data_group:
                         s.__setattr__('SETPOINT_' + motor, data_group[key][()])
-
                 for attr in metadata:
                     setattr(s, attr, metadata[attr])
-            ss.create_attr_from_spectra('detector', '_detectors')
-
+            ss = ss.create_attr_from_spectra('detector', '_detectors')
         return ss
 
     ###########
