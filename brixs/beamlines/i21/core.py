@@ -44,10 +44,17 @@ def get_metadata(scan, verbose=False, folderpath='auto', prefix='auto', filepath
     with h5py.File(Path(filepath), 'r', libver='latest', swmr=True) as f:
 
         # check if rixs
-        if "/entry/andor" in f or "/entry/maranax" in f:
-            exp = 'rixs'
+        if any(path in f for path in (
+            "/entry/andor",
+            "/entry/maranax",
+            "/entry/Polandor_V",
+            "/entry/Polandor_H",
+            "/entry/el_andor"
+        )):
+            exp = "rixs"
         else:
             exp = 'xas'
+
         
         # get metadata
         metadata = _get_metadata(f, exp=exp, verbose=verbose)
@@ -136,6 +143,8 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
             detector = 'Polandor_H'
         elif "/entry/maranax" in f:
             detector = 'maranax'
+        elif "/entry/el_andor" in f:
+            detector = 'el_andor_data'
         else:
             raise KeyError('Cannot find which rixs detector was used (Andor, MaranaX)')
 

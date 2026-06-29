@@ -27,6 +27,9 @@ T_setpoint, sample, round2, entry/instrument/lakeshore336/demand
 # andor
 count_time, andor, list_float, entry/instrument/andor/count_time
 
+# el_andor
+count_time, andor, list_float, entry/instrument/el_andor/count_time
+
 # maranax
 # count_time,          maranax, string, entry/instrument/maranax/count_time
 # readout_rate,        maranax, string, entry/instrument/maranax/maranax_settings/readout_rate
