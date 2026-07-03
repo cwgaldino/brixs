@@ -43,7 +43,8 @@ metadata = {'rixs': {'E': 'energy',
                      'sample_z': 'sz'}}   
 
 additional = {'rixs': {'TemperatureA': 'lak332A_rixs',
-                       'TemperatureB': 'lak332B_rixs'},
+                       'TemperatureB': 'lak332B_rixs',
+                       'i0': 'mir_rixs'},
               'xmcd': {}
               }
 # %%
