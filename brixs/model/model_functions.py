@@ -170,6 +170,28 @@ def voigt_fwhm(x, amp, c, w, m):
     return amp*(m*lorentz + (1-m)*gauss)
 
 
+def voigt_fwhm_second_derivative(x, amp, c, w, m):
+    """Second derivative of the pseudo-Voigt profile defined in voigt_fwhm().
+
+    :param x: x array
+    :param amp: Amplitude
+    :param c: Center
+    :param w: FWHM
+    :param m: Factor from 1 to 0 of the lorentzian amount
+    :return: :math:`y(x)`
+    """
+    d = x - c
+
+    # Lorentzian contribution
+    lorentz_dd = -8 * w**2 * (w**2 - 12*d**2) / (w**2 + 4*d**2)**3
+
+    # Gaussian contribution
+    a = 4 * np.log(2) / w**2
+    gauss_dd = np.exp(-a * d**2) * (4 * a**2 * d**2 - 2 * a)
+
+    return amp * (m * lorentz_dd + (1 - m) * gauss_dd)
+
+
 def voigt_area_fwhm(x, A, c, w, m):
     r"""Pseudo-voigt curve.
 
