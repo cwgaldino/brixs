@@ -5418,7 +5418,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 raise ValueError('cannot calculate shifts via `peak` because fitting functions are not imported\nPlease import fitting function via `import brixs.addons.fitting`')
             _result = self.fit_peak(limits=limits, **kwargs)
             popt = _result['popt']
-            values = np.array([_[1] for _ in popt])
+            values = np.array([_['c'] for _ in popt])
             values = -values + values[0]
         else:
             raise ValueError(f'mode=`{mode}` not valid. Valid modes: `cc`, `max`, `peak`')
