@@ -750,11 +750,19 @@ if ValueInTable(spectrum, spectra) then
         Grh_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Th_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
         Glv_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Tv_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
         Glh_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Th_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
+        Grr_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Tr_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
+        Grl_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Tl_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
+        Glr_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Tr_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
+        Gll_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Tl_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'DenseBorder', DenseBorder}})
     else
         Grv_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Tv_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
         Grh_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Th_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
         Glv_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Tv_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
         Glh_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Th_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
+        Grr_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Tr_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
+        Grl_ = G + CreateResonantSpectra(H_m, H_f, Tr_3p_4f, Tl_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
+        Glr_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Tr_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
+        Gll_ = G + CreateResonantSpectra(H_m, H_f, Tl_3p_4f, Tl_4f_3p, Psis_i, {{'Emin1', Emin1}, {'Emax1', Emax1}, {'NE1', NE1}, {'Gamma1', Gamma1}, {'Emin2', Emin2}, {'Emax2', Emax2}, {'NE2', NE2}, {'Gamma2', Gamma2}, {'restrictions1', CalculationRestrictions}, {'restrictions2', CalculationRestrictions}, {'DenseBorder', DenseBorder}})
     end
 
     Grv = 0
@@ -813,6 +821,62 @@ if ValueInTable(spectrum, spectra) then
     end
     Glh = -1 * Glh
 
+    Grr = 0
+    shift = 0
+    for i = 1, #Psis_i do
+        for j = 1, 1 do
+            Indexes = {}
+            for k = 1, NE1 + 1 do
+                table.insert(Indexes, k + shift)
+            end
+            Grr = Grr + Spectra.Element(Grr_, Indexes) * dZ[i]
+            shift = shift + NE1 + 1
+        end
+    end
+    Grr = -1 * Grr
+
+    Grl = 0
+    shift = 0
+    for i = 1, #Psis_i do
+        for j = 1, 1 do
+            Indexes = {}
+            for k = 1, NE1 + 1 do
+                table.insert(Indexes, k + shift)
+            end
+            Grl = Grl + Spectra.Element(Grl_, Indexes) * dZ[i]
+            shift = shift + NE1 + 1
+        end
+    end
+    Grl = -1 * Grl
+
+    Glr = 0
+    shift = 0
+    for i = 1, #Psis_i do
+        for j = 1, 1 do
+            Indexes = {}
+            for k = 1, NE1 + 1 do
+                table.insert(Indexes, k + shift)
+            end
+            Glr = Glr + Spectra.Element(Glr_, Indexes) * dZ[i]
+            shift = shift + NE1 + 1
+        end
+    end
+    Glr = -1 * Glr
+
+    Gll = 0
+    shift = 0
+    for i = 1, #Psis_i do
+        for j = 1, 1 do
+            Indexes = {}
+            for k = 1, NE1 + 1 do
+                table.insert(Indexes, k + shift)
+            end
+            Gll = Gll + Spectra.Element(Gll_, Indexes) * dZ[i]
+            shift = shift + NE1 + 1
+        end
+    end
+    Gll = -1 * Gll
+
     io.write('Here starts Grv spectrum:')
     print(Grv)
     io.write('Here ends Grv spectrum')
@@ -828,6 +892,22 @@ if ValueInTable(spectrum, spectra) then
     io.write('Here starts Glh spectrum:')
     print(Glh)
     io.write('Here ends Glh spectrum')
+
+    io.write('Here starts Grr spectrum:')
+    print(Grr)
+    io.write('Here ends Grr spectrum')
+
+    io.write('Here starts Grl spectrum:')
+    print(Grl)
+    io.write('Here ends Grl spectrum')
+
+    io.write('Here starts Glr spectrum:')
+    print(Glr)
+    io.write('Here ends Glr spectrum')
+
+    io.write('Here starts Gll spectrum:')
+    print(Gll)
+    io.write('Here ends Gll spectrum')
 end
 
 spectrum = 'Linear Dichroism'
