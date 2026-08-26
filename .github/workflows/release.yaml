@@ -1,45 +1,66 @@
 name: release
 
+# on:
+#   push:
+#     tags:
+#       - "[0-9]+.[0-9]+.[0-9]+"
+#       - "[0-9]+.[0-9]+.[0-9]+a[0-9]+"
+#       - "[0-9]+.[0-9]+.[0-9]+b[0-9]+"
+#       - "[0-9]+.[0-9]+.[0-9]+rc[0-9]+"
 on:
   push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+a[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+b[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+rc[0-9]+"
+    branches:
+      - main  # Triggers the action every time you push code to the main branch
+
 
 env:
   PACKAGE_NAME: "brixs"
   OWNER: "cwgaldino"
   # TAP_NAME: "<TAP_NAME>"
 
+# jobs:
+#   details:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       new_version: ${{ steps.release.outputs.new_version }}
+#       suffix: ${{ steps.release.outputs.suffix }}
+#       tag_name: ${{ steps.release.outputs.tag_name }}
+#     steps:
+#       - uses: actions/checkout@v2
+
+#       - name: Extract tag and Details
+#         id: release
+#         run: |
+#           if [ "${{ github.ref_type }}" = "tag" ]; then
+#             TAG_NAME=${GITHUB_REF#refs/tags/}
+#             NEW_VERSION=$(echo $TAG_NAME | awk -F'-' '{print $1}')
+#             SUFFIX=$(echo $TAG_NAME | grep -oP '[a-z]+[0-9]+' || echo "")
+#             echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+#             echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
+#             echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+#             echo "Version is $NEW_VERSION"
+#             echo "Suffix is $SUFFIX"
+#             echo "Tag name is $TAG_NAME"
+#           else
+#             echo "No tag found"
+#             exit 1
+#           fi
 jobs:
   details:
     runs-on: ubuntu-latest
     outputs:
-      new_version: ${{ steps.release.outputs.new_version }}
-      suffix: ${{ steps.release.outputs.suffix }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      new_version: ${{ steps.version.outputs.version }}
+      tag_name: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Extract tag and Details
-        id: release
+      - name: Extract version from pyproject.toml
+        id: version
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            TAG_NAME=${GITHUB_REF#refs/tags/}
-            NEW_VERSION=$(echo $TAG_NAME | awk -F'-' '{print $1}')
-            SUFFIX=$(echo $TAG_NAME | grep -oP '[a-z]+[0-9]+' || echo "")
-            echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-            echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
-            echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
-            echo "Version is $NEW_VERSION"
-            echo "Suffix is $SUFFIX"
-            echo "Tag name is $TAG_NAME"
-          else
-            echo "No tag found"
-            exit 1
-          fi
+          # Read the version line from pyproject.toml using grep and sed
+          VERSION=$(grep -E '^version *= *' pyproject.toml | head -n 1 | sed -E 's/version *= *"(.*)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Extracted Version: $VERSION"
 
   check_pypi:
     needs: details
@@ -142,6 +163,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create ${{ needs.details.outputs.tag_name }} dist/* --title ${{ needs.details.outputs.tag_name }} --generate-notes
+          # gh release create ${{ needs.details.outputs.tag_name }} dist/* --title ${{ needs.details.outputs.tag_name }} --generate-notes --clobber
 
   # bump_homebrew_formula:
   #   name: Dispatch event to Repo B
