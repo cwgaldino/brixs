@@ -240,6 +240,8 @@ import brixs as br
 # --------------------------------- Settings ------------------------------ %% #
 folderpath = ''
 verbose    = True
+search_on  = True
+save_on    = True
 kwargs     = ''
 _search_string = None
 
@@ -337,76 +339,79 @@ def search(kwargs=None, folderpath=None):
     Returns 
         False, or spectrum/spectra if data is found
     """
-    ##############
-    # folderpath #
-    ##############
-    if folderpath is None:
-        folderpath = br.finder.folderpath
-    folderpath = Path(folderpath)
-    assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
+    if search_on:
+        ##############
+        # folderpath #
+        ##############
+        if folderpath is None:
+            folderpath = br.finder.folderpath
+        folderpath = Path(folderpath)
+        assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
 
-    ##########
-    # kwargs #
-    ##########
-    if kwargs is None:
-        kwargs = br.finder.kwargs
-        if kwargs == '':
-            raise ValueError('kwargs must be defined, e.g., `br.finder.kwargs = vars()`')
-    assert isinstance(kwargs, dict), f'kwargs must be a dict, not type {type(kwargs)}'
+        ##########
+        # kwargs #
+        ##########
+        if kwargs is None:
+            kwargs = br.finder.kwargs
+            if kwargs == '':
+                raise ValueError('kwargs must be defined, e.g., `br.finder.kwargs = vars()`')
+        assert isinstance(kwargs, dict), f'kwargs must be a dict, not type {type(kwargs)}'
 
-    ##################################
-    # get vars in alphabetical order #
-    ##################################
-    names = np.sort(list(kwargs.keys()))
+        ##################################
+        # get vars in alphabetical order #
+        ##################################
+        names = np.sort(list(kwargs.keys()))
 
-    ########################
-    # create search string #
-    ########################
-    search_string = ''
-    for name in names:
-        search_string += name + str(kwargs[name]).replace('\n', '') + '_'
-                         
-    ######################
-    # save search_string #
-    ######################
-    br.finder._search_string = search_string
+        ########################
+        # create search string #
+        ########################
+        search_string = ''
+        for name in names:
+            search_string += name + str(kwargs[name]).replace('\n', '') + '_'
+                            
+        ######################
+        # save search_string #
+        ######################
+        br.finder._search_string = search_string
 
-    #################
-    # search string #
-    #################
-    search_result = _search(folderpath=folderpath)
+        #################
+        # search string #
+        #################
+        search_result = _search(folderpath=folderpath)
 
-    ###########################
-    # load obj or return None #
-    ###########################
-    if isinstance(search_result, Path):
-        if verbose:
-            print(f'Loading data already processed: {search_result.name}')
+        ###########################
+        # load obj or return None #
+        ###########################
+        if isinstance(search_result, Path):
+            if verbose:
+                print(f'Loading data already processed: {search_result.name}')
 
-        if 'Spectrum' in search_result.name:
-            return br.Spectrum().load(filepath=folderpath/search_result)
-        elif 'PhotonEvents' in search_result.name:
-            return br.PhotonEvents().load(filepath=folderpath/search_result)
-        elif 'Spectra' in search_result.name:
-            split = search_result.name.split('_')
-            start = int(split[2])
-            stop  = int(split[3])
-            ss = br.Spectra()
-            for i in range(start, stop+1):
-                filename = f'finderfile_Spectra_{i}_{stop}'
-                ss.append(br.Spectrum().load(filepath=folderpath/filename))
-            
-            if hasattr(ss[0], 'spectra_attrs_123_finder_copy'):
-                for _attr in ss[0].spectra_attrs_123_finder_copy:
-                    ss.__setattr__(_attr, ss[0].spectra_attrs_123_finder_copy[_attr])
-            del ss[0].spectra_attrs_123_finder_copy
+            if 'Spectrum' in search_result.name:
+                return br.Spectrum().load(filepath=folderpath/search_result)
+            elif 'PhotonEvents' in search_result.name:
+                return br.PhotonEvents().load(filepath=folderpath/search_result)
+            elif 'Spectra' in search_result.name:
+                split = search_result.name.split('_')
+                start = int(split[2])
+                stop  = int(split[3])
+                ss = br.Spectra()
+                for i in range(start, stop+1):
+                    filename = f'finderfile_Spectra_{i}_{stop}'
+                    ss.append(br.Spectrum().load(filepath=folderpath/filename))
+                
+                if hasattr(ss[0], 'spectra_attrs_123_finder_copy'):
+                    for _attr in ss[0].spectra_attrs_123_finder_copy:
+                        ss.__setattr__(_attr, ss[0].spectra_attrs_123_finder_copy[_attr])
+                del ss[0].spectra_attrs_123_finder_copy
 
-            return ss
-        elif 'Image' in search_result.name:
-            im = br.Image().loadnpy(filepath=folderpath/search_result, allow_pickle=False)
-            return im.copy_attrs_from(br.Spectrum().load(filepath=folderpath/(str(search_result)+'_metadata')))
+                return ss
+            elif 'Image' in search_result.name:
+                im = br.Image().loadnpy(filepath=folderpath/search_result, allow_pickle=False)
+                return im.copy_attrs_from(br.Spectrum().load(filepath=folderpath/(str(search_result)+'_metadata')))
+            else:
+                pass
         else:
-            pass
+            return False
     else:
         return False
 
@@ -424,90 +429,91 @@ def save(obj, folderpath=None):
     Returns:
         None
     """
-    ##############
-    # folderpath #
-    ##############
-    if folderpath is None:
-        folderpath = br.finder.folderpath
-    folderpath = Path(folderpath)
-    assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
+    if save_on:
+        ##############
+        # folderpath #
+        ##############
+        if folderpath is None:
+            folderpath = br.finder.folderpath
+        folderpath = Path(folderpath)
+        assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
 
-    #####################
-    # check finder file #
-    #####################
-    if (folderpath/'finder.txt').exists() == False:
-        f = open(folderpath/'finder.txt', 'w')
-        f.close()
+        #####################
+        # check finder file #
+        #####################
+        if (folderpath/'finder.txt').exists() == False:
+            f = open(folderpath/'finder.txt', 'w')
+            f.close()
 
-    #################
-    # check counter #
-    #################
-    if (folderpath/'_counter.txt').exists() == False:
+        #################
+        # check counter #
+        #################
+        if (folderpath/'_counter.txt').exists() == False:
+            f = open(folderpath/'_counter.txt', 'w')
+            f.write('-1')
+            f.close()
+
+        ###################
+        # get next number #
+        ###################
+        f = open(folderpath/'_counter.txt', 'r')
+        next_file_number = f.read()
+        f.close() 
+        next_file_number = int(next_file_number) + 1
+
+        ###############
+        # save object #
+        ###############
+        if isinstance(obj, br.Spectrum):
+            filename = f'finderfile_Spectrum_{next_file_number}'
+            obj.save(folderpath/filename)
+        elif isinstance(obj, br.PhotonEvents):
+            filename = f'finderfile_PhotonEvents_{next_file_number}'
+            obj.save(folderpath/filename)
+        elif isinstance(obj, br.Spectra):
+            filename = f'finderfile_Spectra_{next_file_number}_{next_file_number+len(obj)-1}'
+            if len(obj) > 0:
+                if hasattr(obj[0], 'spectra_attrs_123_finder_copy') == False:
+                    _attrsdict = {}
+                    for _attr in obj.get_attrs():
+                        _attrsdict[_attr] = obj.__getattribute__(_attr)
+                    obj[0].spectra_attrs_123_finder_copy = _attrsdict
+                obj[0].save(filepath=folderpath/filename)
+                del obj[0].spectra_attrs_123_finder_copy
+
+            start = next_file_number
+            for i, _s in enumerate(obj[1:]):
+                next_file_number += 1
+                _filename = f'finderfile_Spectra_{next_file_number}_{start+len(obj)-1}'
+                _s.save(filepath=folderpath/_filename)
+        elif isinstance(obj, br.Image):
+            filename = f'finderfile_Image_{next_file_number}.npy'
+            obj.savenpy(filepath=folderpath/filename, allow_pickle=False)
+            br.Spectrum(y=[1,2,3]).copy_attrs_from(obj).save(folderpath/f'finderfile_Image_{next_file_number}.npy_metadata')
+        else:
+            filename = f'finderfile_Generic_{next_file_number}'
+            obj.save(folderpath/filename)
+
+        ###########################################
+        # save string and filepath to finder file #
+        ###########################################
+        f = open(folderpath/'finder.txt', 'a')
+        if br.finder._search_string is None:
+            raise ValueError('It seems like `search string`is None. Which means that probably br.finder.kwargs has not been set correctly, or finder is being called multiple times inside the same function [See finder.py docstring for quick example on how to fix that]')
+        f.write(br.finder._search_string + '\n' + str(filename) + '\n')
+        f.close() 
+
+        ################
+        # tick counter #
+        ################
         f = open(folderpath/'_counter.txt', 'w')
-        f.write('-1')
-        f.close()
+        f.write(str(next_file_number))
+        f.close() 
 
-    ###################
-    # get next number #
-    ###################
-    f = open(folderpath/'_counter.txt', 'r')
-    next_file_number = f.read()
-    f.close() 
-    next_file_number = int(next_file_number) + 1
-
-    ###############
-    # save object #
-    ###############
-    if isinstance(obj, br.Spectrum):
-        filename = f'finderfile_Spectrum_{next_file_number}'
-        obj.save(folderpath/filename)
-    elif isinstance(obj, br.PhotonEvents):
-        filename = f'finderfile_PhotonEvents_{next_file_number}'
-        obj.save(folderpath/filename)
-    elif isinstance(obj, br.Spectra):
-        filename = f'finderfile_Spectra_{next_file_number}_{next_file_number+len(obj)-1}'
-        if len(obj) > 0:
-            if hasattr(obj[0], 'spectra_attrs_123_finder_copy') == False:
-                _attrsdict = {}
-                for _attr in obj.get_attrs():
-                    _attrsdict[_attr] = obj.__getattribute__(_attr)
-                obj[0].spectra_attrs_123_finder_copy = _attrsdict
-            obj[0].save(filepath=folderpath/filename)
-            del obj[0].spectra_attrs_123_finder_copy
-
-        start = next_file_number
-        for i, _s in enumerate(obj[1:]):
-            next_file_number += 1
-            _filename = f'finderfile_Spectra_{next_file_number}_{start+len(obj)-1}'
-            _s.save(filepath=folderpath/_filename)
-    elif isinstance(obj, br.Image):
-        filename = f'finderfile_Image_{next_file_number}.npy'
-        obj.savenpy(filepath=folderpath/filename, allow_pickle=False)
-        br.Spectrum(y=[1,2,3]).copy_attrs_from(obj).save(folderpath/f'finderfile_Image_{next_file_number}.npy_metadata')
-    else:
-        filename = f'finderfile_Generic_{next_file_number}'
-        obj.save(folderpath/filename)
-
-    ###########################################
-    # save string and filepath to finder file #
-    ###########################################
-    f = open(folderpath/'finder.txt', 'a')
-    if br.finder._search_string is None:
-        raise ValueError('It seems like `search string`is None. Which means that probably br.finder.kwargs has not been set correctly, or finder is being called multiple times inside the same function [See finder.py docstring for quick example on how to fix that]')
-    f.write(br.finder._search_string + '\n' + str(filename) + '\n')
-    f.close() 
-
-    ################
-    # tick counter #
-    ################
-    f = open(folderpath/'_counter.txt', 'w')
-    f.write(str(next_file_number))
-    f.close() 
-
-    #######################
-    # reset search string #
-    #######################
-    br.finder._search_string = None
+        #######################
+        # reset search string #
+        #######################
+        br.finder._search_string = None
 
     return
 # %%
