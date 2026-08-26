@@ -25,37 +25,44 @@ Author: Carlos Galdino
 Last updated 08/09/2025
 """
 
-# %% 1) import brixs related modules
+# %% ===================================================================== %% #
+# %% ================== 1) import brixs related modules ================== %% #
+# %% ===================================================================== %% #
 import brixs as br                   # core brixs package (optional)
 import brixs.addons.broaden          # used for broadening the calculated spectra
 import brixs.multiplet as multiplet  # multiplet calculation module
 # %%
 
-# %% 2) tell multiplet where the Quanty executable is
-multiplet.settings.QUANTY_FILEPATH = r'C:\Users\galdin_c\github\quanty\quanty_win\QuantyWin64.exe'
+# %% ===================================================================== %% #
+# %%========= 2) tell multiplet where the Quanty executable is %%========= %% #
+# %% ===================================================================== %% #
+# multiplet.settings.QUANTY_FILEPATH = r'C:\Users\galdin_c\github\quanty\quanty_win\QuantyWin64.exe'
+multiplet.settings.QUANTY_FILEPATH = r'/Users/oax12540/github/quanty/2024Spring/QuantyMac'
 # %%
 
-# %% 3) initialize a calculation object (`q`)
+# %% ===================================================================== %% #
+# %% ============= 3) initialize a calculation object (`q`) ============== %% #
+# %% ===================================================================== %% #
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 
-# these below are the minimum parameters necessary to initialize a calculation object
+# these are the minimum parameters necessary to initialize a calculation object:
 # element, charge, symmetry, experiment, edge
+# primary parameters cannot be changed once the `q` is created
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
-# but you can also initialize it with the default values
+
+# you can also initialize it with the default values
 q = multiplet.Calculation()
 print(q.element, q.charge, q.symmetry, q.experiment, q.edge)
+
 # do not be afraid of making mistakes when initializing a calculation object
 # Error messages are designed to inform available options
 # for instance, if one does not know what edges are available for an experiment
 # one can write nonsense and the error message should guide you
 # see below the error message for this calculation
 # q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='asdlkfjldakj;sdlkj')  # this line yields an error
-# these 5 parameters (element, charge, symmetry, experiment, edge) are called
-# primary parameters and cannot be changed once the `q` is created and a new
-# calculation object must be created
-# see below the error message when trying to change the element for `q`
-# q.element = 'Ni'  # this line gives an error
+
 # other parameters can also be set on initialization. Below is the full list
+# (A description of all parameters can be found in another example)
 q = multiplet.Calculation(element='Cu', 
                           charge='2+', 
                           symmetry='D4h', 
@@ -77,19 +84,55 @@ q = multiplet.Calculation(element='Cu',
                           xNPoints=None, 
                           gamma1=None, 
                           gamma2=None)
-# however, these are not the only calculation parameters available
+# These are not the only calculation parameters available
+# The full list of parameters available can be found by 
+print(q.get_attrs())
 # %%
 
-# %% 4) set up calculation parameters
 # once the calculation object is initialized, one can tweak the calculation 
 # parameters. A description of all parameters can be found in another example
-q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 q.E = 932.7
 q.gamma1 = 0.1
+
+# some parameters are read only
+# For instance, the pre-defined resonance energy for a given edge
+print(q.resonance)
 # %%
 
-# %% 5) run calculation
-s, out = q.run()
-# `s` can be a br.Spectrum or a dictionary depending on the type of calculation
+# %% ===================================================================== %% #
+# %% ====================== 4) run calculation ========================= %% #
+# %% ===================================================================== %% #
+ss, out = q.run()
+# `ss` can be a br.Spectrum or a dictionary depending on the type of calculation
 # and `out` is the output text
-# since `s` can be a br.Spectrum, one can save it to a file using s.save(filepath)
+# since `ss` can be a br.Spectrum, one can save it to a file using ss.save(filepath)
+
+
+# %% ===================================================================== %% #
+# %% ==================== 5) Check available elements ==================== %% #
+# %% ===================================================================== %% #
+# You can check the settings, if you want to check all the elemets available
+print(multiplet.settings.ELEMENTS)
+
+# for each element, you can check the available charges, symmetries, experiments, and edges
+element = 'V'
+print(multiplet.settings.PARAMETERS['elements'][element]['charges'].keys())
+
+charge = '3+'
+print(multiplet.settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'].keys())
+
+symmetry = 'D4h'
+print(multiplet.settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'][symmetry]['experiments'].keys())
+
+experiment = 'RIXS'
+print(multiplet.settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'][symmetry]['experiments'][experiment]['edges'].keys())
+
+edge = 'L2,3-M4,5 (2p3d)'
+print(multiplet.settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'][symmetry]['experiments'][experiment]['edges'][edge].keys())
+
+# one can check the pre-defined resonance energy for a given edge
+print(multiplet.settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'][symmetry]['experiments'][experiment]['edges'][edge]['axes'][0][4])
+# however, note that checking these values (like the resonance energy) is not 
+# necessary since the calculation object will automatically retrieve them when 
+# the calculation is initialized.
+# %%

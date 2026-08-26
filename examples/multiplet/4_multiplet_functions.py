@@ -13,12 +13,12 @@ import numpy as np
 
 # %% ============================ brixs imports =========================== %% #
 import brixs as br
-import brixs.addons.broaden
 import brixs.multiplet as multiplet
 
 # %% ============================== settings ============================= %% #
-# multiplets
-multiplet.settings.QUANTY_FILEPATH = r'C:\Users\galdin_c\github\quanty\quanty_win\QuantyWin64.exe'
+# multiplet
+# multiplet.settings.QUANTY_FILEPATH = r'C:\Users\galdin_c\github\quanty\quanty_win\QuantyWin64.exe'
+multiplet.settings.QUANTY_FILEPATH = r'/Users/oax12540/github/quanty/2024Spring/QuantyMac'
 
 # matplotlib (optional)
 get_ipython().run_line_magic('matplotlib', 'qt5')
@@ -28,9 +28,8 @@ plt.ion()
 # %  ===================================================================== %% #
 # %  ================================ Basics ============================= %% #
 # %% ===================================================================== %% #
-
-# Initialization
-q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='XAS', edge='L2,3 (2p)')
+# initialization
+q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 
 # experimental geometry
 q.plot_geometry()
@@ -43,29 +42,14 @@ q.get_methods()
 
 # get parameters in a dictionary
 par = q.get_parameters()
-# del par['initial']
-# del par['geometry']
-# del par['experiment']
-# par.keys()
-# import json
-# filepath = Path('test.par')
-# pretty_print = True
-# with open(str(filepath), 'w') as file:
-#     if pretty_print:
-#         file.write(json.dumps(par, indent=4, sort_keys=False))
-#     else:
-#         file.write(json.dumps(par))
-
 
 # [EXPERIMENTAL] save/load parameters to a file
 # thise functions are a little finicky because it used json package
 # and this package can raise errors if parameters are not formatted right
 # for example, it will raise an error if parameters is saved as a type np.int32
-# however, it should be fine if one uses only "regular" float's and int's
-# q.save_parameters('test.par')
-# q2 = multiplet.load_calculation('test.par')
-# for now, I will leave them commented out until I ran more tests. However, they
-# should work fine and can be used.
+# however, it should be fine
+q.save_parameters('test.par')
+q2 = multiplet.load_calculation('test.par')
 
 # lua template
 print(q.template)
@@ -83,13 +67,25 @@ q.save_lua_script('test.lua')
 out = multiplet.quanty('test.lua')
 
 # run calculation
-s, out = q.run(update=True)
+s, out = q.run()
 print(out)
 
-# calculation parameters are saved as attrs
+# calculation parameters are stored inside the Spectrum object as attrs
 s.get_attrs()
 s.initial
 
 # plot calculated spectrum
 plt.figure()
 s.plot()
+
+# if more than one spectrum is created during the calculation, q.run() returns
+# a dictionary
+q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
+q.polarization = 'linear'
+data, out = q.run()
+print(data.keys())
+
+br.figure()
+data['vv'].plot()
+data['hh'].plot()
+print(data['vv'].get_attrs())

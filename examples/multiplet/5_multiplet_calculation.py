@@ -16,8 +16,9 @@ import brixs.addons.broaden
 import brixs.multiplet as multiplet
 
 # %% ============================== settings ============================= %% #
-# multiplets
-multiplet.settings.QUANTY_FILEPATH = r'C:\Users\galdin_c\github\quanty\quanty_win\QuantyWin64.exe'
+# multiplet
+# multiplet.settings.QUANTY_FILEPATH = r'C:\Users\galdin_c\github\quanty\quanty_win\QuantyWin64.exe'
+multiplet.settings.QUANTY_FILEPATH = r'/Users/oax12540/github/quanty/2024Spring/QuantyMac'
 
 # matplotlib (optional)
 get_ipython().run_line_magic('matplotlib', 'qt5')
@@ -146,7 +147,6 @@ br.labels.xas()
 # %  ===================================================================== %% #
 # %  ====================== RIXS Linear polarization ===================== %% #
 # %% ===================================================================== %% #
-
 # Initialization
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 q.polarization = 'linear'
@@ -191,7 +191,6 @@ br.labels.xas()
 # %  ===================================================================== %% #
 # %  ==== RIXS Energy map via internal function (faster, recommended) ==== %% #
 # %% ===================================================================== %% #
-
 # %% Initialization
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 q.polarization = 'isotropic'
@@ -270,7 +269,6 @@ ss4 = im4.get_columns(max_number_of_columns=im3.shape[1])
 # %  ===================================================================== %% #
 # %  ================ RIXS Energy map by looping energies ================ %% #
 # %% ===================================================================== %% #
-
 # %% Initialization
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 q.polarization = 'isotropic'
