@@ -88,6 +88,24 @@ def is_perpendicular(vector1, vector2, epsilon=10e-14):
         return False
     return True
 
+def is_vector(vector, lenght=3):
+    """returns True if object is a numeric iterable with a certain number of components
+
+    Args:
+        vector (array-like): Object containing exactly three numeric values.
+        lenght (int, optional): Number of expected components. Default is 3.
+
+    Returns:
+        Bool
+    """
+    try: 
+        vector = np.asarray(vector, dtype=float)
+        if len(vector) == lenght: 
+            return True
+    except (TypeError, ValueError) as error:
+        return False
+    return False
+
 def normalize_vector(vector):
     """Returns normalize vector to 1"""
     if np.linalg.norm(vector) != 1:
@@ -97,11 +115,32 @@ def normalize_vector(vector):
 
 def angle_between_vectors(vector1, vector2):
     """Returns the angle between two vectors in degrees"""
-    vector1 = normalize(vector1)
-    vector2 = normalize(vector2)
+    vector1 = normalize_vector(vector1)
+    vector2 = normalize_vector(vector2)
     return np.degrees(np.arccos(np.dot(vector1, vector2)))
 
+def perpendicular_basis(vector):
+    """Returns two unit vectors u, v perpendicular to a vector.
 
+    Two mutually perpendicular unit vectors satisfying
+        u dot vector = 0
+        v dot vector = 0
+        u dot v = 0
+
+    Returns:
+        u, v
+    """
+    direction = normalize_vector(vector)
+
+    # Select the Cartesian axis least parallel to the direction.
+    # This avoids an almost-zero cross product.
+    reference_axes = np.eye(3)
+    reference = reference_axes[np.argmin(np.abs(reference_axes @ direction))]
+
+    u = normalize_vector(np.cross(direction, reference))
+    v = normalize_vector(np.cross(direction, u))
+
+    return u, v
 # %% =============================== drawing ============================= %% #
 def draw_octahedron(ax, center=(0, 0, 0), x=(1, 0, 0), y=(0, 1, 0), z=(0, 0, 1), color='blue'):
     """Draw octahedron in a axes"""
