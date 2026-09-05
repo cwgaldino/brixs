@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Use finder to avoid running functions multiple types with same input parameters
+"""Use finder.py to avoid running functions multiple types with same input parameters.
 
 Let's say you have a function processing_function(a, b, c) that returns a 
 br.Spectrum type based on parameters `a`, `b`, and `c`. 
@@ -14,24 +14,10 @@ parameters. It will then save the spectrum somewhere. If you try to run
 processing_function(a, b, c) with the same parameters set, it will load and
 return the already calculated spectrum. 
 
-
-#########
-# NOTES #
-#########
-As for right now, finder does not work with br.Image() type, but implementation 
-should be straight-forward.
-
-Spectra is saved in multiple files (one for each spectrum). Therefore, metadata
-from the spectra object itself is not saved (only metadata for each spectrum).
-
-
-
 #########
 # Usage #
 #########
-
 There are two ways to user the finder functionality:
-
 
 1) via decorator
 
@@ -44,8 +30,8 @@ There are two ways to user the finder functionality:
 >>>    s = <does something with a, b and c and returns s>
 >>>    return s
 
-Using finder via decorator will work in most simple cases. For more complex implementations
-one needs to use method 2. See below.
+Using finder.py via decorator will work in most simple cases. For more complex 
+implementations one needs to use method 2. See below.
     
 2) manually setting up the finder function
 
@@ -108,7 +94,7 @@ the function as they need to be included manually
 >>>    return s
 
 
-2. watch out for function that change dicts or lists inside the function
+2. watch out for functions that change dicts or lists inside the function
 
 >>> def processing_function(a, b):
 >>>
@@ -169,12 +155,12 @@ the function as they need to be included manually
 >>>     
 >>>     return s
 
-because when you run process2(), the function br.finder.search() will set up the 
+when you run process2(), the function br.finder.search() will set up the 
 variable br.finder._search_string. However, when you run process1(), _search_string 
 will be modified by the br.finder.search() inside process1(). This way, the finder
 will work well for process1(), but at the end of process1() it will save the file
 and set br.finder._search_string back to None. There will be an error when you 
-try to run br.finder.save() in process2() because the search_string is not existing
+try to run br.finder.save() in process2() because the search_string does not exist
 anymore. To fix this, you have to manually save the search string obtained in 
 process2() and again manually feed it to br.finder.save() in process2(). See below
 
@@ -195,8 +181,10 @@ process2() and again manually feed it to br.finder.save() in process2(). See bel
 >>>     return s
 
 Note that if finder is called explicitally more than once inside a function,
-than one must not use vars() in the second call, as vars() may get variables 
-that are not desired for the finder search. 
+than one must be careful to use vars() in the second call, as vars() may get variables 
+that are not desired for the finder search. In the example below, we have to 
+manually delete the _search_string from the kwargs dictionary that was created 
+by varrs() right before the second call to br.finder.search().
 
 >>> def process2(a, b, c, d):
 >>>
@@ -217,14 +205,6 @@ that are not desired for the finder search.
 >>>     br.finder.save(s)
 >>>    
 >>>     return s
-
-###################
-# Developers note #
-###################
-1. maybe we can make a better way to get the last file number in function _save().
-I am thinking about using a variable as a counter. Finder would have the check 
-the number of files only once when finder is restarted or when folderpath changes.
-
 """
 
 # %% ------------------------- Standard Imports --------------------------- %% #
