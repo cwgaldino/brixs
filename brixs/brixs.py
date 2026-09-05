@@ -2273,6 +2273,58 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         
         return s
 
+    def expand(self, vmin=None, vmax=None, step=None, value=0):
+        """Expands the spectrum range by padding it with constant values.
+
+        If `step` is not provided, the method attempts to use the spectrum's
+        intrinsic step size. If the spectrum is not uniformly spaced, the mean
+        spacing between consecutive x values is used.
+
+        Args:
+            value (float, optional): Intensity assigned to the newly created points. Default is 0.
+            vmin (float, optional): lower limit of the expanded spectrum. If `None`, no
+                expansion is performed on the lower side.
+            vmax (float, optional): upper limit of the expanded spectrum. If `None`, no
+                expansion is performed on the upper side.
+            step (float, optional): Spacing between generated x values. If `None`, the method uses
+                `self.step` when available, otherwise the mean spacing of
+                `self.x`.
+
+        Returns:
+            Spectrum: A new spectrum with the requested x-range expansion
+        """
+        if step is None:
+            try:
+                self.check_step()
+                step = self.step
+            except ValueError:
+                step = np.mean(np.diff(self.x))
+
+        if vmax is not None:
+            if vmax <= max(self.x):
+                vmax = None
+        if vmin is not None:
+            if vmin >= min(self.x):
+                vmin = None
+
+        if vmin is None and vmax is None:
+            return self.copy()
+        elif vmin is None:
+            x = np.arange(max(self.x) + step, vmax + step/10, step)
+            s = Spectrum(x=x, y=np.zeros(len(x))+value)
+            return Spectra([self, s]).concatenate()
+        elif vmax is None:
+            x = np.arange(min(self.x) - step, vmin - step/10, -step)[::-1]
+            s = Spectrum(x=x, y=np.zeros(len(x))+value)
+            return Spectra([s, self]).concatenate()
+        else:
+            x2 = np.arange(max(self.x) + step, vmax + step/10, step)
+            s2 = Spectrum(x=x2, y=np.zeros(len(x2))+value)
+        
+            x1 = np.arange(min(self.x) - step, vmin - step/10, -step)[::-1]
+            s1 = Spectrum(x=x1, y=np.zeros(len(x1))+value)
+            return Spectra([s1, self, s2]).concatenate()
+    
     ########################
     # calculation and info #
     ########################
@@ -2452,7 +2504,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         raise NotImplementedError('not implemented yet')
 
-    def polyfit(self, deg, limits=None):
+    def polyfit(self, deg, limits=None, **kwargs):
         """Fit data with a polynomial. Wrapper for `numpy.polyfit()`_.
 
         Usage:
@@ -2471,7 +2523,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-        
+            **kwargs are passed to np.polyfit() function.
+
         Returns:
             dictionary {fit, popt, R2, f(x)}
 
@@ -2492,7 +2545,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         y = s.y
 
         # fit
-        popt  = np.polyfit(x, y, deg=deg)
+        popt  = np.polyfit(x, y, deg=deg, **kwargs)
         model = lambda x: np.polyval(popt, x)
         R2 =  1 - (sum((self.y-model(self.x))**2)/sum((self.y-np.mean(self.y))**2))
     
@@ -5107,6 +5160,28 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                         ss.__setattr__(attr, ss.__getattribute__(attr).append(self.__getattribute__(attr)[i]))
         return ss
 
+
+    def expand(self, vmin=None, vmax=None, step=None, value=0):
+        """Return a copy of the spectra collection with all spectra expanded.
+
+        Args:
+            value (float, optional): Y-value assigned to the newly inserted points.
+                Default is 0.
+            vmin (float, optional): Minimum x-value of the expanded spectra. If ``None``, the
+                lower limit is left unchanged.
+            vmax (float, optional): Maximum x-value of the expanded spectra. If ``None``, the
+                upper limit is left unchanged.
+            step (float, optional): Step size used when generating new x-values. If ``None``,
+                the step size is inferred by :meth:`Spectrum.expand`.
+
+        Returns:
+            Spectra: A new spectra collection containing the expanded spectra.
+        """
+        ss = self.copy()
+        for i, s in enumerate(ss):
+            ss[i] = s.expand(value=value, vmin=vmin, vmax=vmax, step=step)
+        return ss
+
     ########################
     # calculation and info #
     ########################
@@ -5839,7 +5914,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         xas = Spectrum(x=x_values, y=self.calculate_y_average())
         return xas
 
-    def polyfit(self, deg, limits=None):
+    def polyfit(self, deg, limits=None, **kwargs):
         """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
 
         Args:
@@ -5851,7 +5926,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 inclusive. Use `x_start = None` or `x_stop = None` to indicate 
                 the minimum or maximum x value of the data, respectively. If 
                 limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
-         
+            **kwargs are passed to np.polyfit() function.
+
         Returns:
             dictionary {fit, popt, R2, f(x)}
 
@@ -5872,7 +5948,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         fit   = [0]*len(self)
         R2    = [0]*len(self)
         for i in range(len(self)):
-            _result = self[i].polyfit(deg=deg, limits=limits)
+            _result = self[i].polyfit(deg=deg, limits=limits, **kwargs)
             fit[i]   = _result['fit']
             popt[i]  = _result['popt']
             model[i] = _result['model']
@@ -7940,7 +8016,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##############
         s = Spectrum(x=self.x_centers)
         try:
-            s.check_step()
+            s.check_step(max_error=max_error)
         except ValueError:
             raise ValueError(f"Step in the x centers seems not to be uniform. Set im.x_centers = None or change im.x_centers")
         self._x_step = s.step
@@ -7983,7 +8059,7 @@ class Image(_BrixsObject, metaclass=_Meta):
 
         s = Spectrum(x=self.y_centers)
         try:
-            s.check_step()
+            s.check_step(max_error=max_error)
         except ValueError:
             raise ValueError(f"Step in the y centers seems not to be uniform. Set im.y_centers = None or change im.y_centers")
         self._y_step = s.step
@@ -8204,7 +8280,7 @@ class Image(_BrixsObject, metaclass=_Meta):
 
         return im
 
-    def set_horizontal_shift(self, value):
+    def set_horizontal_shift(self, value, expand=False, fill_pixel_value=0):
         """Roll pixels rows left and right in terms of x centers.
 
         Note:
@@ -8213,16 +8289,27 @@ class Image(_BrixsObject, metaclass=_Meta):
              last position are re-introduced at the other side.
 
         Args:
-            value (number or list): shift value in terms of x center by which the data are 
-                shifted. If list, then it must be of the same size as the number of
-                 rows. First element will be assigned to the first row (top to 
-                 bottom) and so on. 
+            value (number or list): Shift value in units of ``x_centers``.
+                If a single number is provided, the same shift is
+                applied to all image rows. If a list is provided,
+                its length must match the number of image rows. Each
+                element specifies the horizontal shift applied to the
+                corresponding row.
+            expand (bool, optional): If ``False`` (default), rows are 
+                shifted by rolling
+                pixels within the existing image boundaries. Pixels that
+                move beyond the left or right edge are wrapped around
+                and reintroduced on the opposite side. If ``True``, the image 
+                is first expanded along the
+                x-axis so that all requested shifts can be accommodated
+                without wrap-around. Newly created pixels are filled
+                with fill_pixel_value.
+            fill_pixel_value (number, optional): only used if expand=True.
+                If image needs to be expanded (columns or rows added), expand_pixel_value 
+                is the value of these new added pixels. Default is 0.
 
         Returns:
             :py:class:`Image`
-        
-        See Also:
-            :py:func:`Image.set_horizontal_roll`, :py:func:`Image.set_vertical_roll`, :py:func:`Image.set_vertical_shift`
         """
         ###################################
         # asserting validity of the input #
@@ -8242,44 +8329,73 @@ class Image(_BrixsObject, metaclass=_Meta):
             value = [value]*len(centers)
         assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
 
+        #############
+        # net shift #
+        #############
+        ref_shift = value[0] 
+        value = [float(k - ref_shift) for k in value]  # shift values in relation to the reference shift
+
+        ###################
+        # expand and copy #
+        ###################
+        if expand:
+            im = self.x_expand(vmin=min(self.x_centers)+min(value), vmax=max(self.x_centers)+max(value), value=fill_pixel_value)
+        else:
+            im = self.copy()
+
         ###################
         # Shift x_centers #
         ###################
-        ref_shift = value[0] 
-        value = [float(k - ref_shift) for k in value]  # shift values in relation to the reference shift
-        _temp = self.x_step
-        self.x_centers += ref_shift  # this will reset x_step to None
-        self._x_step = _temp  # restore x_step to its original value
+        im._x_centers += ref_shift  # this will reset x_step to None
         
         #################
         # shift to roll #
         #################
-        value = [int(round(k/self.x_step)) for k in value]
+        print('gg')
+        print(im.x_step)
+        value = [int(round(k/im.x_step)) for k in value]
         
         ########
         # roll #
         ########
-        return self.set_horizontal_roll(value=value)
+        return im.set_horizontal_roll(value=value)
     
-    def set_vertical_shift(self, value):
+    def set_vertical_shift(self, value, expand=False, fill_pixel_value=0):
         """Roll pixels columns up and down in terms of y centers.
 
         Note:
-            The shift value in terms of y center scale is converted to number of
-             pixels to be rolled left or right. Elements that roll beyond the 
-             last position are re-introduced at the other side.
+            Shift values are given in units of ``y_centers`` and are
+            internally converted to integer pixel rolls.
+
+            When ``expand=False``, pixels that move beyond the image
+            boundaries are wrapped around to the opposite side.
+
+            When ``expand=True``, the image is enlarged before rolling
+            so that shifted pixels remain within the image and no
+            wrap-around occurs.
 
         Args:
-            value (number or list): shift value in terms of y center by which the data are 
-                shifted. If list, then it must be of the same size as the number of
-                 rows. First element will be assigned to the first row (top to 
-                 bottom) and so on. 
+            value (number or list): Shift value in units of ``y_centers``.
+                If a single number is provided, the same shift is
+                applied to all image columns. If a list is provided,
+                its length must match the number of image columns. Each
+                element specifies the vertical shift applied to the
+                corresponding column.
+            expand (bool, optional): If ``False`` (default), columns are 
+                shifted by rolling
+                pixels within the existing image boundaries. Pixels that
+                move beyond the top or bottom edge are wrapped around
+                and reintroduced on the opposite side. If ``True``, the image 
+                is first expanded along the
+                y-axis so that all requested shifts can be accommodated
+                without wrap-around. Newly created pixels are filled
+                with fill_pixel_value.
+            fill_pixel_value (number, optional): only used if expand=True.
+                If image needs to be expanded (columns or rows added), expand_pixel_value 
+                is the value of these new added pixels. Default is 0.
 
         Returns:
             :py:class:`Image`
-
-        See Also:
-            :py:func:`Image.set_horizontal_roll`, :py:func:`Image.set_vertical_roll`, :py:func:`Image.set_horizontal_shift`
         """
         ###################################
         # asserting validity of the input #
@@ -8299,29 +8415,38 @@ class Image(_BrixsObject, metaclass=_Meta):
             value = [value]*len(centers)
         assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of columns ({len(centers)})'
 
-        ###################
-        # Shift y_centers #
-        ###################
+        #############
+        # net shift #
+        #############
         ref_shift = value[0]  
         value = [float(k - ref_shift) for k in value]  # shift values in relation to the reference shift
+
+        ###################
+        # expand and copy #
+        ###################
+        if expand:
+            im = self.y_expand(vmin=min(self.y_centers)+min(value), vmax=max(self.y_centers)+max(value), value=fill_pixel_value)
+        else:
+            im = self.copy()
 
         # max_allowed_shift = max(self.y_centers) - min(self.y_centers)
         # if max(abs(value)) > max_allowed_shift:
         #     raise ValueError(f'Some shift values are larger than the span of the y centers (from {min(self.y_centers)} to {max(self.y_centers)})'+'\nThis may result in image columns where all pixels are rolled out of the image and re-introduced on the other side.')
 
-        _temp = self.y_step
-        self.y_centers += ref_shift  # this will reset y_step to None
-        self._y_step = _temp  # restore y_step to its original value
-        
+        ###################
+        # Shift y_centers #
+        ###################
+        im._y_centers += ref_shift  # this will reset y_step to None
+
         #################
         # shift to roll #
         #################
-        value = [int(round(k/self.y_step)) for k in value]
+        value = [int(round(k/im.y_step)) for k in value]
         
         ########
         # roll #
         ########
-        return self.set_vertical_roll(value=value)
+        return im.set_vertical_roll(value=value)
 
     def set_horizontal_roll(self, value):
         """Roll pixels rows left and right.
@@ -8448,57 +8573,105 @@ class Image(_BrixsObject, metaclass=_Meta):
     ###############
     # modifiers 2 #
     ###############
-    def set_horizontal_shift_via_polyval(self, p):
+    def set_horizontal_shift_via_polyval(self, p, expand=False, fill_pixel_value=0):
         """Set horizontal shift values to np.polyval(p, y_centers).
 
         Args:
             p (array): 1D array of polynomial coefficients (including 
                 coefficients equal to zero) from highest degree to the constant 
                 term.
+            expand (bool, optional): If ``False`` (default), rows are 
+                shifted by rolling
+                pixels within the existing image boundaries. Pixels that
+                move beyond the left or right edge are wrapped around
+                and reintroduced on the opposite side. If ``True``, the image 
+                is first expanded along the
+                x-axis so that all requested shifts can be accommodated
+                without wrap-around. Newly created pixels are filled
+                with fill_pixel_value.
+            fill_pixel_value (number, optional): only used if expand=True.
+                If image needs to be expanded (columns or rows added), expand_pixel_value 
+                is the value of these new added pixels. Default is 0.
 
         Returns:
             :py:class:`Image`
         """
         f = lambda y: np.polyval(p, y)
-        return self.set_horizontal_shift_via_function(f)
+        return self.set_horizontal_shift_via_function(f, expand=expand, fill_pixel_value=fill_pixel_value)
     
-    def set_vertical_shift_via_polyval(self, p):
+    def set_vertical_shift_via_polyval(self, p, expand=False, fill_pixel_value=0):
         """Set vertical shift values to np.polyval(p, x_centers).
 
         Args:
             p (array): 1D array of polynomial coefficients (including 
                 coefficients equal to zero) from highest degree to the constant 
                 term.
+            expand (bool, optional): If ``False`` (default), columns are 
+                shifted by rolling
+                pixels within the existing image boundaries. Pixels that
+                move beyond the top or bottom edge are wrapped around
+                and reintroduced on the opposite side. If ``True``, the image 
+                is first expanded along the
+                y-axis so that all requested shifts can be accommodated
+                without wrap-around. Newly created pixels are filled
+                with fill_pixel_value.
+            fill_pixel_value (number, optional): only used if expand=True.
+                If image needs to be expanded (columns or rows added), expand_pixel_value 
+                is the value of these new added pixels. Default is 0.
 
         Returns:
             :py:class:`Image`
         """
         f = lambda x: np.polyval(p, x)
-        return self.set_vertical_shift_via_function(f)
+        return self.set_vertical_shift_via_function(f, expand=expand, fill_pixel_value=fill_pixel_value)
 
-    def set_vertical_shift_via_function(self, f):
+    def set_vertical_shift_via_function(self, f, expand=False, fill_pixel_value=0):
         """Set vertical shift values to f(x_center).
 
         Args:
-            f (function): function where argument is x centers elements
+            f (function): function where argument is x centers elements.
+            expand (bool, optional): If ``False`` (default), columns are 
+                shifted by rolling
+                pixels within the existing image boundaries. Pixels that
+                move beyond the top or bottom edge are wrapped around
+                and reintroduced on the opposite side. If ``True``, the image 
+                is first expanded along the
+                y-axis so that all requested shifts can be accommodated
+                without wrap-around. Newly created pixels are filled
+                with fill_pixel_value.
+            fill_pixel_value (number, optional): only used if expand=True.
+                If image needs to be expanded (columns or rows added), expand_pixel_value 
+                is the value of these new added pixels. Default is 0.
 
         Returns:
             :py:class:`Image`
         """
         value = np.array([f(x) for x in self.x_centers])
-        return self.set_vertical_shift(value=value)
+        return self.set_vertical_shift(value=value, expand=expand, fill_pixel_value=fill_pixel_value)
 
-    def set_horizontal_shift_via_function(self, f):
+    def set_horizontal_shift_via_function(self, f, expand=False, fill_pixel_value=0):
         """Set horizontal shift values to f(y_center).
 
         Args:
-            f (function): function where argument is y centers elements
+            f (function): function where argument is y centers elements.
+            expand (bool, optional): If ``False`` (default), rows are 
+                shifted by rolling
+                pixels within the existing image boundaries. Pixels that
+                move beyond the left or right edge are wrapped around
+                and reintroduced on the opposite side. If ``True``, the image 
+                is first expanded along the
+                x-axis so that all requested shifts can be accommodated
+                without wrap-around. Newly created pixels are filled
+                with fill_pixel_value.
+            fill_pixel_value (number, optional): only used if expand=True.
+                If image needs to be expanded (columns or rows added), expand_pixel_value 
+                is the value of these new added pixels. Default is 0.
 
         Returns:
             :py:class:`Image`
         """
         value = np.array([f(x) for x in self.y_centers])
-        return self.set_horizontal_shift(value=value)
+        return self.set_horizontal_shift(value=value, expand=expand, fill_pixel_value=fill_pixel_value)
 
 
     def floor(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
@@ -8914,6 +9087,155 @@ class Image(_BrixsObject, metaclass=_Meta):
         im = self.copy()
         im._data = np.flip(self.data, axis=0)
         return im
+
+    def x_expand(self, vmin=None, vmax=None, value=0):
+        """Expand image horizontally by adding columns.
+
+        New columns are inserted on the left and/or right side of the image so
+        that the x-axis spans the requested range. Newly created pixels are
+        filled with ``value``.
+
+        Args:
+            vmin (float, optional): New minimum x value.
+            vmax (float, optional): New maximum x value.
+            value (float, optional): Value used for newly created pixels. Default is 0.
+
+        Returns:
+            Image: Expanded image.
+        
+        Raises:
+            ValueError: If x_centers are not uniformly spaced.
+        """
+        if self.x_step is None:
+            try:
+                self.check_x_step()
+            except ValueError:
+                raise ValueError('x_centers must have a uniform step size to allow column expansion.')
+        step = self.x_step
+
+        if vmax is not None:
+            if vmax <= max(self.x_centers):
+                vmax = None
+        if vmin is not None:
+            if vmin >= min(self.x_centers):
+                vmin = None
+
+        im = self.copy()
+        if vmin is None and vmax is None:
+            return im
+        elif vmin is None:
+            x_centers = copy.deepcopy(im.x_centers)
+            x = np.arange(max(x_centers) + step, vmax + step*0.1, step)
+            data = np.full((len(im.y_centers), len(x)), value, dtype=im.data.dtype)
+            im._data = np.concatenate((im.data, data), axis=1, dtype='float')
+            im._x_centers = np.concatenate((x_centers, x), axis=0, dtype='float')
+            return im
+        elif vmax is None:
+            x_centers = copy.deepcopy(im.x_centers)
+            x = np.arange(min(x_centers) - step, vmin - step*0.1, -step)[::-1]
+            data = np.full((len(im.y_centers), len(x)), value, dtype=im.data.dtype)
+            im._data = np.concatenate((data, im.data), axis=1, dtype='float')
+            im._x_centers = np.concatenate((x, x_centers), axis=0, dtype='float')
+            return im
+        else:
+            x_centers = copy.deepcopy(im.x_centers)
+
+            x1 = np.arange(min(x_centers) - step, vmin - step*0.1, -step)[::-1]
+            data1 = np.full((len(im.y_centers), len(x1)), value, dtype=im.data.dtype)
+
+            x2 = np.arange(max(x_centers) + step, vmax + step*0.1, step)
+            data2 = np.full((len(im.y_centers), len(x2)), value, dtype=im.data.dtype)
+
+            im._data = np.concatenate((data1, im.data, data2), axis=1, dtype='float')
+            im._x_centers = np.concatenate((x1, x_centers, x2), axis=0, dtype='float')
+        return im
+
+    def y_expand(self, vmin=None, vmax=None, value=0):
+        """Expand image vertically by adding rows.
+
+        New rows are inserted on the top and/or bottom of the image so
+        that the y-axis spans the requested range. Newly created pixels are
+        filled with ``value``.
+
+        Args:
+            vmin (float, optional): New minimum y value.
+            vmax (float, optional): New maximum y value.
+            value (float, optional): Value used for newly created pixels. Default is 0.
+
+        Returns:
+            Image: Expanded image.
+        
+        Raises:
+            ValueError: If y_centers are not uniformly spaced.
+        """
+        if self.y_step is None:
+            try:
+                self.check_y_step()
+            except ValueError:
+                raise ValueError('y_centers must have a uniform step size to allow row expansion.')
+        step = self.y_step
+
+        if vmax is not None:
+            if vmax <= max(self.y_centers):
+                vmax = None
+        if vmin is not None:
+            if vmin >= min(self.y_centers):
+                vmin = None
+
+        im = self.copy()
+        if vmin is None and vmax is None:
+            return im
+        elif vmin is None:
+            y_centers = copy.deepcopy(im.y_centers)
+            y = np.arange(max(y_centers) + step, vmax + step*0.1, step)
+            data = np.full((len(y), len(im.x_centers)), value, dtype=im.data.dtype)
+            im._data = np.concatenate((im.data, data), axis=0, dtype='float')
+            im._y_centers = np.concatenate((y_centers, y), axis=0, dtype='float')
+            return im
+        elif vmax is None:
+            y_centers = copy.deepcopy(im.y_centers)
+            y = np.arange(min(y_centers) - step, vmin - step*0.1, -step)[::-1]
+            data = np.full((len(y), len(im.x_centers)), value, dtype=im.data.dtype)
+            im._data = np.concatenate((data, im.data), axis=0, dtype='float')
+            im._y_centers = np.concatenate((y, y_centers), axis=0, dtype='float')
+            return im
+        else:
+            y_centers = copy.deepcopy(im.y_centers)
+
+            y1 = np.arange(min(y_centers) - step, vmin - step*0.1, -step)[::-1]
+            data1 = np.full((len(y1), len(im.x_centers)), value, dtype=im.data.dtype)
+
+            y2 = np.arange(max(y_centers) + step, vmax + step*0.1, step)
+            data2 = np.full((len(y2), len(im.x_centers)), value, dtype=im.data.dtype)
+
+            im._data = np.concatenate((data1, im.data, data2), axis=0, dtype='float')
+            im._y_centers = np.concatenate((y1, y_centers, y2), axis=0, dtype='float')
+        return im
+
+    def expand(self, xmin=None, xmax=None, ymin=None, ymax=None, value=0):
+        """Expand image by adding rows and columns.
+
+        New columns are inserted on the left and/or right side of the image so
+        that the x-axis spans the requested range. Newly created pixels are
+        filled with ``value``.
+
+        New rows are inserted on the top and/or bottom of the image so
+        that the y-axis spans the requested range. Newly created pixels are
+        filled with ``value``.
+
+        Args:
+            xmin and xmax (float, optional): New minimum and maximum x values.
+            ymin and ymax (float, optional): New minimum and maximum y values.
+            value (float, optional): Value used for newly created pixels. Default is 0.
+
+        Returns:
+            Image: Expanded image.
+        
+        Raises:
+            ValueError: If x_centers and y_centers are not uniformly spaced.
+        """
+        return self.x_expand(vmin=xmin, vmax=xmax, value=value).y_expand(vmin=ymin, vmax=ymax, value=value)
+
 
     ########################
     # calculation and info #
@@ -10052,6 +10374,293 @@ class Image(_BrixsObject, metaclass=_Meta):
         
         return pos
 
+    def manual_vertical_shift_via_polyfit(self, polyorder, value=0, color='white', cmap='jet', vmin=None, vmax=None):
+        """Interactively correct vertical curvature using a polynomial fit.
+
+        Display the original image and the corrected image side by side.
+        Clicking on the original image adds reference points describing the
+        feature that should be made horizontal and set to y=value. 
+        
+        Point coordinates are fitted with a polynomial. The minimum number of 
+        points is polyorder + 1, e. g., polyorder=4 requires 5 reference points
+        for the polyfit to prevent poorly conditioned polynomial fit.
+        Clicking near an existing reference point removes it.
+        
+        Args:
+            polyorder (int, optional): Degree of the polynomial fitted to the 
+                selected reference. points. 
+            value (number, optional): y value for the reference line. Default is 0.
+            color (str or tuple, optional): Matplotlib-compatible color used 
+                for the selected points and fitted polynomial curve. 
+                Default is 'white'.
+            cmap: The Colormap instance. Default is 'jet'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
+
+        Returns:
+            dict: Dictionary updated in place as reference points are modified. It contains:
+                * 'im' (:obj:`Image`): Vertically corrected copy of the image.
+                * 'p' (array-like): Polynomial coefficients used to
+                calculate the vertical shifts, ordered from the highest
+                polynomial degree to the constant term.
+                * 'shift' (array-like): Vertical shift applied to each image column.
+        """
+
+        im  = self.copy()
+        final = {'im': self.copy(), 'p': [0, ], 'shift': [0 for _ in range(len(im.x_centers))]}
+
+        # figure initialization
+        fig, axes = subplots(1, 2, figsize=(28, 14), sharex=True, layout='constrained')
+        plt.suptitle(f"Manual vertical shift plot (minimum required number of points = {polyorder+1})")
+        # plt.suptitle("Manual vertical shift plot.")
+        axes[0].set_title("Click on this image to add points (click on a point to remove it)")
+        axes[1].set_title("Corrected image")
+        
+        im.plot(ax=axes[0], vmin=vmin, vmax=vmax, cmap=cmap)
+        lines = {0: None, 1: None, 2: None}
+        lines[0] = axes[0].plot([im.x_centers[0], im.x_centers[-1]], [im.y_centers[0], im.y_centers[0]], color=color)[0]
+        lines[0].set_visible(False)
+        lines[1] = im.plot(ax=axes[1], vmin=vmin, vmax=vmax, cmap=cmap)
+        lines[2] = axes[1].plot([im.x_centers[0], im.x_centers[-1]], [im.y_centers[0], im.y_centers[0]], color=color)[0]
+        lines[2].set_visible(False)
+
+        # click events
+        press_event = {"x": None, "y": None}
+        curve       = {"x": [], "y": [], "artists": []}
+        
+        def on_press(event):
+            if event.inaxes == axes[0]:
+                press_event["x"] = event.x
+                press_event["y"] = event.y
+        def on_release(event):
+            # ignore clicks outside image
+            if event.inaxes != axes[0]:
+                return  
+                
+            # ignore if no press recorded
+            if press_event["x"] is None:
+                return
+                
+            # ignore if it is a drag
+            dx = abs(event.x - press_event["x"])
+            dy = abs(event.y - press_event["y"])
+            # threshold in pixels
+            if dx > 5 or dy > 5:
+                return  
+
+            # get click position
+            x_click = event.xdata
+            y_click = event.ydata
+            
+            # check if click is near an existing point
+            x_min, x_max = axes[0].get_xlim()
+            y_min, y_max = axes[0].get_ylim()
+            tol_x = 0.01 * abs(x_max - x_min)  # dynamic tolerance based on zoom
+            tol_y = 0.01 * abs(y_max - y_min)
+            remove_index = None
+            for i, (x0, y0) in enumerate(zip(curve["x"], curve["y"])):
+                if abs(x_click - x0) < tol_x and abs(y_click - y0) < tol_y:
+                    remove_index = i
+                    break
+
+            # Remove point if click is near existing point
+            if remove_index is not None:
+                curve["x"].pop(remove_index)
+                curve["y"].pop(remove_index)
+                # remove marker from plot
+                artist = curve["artists"].pop(remove_index)
+                artist.remove()
+            # Otherwise, add point
+            else:
+                curve["x"].append(x_click)
+                curve["y"].append(y_click)
+                artist, = axes[0].plot(x_click, y_click, marker='x', color=color, markersize=8, markeredgewidth=2)
+                curve["artists"].append(artist)
+
+            # polyfit
+            if len(curve['x']) >= polyorder+1:
+                s = Spectrum(x=curve['x'], y=curve['y'])
+                fit = s.polyfit(deg=polyorder)
+                x = np.linspace(im.x_centers[0], im.x_centers[-1], 2000)
+                y = fit['model'](x)
+
+                lines[0].set_visible(True)
+                lines[0].set_data(x, y)
+
+                # correct curvature
+                final['p'] = -fit['popt']
+                final['p'][-1] += value
+                final['shift'] = np.polyval(final['p'], final['im'].x_centers)
+                # temp = final['shift'] - final['shift'][0]
+                # im2 = im.expand(
+                final['im'] = im.set_vertical_shift_via_polyval(p=final['p'], expand=True)
+                lines[1].remove()
+                lines[1] = final['im'].plot(ax=axes[1], vmin=vmin, vmax=vmax, cmap=cmap)
+                lines[2].set_data([im.x_centers[0], im.x_centers[-1]], [value, value])
+                lines[2].set_visible(True)
+            else:
+                final['p'] = 0
+                final['shift'] = [0 for _ in range(len(im.x_centers))]
+                final['im'] = im
+                lines[0].set_data([im.x_centers[0], im.x_centers[-1]], [im.y_centers[0], im.y_centers[0]])
+                lines[0].set_visible(False)
+                lines[1].remove()
+                lines[1] = final['im'].plot(ax=axes[1], vmin=vmin, vmax=vmax, cmap=cmap)
+                lines[2].set_data([im.x_centers[0], im.x_centers[-1]], [im.y_centers[0], im.y_centers[0]])
+                lines[2].set_visible(False)
+            _ = fig.canvas.draw_idle()
+            
+        # Connect event
+        _ = fig.canvas.mpl_connect('button_press_event', on_press)
+        _ = fig.canvas.mpl_connect('button_release_event', on_release)
+
+        return final
+
+    def manual_horizontal_shift_via_polyfit(self, polyorder, value=0, color='white', cmap='jet', vmin=None, vmax=None):
+        """Interactively correct horizontal curvature using a polynomial fit.
+
+        Display the original image and the corrected image side by side.
+        Clicking on the original image adds reference points describing the
+        feature that should be made horizontal and set to x=value. 
+        
+        Point coordinates are fitted with a polynomial. The minimum number of 
+        points is polyorder + 1, e. g., polyorder=4 requires 5 reference points
+        for the polyfit to prevent poorly conditioned polynomial fit.
+        Clicking near an existing reference point removes it.
+
+        Args:
+            polyorder (int, optional): Degree of the polynomial fitted to the 
+                selected reference. points.
+            value (number, optional): x value for the reference line. Default is 0.
+            color (str or tuple, optional): Matplotlib-compatible color used 
+                for the selected points and fitted polynomial curve. 
+                Default is 'white'.
+            cmap: The Colormap instance. Default is 'jet'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
+
+        Returns:
+            dict: Dictionary updated in place as reference points are modified. It contains:
+                * 'im' (:obj:`Image`): Vertically corrected copy of the image.
+                * 'p' (array-like): Polynomial coefficients used to
+                calculate the vertical shifts, ordered from the highest
+                polynomial degree to the constant term.
+                * 'shift' (array-like): Vertical shift applied to each image column.
+        """
+
+        im  = self.copy()
+        final = {'im': self.copy(), 'p': [0, ], 'shift': [0 for _ in range(len(im.x_centers))]}
+
+        # figure initialization
+        fig, axes = subplots(1, 2, figsize=(28, 14), sharey=True, layout='constrained')
+        plt.suptitle(f"Manual horizontal shift plot (minimum required number of points = {polyorder+1})")
+        axes[0].set_title("Click on this image to add points (click on a point to remove it)")
+        axes[1].set_title("Corrected image")
+        
+        im.plot(ax=axes[0], vmin=vmin, vmax=vmax, cmap=cmap)
+        lines = {0: None, 1: None, 2: None}
+        lines[0] = axes[0].plot([im.x_centers[0], im.x_centers[0]], [im.y_centers[0], im.y_centers[-1]], color=color)[0]
+        lines[0].set_visible(False)
+        lines[1] = im.plot(ax=axes[1], vmin=vmin, vmax=vmax, cmap=cmap)
+        lines[2] = axes[1].plot([im.x_centers[0], im.x_centers[0]], [im.y_centers[0], im.y_centers[-1]], color=color)[0]
+        lines[2].set_visible(False)
+
+        # click events
+        press_event = {"x": None, "y": None}
+        curve       = {"x": [], "y": [], "artists": []}
+        
+        def on_press(event):
+            if event.inaxes == axes[0]:
+                press_event["x"] = event.x
+                press_event["y"] = event.y
+        def on_release(event):
+            # ignore clicks outside image
+            if event.inaxes != axes[0]:
+                return  
+                
+            # ignore if no press recorded
+            if press_event["x"] is None:
+                return
+                
+            # ignore if it is a drag
+            dx = abs(event.x - press_event["x"])
+            dy = abs(event.y - press_event["y"])
+            # threshold in pixels
+            if dx > 5 or dy > 5:
+                return  
+
+            # get click position
+            x_click = event.xdata
+            y_click = event.ydata
+            
+            # check if click is near an existing point
+            x_min, x_max = axes[0].get_xlim()
+            y_min, y_max = axes[0].get_ylim()
+            tol_x = 0.01 * abs(x_max - x_min)  # dynamic tolerance based on zoom
+            tol_y = 0.01 * abs(y_max - y_min)
+            remove_index = None
+            for i, (x0, y0) in enumerate(zip(curve["x"], curve["y"])):
+                if abs(x_click - x0) < tol_x and abs(y_click - y0) < tol_y:
+                    remove_index = i
+                    break
+
+            # Remove point if click is near existing point
+            if remove_index is not None:
+                curve["x"].pop(remove_index)
+                curve["y"].pop(remove_index)
+                # remove marker from plot
+                artist = curve["artists"].pop(remove_index)
+                artist.remove()
+            # Otherwise, add point
+            else:
+                curve["x"].append(x_click)
+                curve["y"].append(y_click)
+                artist, = axes[0].plot(x_click, y_click, marker='x', color=color, markersize=8, markeredgewidth=2)
+                curve["artists"].append(artist)
+
+            # polyfit
+            if len(curve['x']) >= polyorder+1:
+                s = Spectrum(x=curve['y'], y=curve['x'])
+                fit = s.polyfit(deg=polyorder)
+                y = np.linspace(im.y_centers[0], im.y_centers[-1], 2000)
+                x = fit['model'](y)
+
+                lines[0].set_visible(True)
+                lines[0].set_data(x, y)
+
+                # correct curvature
+                final['p'] = -fit['popt']
+                final['p'][-1] += value
+                final['shift'] = np.polyval(final['p'], final['im'].y_centers)
+                final['im'] = im.set_horizontal_shift_via_polyval(p=final['p'], expand=True)
+                lines[1].remove()
+                lines[1] = final['im'].plot(ax=axes[1], vmin=vmin, vmax=vmax, cmap=cmap)
+                lines[2].set_data([value, value], [im.y_centers[0], im.y_centers[-1]])
+                lines[2].set_visible(True)
+            else:
+                final['p'] = 0
+                final['shift'] = [0 for _ in range(len(im.x_centers))]
+                final['im'] = im
+                lines[0].set_data([im.x_centers[0], im.x_centers[0]], [im.y_centers[0], im.y_centers[-1]])
+                lines[0].set_visible(False)
+                lines[1].remove()
+                lines[1] = final['im'].plot(ax=axes[1], vmin=vmin, vmax=vmax, cmap=cmap)
+                lines[2].set_data([im.x_centers[0], im.x_centers[0]], [im.y_centers[0], im.y_centers[-1]])
+                lines[2].set_visible(False)
+            _ = fig.canvas.draw_idle()
+            
+        # Connect event
+        _ = fig.canvas.mpl_connect('button_press_event', on_press)
+        _ = fig.canvas.mpl_connect('button_release_event', on_release)
+
+        return final
+    
 # %% ============================ PhotonEvents =========================== %% #
 class PhotonEvents(_BrixsObject, metaclass=_Meta):
     """Returns a ``Photon events`` object.
