@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """Useful functions for everyday use ---> Matplotlib figures"""
 
-# %% ------------------------- Standard Imports --------------------------- %% #
+# %% ------------------------- Standard Imports -------------------------- %% #
 import cmd
+from collections.abc import Iterable
 from string import ascii_lowercase
 from types import MethodType
 from pathlib import Path
@@ -12,17 +13,17 @@ import warnings
 import decimal
 import copy
 
-# %% ------------------------- Matplotlib Imports ------------------------- %% #
+# %% ------------------------- Matplotlib Imports ------------------------ %% #
 import matplotlib
 from matplotlib.pyplot import get_current_fig_manager as _get_current_fig_manager
 from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
+from matplotlib.widgets import MultiCursor
 from matplotlib import colormaps
-from collections.abc import Iterable
+import matplotlib.pyplot as plt
 from cycler import cycler
 
-# %% -------------------------- operating system -------------------------- %% #
+# %% -------------------------- operating system ------------------------- %% #
 import platform
 import os
 def _operating_system():
@@ -60,7 +61,7 @@ if is_jupyter:
     except:
         pass
 
-# %% --------------- supporting functions from numanip -------------------- %% #
+# %% ----------------- supporting functions from numanip ----------------- %% #
 # backpack developers note --> if these function change, it needs to be copied to numanip.py
 import numbers
 def is_number(n):
@@ -107,7 +108,7 @@ def _n_decimal_places(number, count_zero=False):
             return 0
     return n
 
-# %% ------------ supporting functions from arraymanip -------------------- %% #
+# %% ---------------- supporting functions from arraymanip --------------- %% #
 # backpack developers note --> if these function change, it needs to be copied to arraymanip.py
 def _index(x, value, closest=True, roundup=False):
     """Returns the first index of the element in array.
@@ -250,7 +251,7 @@ def _extract(x, y, ranges, invert=False):
     else:
         raise RuntimeError('No data points within the selected range.')
 
-# %% ---------------- supporting functions from query --------------------- %% #
+# %% ------------------ supporting functions from query ------------------ %% #
 import subprocess
 import tempfile
 import io 
@@ -318,7 +319,7 @@ def _figure2clipboard(dpi=300):
     return
 # %%
 
-# %% ================================ colors ============================== %% #
+# %% =============================== colors ============================== %% #
 def get_available_colors():
     """Returns matplotlib available colors."""
     from matplotlib import colors as mcolors    
@@ -583,7 +584,7 @@ def maximize():
     return
 # %%
         
-# %% ================================ figure ============================== %% #
+# %% =============================== figure ============================== %% #
 def figure(*args, **kwargs):
     """Create figure object. Wrapper for `plt.figure()`_.
 
@@ -602,6 +603,8 @@ def figure(*args, **kwargs):
 
         >>> fig = br.figure()
         >>> fig.grid() # creates a figure grid with grid lines to help axes alignment
+        >>> fig.crosshair() # crosshair cursor that follows the mouse pointer
+        >>> fig.crosshair(share=True) # uses the same crosshair for all axes in the figure
 
     Args:
         *args, **kwargs: args and kwargs are passed to `plt.figure()`.
@@ -621,31 +624,31 @@ def figure(*args, **kwargs):
         kwargs['figsize'] = (cm2inch(kwargs['figsize'][0])[0], cm2inch(kwargs['figsize'][1])[0])
 
     # initialize figure
-    if is_jupyter:
-        if matplotlib.is_interactive():
-            plt.ioff()
-            fig = plt.figure(*args, **kwargs)
-            plt.ion()
-            fig.output = widgets.Output()
-            display(fig.canvas, fig.output)
+    if is_jupyter and matplotlib.is_interactive():
+        plt.ioff()
+        fig = plt.figure(*args, **kwargs)
+        plt.ion()
+        fig.output = widgets.Output()
+        display(fig.canvas, fig.output)
     else:
         fig = plt.figure(*args, **kwargs)
 
     # event callbacks
-    fig = _set_figure_methods(fig)
-    return fig
-
-def _set_figure_methods(fig):
-    """adds onclick functionality to figures"""
-
-    #  mouse events
     cid1 = fig.canvas.mpl_connect('button_press_event', _onclick)
     cid2 = fig.canvas.mpl_connect('key_press_event', _onkey)
-    # cid2 = fig.canvas.mpl_connect('resize_event', _onmove)
+    # cid3 = fig.canvas.mpl_connect('resize_event', _onmove)
 
-    # grid function
+    #################
+    # grid function #
+    #################
     fig._grid = False
     fig.grid  = MethodType(_grid, fig)
+
+    ######################
+    # crosshair function #
+    ######################
+    fig._cursor = []
+    fig.crosshair  = MethodType(_crosshair, fig)
 
     return fig
 
@@ -869,7 +872,7 @@ def _onkey(event):
     return
 
 def _grid(self, visible=None):
-    """show figure grid (not be confused with axes grid)"""
+    """Show figure grid (not to be confused with axes grid)"""
     if visible is None:
         if self._grid == False:
             visible = True
@@ -899,6 +902,61 @@ def _grid(self, visible=None):
         self._grid.set_visible(False)
         del self._grid
         self._grid = False
+    return
+
+def figure_grid(visible=None, fig=None):
+    """Show figure grid (not to be confused with axes grid)"""
+    if fig is None:
+        fig = plt.gcf()
+    if hasattr(fig, 'grid'):
+        fig.grid(visible=visible)
+    else:
+        fig._grid = False
+        fig.grid  = MethodType(_grid, fig)
+    fig.grid(visible=visible)
+    return
+
+def _crosshair(self, visible=None, share=False):
+    """Show crosshair cursor on figure."""
+    if visible is None:
+        if self._cursor == []:
+            visible = True
+        else:
+            visible = False
+    elif visible == True:
+        if self._cursor != []:
+            return
+    elif visible == False:
+        if self._cursor == []:
+            return
+
+    if visible:
+        self._cursor = []
+        if share:
+            _cursor = MultiCursor(None, self.axes, color='0.5', lw=0.5, ls='--', horizOn=True, vertOn=True, useblit=True)
+            self._cursor.append(_cursor)
+        else:
+            for _ax in self.axes:
+                _cursor = MultiCursor(None, [_ax, ], color='0.5', lw=0.5, ls='--', horizOn=True, vertOn=True, useblit=True)
+                self._cursor.append(_cursor)
+        # self._cursor = MultiCursor(None, self.axes, color='0.5', lw=0.5, ls='--', horizOn=True, vertOn=True, useblit=True)
+    else:
+        for cursor in self._cursor:
+            cursor.visible = False
+        del self._cursor
+        self._cursor = []
+    return
+
+def crosshair(visible=None, share=False, fig=None):
+    """Show crosshair cursor on figure."""
+    if fig is None:
+        fig = plt.gcf()
+    if hasattr(fig, 'crosshair'):
+        fig.crosshair(visible=visible, share=share)
+    else:
+        fig._cursor = []
+        fig.crosshair  = MethodType(_crosshair, fig)
+        fig.crosshair(visible=visible, share=share)
     return
 
 # %% ============================== subplots ============================== %% #
@@ -998,7 +1056,7 @@ class Axes(list):
     def last_col(self):
         raise AttributeError('Cannot delete object.')
 
-def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, layout=None, **fig_kw):
+def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, width_ratios=None, height_ratios=None, layout=None, crosshair=True, **fig_kw):
     """Create a figure and a set of subplots in a grid. Wrapper for `plt.subplots()`_.
 
     The difference between this function and plt.subplots is that this function 
@@ -1016,8 +1074,14 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
         
         >>> first_row = axes.first_row to get a list of all axes in the first row 
         >>> last_row  = axes.last_row to get a list of all axes in the last row 
-        >>> first_col = axes.first_row to get a list of all axes in the first column
-        >>> last_col  = axes.first_row to get a list of all axes in the last column 
+        >>> first_col = axes.first_col to get a list of all axes in the first column
+        >>> last_col  = axes.last_col to get a list of all axes in the last column 
+
+    On a figure level, figure comes with extra methods:
+
+        >>> fig.grid() # creates a figure grid with grid lines to help axes alignment
+        >>> fig.crosshair() # crosshair cursor that follows the mouse pointer
+        >>> fig.crosshair(share=True) # uses the same crosshair for all axes in the figure
 
     Args:
         nrows, ncols (int): Number of rows/columns of the subplot grid.
@@ -1076,24 +1140,22 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
     ############
     # subplots #
     ############
-    if is_jupyter:
-        if matplotlib.is_interactive():
-            plt.ioff()
-            fig, _axes = plt.subplots(nrows, ncols, 
-                                sharex=sharex,
-                                sharey=sharey,
-                                layout=layout,
-                                gridspec_kw=gridspec_kw, **fig_kw)
-            plt.ion()
-            fig.output = widgets.Output()
-            display(fig.canvas, fig.output)
+    if is_jupyter and matplotlib.is_interactive():
+        plt.ioff()
+        fig, _axes = plt.subplots(nrows, ncols, 
+                            sharex=sharex,
+                            sharey=sharey,
+                            layout=layout,
+                            gridspec_kw=gridspec_kw, **fig_kw)
+        plt.ion()
+        fig.output = widgets.Output()
+        display(fig.canvas, fig.output)
     else:
         fig, _axes = plt.subplots(nrows, ncols, 
                                 sharex=sharex,
                                 sharey=sharey,
                                 layout=layout,
                                 gridspec_kw=gridspec_kw, **fig_kw)
-    fig = _set_figure_methods(fig)
 
     #################
     # fatten output #
@@ -1124,6 +1186,23 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
     #         axes[i] = ax
     # except TypeError:
     #     axes[0] = _axes
+
+    # event callbacks
+    cid1 = fig.canvas.mpl_connect('button_press_event', _onclick)
+    cid2 = fig.canvas.mpl_connect('key_press_event', _onkey)
+    # cid3 = fig.canvas.mpl_connect('resize_event', _onmove)
+
+    #################
+    # grid function #
+    #################
+    fig._grid = False
+    fig.grid  = MethodType(_grid, fig)
+
+    ######################
+    # crosshair function #
+    ######################
+    fig._cursor = []
+    fig.crosshair  = MethodType(_crosshair, fig)
 
     ####################
     # new axes methods #
