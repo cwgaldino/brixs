@@ -79,6 +79,8 @@ import copy
 from collections.abc import Iterable, MutableMapping
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy.lib.stride_tricks import sliding_window_view
+from matplotlib.widgets import Button
+from matplotlib.widgets import CheckButtons
 
 # %% ----------------------------- backpack ------------------------------ %% #
 from .backpack import filemanip, arraymanip, figmanip, numanip, vectormanip, other
@@ -5176,56 +5178,43 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         return s
 
 
-    def calculate_map(self, axis=0, limits=None):
-        """Return image representation of spectra.
+    def create_intensity_map(self, values=None, stack_as='columns'):
+        """Return an image created by stacking spectra.
 
-        Note:
-            All spectra must have the same x-coordinates. This is verified.
-
-        Warning:
-            attrs are copied to the final image, but attrs from each spectrum is lost.
+        Spectra must have the same x-coordinates. This is verified. If not, an 
+        error is raised.
 
         Args:
-            axis (int, optional): Image axis along which spectra will be laid out.
-                If `axis=0`, spectra will be placed horizontally (each spectrum 
-                will be a "row of pixels"). If `axis=1`, spectra will be placed
-                vertically (each spectrum will be a "column"). Default is 0.
-            limits (None or list): a pair of values `(x_start, x_stop)`, a list 
-                of pairs `((xi_1, xf_1), (xi_2, xf_2), ...)`, or None. If None, 
-                this function simply returns None. If pairs, each pair 
-                represents the start and stop of a data range from x. Limits are
-                inclusive. Use `x_start = None` or `x_stop = None` to indicate 
-                the minimum or maximum x value of the data, respectively. If 
-                limits = [], i.e., an empty list, it assumes `limits = (None, None)`.
+            values (array-like, optional): Values assigned to the image 
+                x-axis (if stack_as='columns') or y-axis (if stack_as='rows'). 
+                If None, the spectra will be numbered from 0 to len(ss)-1.
+            stack_as (str, optional): Defines how spectra are arranged in the 
+                image. If 'columns', each spectrum is stored as an image 
+                column. while if 'rows', each spectrum is stored as an image 
+                row. Default is 'columns'.
 
         Returns:
-            :py:class:`Image`.
+            Image: Image containing the stacked spectra.
         """
-        # check axis
-        if axis != 0 and axis != 1:
-            raise ValueError('axis must be 0 or 1')
-        
-        if axis == 0:
-            return self.stack_spectra_as_columns(limits=limits)
+        if stack_as not in ('columns', 'rows'):
+            raise ValueError("stack_as must be 'columns' or 'rows'")
+
+        try:
+            self.check_same_x()
+            ss = self.copy()
+        except ValueError:
+            raise ValueError('Spectra must have the same x-coordinates or provide interpolation values using x_values if stack_as="columns" or y_values if stack_as="rows".')   
+
+        if values is not None:
+            if len(values) != len(self):
+                raise ValueError(f'Length of values must match the number of spectra. Length of values: {len(values)}, number of spectra: {len(self)}')
         else:
-            return self.stack_spectra_as_columns(limits=limits)
-        
-        # # gather ys
-        # y, ys = self._gather_ys(limits=limits)
+            values = list(range(len(self)))
 
+        if stack_as == 'columns':
+            return ss.stack_spectra_as_columns(x_centers=values)
+        return ss.stack_spectra_as_rows(y_centers=values)
 
-        # if axis == 1:
-        #     ys = ys.transpose()
-        #     x = y
-        #     y = centers
-
-        # im = Image(data=ys)
-        # im._copy_attrs_from(self)
-        # im.x_centers = x
-        # im.y_centers = y
-
-        # return im
-    
     def stack_spectra_as_columns(self, x_centers=None, limits=None):
         """Return image representation of spectra, where spectra are layed out in the vertical direction.
 
@@ -5253,6 +5242,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # check centers
         if x_centers is not None:
             assert len(x_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(x_centers)}\nnumber of spectra: {len(self)}'
+        else:
+            x_centers = list(range(len(self)))
 
         # check if array is monotonic
         # This is necessary because the way images are plotted
@@ -5298,6 +5289,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         # check centers
         if y_centers is not None:
             assert len(y_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(y_centers)}\nnumber of spectra: {len(self)}'
+        else:
+            y_centers = list(range(len(self)))
 
         # check if array is monotonic
         # This is necessary because the way images are plotted
@@ -5798,6 +5791,54 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         _ = self.check_same_x(max_error=0.1)
         return [s.calculate_y_average(limits=limits) for s in self]
 
+    def get_y_sum(self, x_values=None):
+        """Return the integrated intensity of each spectrum.
+
+        The y-value of the returned spectrum corresponds to the integrated
+        intensity of one spectrum in the collection.
+
+        Args:
+            x_values (array-like, optional):
+                Values assigned to the x-axis of the returned spectrum.
+                The length must match the number of spectra. If ``None``,
+                the spectrum indices are used.
+
+        Returns:
+            Spectrum:
+                Spectrum containing the integrated intensity of each
+                spectrum in the collection.
+        """
+        if x_values is not None:
+            if len(x_values) != len(self): raise ValueError(f'x_values={len(x_values)} must be the same as the number of Spectra ({len(self)})')
+        else:
+            x_values = np.arange(len(self))
+        xas = Spectrum(x=x_values, y=self.calculate_y_sum())
+        return xas
+
+    def get_y_average(self, x_values=None):
+        """Return a spectrum containing the average y-value of each spectrum.
+
+        The y-value of the returned spectrum corresponds to the average
+        y-value of one spectrum in the collection.
+
+        Args:
+            x_values (array-like, optional):
+                Values assigned to the x-axis of the returned spectrum.
+                The length must match the number of spectra. If ``None``,
+                the spectrum indices are used.
+
+        Returns:
+            Spectrum:
+                Spectrum containing the average y intensity of each
+                spectrum in the collection.
+        """
+        if x_values is not None:
+            if len(x_values) != len(self): raise ValueError(f'x_values={len(x_values)} must be the same as the number of Spectra ({len(self)})')
+        else:
+            x_values = np.arange(len(self))
+        xas = Spectrum(x=x_values, y=self.calculate_y_average())
+        return xas
+
     def polyfit(self, deg, limits=None):
         """Fit data recursively with a polynomial. Wrapper for `numpy.polyfit()`_.
 
@@ -5999,6 +6040,398 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 temp[i] = self[i].plot(ax=ax, label=label[i], color=colors[i], smooth=smooth, switch_xy=switch_xy, limits=limits, verbose=verbose, **kwargs)
 
         return temp
+
+    def manual_align(self, vlines=[], hlines=[], step='auto'):
+        """Interactively align spectra by applying horizontal shifts.
+
+        Opens a matplotlib window that allows the user to browse through the
+        spectra and manually adjust the shift of each spectrum individually.
+        Shifts are applied to a copy of the original spectra collection, leaving
+        the input object unchanged.
+
+        Navigation and shifting can be performed using either the on-screen
+        buttons or keyboard shortcuts.
+
+        Keyboard shortcuts:
+            - ``<`` or ``,``
+                Select previous spectrum.
+            - ``>`` or ``.``
+                Select next spectrum.
+            - ``-``
+                Shift current spectrum to lower x values.
+            - ``+`` or ``=``
+                Shift current spectrum to higher x values.
+
+        Args:
+            vlines (number or sequence, optional): Vertical guide lines to be
+                displayed in the plot. Passed to :func:`brixs.axvlines`.
+                Default is ``[]``.
+            hlines (number or sequence, optional): Horizontal guide lines to be
+                displayed in the plot. Passed to :func:`brixs.axhlines`.
+                Default is ``[]``.
+            step (float or str, optional): Shift increment used when moving a
+                spectrum left or right. If ``'auto'``, the shift step is set to
+                one-tenth of the average x-spacing of the current spectrum.
+                Default is ``'auto'``.
+
+        Returns:
+            Spectra: Copy of the original spectra collection. The returned object
+            is updated interactively as shifts are applied.
+        """
+        # Initial
+        ss = self.copy()
+        state = {"idx": 0}
+
+        # figure initialization
+        fig, ax = plt.subplots()
+        title = ax.text(0.42, 1.01, '', transform=ax.transAxes, ha='left', va='bottom')
+        line, = ax.plot(ss[0].x, ss[0].y, color="black", marker="o")
+
+        # lines
+        figmanip.axvlines(vlines, ls='--')
+        figmanip.axhlines(hlines, ls='--')
+
+        def update():
+            """Update the line using the currently selected spectrum."""
+            idx = state["idx"]
+            line.set_xdata(ss[idx].x)
+            line.set_ydata(ss[idx].y)
+            ax.relim()
+            ax.autoscale_view()
+            title.set_text(f"{idx}/{len(ss) - 1}: shift={ss[idx].shift}")
+            fig.canvas.draw_idle()
+
+        def _prev(event=None):
+            """Select the previous spectrum."""
+            state["idx"] = max(0, state["idx"] - 1)
+            update()
+        def _next(event=None):
+            """Select the next spectrum."""
+            state["idx"] = min(len(ss) - 1, state["idx"] + 1)
+            update()
+        def _shift_right(event=None):
+            """Shift the current spectrum to the right."""
+            idx = state["idx"]
+            if step == 'auto':
+                ss[idx] = ss[idx].set_shift(np.mean(np.diff(ss[idx].x)) / 10)
+            else:
+                ss[idx] = ss[idx].set_shift(step)
+            update()
+        
+        def _shift_left(event=None):
+            """Shift the current spectrum to the left."""
+            idx = state["idx"]
+            if step == 'auto':
+                ss[idx] = ss[idx].set_shift(-np.mean(np.diff(ss[idx].x)) / 10)
+            else:
+                ss[idx] = ss[idx].set_shift(-step)
+            update()
+        def _onkey(event):
+            """Handle keyboard commands."""
+            if event.key in (".", ">"):
+                _next()
+            elif event.key in (",", "<"):
+                _prev()
+            elif event.key in ("+", "="):
+                _shift_right()
+            elif event.key == "-":
+                _shift_left()
+
+        # buttons
+        _y = 0.95
+        _height = 0.04
+        _width  = 0.08
+        _fontsize = 8
+        
+        buttons = {}
+        buttons["previous"] = Button(fig.add_axes((0.08+(_width+0.01)*0, _y, _width, _height)), "< Prev")
+        buttons["previous"].on_clicked(_prev)
+        
+        buttons["next"] = Button(fig.add_axes((0.08+(_width+0.01)*1, _y, _width, _height)), "Next >")
+        buttons["next"].on_clicked(_next)
+        
+        buttons["shift_left"] = Button(fig.add_axes((0.08+(+_width+0.01)*2, _y, _width, _height)), "Shift −")
+        buttons["shift_left"].on_clicked(_shift_left)
+        
+        buttons["shift_right"] = Button(fig.add_axes((0.08+(+_width+0.01)*3, _y, _width, _height)), "Shift +")
+        buttons["shift_right"].on_clicked(_shift_right)
+
+        for _name in buttons:
+            buttons[_name].label.set_fontsize(_fontsize)
+
+        # Keyboard callback
+        cid_key = fig.canvas.mpl_connect("key_press_event", _onkey)
+
+        # save objects to prevent garbage collection
+        fig._buttons = buttons
+
+        # update figure
+        update()
+
+        # final
+        plt.show()
+
+        return ss
+
+    def manual_align_all(self, vlines=[], hlines=[], vertical_offset=0, step='auto'):
+        """Interactively align spectra.
+
+        Opens an interactive matplotlib interface for manual alignment of spectra.
+        Individual spectra can be selected by clicking directly on a curve,
+        navigated using buttons or keyboard shortcuts, shifted horizontally, and
+        shown or hidden through a checklist panel.
+
+        The selected spectrum is highlighted in black and drawn above all other
+        spectra. Visibility controls allow spectra to be temporarily hidden
+        without removing them from the alignment session.
+
+        Shifts are applied to a copy of the spectra collection, leaving the
+        original object unchanged.
+
+        Keyboard shortcuts:
+            - ``<`` or ``,``
+                Select previous spectrum.
+            - ``>`` or ``.``
+                Select next spectrum.
+            - ``-``
+                Shift current spectrum to lower x values.
+            - ``+`` or ``=``
+                Shift current spectrum to higher x values.
+
+        Mouse controls:
+            - Left click on a curve
+                Select the corresponding spectrum.
+            - Check box
+                Toggle spectrum visibility.
+
+        Args:
+            vlines (number or sequence, optional): Vertical guide lines displayed
+                in the plot. Passed to :func:`brixs.axvlines`. Default is ``[]``.
+            hlines (number or sequence, optional): Horizontal guide lines
+                displayed in the plot. Passed to :func:`brixs.axhlines`.
+                Default is ``[]``.
+            vertical_offset (float, optional): Vertical offset applied between
+                consecutive spectra for easier visualization. The *i*-th spectrum
+                is shifted by ``i * vertical_offset`` in the y direction.
+                Default is ``0``.
+            step (float or str, optional): Horizontal shift increment applied when
+                using the shift controls. If ``'auto'``, the increment is set to
+                one-tenth of the average x-spacing of the currently selected
+                spectrum. Default is ``'auto'``.
+
+        Returns:
+            Spectra: Copy of the original spectra collection. The returned object
+            is updated interactively as shifts are applied and contains the final
+            alignment state.
+        """
+        # Initial
+        ss = self.copy()
+        offset = [vertical_offset*i for i in range(len(ss))]
+        state  = {"idx": None, "active": False, "x0": None}
+
+        # Figure initialization
+        fig, ax = plt.subplots()
+        title = ax.text(0.65, 1.02, "Click on a curve to select it", transform=ax.transAxes, ha="center", va="bottom")
+
+        # lines
+        figmanip.axvlines(vlines, ls='--')
+        figmanip.axhlines(hlines, ls='--')
+        
+        # Plot spectra
+        lines = []
+        labels = []
+        colors = []
+        for i, s in enumerate(ss):
+            line, = ax.plot(s.x, s.y+offset[i], label=str(i), picker=5)
+            lines.append(line)
+            labels.append(str(i))
+            colors.append(line.get_color())
+
+        # CheckButton panel
+        rax = ax.inset_axes([1, 0, 0.08, 1])
+        check = CheckButtons(ax=rax, labels=labels, actives=[line.get_visible() for line in lines], label_props={"color": colors}, frame_props={"edgecolor": colors}, check_props={"facecolor": colors})
+
+        def update_after_shift(idx):
+            lines[idx].set_xdata(ss[idx].x)
+            ax.relim()
+            ax.autoscale_view()
+            fig.canvas.draw_idle()
+            
+        def update_selection(idx):
+            """Restore the previous line and highlight the selected line."""
+            # Restore the previously selected line
+            if state["idx"] is not None:
+                previous_idx  = state["idx"]
+                previous_line = lines[previous_idx]
+                previous_line.set_color(colors[previous_idx])
+                previous_line.set_linewidth(1.5)
+                previous_line.set_zorder(2)
+                check.labels[previous_idx].set_color(colors[previous_idx])
+                check.labels[previous_idx].set_fontweight("normal")
+
+            selected_line = lines[idx]
+        
+            # Highlight the newly selected line
+            selected_line.set_color("black")
+            selected_line.set_linewidth(2.5)
+
+            # Bring it in front of all other curves
+            highest_zorder = max(line.get_zorder() for line in lines)
+            selected_line.set_zorder(highest_zorder + 1)
+
+            # Highlight the check boxes
+            check.labels[idx].set_color("black")
+            check.labels[idx].set_fontweight("bold")
+            _temp = colors[:]
+            _temp[idx] = "black"
+            check.set_frame_props({"edgecolor": _temp})
+            check.set_check_props({"facecolor": _temp})
+            
+            # update state
+            state["idx"] = idx
+
+            # final
+            title.set_text(f"Selected spectrum: {idx}")
+            fig.canvas.draw_idle()
+
+        def on_pick(event):
+            """Select the curve clicked by the user."""
+            if event.mouseevent.button != 1:
+                return
+            selected_line = event.artist
+            if selected_line not in lines:
+                return
+            if not selected_line.get_visible():
+                return
+            idx = lines.index(selected_line)
+            state["active"] = True
+            state["x0"]     = event.mouseevent.xdata
+            update_selection(idx)
+
+        def on_check_clicked(label):
+            """Toggle the visibility of the selected spectrum."""
+            idx  = int(label)
+            line = lines[idx]
+            line.set_visible(not line.get_visible())
+            # Clear the selection if the selected line is hidden
+            if state["idx"] == idx:
+                idx = int(label)
+                line.set_color(colors[idx])
+                line.set_linewidth(1.5)
+                line.set_zorder(2)
+                check.labels[idx].set_color(colors[idx])
+                check.labels[idx].set_fontweight("normal")
+                check.set_frame_props({"edgecolor": colors})
+                check.set_check_props({"facecolor": colors})
+                state["idx"] = None
+                title.set_text("Click on a curve to select it")
+            fig.canvas.draw_idle()
+
+        def _prev(event=None):
+            """Select the previous spectrum."""
+            idx = state["idx"]
+            if idx is None:
+                idx = len(ss)
+            else:
+                idx = max(0, state["idx"] - 1)
+            update_selection(idx)
+            active_idxs = np.where(check.get_status())[0]
+            if idx not in active_idxs:
+                idx = active_idxs[active_idxs < idx].max()  
+            update_selection(idx)
+        def _next(event=None):
+            """Select the next spectrum."""
+            idx = state["idx"]
+            if idx is None:
+                idx = 0
+            else:
+                idx = min(len(ss) - 1, idx + 1)
+            active_idxs = np.where(check.get_status())[0]
+            if idx not in active_idxs:
+                idx = active_idxs[active_idxs > idx].min()  
+            update_selection(idx)
+
+            
+        def _shift_right(event=None):
+            """Shift the current spectrum to the right."""
+            idx = state["idx"]
+            if idx is not None:
+                if step == 'auto':
+                    ss[idx] = ss[idx].set_shift(np.mean(np.diff(ss[idx].x)) / 10)
+                else:
+                    ss[idx] = ss[idx].set_shift(step)
+                update_after_shift(idx)
+        def _shift_left(event=None):
+            """Shift the current spectrum to the left."""
+            idx = state["idx"]
+            if idx is not None:
+                if step == 'auto':
+                    ss[idx] = ss[idx].set_shift(-np.mean(np.diff(ss[idx].x)) / 10)
+                else:
+                    ss[idx] = ss[idx].set_shift(-step)
+                update_after_shift(idx)
+        def on_key(event):
+            """Handle keyboard commands."""
+            if event.key in (".", ">"):
+                _next()
+            elif event.key in (",", "<"):
+                _prev()
+            elif event.key in ("+", "="):
+                _shift_right()
+            elif event.key == "-":
+                _shift_left()
+    
+        def on_motion(event):
+            if not state["active"]:
+                return
+            if event.inaxes is not ax or event.xdata is None:
+                return
+            idx = state["idx"]
+            lines[idx].set_xdata(ss[idx].x  + event.xdata - state["x0"])
+            ax.relim()
+            ax.autoscale_view()
+            fig.canvas.draw_idle()
+        def on_release(event):
+            state["active"] = False
+            state["x0"]     = None
+
+        # buttons
+        _y = 0.95
+        _height = 0.04
+        _width  = 0.08
+        _fontsize = 8
+        
+        buttons = {}
+        buttons["previous"] = Button(fig.add_axes((0.08+(_width+0.01)*0, _y, _width, _height)), "< Prev")
+        buttons["previous"].on_clicked(_prev)
+        
+        buttons["next"] = Button(fig.add_axes((0.08+(_width+0.01)*1, _y, _width, _height)), "Next >")
+        buttons["next"].on_clicked(_next)
+        
+        buttons["shift_left"] = Button(fig.add_axes((0.08+(+_width+0.01)*2, _y, _width, _height)), "Shift −")
+        buttons["shift_left"].on_clicked(_shift_left)
+        
+        buttons["shift_right"] = Button(fig.add_axes((0.08+(+_width+0.01)*3, _y, _width, _height)), "Shift +")
+        buttons["shift_right"].on_clicked(_shift_right)
+
+        for _name in buttons:
+            buttons[_name].label.set_fontsize(_fontsize)
+
+        # Connect callbacks
+        check.on_clicked(on_check_clicked)
+        _ = fig.canvas.mpl_connect("pick_event", on_pick)
+        _ = fig.canvas.mpl_connect("key_press_event", on_key)
+        _ = fig.canvas.mpl_connect("motion_notify_event", on_motion)
+        _ = fig.canvas.mpl_connect("button_release_event", on_release)
+
+        # Save objects to prevent garbage collection
+        fig._check   = check
+        fig._buttons = buttons
+
+        # Final
+        plt.show()
+
+        return ss
 
 # %% =============================== Image =============================== %% #
 class Image(_BrixsObject, metaclass=_Meta):
@@ -7808,6 +8241,15 @@ class Image(_BrixsObject, metaclass=_Meta):
         if isinstance(value, Iterable) == False:
             value = [value]*len(centers)
         assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
+
+        ###################
+        # Shift x_centers #
+        ###################
+        ref_shift = value[0] 
+        value = [float(k - ref_shift) for k in value]  # shift values in relation to the reference shift
+        _temp = self.x_step
+        self.x_centers += ref_shift  # this will reset x_step to None
+        self._x_step = _temp  # restore x_step to its original value
         
         #################
         # shift to roll #
@@ -7847,7 +8289,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             try:
                 self.check_y_step()
             except ValueError:
-                raise ValueError(f'Cannot shift data, because x centers are not uniform. Use im.x_interp() to make data uniform, or shift data using im.set_roll()')
+                raise ValueError(f'Cannot shift data, because y centers are not uniform. Use im.y_interp() to make data uniform, or shift data using im.set_roll()')
         
         #####################################
         # asserting validity of the input 2 #
@@ -7856,6 +8298,20 @@ class Image(_BrixsObject, metaclass=_Meta):
         if isinstance(value, Iterable) == False:
             value = [value]*len(centers)
         assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of columns ({len(centers)})'
+
+        ###################
+        # Shift y_centers #
+        ###################
+        ref_shift = value[0]  
+        value = [float(k - ref_shift) for k in value]  # shift values in relation to the reference shift
+
+        # max_allowed_shift = max(self.y_centers) - min(self.y_centers)
+        # if max(abs(value)) > max_allowed_shift:
+        #     raise ValueError(f'Some shift values are larger than the span of the y centers (from {min(self.y_centers)} to {max(self.y_centers)})'+'\nThis may result in image columns where all pixels are rolled out of the image and re-introduced on the other side.')
+
+        _temp = self.y_step
+        self.y_centers += ref_shift  # this will reset y_step to None
+        self._y_step = _temp  # restore y_step to its original value
         
         #################
         # shift to roll #
@@ -7875,7 +8331,7 @@ class Image(_BrixsObject, metaclass=_Meta):
              other side. 
 
         Warning:
-            Roll values must be an integer. Float values will be rounded to int.
+            Roll values must be an integer. Float values will be rounded and turned into int.
 
         Args:
             value (int or list): The number of pixels by which the data are 
@@ -7907,11 +8363,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         # roll #
         ########
         # I copyied this part from stackoverflow. 
-        # Honestly, I don't 100% understand it, but it runs two order of magnetude
         # faster than the old implementation
         im = self.copy()   
         rows, column_indices = np.ogrid[:im.data.shape[0], :im.data.shape[1]]
-        value[value < 0] += im.data.shape[1]
+        # value[value < 0] += im.data.shape[1]  # any shift is larger than the image will yield an error later
+        value = np.asarray(value) % im.data.shape[1]  # This will allow any shift size, even larger than the image size
         column_indices = column_indices - value[:, np.newaxis]
         try:
             im._data = im.data[rows, column_indices]
@@ -7936,7 +8392,7 @@ class Image(_BrixsObject, metaclass=_Meta):
              other side. 
 
         Warning:
-            Roll values must be an integer. Float values will be rounded to int.
+            Roll values must be an integer. Float values will be rounded and turned into int.
 
         Args:
             value (int or list): The number of pixels by which the data are 
@@ -7968,11 +8424,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         # roll #
         ########
         # I copied this part from stackoverflow. 
-        # Honestly, I don't 100% understand it, but it runs two order of magnitude
         # faster than the old implementation
         im = self.copy()    
         row_indices, cols = np.ogrid[:im.data.shape[0], :im.data.shape[1]]
-        value[value < 0] += im.data.shape[0]
+        # value[value < 0] += im.data.shape[0]  # any shift is larger than the image will yield an error later
+        value = np.asarray(value) % im.data.shape[0]  # This will allow any shift size, even larger than the image size
         row_indices = row_indices - value[np.newaxis, :]
         try:
             im._data = im.data[row_indices, cols]
@@ -8101,8 +8557,10 @@ class Image(_BrixsObject, metaclass=_Meta):
         im._y_edges         = copy.deepcopy(self.x_edges) 
         return im
 
-    def x_interp(self, start=None, stop=None, num=None, step=None, x=None):
+    def x_interp(self, start=None, stop=None, num=None, step=None, x=None, max_number_of_columns=100):
         """return image with interpolated x centers
+
+        This may be useful to create rows out of the average of other rows.
 
         Args:
             start (number, optional): The starting value for x centers. If `None`,
@@ -8113,6 +8571,9 @@ class Image(_BrixsObject, metaclass=_Meta):
             step (number, optional): Spacing between x centers. This overwrites ``num``.
             x (list or array, optional): The values at which to
                 evaluate the interpolated values for x centers. This overwrites all other arguments.
+            max_number_of_rows (number, optional): Raises an Error if one tries
+                to x_interp a image with more than columns than max_number_of_columns.
+                Default is 100.
 
         Return:
             :py:class:`Image`
@@ -8120,7 +8581,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ###############
         # get columns #
         ###############
-        cols = self.columns
+        cols = self.get_columns(max_number_of_columns=max_number_of_columns)
 
         ##########
         # interp #
@@ -8145,18 +8606,23 @@ class Image(_BrixsObject, metaclass=_Meta):
         im._y_edges         = copy.deepcopy(self.y_edges)
         return im
 
-    def y_interp(self, start=None, stop=None, num=None, step=None, y=None):
+    def y_interp(self, start=None, stop=None, num=None, step=None, y=None, max_number_of_rows=100):
         """return image with interpolated y centers
+
+        This may be useful to create rows out of the average of other rows.
 
         Args:
             start (number, optional): The starting value for y centers. If `None`,
-                the minium attr value will be used.
+                the minimum attr value will be used.
             stop (number, optional): The end value for y centers. If `None`,
                 the maximum attr value will be used.
             num (int, optional): Number of x centers values.
             step (number, optional): Spacing between y centers. This overwrites ``num``.
             y (list or array, optional): The values at which to
                 evaluate the interpolated values for y centers. This overwrites all other arguments.
+            max_number_of_rows (number, optional): Raises an Error if one tries
+                to y_interp a image with more than rows than max_number_of_rows.
+                Default is 100.
 
         Return:
             :py:class:`Image`
@@ -8164,7 +8630,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ############
         # get rows #
         ############
-        rows = self.rows
+        rows = self.get_rows(max_number_of_rows=max_number_of_rows)
 
         ##########
         # interp #
@@ -9585,6 +10051,134 @@ class Image(_BrixsObject, metaclass=_Meta):
         pos.y_centers = arraymanip.moving_average(pos.y_edges, 2)
         
         return pos
+
+    def manual_vertical_shift_via_polyfit(self, polyorder=4, color='white', cmap='jet', vmin=None, vmax=None):
+        """Interactively correct vertical curvature using a polynomial fit.
+
+        Display the original image and the corrected image side by side.
+        Clicking on the original image adds reference points describing the
+        feature that should be made horizontal and set to y=0. 
+        
+        When two or more reference points are present, their coordinates are
+        fitted with a polynomial. Clicking near an existing reference point removes it.
+        
+        Args:
+            polyorder (int, optional): Degree of the polynomial fitted to the 
+                selected reference. points. Default is 4.
+            color (str or tuple, optional): Matplotlib-compatible color used 
+                for the selected points and fitted polynomial curve. 
+                Default is 'white'.
+            cmap: The Colormap instance. Default is 'jet'.
+            vmin: Minimum intensity that the colormap covers. The intensity histogram is
+                calculated and vmin is set on the position of the maximum.
+            vmax: Maximmum intensity that the colormap covers. The intensity histogram is
+                calculated and vmax is set to the value where the 
+                intensity drops below 0.01 % of the maximum.
+
+        Returns:
+            dict: Dictionary updated in place as reference points are modified. It contains:
+                * 'im' (:obj:`Image`): Vertically corrected copy of the image.
+                * 'p' (array-like): Polynomial coefficients used to
+                calculate the vertical shifts, ordered from the highest
+                polynomial degree to the constant term.
+                * 'shift' (array-like): Vertical shift applied to each image column.
+        """
+
+        im  = self.copy()
+        final = {'im': self.copy(), 'p': [0, ], 'shift': [0 for _ in range(len(im.x_centers))]}
+
+        # figure initialization
+        fig, axes = br.subplots(1, 2, figsize=(28, 14), sharex=True, layout='constrained')
+        plt.suptitle("Manual vertical shift plot.")
+        axes[0].set_title("Click on this image to add points (click on a point to remove it)")
+        axes[1].set_title("Corrected image.")
+        
+        im.plot(ax=axes[0], vmin=vmin, vmax=vmax)
+        line = axes[0].plot([im.x_centers[0], im.x_centers[-1]], [im.y_centers[0], im.y_centers[0]], color=color)[0]
+        line.set_visible(False)
+        line2 = im.plot(ax=axes[1], vmin=vmin, vmax=vmax)
+
+        # click events
+        press_event = {"x": None, "y": None}
+        curve       = {"x": [], "y": [], "artists": []}
+        
+        def on_press(event):
+            if event.inaxes == axes[0]:
+                press_event["x"] = event.x
+                press_event["y"] = event.y
+        def on_release(event):
+            # ignore clicks outside image
+            if event.inaxes != axes[0]:
+                return  
+                
+            # ignore if no press recorded
+            if press_event["x"] is None:
+                return
+                
+            # ignore if it is a drag
+            dx = abs(event.x - press_event["x"])
+            dy = abs(event.y - press_event["y"])
+            # threshold in pixels
+            if dx > 5 or dy > 5:
+                return  
+
+            # get click position
+            x_click = event.xdata
+            y_click = event.ydata
+            
+            # check if click is near an existing point
+            x_min, x_max = axes[0].get_xlim()
+            y_min, y_max = axes[0].get_ylim()
+            tol_x = 0.01 * abs(x_max - x_min)  # dynamic tolerance based on zoom
+            tol_y = 0.01 * abs(y_max - y_min)
+            remove_index = None
+            for i, (x0, y0) in enumerate(zip(curve["x"], curve["y"])):
+                if abs(x_click - x0) < tol_x and abs(y_click - y0) < tol_y:
+                    remove_index = i
+                    break
+
+            # Remove point if click is near existing point
+            if remove_index is not None:
+                curve["x"].pop(remove_index)
+                curve["y"].pop(remove_index)
+                # remove marker from plot
+                artist = curve["artists"].pop(remove_index)
+                artist.remove()
+            # Otherwise, add point
+            else:
+                curve["x"].append(x_click)
+                curve["y"].append(y_click)
+                artist, = axes[0].plot(x_click, y_click, marker='x', color=color, markersize=8, markeredgewidth=2)
+                curve["artists"].append(artist)
+
+            # polyfit
+            if len(curve['x']) >= 2:
+                s = br.Spectrum(x=curve['x'], y=curve['y'])
+                fit = s.polyfit(deg=polyorder)
+                x = np.linspace(im.x_centers[0], im.x_centers[-1], 2000)
+                y = fit['model'](x)
+
+                line.set_visible(True)
+                line.set_data(x, y)
+
+                # correct curvature
+                final['p'] = -fit['popt']
+                final['shift'] = np.polyval(final['p'], final['im'].x_centers)
+                final['im'] = im.set_vertical_shift_via_polyval(p=final['p'])
+                line2.set_data(final['im'].data)
+            else:
+                final['p'] = 0
+                final['shift'] = [0 for _ in range(len(im.x_centers))]
+                line.set_data([im.x_centers[0], im.x_centers[-1]], [im.y_centers[0], im.y_centers[0]])
+                line.set_visible(False)
+                line2.set_data(im.data)
+            _ = fig.canvas.draw_idle()
+            
+        # Connect event
+        _ = fig.canvas.mpl_connect('button_press_event', on_press)
+        _ = fig.canvas.mpl_connect('button_release_event', on_release)
+
+        return final
 
 # %% ============================ PhotonEvents =========================== %% #
 class PhotonEvents(_BrixsObject, metaclass=_Meta):
