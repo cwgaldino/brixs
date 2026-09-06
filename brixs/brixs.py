@@ -8351,8 +8351,6 @@ class Image(_BrixsObject, metaclass=_Meta):
         #################
         # shift to roll #
         #################
-        print('gg')
-        print(im.x_step)
         value = [int(round(k/im.x_step)) for k in value]
         
         ########
@@ -9847,6 +9845,23 @@ class Image(_BrixsObject, metaclass=_Meta):
             # replace value
             im.data[y_start:y_stop, x_start:x_stop] = np.ones((abs(y_start-y_stop), abs(x_start-x_stop)))*valuefinal
         return im
+
+    def patch_from_photon_events(self, pe, n=2):
+        """Apply square patches around photon event positions.
+
+        This is a convenience wrapper around `Image.patch`, but instead of 
+        passing a list, it patches the image based on photon events.
+
+        Args:
+            pe (iterable): Collection of photon events.
+            n (int, optional): Half-size of the square patch in pixels. A value of
+                `n=2` results in a 5 x 5 patch. Default is 2.
+
+        Returns:
+            br.Image: Image with patches applied at the specified positions.
+        """
+        _pos = [(_[1], _[0]) for _ in pe]
+        return self.patch(pos=_pos, nx=n, ny=n, value=None, coordinates='centers')
 
 
     ##########################        
