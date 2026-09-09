@@ -505,6 +505,16 @@ def figure(*args, **kwargs):
         br.settings.FIGURE_SIZE
         br.settings.FIGURE_GRID
     """
+    ######################
+    # constrained layout #
+    ######################
+    if settings.FIGURE_CONSTRAINED_LAYOUT:
+        if 'layout' not in kwargs and 'constrained_layout' not in kwargs:
+            kwargs['layout'] = 'constrained'
+
+    #################
+    # create figure #
+    #################
     fig = figmanip.figure(*args, **kwargs)
 
     ############
@@ -575,6 +585,16 @@ def subplots(*args, **kwargs):
         br.settings.FIGURE_GRID
 
     """
+    ######################
+    # constrained layout #
+    ######################
+    if settings.FIGURE_CONSTRAINED_LAYOUT:
+        if 'layout' not in kwargs and 'constrained_layout' not in kwargs:
+            kwargs['layout'] = 'constrained'
+
+    #################
+    # create figure #
+    #################
     fig, axes = figmanip.subplots(*args, **kwargs)
 
     ############
@@ -690,8 +710,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
     def __init__(self, x=None, y=None, filepath=None, **kwargs):
         """Initialize the object instance"""
-        ###########################
-        # Initializing attributes #
+        ###########################  - Must contain all core attributes 
+        # Initializing attributes #  - Does not need to use attribute's default values
         ###########################
         # core
         self._x = None
@@ -2736,8 +2756,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
     def __init__(self, data=None):
         """Initialize the object instance"""
-        ###########################
-        # Initializing attributes #
+        ###########################  - Must contain all core attributes 
+        # Initializing attributes #  - Does not need to use attribute's default values
         ###########################
         # core
         self._data = []
@@ -6584,8 +6604,8 @@ class Image(_BrixsObject, metaclass=_Meta):
     
     def __init__(self, data=None, x_centers=None, y_centers=None):
         """Initialize the object instance"""
-        ###########################
-        # Initializing attributes #
+        ###########################  - Must contain all core attributes 
+        # Initializing attributes #  - Does not need to use attribute's default values
         ###########################
         # core
         self._data = None
@@ -10724,8 +10744,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     
     def __init__(self, x=[], y=[], xlim=None, ylim=None, filepath=None, **kwargs): 
         """Initialize the object instance"""
-        ###########################
-        # Initializing attributes #
+        ###########################  - Must contain all core attributes 
+        # Initializing attributes #  - Does not need to use attribute's default values
         ###########################
         # core
         self._x = None
@@ -11160,7 +11180,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ###############################
         # check if empty PhotonEvents #
         ###############################
-        if self.x is None:
+        if len(self.x) == 0:
             return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
             
         #################
