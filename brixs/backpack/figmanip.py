@@ -604,7 +604,7 @@ def figure(*args, **kwargs):
         >>> fig = br.figure()
         >>> fig.grid() # creates a figure grid with grid lines to help axes alignment
         >>> fig.crosshair() # crosshair cursor that follows the mouse pointer
-        >>> fig.crosshair(share=True) # uses the same crosshair for all axes in the figure
+        >>> fig.crosshair(shared=True) # uses the same crosshair for all axes in the figure
 
     Args:
         *args, **kwargs: args and kwargs are passed to `plt.figure()`.
@@ -916,7 +916,7 @@ def figure_grid(visible=None, fig=None):
     fig.grid(visible=visible)
     return
 
-def _crosshair(self, visible=None, share=False):
+def _crosshair(self, visible=None, shared=False):
     """Show crosshair cursor on figure."""
     if visible is None:
         if self._cursor == []:
@@ -932,7 +932,7 @@ def _crosshair(self, visible=None, share=False):
 
     if visible:
         self._cursor = []
-        if share:
+        if shared:
             _cursor = MultiCursor(None, self.axes, color='0.5', lw=0.5, ls='--', horizOn=True, vertOn=True, useblit=True)
             self._cursor.append(_cursor)
         else:
@@ -947,16 +947,44 @@ def _crosshair(self, visible=None, share=False):
         self._cursor = []
     return
 
-def crosshair(visible=None, share=False, fig=None):
-    """Show crosshair cursor on figure."""
-    if fig is None:
-        fig = plt.gcf()
-    if hasattr(fig, 'crosshair'):
-        fig.crosshair(visible=visible, share=share)
+def crosshair(axes=None, visible=None, shared=False, fig=None):
+    """Add crosshair cursors on all axes of a figure or in all axes in the list.
+
+    Args:
+        axes (list[matplotlib.axes.Axes] | None, optional):
+            Axes on which to create crosshair cursors. This overwrites the 
+            fig. If axes=None and fig=None, than fig=plt.gcf() [current figure].
+        visible (bool | None, optional):
+            Visibility state of the crosshair. If provided, the state is
+            forwarded to the figure's ``crosshair()`` method.
+        shared (bool, optional): If ``True``, create a single crosshair shared across all axes.
+            If ``False``, each axis receives its own independent crosshair.
+            Defaults to ``False``.
+        fig (matplotlib.figure.Figure | None, optional): Figure on which to 
+            create or control the crosshair. If ``None``, the current figure is 
+            used.
+
+    Returns:
+        None
+    """
+    if axes is not None:
+        fig = axes[0].get_figure()
+        if shared:
+            _cursor = MultiCursor(None, axes, color='0.5', lw=0.5, ls='--', horizOn=True, vertOn=True, useblit=True)
+            fig._cursor.append(_cursor)
+        else:
+            for _ax in axes:
+                _cursor = MultiCursor(None, [_ax, ], color='0.5', lw=0.5, ls='--', horizOn=True, vertOn=True, useblit=True)
+                fig._cursor.append(_cursor)
     else:
-        fig._cursor = []
-        fig.crosshair  = MethodType(_crosshair, fig)
-        fig.crosshair(visible=visible, share=share)
+        if fig is None:
+            fig = plt.gcf()
+        if hasattr(fig, 'crosshair'):
+            fig.crosshair(visible=visible, shared=shared)
+        else:
+            fig._cursor = []
+            fig.crosshair  = MethodType(_crosshair, fig)
+            fig.crosshair(visible=visible, shared=shared)
     return
 
 # %% ============================== subplots ============================== %% #
@@ -1081,7 +1109,7 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
 
         >>> fig.grid() # creates a figure grid with grid lines to help axes alignment
         >>> fig.crosshair() # crosshair cursor that follows the mouse pointer
-        >>> fig.crosshair(share=True) # uses the same crosshair for all axes in the figure
+        >>> fig.crosshair(shared=True) # uses the same crosshair for all axes in the figure
 
     Args:
         nrows, ncols (int): Number of rows/columns of the subplot grid.
