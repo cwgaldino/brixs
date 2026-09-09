@@ -93,7 +93,7 @@ def _get_metadata(f, exp, verbose=False):
             if proc == 'list_bool':      _value = [bool(_ == 1) for _ in f[address][()]]
             if proc == 'list_str':       _value = [str(_) for _ in f[address][()]]
         except Exception as e:
-            if verbose: print(name, ':', e)
+            if verbose: print(name, ' - ', proc, ' - ', address, ':', e)
             _value = None
         metadata[key][name] = _value
     return metadata

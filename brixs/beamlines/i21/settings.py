@@ -9,6 +9,7 @@ class _settings():
         self._PREFIX = 'i21-'
         self._CALIB = 1
         self._SLOPE  = None
+        self._DEFAULT_PROCESSING_PARAMETERS  = {}
         self._MAX_IMAGES_TO_LOAD_AT_ONCE = 200
 
     @property
@@ -73,6 +74,16 @@ class _settings():
         raise AttributeError('Cannot delete object.')
 
     @property
+    def DEFAULT_PROCESSING_PARAMETERS(self):
+        return self._DEFAULT_PROCESSING_PARAMETERS
+    @DEFAULT_PROCESSING_PARAMETERS.setter
+    def DEFAULT_PROCESSING_PARAMETERS(self, value):
+        self._DEFAULT_PROCESSING_PARAMETERS = value
+    @DEFAULT_PROCESSING_PARAMETERS.deleter
+    def DEFAULT_PROCESSING_PARAMETERS(self):
+        raise AttributeError('Cannot delete object.')
+
+    @property
     def MAX_IMAGES_TO_LOAD_AT_ONCE(self):
         return self._MAX_IMAGES_TO_LOAD_AT_ONCE
     @MAX_IMAGES_TO_LOAD_AT_ONCE.setter
@@ -89,6 +100,7 @@ class _settings():
                  f'PREFIX:                     {self.PREFIX}\n' +\
                  f'CALIB:                      {self.CALIB}\n' +\
                  f'SLOPE:                      {self.SLOPE}\n' +\
+                 f'DEFAULT_PROCESSING_PARAMETERS: {self.DEFAULT_PROCESSING_PARAMETERS}\n' +\
                  f'MAX_IMAGES_TO_LOAD_AT_ONCE: {self.MAX_IMAGES_TO_LOAD_AT_ONCE}\n'
         return _text
 

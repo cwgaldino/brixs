@@ -16,10 +16,12 @@ chi, manipulator, round2, entry/instrument/manipulator/chi
 phi, manipulator, round2, entry/instrument/manipulator/phi                                                                         
 th,  manipulator, round2, entry/instrument/manipulator/th
 
-E,         instrument, round2, entry/sample/beam/incident_energy
-pol,       instrument, string, entry/instrument/id/polarisation
-exit_slit, instrument, round2, entry/instrument/s5/v1_gap
+E,         instrument, round2,     entry/sample/beam/incident_energy
+pol,       instrument, string,     entry/instrument/id/polarisation
+exit_slit, instrument, round2,     entry/instrument/s5/v1_gap
 i0,        instrument, list_float, entry/m4c1/m4c1 
+sgmpitch,  instrument, float,      entry/instrument/sgm/pitch
+cff,       instrument, float,      entry/instrument/sgm/pitch
 
 T,          sample, round2, entry/instrument/lakeshore336/sample                                               
 T_setpoint, sample, round2, entry/instrument/lakeshore336/demand                                                 
@@ -28,7 +30,7 @@ T_setpoint, sample, round2, entry/instrument/lakeshore336/demand
 count_time, andor, list_float, entry/instrument/andor/count_time
 
 # el_andor
-count_time, andor, list_float, entry/instrument/el_andor/count_time
+# count_time, el_andor, list_float, entry/instrument/el_andor/count_time
 
 # maranax
 # count_time,          maranax, string, entry/instrument/maranax/count_time
