@@ -154,6 +154,12 @@ FIGURE_SIZE (tuple): default size in px (w, h) for new figures. If None, the
     matplotlib default will be used. Default is None. This is overwritten by
     `figsize` argument when calling a new figure.
 
+FIGURE_CONSTRAINED_LAYOUT (bool): if True, sets layout='constrained' in all
+    created br.figure() and br.subplots() when layout is not explicitly passed
+    to the function. This replaces plt.rcParams['figure.constrained_layout.use'] = True  
+    which is much more agressive and has global consequenses on the matplotlib 
+    package.
+
 FIGURE_DPI (float): default DPI value for new figures. If None, the 
     matplotlib default will be used. Default is None.
 
@@ -189,9 +195,10 @@ class _settings():
         ##########
         # figure #
         ##########
-        self.FIGURE_POSITION          = None
-        self.FIGURE_SIZE              = None
-        self.FIGURE_DPI               = None
+        self.FIGURE_POSITION           = None
+        self.FIGURE_SIZE               = None
+        self.FIGURE_DPI                = None
+        self.FIGURE_CONSTRAINED_LAYOUT = False
 
         self.FIGURE_FORCE_NEW_WINDOW  = False
         # self.FIGURE_FORCE_ON_TOP      = False
@@ -227,12 +234,13 @@ class _settings():
 
     def __str__(self):
         text  =  '========== figure settings ============\n'
-        text += f'FIGURE_POSITION:         {self.FIGURE_POSITION}\n' +\
-                f'FIGURE_SIZE:             {self.FIGURE_SIZE}\n' +\
-                f'FIGURE_DPI:              {self.FIGURE_DPI}\n' +\
-                f'FIGURE_FORCE_NEW_WINDOW: {self.FIGURE_FORCE_NEW_WINDOW}\n' +\
-                f'FIGURE_GRID:             {self.FIGURE_GRID}\n' +\
-                f'FIGURE_GRID_OFFSET:      {self.FIGURE_GRID_OFFSET}'
+        text += f'FIGURE_POSITION:           {self.FIGURE_POSITION}\n' +\
+                f'FIGURE_SIZE:               {self.FIGURE_SIZE}\n' +\
+                f'FIGURE_CONSTRAINED_LAYOUT: {self.FIGURE_CONSTRAINED_LAYOUT}\n' +\
+                f'FIGURE_DPI:                {self.FIGURE_DPI}\n' +\
+                f'FIGURE_FORCE_NEW_WINDOW:   {self.FIGURE_FORCE_NEW_WINDOW}\n' +\
+                f'FIGURE_GRID:               {self.FIGURE_GRID}\n' +\
+                f'FIGURE_GRID_OFFSET:        {self.FIGURE_GRID_OFFSET}'
         # text += '\n======== spectra settings ===========\n'  
         # text += f'MAX_ERROR_STEP_X:        {self.MAX_ERROR_STEP_X}\n'
         return text
