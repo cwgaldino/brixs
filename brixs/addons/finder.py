@@ -319,41 +319,41 @@ def search(kwargs=None, folderpath=None):
     Returns 
         False, or spectrum/spectra if data is found
     """
+    ##############
+    # folderpath #
+    ##############
+    if folderpath is None:
+        folderpath = br.finder.folderpath
+    folderpath = Path(folderpath)
+    assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
+
+    ##########
+    # kwargs #
+    ##########
+    if kwargs is None:
+        kwargs = br.finder.kwargs
+        if kwargs == '':
+            raise ValueError('kwargs must be defined, e.g., `br.finder.kwargs = vars()`')
+    assert isinstance(kwargs, dict), f'kwargs must be a dict, not type {type(kwargs)}'
+
+    ##################################
+    # get vars in alphabetical order #
+    ##################################
+    names = np.sort(list(kwargs.keys()))
+
+    ########################
+    # create search string #
+    ########################
+    search_string = ''
+    for name in names:
+        search_string += name + str(kwargs[name]).replace('\n', '') + '_'
+            
+    ######################
+    # save search_string #
+    ######################
+    br.finder._search_string = search_string
+    
     if search_on:
-        ##############
-        # folderpath #
-        ##############
-        if folderpath is None:
-            folderpath = br.finder.folderpath
-        folderpath = Path(folderpath)
-        assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
-
-        ##########
-        # kwargs #
-        ##########
-        if kwargs is None:
-            kwargs = br.finder.kwargs
-            if kwargs == '':
-                raise ValueError('kwargs must be defined, e.g., `br.finder.kwargs = vars()`')
-        assert isinstance(kwargs, dict), f'kwargs must be a dict, not type {type(kwargs)}'
-
-        ##################################
-        # get vars in alphabetical order #
-        ##################################
-        names = np.sort(list(kwargs.keys()))
-
-        ########################
-        # create search string #
-        ########################
-        search_string = ''
-        for name in names:
-            search_string += name + str(kwargs[name]).replace('\n', '') + '_'
-                            
-        ######################
-        # save search_string #
-        ######################
-        br.finder._search_string = search_string
-
         #################
         # search string #
         #################
