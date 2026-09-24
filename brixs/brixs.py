@@ -4567,6 +4567,15 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         return ss
 
+    def save_shift_to_file(self, filepath):
+        """Save shift values to a file to be loaded later"""
+        return np.savetxt(filepath, self.shift)
+    
+    def set_shift_from_file(self, filepath):
+        """Set shift value from a file. Each shift value must be in a new row"""
+        values = np.loadtxt(filepath)
+        return self.set_shift(values)
+
     #############
     # modifiers #
     #############

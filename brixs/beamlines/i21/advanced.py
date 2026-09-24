@@ -628,7 +628,7 @@ def quick_mesh(scans, fast_motor='auto', figsize=(27, 6), vmin=None, vmax=None, 
     for i, ax in enumerate(axes):
         try:
             ax.set_title(titles[i], ha='center', va='top', fontsize=22, fontweight='bold', bbox=dict(facecolor='lightgrey', edgecolor='none', pad=0))
-            pos = data[labels[i]].plot(ax=ax, vmin=vmin, vmax=vmax, verbose=False)
+            pos = data[labels[i]].plot(ax=ax, vmin=vmin, vmax=vmax, verbose=False, origin='lower')
             cb = fig.colorbar(pos, ax=ax, fraction=0.046, pad=0.04)
             cb.ax.tick_params(labelsize=6)
             cb.ax.ticklabel_format(style='sci', axis='both', scilimits=(0, 0))
