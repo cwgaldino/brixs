@@ -16,28 +16,37 @@ def operating_system():
     # if this function changes, it needs to be copied to these files: filemanip
 
     system = platform.system().lower()
-    is_windows = system == 'windows'
-    is_linux = system == 'linux'
-    is_mac = system == 'darwin'
-    if is_windows:
+    if system == 'windows':
         return 'windows'
-    elif is_linux:
+    elif system == 'linux':
         return 'linux'
-    elif is_mac:
+    elif system == 'darwin':
         return 'mac'
     else:
-        raise ValueError('OS not recognized')
+        raise ValueError(f'OS not recognized: {system}')
 
-def is_jupyter():
-    if 'JPY_PARENT_PID' in os.environ:
-        return True
-    else:
-        return False
+# def is_jupyter():
+#     if 'JPY_PARENT_PID' in os.environ:
+#         return True
+#     else:
+#         return False
+def check_if_jupyter():
+    """Robust check for Jupyter Notebook/Lab environments."""
+    # Check by IPython class name
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter Notebook or JupyterLab
+        elif shell == 'Shell':
+            return True   # Google Colab
+        return False      # Other IPython environments (like standard Terminal IPython)
+    except NameError:
+        return False      # Standard Python interpreter
 
 is_windows = operating_system() == 'windows'
 is_linux   = operating_system() == 'linux'
 is_mac     = operating_system() == 'mac'
-is_jupyter = is_jupyter()
+is_jupyter = check_if_jupyter()
 
 # if jupyter notebook, import things for copy2clipboard() 
 if is_jupyter:

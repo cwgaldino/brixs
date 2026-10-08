@@ -1377,10 +1377,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
                 temp = self.remove_nan()
             else:
                 temp = self.copy()
-            if self.x is not None:
-                number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in temp.x])
-                number_of_decimal_places_y = max([numanip.n_decimal_places(y) for y in temp.y])
-                kwargs['fmt'] = (f'%.{number_of_decimal_places_x}f', f'%.{number_of_decimal_places_y}f')
+            if temp.x is not None:
+                if len(temp) > 0:
+                    number_of_decimal_places_x = max([numanip.n_decimal_places(x) for x in temp.x])
+                    number_of_decimal_places_y = max([numanip.n_decimal_places(y) for y in temp.y])
+                    kwargs['fmt'] = (f'%.{number_of_decimal_places_x}f', f'%.{number_of_decimal_places_y}f')
         kwargs.setdefault('delimiter', ', ')
         kwargs.setdefault('newline', '\n')
         kwargs.setdefault('comments', '# ')

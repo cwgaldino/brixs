@@ -20,17 +20,14 @@ import platform
 def _operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
     system = platform.system().lower()
-    is_windows = system == 'windows'
-    is_linux = system == 'linux'
-    is_mac = system == 'darwin'
-    if is_windows:
+    if system == 'windows':
         return 'windows'
-    elif is_linux:
+    elif system == 'linux':
         return 'linux'
-    elif is_mac:
+    elif system == 'darwin':
         return 'mac'
     else:
-        raise ValueError('OS not recognized')
+        raise ValueError(f'OS not recognized: {system}')
 
 is_windows = _operating_system() == 'windows'
 is_linux   = _operating_system() == 'linux'

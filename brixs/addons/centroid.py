@@ -214,11 +214,11 @@ def find_candidates(self, nx, ny, threshold, threshold2=None,
     This is an approximate description of the algorithm:
     1) enhance image (floor, square, moving average)
     2) get all positions where pixel intensity is above threshold
-    3) for positions that are too close (<=n), keep only the one for the brightest pixel
+    3) for positions that are too close (<=nx, <=ny), keep only the one for the brightest pixel
     4) go back to the original image and find brightest pixel around the positions
-    suggested by the enhanced image (<=n) 
-    5) again, check the original image for positions that are too close (<=n) and
-    keep only the one with the brightest pixel
+    suggested by the enhanced image 
+    5) again, check the original image for positions that are too close 
+    (<=nx, <=ny) and keep only the one with the brightest pixel
 
     Args:
         nx, ny (int): photon hits candidates that are within n pixels of distance 
