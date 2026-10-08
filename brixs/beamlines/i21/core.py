@@ -258,8 +258,8 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
         scan (int, optional): scan number
         verbose (bool, optional): if True, prints the name of metadata is could
             not load. Default is False.
-        folderpath, prefix, filepath (str or Path, optional): use this to 
-            overwrite i21.settings (FOLDERPATH, PREFIX), or use filepath to 
+        folderpath, prefix, filepath (str or Path, optional): use this to
+            overwrite i21.settings (FOLDERPATH, PREFIX), or use filepath to
             directly give the path to a nexus file.
 
     Returns:
@@ -272,12 +272,12 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
     # get filepath
     if prefix     == 'auto': prefix     = settings.PREFIX
     if folderpath == 'auto': folderpath = settings.FOLDERPATH
-    if filepath   == 'auto': filepath   = folderpath/ (prefix + str(scan) + '.nxs')       
+    if filepath   == 'auto': filepath   = folderpath/ (prefix + str(scan) + '.nxs')      
 
     # open nexus file
     with h5py.File(Path(filepath), 'r', libver='latest', swmr=True) as f:
-        dets = ['diff1', 'fy2', 'draincurrent', 'm4c1']
-        det_name = {'diff1': 'diff1', 'fy2': 'fy2', 'draincurrent': 'tey', 'm4c1': 'i0'}
+        dets = ['diff1', 'fy2', 'draincurrent', 'm4c1', 'fy1', 'fy3', 'diff1', 'diff3']
+        det_name = {'diff1': 'diff1', 'fy2': 'fy2', 'draincurrent': 'tey', 'm4c1': 'i0', 'diff2': 'diff2', 'diff3': 'diff3', 'fy1': 'fy1', 'fy3': 'fy3'}
 
         data = {}
         for det in dets:
@@ -298,7 +298,17 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
                     data[det_name[det]] = br.Spectrum(x=f[f'entry/diff1/{name}'][()], y=f[f'entry/diff1/{det}'][()])
                 except:
                     pass
-        
+                   
+        # for scan y -2.9 3.1 0.1 diff1 fy2 draincurrent
+        for det in dets:
+            if f'entry/{det}' in f:
+                name = [item for item in list(f[f'entry/{det}'].keys()) if item not in dets][0]
+                for det2 in dets:
+                    try:
+                        data[det_name[det2]] = br.Spectrum(x=f[f'entry/{det}/{name}'][()], y=f[f'entry/{det}/{det2}'][()])
+                    except:
+                        pass
+       
         # get attrs
         metadata = _get_metadata(f, exp='xas', verbose=verbose)
         for key in data:
