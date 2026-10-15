@@ -2,27 +2,33 @@
 # -*- coding: utf-8 -*-
 """BRIXS settings file
 
-################################################################################
-######################### Reserved and forbidden words #########################
-################################################################################
-1) These words will raise an error if the user try to define attrs with these words
+# %% ===================================================================== %% #
+# %% ============== Reserved and forbidden attribute names =============== %% #
+# %% ===================================================================== %% #
+DEVELOPER NOTE: Any changes to this section must also be applied to its copy in __init__.py
 
-2) This avoids errors when converting from one object to another (e.g. im -> s)
+Reserved words are the names of all public methods, variables, and
+pseudovariables (@property attributes) defined by each brixs object.
+Each object has its own set of reserved words. These are used internally
+to build the corresponding list of forbidden words.
 
-3) This also avoid that import methods or variables are overwritten
+Forbidden words are defined for each brixs object and include:
+  - all method names defined across all brixs objects;
+  - pseudovariables (@property attributes) defined by other objects, unless 
+    also defined by the current object;
+  - variables defined by other objects, unless also defined by the current
+    object.
 
-reserved words:  methods, vars, and pseudovars for a object, i.e., the reserved 
-words of a Spectrum object are all the words representing methods, vars, and pseudovars
-in a Spectrum object (pseudovars are vars defined via @property decorator)
+Brixs prevents users from creating attributes with forbidden names. This
+avoids accidentally overwriting built-in methods or attributes and, more
+importantly, prevents naming conflicts when one brixs object generates an
+object of another type (e.g. Image.calculate_histogram() returns a Spectrum).
+In such cases, user-defined attributes transferred to the new object must
+not conflict with methods or attributes of the destination object.
 
-forbidden words: all methods from a object + pseudovar from all other objects, i.e.,
-the forbidden words of a Spectrum object are all methods defined for a spectrum 
-object plus all methods and pseudovars of all other objects (as long the pseudovars
-from other objects are not equal to pseudovars in Spectrum).
-
-################################################################################
-############################ brixs expansion modules ###########################
-################################################################################
+# %% ===================================================================== %% #
+# %% ====================== brixs expansion modules ====================== %% #
+# %% ===================================================================== %% #
 brixs expansion modules allows for posterior addition of new methods and attrs 
 after brixs has been imported. 
 
@@ -210,12 +216,13 @@ class _settings():
         ############
         # internal #
         ############
-        self._forbidden_words = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
         self._reserved_words  = {'Spectrum':    {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'Spectra':     {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'Image':       {'methods':[], 'vars':[], 'pseudovars': []}, 
                                  'PhotonEvents':{'methods':[], 'vars':[], 'pseudovars': []},
                                  'Dummy':       {'methods':[], 'vars':[], 'pseudovars': []}}
+        self._forbidden_words = {'Spectrum':[], 'Spectra':[], 'Image':[], 'PhotonEvents':[], 'Dummy':[]}
+        
         
         ###########################
         # brixs expansion modules #
