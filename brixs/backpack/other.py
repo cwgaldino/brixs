@@ -12,8 +12,7 @@ import os
 # %% -------------------------- operating system ------------------------ %% #
 def operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: filemanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in filemanip, figmanip
 
     system = platform.system().lower()
     if system == 'windows':
@@ -71,8 +70,7 @@ def query(question, default="yes"):
     Returns:
         True for "yes" or False for "no".
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: filemanip
+    # DEVELOPER NOTE: Any changes to this section must also be applied to its copy in filemanip
 
     valid = {"yes": True, "y": True, "ye": True, "Y": True, "YES": True, "YE": True,
              "no": False, "n": False, "No":True, "NO":True, "N":True}
@@ -177,8 +175,7 @@ def copy2clipboard(txt):
 
     on linux it uses ``xclip`` package (``sudo apt install xclip``).
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this section must also be applied to its copy in figmanip
 
     if is_jupyter:
         # This JS runs in your browser, not on the server

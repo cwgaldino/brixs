@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Useful functions for everyday use ---> files and folders"""
 
-# %% ------------------------- Standard Imports --------------------------- %% #
+# %% ------------------------- Standard Imports -------------------------- %% #
 from pathlib import Path
 import collections
 import numpy as np
@@ -14,11 +14,11 @@ import json
 import os
 import re
 
-# %% ----------------- supporting functions from query -------------------- %% #
-# backpack developers note --> if these function change, it needs to be copied to query.py
+# %% ----------------------- supporting functions ------------------------ %% #
 import platform
 def _operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in other.py
     system = platform.system().lower()
     if system == 'windows':
         return 'windows'
@@ -48,6 +48,7 @@ def _query(question, default="yes"):
     Returns:
         True for "yes" or False for "no".
     """    
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in other.py
     valid = {"yes": True, "y": True, "ye": True, "Y": True, "YES": True, "YE": True,
              "no": False, "n": False, "No":True, "NO":True, "N":True}
     if default is None:

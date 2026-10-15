@@ -28,6 +28,7 @@ import platform
 import os
 def _operating_system():
     """Return string with name of operating system (windows, linux, or mac)."""
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in other.py, filemanip
     system = platform.system().lower()
     is_windows = system == 'windows'
     is_linux = system == 'linux'
@@ -41,23 +42,31 @@ def _operating_system():
     else:
         raise ValueError('OS not recognized')
 
-def is_jupyter():
-    if 'JPY_PARENT_PID' in os.environ:
-        return True
-    else:
-        return False
+def _check_if_jupyter():
+    """Robust check for Jupyter Notebook/Lab environments."""
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in other.py
+
+    # Check by IPython class name
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter Notebook or JupyterLab
+        elif shell == 'Shell':
+            return True   # Google Colab
+        return False      # Other IPython environments (like standard Terminal IPython)
+    except NameError:
+        return False      # Standard Python interpreter
 
 is_windows = _operating_system() == 'windows'
 is_linux   = _operating_system() == 'linux'
 is_mac     = _operating_system() == 'mac'
-is_jupyter = is_jupyter()
+is_jupyter = _check_if_jupyter()
 
-# if jupyter notebook, import things for _copy2clipboard(), figure(), and subplots()
+# if jupyter notebook, import things for copy2clipboard() 
 if is_jupyter:
     try:
         from IPython.display import display, Javascript
         import json
-        import ipywidgets as widgets
     except:
         pass
 
@@ -66,8 +75,7 @@ if is_jupyter:
 import numbers
 def is_number(n):
     """Returns True if variable is number."""
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: numanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in numanip
     if isinstance(n, bool):
         return False
     elif isinstance(n, int):
@@ -87,6 +95,7 @@ def is_number(n):
         
 def _round_to_1(x):
     """return the most significant digit"""
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in numanip
     return round(x, -int(np.floor(np.log10(abs(x)))))
 
 def _n_decimal_places(number, count_zero=False):
@@ -102,6 +111,7 @@ def _n_decimal_places(number, count_zero=False):
     Returns:
         number of decimal places in number.
     """
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in numanip
     n = abs(decimal.Decimal(str(number)).as_tuple().exponent)
     if count_zero == False and n == 1:
         if str(number)[-1] == '0':
@@ -125,8 +135,7 @@ def _index(x, value, closest=True, roundup=False):
     Returns:
         index (int)
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in arraymanip
     if closest:
         _inner1 = np.array(x) - value
         _inner2 = np.ma.masked_array(_inner1, np.isnan(_inner1))
@@ -149,7 +158,6 @@ def _index(x, value, closest=True, roundup=False):
     else:
         return np.where(x == value)[0]
 
-
 def _choose(x, ranges):
     """Return a mask of x values inside range pairs.
 
@@ -161,6 +169,7 @@ def _choose(x, ranges):
     Returns:
         1d list.
     """
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in arraymanip
     assert isinstance(x, Iterable), 'input must be a iterable'
     x = np.array(x)
 
@@ -223,6 +232,7 @@ def _extract(x, y, ranges, invert=False):
 
 
     """
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in arraymanip
     x = np.array(x)
     y = np.array(y)
 
@@ -260,6 +270,7 @@ def _copy2clipboard(txt):
 
     on linux it uses ``xclip`` package (``sudo apt install xclip``).
     """
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in other.py
     if is_jupyter:
         # This JS runs in your browser, not on the server
         try:

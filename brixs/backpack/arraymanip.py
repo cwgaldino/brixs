@@ -236,8 +236,7 @@ def index(x, value, closest=True, roundup=False):
     Returns:
         index (int)
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
     if closest:
         _inner1 = np.array(x) - value
         _inner2 = np.ma.masked_array(_inner1, np.isnan(_inner1))
@@ -359,8 +358,7 @@ def choose(x, limits):
     Returns:
         1d list.
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
 
     assert isinstance(x, Iterable), 'input must be a iterable'
     x = np.array(x)
@@ -451,8 +449,7 @@ def extract(x, y, limits, invert=False):
 
 
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
     
     x = np.array(x)
     y = np.array(y)

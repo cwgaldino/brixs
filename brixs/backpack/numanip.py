@@ -56,8 +56,7 @@ def is_integer(n, allow_float=True, allow_str=True):
     
 def is_number(n):
     """Returns True if variable is number."""
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
     if isinstance(n, bool):
         return False
     elif isinstance(n, int):
@@ -77,8 +76,7 @@ def is_number(n):
 
 def round_to_1(x):
     """return the most significant digit"""
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
     return round(x, -int(np.floor(np.log10(abs(x)))))
 
 def n_decimal_places(number, count_zero=False):
@@ -94,8 +92,7 @@ def n_decimal_places(number, count_zero=False):
     Returns:
         number of decimal places in number.
     """
-    # backpack developers note!!!!
-    # if this function changes, it needs to be copied to these files: figmanip
+    # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
 
     n = abs(decimal.Decimal(str(number)).as_tuple().exponent)
     if count_zero == False and n == 1:
