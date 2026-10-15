@@ -1,70 +1,154 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Core brixs module. Defines the main objects: 
+"""Core brixs module.
 
-    Spectrum, Spectra, PhotonEvents, Image, Dummy
+Defines the main brixs objects:
 
-Every BRIXS object has 5 types of attributes: 
+    Spectrum
+    Spectra
+    Image
+    PhotonEvents
+    Dummy
 
-    `Core`: 
-        stores the main data of the object
 
-    `Check`: 
-        asserts data quality
+   
 
-    `Modifiers` (or `base modifiers`): 
-        absolute values of 'shift', 'factor', 'offset', 'calib'
+Attribute types
+---------------
+Every brixs object may contain five types of attributes:
 
-    `Labels`: 
-        labels for datapoints
+    Core
+        Stores the main data of the object.
 
-    `User`: 
-        user-defined attributes
+    Check
+        Stores the results of data-quality checks.
 
-########################        
-# NOTES FOR DEVELOPERS #  
-########################       
+    Modifiers (or base modifiers)
+        Stores absolute values of modifiers such as `shift`, `factor`,
+        `offset`, and `calib`.
 
-Initializing objects and empty objects:
-    Empty objects should have their core attrs set to None, e.g., Spectrum 
-    has x and y data. Initially, s.x and s.y should be None. If the user sets
-    s.x or s.y to an empty state, i.e., s.x = [], then s.x should be set to None
-    (initial state).
+    Labels
+        Stores labels and other information associated with the data points.
 
-Check attrs:
+    User
+        User-defined attributes.
+
+
+
+        
+Notes for developers
+--------------------  
+
+Object initialization
+~~~~~~~~~~~~~~~~~~~~~
+The `__init__` method of each brixs object (`Spectrum`, `Spectra`, `Image`,
+`PhotonEvents`, and `Dummy`) must explicitly initialize all Core, Check,
+Modifier, and Label attributes.
+
+Attributes should first be initialized using their private names (i.e. with
+a leading underscore) and their default values. This makes it easier to keep
+track of all attributes defined by an object. Their final values can then be
+assigned through the corresponding properties when necessary.
+
+The following conventions should be followed:
+
+    Core
+        Core attributes must be initialized to an empty state appropriate
+        for their type. For example, the core attributes of `Spectrum` are
+        `x` and `y`, which are NumPy arrays. Therefore, an empty `Spectrum`
+        must have empty arrays for both `x` and `y`.
+
+    Check
+        Check attributes must be initialized to `None`.
+
+    Modifiers
+        Modifiers must be initialized to the value corresponding to an
+        unmodified state. For example, `Spectrum.shift` must be initialized
+        to `0`.
+
+    Labels
+        Labels should, whenever possible, be initialized to an appropriate
+        empty state. Labels whose initial value is undefined may be set to
+        `None`.
+
+Empty objects must preserve the appropriate initial empty or `None` state
+for these attributes.
+
+
+Core attributes
+~~~~~~~~~~~~~~~
+1. Setting a Core attribute to `None` must reset it to its initial empty
+   state.
+
+Check attributes
+~~~~~~~~~~~~~~~~
+1. Check attributes must not be directly modifiable by the user. They should
+   only be modified by the corresponding check methods.
+
+2. Check attributes cache the results of data-quality checks so that the
+   same checks do not need to be performed repeatedly.
+
+3. Calling check methods from inside other functions or methods should be
+   avoided whenever possible. Prefer raising an appropriate error and letting
+   the user handle it. If a check is required internally, first determine
+   whether the corresponding Check attribute has already been evaluated.
+
+
+Writing new methods
+~~~~~~~~~~~~~~~~~~~
+1. Methods should avoid modifying the Core attributes of `self` directly.
+   Instead, create a copy of `self`, modify the copy, and return it.
+   If a method intentionally modifies Core attributes in place, this behaviour
+   must be stated explicitly in its docstring.
+
+2. Methods that return a modified copy of `self` should preserve all applicable
+   Modifier, Label, and User attributes.
+
+   Check attributes require special care. A method must ensure that existing
+   Check attributes remain valid after the operation. Any Check attribute
+   invalidated by the operation must be reset to `None`.
+
+3. Methods must take into account the behaviour expected when operating on an
+   empty object (i.e. an object containing no data).
+
+   
+
+
+Support classes
+---------------
+_Meta
+    Metaclass used to facilitate the creation of read-only and non-removable
+    attributes.
+
+    Objects using this metaclass define `_read_only` and `_non_removable`
+    lists to specify properties that cannot be modified and/or removed.
+
+    Example:
+
+        _read_only = ['step', 'monotonicity', 'has_nan']
+        _non_removable = []
+
+_BrixsObject
+    Base class defining methods and behaviour common to all brixs objects.
+        
     
-    1. `check` attrs cannot be user modifiable and shall only 
-    be modified via 'check methods'
-
-    2. check attrs exist so one does not waste time running checks all the time.
-    Once a check is done, it's result is saved in a check attr.
-
-    3. one should avoid using `check` methods inside functions/methods. It's
-    preferable to raise an error and let the user deal with it or at least check 
-    if check attrs are defined already before calling the check methods. 
-
-
-Writing new methods:
-    
-    1. Methods shall avoid changing the `core` attrs inside 
-    `self`. Instead, a copy of `self` shall be created, modified, and 
-    returned to the user. If `core` attrs are modified directly on `self`, 
-    this should be explicitly clear in the docstring.
-
-    2. Methods that return a copy of `self` must (as much as possible) copy all 
-    suitable attrs (`Modifiers`, `Labels`, and `User`). As for `Check` attrs, 
-    methods must ensure that `check` attrs are still valid after operating
-    on `self` or on the copy of `self`. If `check` attrs are not valid 
-    anymore, reset them to None.  
-
-    3. Methods should take into consideration what happens in case the object is 
-    'empty' (object with no data).  
-
-Copy methods:
-    copy() must copy all attrs including all 4 attrs types
-    (data, check, modifiers, labels) within _copy() and user attrs included in copy().
 
     
+Copying attributes and objects
+------------------------------
+copy_attrs_from()
+    Returns a copy of the object with User attributes copied from another
+    brixs object.
+
+_copy_attrs_from()
+    Copies User attributes from another brixs object to this object.
+
+_copy()
+    Returns a copy containing Core, Check, Modifier, and Label attributes,
+    but not User attributes.
+
+copy()
+    Returns a complete copy, including User attributes. 
 """
 
 # %% ------------------------- Standard Imports -------------------------- %% #
@@ -123,18 +207,18 @@ class _Meta(type):
             return getter, setter, deleter#, 'non-removable attribute'
 
         #################
-        # reserved word #
-        #################
-        def lazy_reserved(_attr):
-            variable = '_' + _attr
-            if not hasattr(self, variable):
-                def getter(self):
-                    raise AttributeError(f'Cannot get attribute. `{_attr}` is a reserved word.')
-                def setter(self, value):
-                    raise AttributeError(f'Cannot set attribute. `{_attr}` is a reserved word.')
-                def deleter(self):
-                    raise AttributeError('Attribute cannot be deleted.')
-            return getter, setter, deleter
+        # reserved word # - I don't remember why this was implemented
+        ################# - I will comment it out for now, but we should delete it soon
+        # def lazy_reserved(_attr):
+        #     variable = '_' + _attr
+        #     if not hasattr(self, variable):
+        #         def getter(self):
+        #             raise AttributeError(f'Cannot get attribute. `{_attr}` is a reserved word.')
+        #         def setter(self, value):
+        #             raise AttributeError(f'Cannot set attribute. `{_attr}` is a reserved word.')
+        #         def deleter(self):
+        #             raise AttributeError('Attribute cannot be deleted.')
+        #     return getter, setter, deleter
 
         ################
         # create attrs #
@@ -163,6 +247,27 @@ class _Meta(type):
 
 class _BrixsObject(object): 
     """Parent class defining common attrs and methods"""   
+
+    #################
+    # magic methods #
+    #################
+    def __setattr__(self, name, value):
+        if isinstance(self, Spectrum):
+            name_ = 'Spectrum'
+        elif isinstance(self, Spectra):
+            name_ = 'Spectra'
+        elif isinstance(self, Image):
+            name_ = 'Image'
+        elif isinstance(self, PhotonEvents):
+            name_ = 'PhotonEvents'
+        elif isinstance(self, Dummy):
+            name_ = 'Dummy'
+        else:
+            raise ValueError('What?')
+        if name in settings._forbidden_words[name_]:
+            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+        super().__setattr__(name, value)
+
     #########
     # attrs #
     #########       
@@ -260,7 +365,7 @@ class _BrixsObject(object):
         return s2
     
     def copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
+        """returns a copy of this object with user defined attributes copied from another brixs object.
 
         Usage:
             s3 = s2.copy_attrs_from(s)
@@ -279,7 +384,7 @@ class _BrixsObject(object):
             raise TypeError(f'type {type(s)} not valid\nCan only copy user attrs from type br.Spectrum, br.Spectra, br.Image, or br.PhotonEvents')
 
         # transfer attrs
-        s2 = self.copy()
+        s2 = self._copy()
         for attr in s.get_attrs():
             value = copy.deepcopy(s.__getattribute__(attr))
             s2.__setattr__(attr, value)
@@ -287,7 +392,7 @@ class _BrixsObject(object):
         return s2
     
     def _copy_attrs_from(self, s):
-        """Copy user defined attributes from another brixs object.
+        """Copy user defined attributes from another brixs object to this object.
 
         Usage:
             s1._copy_attrs_from(s)
@@ -315,7 +420,7 @@ class _BrixsObject(object):
 
 # %% ====================== common support functions ===================== %% #
 def get_functions():
-    """return a list of methods available including hidden ones"""        
+    """return a list of functions available including hidden ones"""        
     methodList = []
 
     for _module in (filemanip, arraymanip, figmanip, numanip, vectormanip, other):
@@ -496,6 +601,7 @@ def _str2attr(header, indentation=0, verbose=False):
 # %%
 
 # %% ====================== modified figure function ===================== %% #
+# these modified figure functions have access to brixs.settings 
 def figure(*args, **kwargs):
     """same as br.figmanip.figure(), but the following br.settings affect figure:
 
@@ -711,11 +817,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     def __init__(self, x=None, y=None, filepath=None, **kwargs):
         """Initialize the object instance"""
         ###########################  - Must contain all core attributes 
-        # Initializing attributes #  - Does not need to use attribute's default values
+        # Initializing attributes #
         ###########################
         # core
-        self._x = None
-        self._y = None
+        self._x = np.array([], dtype='float')
+        self._y = np.array([], dtype='float')
 
         # check
         self._step         = None
@@ -756,12 +862,14 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     def x(self, value):
         # check None
         if value is None:
-            if self.y is not None:
+            if len(self.y) > 0:
                 self._x = np.arange(0, len(self.y))
+                self._step         = 1
+                self._monotonicity = 'increasing'
             else:
-                self._x = None
-            self._step         = None
-            self._monotonicity = None
+                self._x = np.array([], dtype='float')
+                self._step         = None
+                self._monotonicity = None
             self._has_nan      = None
             return
         
@@ -779,18 +887,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
-        if self.y is not None:
-            assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
-        else:
-            if len(value) == 0:
-                self._x = None
-                self._step         = None
-                self._monotonicity = None
-                self._has_nan      = None
-                return
-            else:
-                self._y = np.arange(0, len(value))
-              
+        if len(value) != len(self.y):
+            raise ValueError(f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).')
+        
         #################
         # set attribute #
         #################
@@ -816,10 +915,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ###################################
         # check None
         if value is None:
-            if self.x is not None:
+            if len(self.x) > 0:
                 self._y = np.arange(0, len(self.x))
             else:
-                self._y = None
+                self._y = np.array([], dtype='float')
+            self._has_nan      = None
             return
             
         # check type
@@ -833,20 +933,19 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
-        if self.x is not None:
-            assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
-        else:
-            if len(value) == 0:
-                self._y = None
-                return
-            else:
-                self._x = np.arange(0, len(value))
-                self._step         = 1
-                self._monotonicity = 'increasing'
+        if len(value) != len(self.x):
+            raise ValueError(f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).')
 
         #################
         # set attribute #
         #################
+        # if len(value) == 0:
+        #     self._y = None
+        #     return
+        # else:
+        #     self._x = np.arange(0, len(value))
+        #     self._step         = 1
+        #     self._monotonicity = 'increasing'
         self._y = np.array(value, dtype='float')
 
         ##########################
@@ -864,10 +963,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     ###################################
     @property
     def data(self):
-        if self.x is not None:
-            return np.vstack((self.x, self.y)).transpose()
-        else:
-            return
+        return np.vstack((self.x, self.y)).transpose()
     @data.setter
     def data(self, value):
         raise AttributeError('Attribute is "read only".')
@@ -936,16 +1032,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
     #################
     # magic methods #
     #################
-    def __setattr__(self, name, value):
-        if name in settings._forbidden_words['Spectrum']:
-            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
-        super().__setattr__(name, value)
-
     def __len__(self):
-        if self.x is None:
-            return 0
-        else:
-            return len(self.x)
+        return len(self.x)
 
     def __add__(self, object):
         if isinstance(object, Spectrum):
@@ -1097,12 +1185,13 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ##################################
         # assert that limits is Iterable #
         ##################################
-        assert isinstance(limits, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
+        if not isinstance(limits, Iterable):
+            raise TypeError(f'`limits` must be an Iterable, not {type(limits)}')
         
         ################
         # empty object #
         ################
-        if self.x is None:
+        if len(self.x) == 0:
             raise ValueError('cannot operate on empty spectrum')
 
         ################################
@@ -1122,7 +1211,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ##############
         # one pair
         if len(limits) == 1: # ((xi, xf), )
-            assert isinstance(limits[0], Iterable), f'wrong format for limits={limits}'
+            if not isinstance(limits[0], Iterable):
+                raise TypeError(f'wrong format for limits={limits}')
         # two pairs 
         elif len(limits) == 2: # (xi, xf), or ((xi1, xf1), (xi2, xf2))
             if isinstance(limits[0], Iterable) == False:
@@ -1133,7 +1223,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         final = []
         # three or more pairs 
         for lim in limits:
-            assert isinstance(lim, Iterable), f'wrong format for limits={limits}'
+            if not isinstance(lim, Iterable):
+                raise TypeError(f'wrong format for limits={limits}')
             temp = [lim[0], lim[1]]
             if temp[0] == None: temp[0] = vmin
             if temp[1] == None: temp[1] = vmax
@@ -1153,12 +1244,14 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             Spectrum
         """
-        assert isinstance(x, Iterable) == False, 'x must be a number'
+        if isinstance(x, Iterable):
+            raise TypeError('x must be a number')
         try:
             x + 3.2, 
         except:
             raise ValueError('x must be a number')
-        assert isinstance(y, Iterable) == False, 'y must be a number'
+        if isinstance(y, Iterable):
+            raise TypeError('y must be a number')
         try:
             y + 3.2, 
         except:
@@ -1172,9 +1265,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ##########################
         # reset check attributes #
         ##########################
-        # self._step         = None
-        # self._monotonicity = None
-        # self._has_nan      = None
+        self._step         = None
+        self._monotonicity = None
+        self._has_nan      = None
         return s
     
     ########
@@ -1205,7 +1298,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         #####################
         # if empty spectrum #
         #####################
-        if self.x is None:
+        if len(self.x) == 0:
             # print(f'Warning: No datapoints within limits={limits}')
             s = Spectrum(x=x, y=y)
             s._step         = self.step
@@ -1343,9 +1436,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ############
         filepath = Path(filepath)
 
-        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
+        if not filepath.parent.exists():
+            raise FileExistsError(f'filepath folder does not exists.\nfolderpath: {filepath.parent}')
         if filepath.exists():
-            assert filepath.is_file(), 'filepath must point to a file'
+            if not filepath.is_file():
+                raise FileNotFoundError('filepath must point to a file')
         
         ###################
         # check overwrite #
@@ -1410,10 +1505,10 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ########
         # save #
         ########
-        if self.x is None:
-            np.savetxt(Path(filepath), [], **kwargs)
-        else:
-            np.savetxt(Path(filepath), self.data, **kwargs)
+        # if len(self.x) == 0:
+        #     np.savetxt(Path(filepath), [], **kwargs)
+        # else:
+        np.savetxt(Path(filepath), self.data, **kwargs)
         return
 
     def load(self, filepath, only_data=False, verbose=False, **kwargs):
@@ -1460,8 +1555,10 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         # filepath #
         ############
         filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
-        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+        if not filepath.is_file():
+            raise FileNotFoundError(f'filepath must point to a file, {filepath}')
+        if not filepath.exists():
+            raise FileExistsError(f'filepath does not exist, {filepath}')
 
         ##########
         # kwargs #
@@ -1482,7 +1579,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             ##############
             x = data[:, 0]
             y = data[:, 1]
-            assert len(x) == len(y), f'Length of x array (len={len(x)}) is not compatible with y array (len={len(y)}).'
+            if len(x) != len(y):
+                raise ValueError(f'Length of x array (len={len(x)}) is not compatible with y array (len={len(y)}).')
             
             ##########
             # assign #
@@ -1544,7 +1642,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.x is None:
+        if len(self.x) == 0:
             self._has_nan = False
             return
         
@@ -1596,6 +1694,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             s = self.copy()
             s._x = x
             s._y = y
+
             # reset checks
             s._step = None
             s._has_nan = False
@@ -1633,7 +1732,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ########################
         # check empty spectrum #
         ########################
-        if self.x is None:
+        if len(self.x) == 0:
             raise ValueError('cannot check step for empty spectrum')
         
         #####################################
@@ -1676,12 +1775,12 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             None
 
         See Also:
-                :py:func:`Spectrum.check_step`, :py:func:`Spectrum.fix_monotonicity`
+            :py:func:`Spectrum.check_step`, :py:func:`Spectrum.fix_monotonicity`
         """
         ########################
         # check empty spectrum #
         ########################
-        if self.x is None:
+        if len(self.x) == 0:
             raise ValueError('cannot check monotonicity for empty spectrum')
         
         if np.all(np.diff(self.x) > 0) == True:
@@ -1710,7 +1809,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ########################
         # check empty spectrum #
         ########################
-        if self.x is None:
+        if len(self.x) == 0:
             raise ValueError('cannot operate on empty spectrum')
         
         # check mode
@@ -2017,7 +2116,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         if limits is None: limits = (None, None)
         temp  = self._copy(limits=limits)
-        assert temp.y is not None, 'no data points within limits = {limits}'
+        # if len(temp) == 0:
+            # raise ValueError('no data points within limits = {limits}')
         value = -np.mean(temp.y)
         return self.set_offset(value)
     
@@ -2039,7 +2139,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         if limits is None: limits = (None, None)
         temp = self._copy(limits=limits)
-        assert temp.y is not None, 'no data points within limits = {limits}'
+        # if len(temp) == 0:
+            # raise ValueError('no data points within limits = {limits}')
         return self.set_factor(value/np.mean(temp.y))
 
     ############
@@ -2067,7 +2168,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ################################
         # assert spectrum is not empty #
         ################################
-        assert len(self) > 0, 'Cannot operate on an empty Spectrum'
+        if len(self) > 0:
+            return self.copy()
 
         ##############################################
         # np.interp requires that array is monotonic #
@@ -2122,7 +2224,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         # assert spectrum is not empty
-        assert len(self) > 0, 'Cannot calculate derivative of an empty Spectrum'
+        if len(self) > 0:
+            return self.copy()
 
         # copy x and y and calculate derivative
         x, y = arraymanip.derivative(self.x, self.y, order=order)
@@ -2177,7 +2280,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         # check if data is divisible by n
         if force_divisible:
-            assert len(self) % n == 0, f"The length of data ({len(self)}) is not evenly divisible by n={n}\nPlease, set force_divisible=False or pick one of the following numbers: {np.sort(list(numanip.factors(len(self))))}"
+            if len(self) % n != 0:
+                raise ValueError(f"The length of data ({len(self)}) is not evenly divisible by n={n}\nPlease, set force_divisible=False or pick one of the following numbers: {np.sort(list(numanip.factors(len(self))))}")
 
         if len(self) % n == 0:
             x = np.mean(self.x.reshape(-1, n), axis=1)
@@ -2236,7 +2340,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         # assert spectrum is not empty
-        assert len(self) > 0, 'Cannot crop an empty Spectrum'
+        if len(self) > 0:
+            return self.copy()
   
         # sort start and stop
         if start is None and stop is None:
@@ -2385,7 +2490,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ################################
         # assert spectrum is not empty #
         ################################
-        assert len(self) > 0, 'Cannot operate on an empty Spectrum'
+        if len(self) == 0:
+            raise ValueError('Cannot operate on an empty Spectrum')
 
         ##############################################
         # np.interp requires that array is monotonic #
@@ -2829,7 +2935,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     def shift(self, value):
         if isinstance(value, Iterable) == False:
             value = [value]*len(self)
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}')
         for i, s in enumerate(self):
             s.shift = -s.shift
             s.shift = value[i]
@@ -2844,7 +2951,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     def calib(self, value):
         if isinstance(value, Iterable) == False:
             value = [value]*len(self)
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}')
         for i, s in enumerate(self):
             s.calib = 1/s.calib
             s.calib = value[i]
@@ -2860,7 +2968,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     def factor(self, value):
         if isinstance(value, Iterable) == False:
             value = [value]*len(self)
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}')
         for i, s in enumerate(self):
             s.factor = 1/s.factor
             s.factor = value[i]
@@ -2875,7 +2984,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
     def offset(self, value):
         if isinstance(value, Iterable) == False:
             value = [value]*len(self)
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}')
         for i, s in enumerate(self):
             s.offset = -s.offset
             s.offset = value[i]
@@ -2891,11 +3001,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
     def __repr__(self):
         return str({i:val for i, val in enumerate(self.data)})[1:-1].replace(', ', '\n')
-
-    def __setattr__(self, name, value):
-        if name in settings._forbidden_words['Spectra']:
-            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
-        super().__setattr__(name, value)
 
     def __getitem__(self, item):
         if numanip.is_integer(item, allow_float=False, allow_str=False):
@@ -2915,7 +3020,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             # print(sum([isinstance(_, bool) for _ in item]))
             # print(len(item))
             # assert sum([isinstance(_, bool) for _ in item]) == len(item), f'Error when trying indexing via list. All list elements must be either True or False'#\nbool item list:{item}'
-            assert len(item) == len(self), f'Error when trying indexing via list. List must be the same size as number of spectra = {len(self)}'#All list elements must be either True or False'#\nbool item list:{item}'
+            if len(item) != len(self):
+                raise ValueError(f'Error when trying indexing via list. List must be the same size as number of spectra = {len(self)}')#All list elements must be either True or False'#\nbool item list:{item}'
             ss = Spectra()
             for i, s in enumerate(self):
                 if item[i]:
@@ -3003,14 +3109,18 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ref = self.__getattribute__(attr)
 
         # check validity
-        assert isinstance(ref, Iterable), 'ref attr must be an iterable type'
-        assert len(ref) == len(self), f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}'
+        if not isinstance(ref, Iterable):
+            raise TypeError('ref attr must be an iterable type')
+        if len(ref) != len(self):
+            raise ValueError(f'Lenght of attr must be the same as the number of spectra.\nlenght of attr: {len(ref)}\nnumber of spectra: {len(self)}')
         
         if attrs2reorder is not None:
             for attr in attrs2reorder:
                 temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
+                if not isinstance(temp, Iterable):
+                    raise TypeError(f'{attr} must be an iterable type')
+                if len(temp) != len(self):
+                    raise ValueError(f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}')
 
         # sort
         ss = self._copy()
@@ -3108,19 +3218,24 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # check length of values #
         ##########################
-        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
+        if len(values) != len(self):
+            raise ValueError(f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})')
 
         ##############################
         # check extra attrs to merge #
         ##############################
         if attrs2merge is not None:
-            assert isinstance(attrs2merge, Iterable), 'attrs2merge must be a list'
+            if not isinstance(attrs2merge, Iterable):
+                raise TypeError('attrs2merge must be a list')
             if isinstance(ref, str): attrs2merge += ref
             for attr in attrs2merge:
                 temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
-                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+                if not  isinstance(temp, Iterable):
+                    raise TypeError(f'{attr} must be an iterable type')
+                if len(temp) != len(self):
+                    raise ValueError(f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}')
+                if sum([numanip.is_number(x) for x in temp]) != len(temp):
+                    raise ValueError(f'{attr} must be a list of numbers')
         else:
             if isinstance(ref, str): 
                 attrs2merge = [ref, ]
@@ -3203,7 +3318,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         #############################
         # check attrs2interp format #
         #############################
-        assert isinstance(attrs2interp, Iterable) or attrs2interp is None, f'attrs2interp must be a list of strings or None'
+        if not isinstance(attrs2interp, Iterable) or attrs2interp is not None:
+            raise TypeError(f'attrs2interp must be a list of strings or None')
 
         #####################
         # check attr length #
@@ -3222,12 +3338,14 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##########################
         # check length of values #
         ##########################
-        assert len(values) == len(self), f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})'
+        if len(values) != len(self):
+            raise ValueError(f'number of values ({len(values)}) must be the same as the number of spectra ({len(self)})')
 
         #############################
         # check values is monotonic #
         #############################
-        assert arraymanip.check_monotonicity(values) == 1, f'values ({values}) must be increasingly monotonic. Use Spectra.merge_duplicates() and Spectra.reorder_by_attr()'
+        if arraymanip.check_monotonicity(values) != 1:
+            raise ValueError(f'values ({values}) must be increasingly monotonic. Use Spectra.merge_duplicates() and Spectra.reorder_by_attr()')
 
         ##############################
         # check extra attrs to merge #
@@ -3235,9 +3353,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if attrs2interp is not None:
             for attr in attrs2interp:
                 temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
-                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+                if not isinstance(temp, Iterable):
+                    raise TypeError(f'{attr} must be an iterable type')
+                if len(temp) != len(self):
+                    raise ValueError(f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}')
+                if sum([numanip.is_number(x) for x in temp]) != len(temp):
+                    raise ValueError(f'{attr} must be a list of numbers')
 
         ##########
         # sort x #
@@ -3323,7 +3444,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # assert that limits is Iterable #
         ##################################
-        assert isinstance(limits, Iterable), f'`limits` must be an Iterable, not {type(limits)}'
+        if not isinstance(limits, Iterable):
+            raise TypeError(f'`limits` must be an Iterable, not {type(limits)}')
         
         ################
         # empty object #
@@ -3348,7 +3470,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##############
         # one pair
         if len(limits) == 1: # ((xi, xf), )
-            assert isinstance(limits[0], Iterable), f'wrong format for limits={limits}'
+            if not isinstance(limits[0], Iterable):
+                raise TypeError(f'wrong format for limits={limits}')
         # two pairs 
         elif len(limits) == 2: # (xi, xf), or ((xi1, xf1), (xi2, xf2))
             if isinstance(limits[0], Iterable) == False:
@@ -3359,7 +3482,8 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         final = []
         # three or more pairs 
         for lim in limits:
-            assert isinstance(lim, Iterable), f'wrong format for limits={limits}'
+            if not isinstance(lim, Iterable):
+                raise TypeError(f'wrong format for limits={limits}')
             temp = [lim[0], lim[1]]
             if temp[0] == None: temp[0] = vmin
             if temp[1] == None: temp[1] = vmax
@@ -4087,7 +4211,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             return False
         
         #############
@@ -4794,7 +4918,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         text = ''
         flag = False
         for i, s in enumerate(self):
-            if s.x is None:
+            if len(s.x) == 0:
                 flag = True
                 text += f'{i}: empty\n'
             else:
@@ -6612,28 +6736,28 @@ class Image(_BrixsObject, metaclass=_Meta):
     _read_only     = ['x_step', 'x_monotonicity', 'y_step', 'y_monotonicity', 'has_nan']
     _non_removable = []
     
-    def __init__(self, data=None, x_centers=None, y_centers=None):
+    def __init__(self, data=None, x_centers=None, y_centers=None, x_edges=None, y_edges=None):
         """Initialize the object instance"""
-        ###########################  - Must contain all core attributes 
-        # Initializing attributes #  - Does not need to use attribute's default values
+        ###########################
+        # Initializing attributes # 
         ###########################
         # core
-        self._data = None
+        self._data = np.empty((0, 0))
 
         # check
-        self._x_step = None
-        self._y_step = None
+        self._x_step         = None
+        self._y_step         = None
         self._x_monotonicity = None
         self._y_monotonicity = None
-        self._has_nan = None
+        self._has_nan        = None
 
         # modifiers
         self._factor = 1
         self._offset = 0 
 
         # labels
-        self._x_centers = None
-        self._y_centers = None
+        self._x_centers = np.array([], dtype='float')   
+        self._y_centers = np.array([], dtype='float') 
         self._x_edges   = None
         self._y_edges   = None
 
@@ -6646,9 +6770,13 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         if data is not None:
             self.data = data
-            if x_centers is not None:
+            if x_edges is not None:
+                self.x_edges = x_edges
+            elif x_centers is not None:
                 self.x_centers = x_centers
-            if y_centers is not None:
+            if y_edges is not None:
+                self.y_edges = y_edges
+            elif y_centers is not None:
                 self.y_centers = y_centers
         return
 
@@ -6664,7 +6792,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         # if None #
         ###########
         if value is None:
-            self._data = None           
+            self._data = np.empty((0, 0))           
         ############
         # if array #
         ############
@@ -6672,7 +6800,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             if len(value.shape) != 2:
                 raise ValueError(f'data must be a 2d matrix. data={value}')
             if value.shape == (0, 0):
-                self._data = None
+                self._data = np.empty((0, 0))
             else:
                 self._data = np.array(value, dtype='float')    
         ###########
@@ -6683,7 +6811,7 @@ class Image(_BrixsObject, metaclass=_Meta):
             # empty list #
             ##############
             if len(value) == 0:
-                self._data = None
+                self._data = np.empty((0, 0))
             else:
                 ####################
                 # check list is 2d #
@@ -6701,18 +6829,23 @@ class Image(_BrixsObject, metaclass=_Meta):
                 # check if list are empty #
                 ###########################
                 if len(value[0]) == 0:
-                    self._data = None
+                    self._data = np.empty((0, 0))
                 else:
                     self._data = np.array(value, dtype='float')    
         else:
             raise ValueError(f'data must be a 2d matrix. data={value}')
+        # check
         self._x_step         = None
         self._y_step         = None
         self._x_monotonicity = None
         self._y_monotonicity = None
-        self._has_nan = None
+        self._has_nan        = None
+
+        # modifiers
         self._factor         = 1
         self._offset         = 0
+
+        # labels
         self.x_centers       = None
         self.y_centers       = None  
         return
@@ -6726,12 +6859,8 @@ class Image(_BrixsObject, metaclass=_Meta):
     @x_centers.setter
     def x_centers(self, value):
         if value is None:
-            if self.data is None:
-                self._x_centers = None 
-                self._x_edges   = None 
-                self._x_step         = None
-                self._x_monotonicity = None
-                return
+            if len(self) == 0:
+                value = []
             else:
                 value = np.arange(0, self.data.shape[1])
         elif isinstance(value, Iterable):
@@ -6739,11 +6868,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise ValueError(f"x centers must be None or an iterable (list, tuple, or 1D array)")
         
-        # setting centers
+        # labels
         self._x_centers = np.array(value, dtype='float')
         self._x_edges   = None
 
-        # reseting checks
+        # checks
         self._x_step         = None
         self._x_monotonicity = None
         return
@@ -6757,12 +6886,8 @@ class Image(_BrixsObject, metaclass=_Meta):
     @y_centers.setter
     def y_centers(self, value):
         if value is None:
-            if self.data is None:
-                self._y_centers = None 
-                self._y_edges   = None 
-                self._y_step         = None
-                self._y_monotonicity = None
-                return
+            if len(self) == 0:
+                value = []
             else:
                 value = np.arange(0, self.data.shape[0])
         elif isinstance(value, Iterable):
@@ -6770,11 +6895,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise ValueError(f"y centers must be None or an iterable (list, tuple, or 1D array)")
         
-        # setting centers
+        # labels
         self._y_centers = np.array(value, dtype='float')
         self._y_edges  = None
         
-        # reseting checks
+        # checks
         self._y_step         = None
         self._y_monotonicity = None
         return
@@ -6788,8 +6913,8 @@ class Image(_BrixsObject, metaclass=_Meta):
     @x_edges.setter
     def x_edges(self, value):
         if value is None:
-            if self.data is None:
-                self._x_centers = None 
+            if len(self) == 0 :
+                self._x_centers = [] 
                 self._x_edges   = None 
                 return
             else:
@@ -6816,8 +6941,8 @@ class Image(_BrixsObject, metaclass=_Meta):
     @y_edges.setter
     def y_edges(self, value):
         if value is None:
-            if self.data is None:
-                self._y_centers = None 
+            if len(self) == 0 :
+                self._y_centers = []
                 self._y_edges   = None 
                 return
             else: 
@@ -6842,8 +6967,6 @@ class Image(_BrixsObject, metaclass=_Meta):
     ###################################
     @property
     def shape(self):
-        if self.data is None:
-            return (0, 0)
         return (self.data.shape[0], self.data.shape[1])
     @shape.setter
     def shape(self, value):
@@ -6854,8 +6977,6 @@ class Image(_BrixsObject, metaclass=_Meta):
 
     @property
     def histogram(self):
-        if self.data is None:
-            return None
         return self.calculate_histogram()
     @histogram.setter
     def histogram(self, value):
@@ -7025,16 +7146,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         else:
             raise TypeError('Index must be a tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop), not {}'.format(type(item).__name__))
 
-    def __setattr__(self, name, value):
-        if name in settings._forbidden_words['Image']:
-            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
-        super().__setattr__(name, value)
-
     def __len__(self):
-        if self._data is None:
-            return 0
-        else:
-            return len(self._data)
+        return len(self.data)
 
     def __add__(self, object):
         if isinstance(object, Image):
@@ -7152,14 +7265,14 @@ class Image(_BrixsObject, metaclass=_Meta):
     ###########
     # support #
     ###########
-    def _check_mask(self, mask):
-        """returns mask in the right format.
-
+    def _format_rois(self, value):
+        """returns a list of rectangular ROI in the right format and correct limits.
+        
         Note:
-            mask must be in terms of x_center and y_center.
+            rois must be in terms of x_center and y_center.
 
         Args:
-            mask (None or list): list with 4 elements `(x_start, x_sto, y_start, y_stop)`, a list 
+            value (None or list): list with 4 elements `(x_start, x_stop, y_start, y_stop)`, or a list 
                 like `((xi_1, xf_1, yi_1, yf_1), (xi_2, xf_2, yi_2, yf_2), ...)` 
                 in terms of x_centers and y_centers, or None. If None, 
                 this function simply returns None. Use 
@@ -7168,24 +7281,25 @@ class Image(_BrixsObject, metaclass=_Meta):
                 an empty list, it assumes `limits = (None, None, None, None)`.
 
         Returns:
-            None or limits in the following format:
+            None or rois in the following format:
                 ((xi_1, xf_1, yi_1, yf_1), (xi_2, xf_2, yi_2, yf_2), ...)              
         """
         #####################
         # if limits is None #
         #####################
-        if mask is None:
+        if value is None:
             return None
         
         ##################################
         # assert that limits is Iterable #
         ##################################
-        assert isinstance(mask, Iterable), f'`mask` must be an Iterable, not {type(mask)}'
+        if not isinstance(value, Iterable):
+            raise TypeError(f'`value` must be an Iterable, not {type(value)}')
         
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         ################################
@@ -7199,23 +7313,23 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty limits #
         ################
-        if len(mask) == 0:
+        if len(value) == 0:
             return ((xmin, xmax, ymin, ymax),)
 
         ##############
         # fix format #
         ##############
         # 4 elements 
-        if len(mask) == 4: # (xi, xf, yi, yf), or ((xi1, xf1, yi1, yf1), ..., (xi2, xf2, yi2, yf2))
-            if isinstance(mask[0], Iterable) == False:
-                if isinstance(mask[1], Iterable) == False and isinstance(mask[2], Iterable) == False and isinstance(mask[3], Iterable) == False:
-                    mask = [mask, ]
+        if len(value) == 4: # (xi, xf, yi, yf), or ((xi1, xf1, yi1, yf1), ..., (xi2, xf2, yi2, yf2))
+            if isinstance(value[0], Iterable) == False:
+                if isinstance(value[1], Iterable) == False and isinstance(value[2], Iterable) == False and isinstance(value[3], Iterable) == False:
+                    value = [value, ]
                 else:
-                    raise ValueError(f'wrong format for mask={mask}')
+                    raise ValueError(f'wrong format for value={value}')
         # 1, 2, 3 or more than 4 elements 
         final = []
-        for m in mask:
-            assert isinstance(m, Iterable), f'wrong format for mask={mask}'
+        for m in value:
+            assert isinstance(m, Iterable), f'wrong format for mask={value}'
             temp = [m[0], m[1], m[2], m[3]]
             if temp[0] == None: temp[0] = xmin
             if temp[1] == None: temp[1] = xmax
@@ -7237,7 +7351,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         ##############
@@ -7278,7 +7392,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ########################
         # check if empty image #
         ########################
-        if self.x_centers is None:
+        if len(self) == 0:
             return self.copy()
         
         ##################
@@ -7315,7 +7429,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ########################
         # check if empty image #
         ########################
-        if self.y_centers is None:
+        if len(self) == 0:
             return self.copy()
         
         ##################
@@ -7355,19 +7469,14 @@ class Image(_BrixsObject, metaclass=_Meta):
         ####################################
         if self.shape[0] > max_number_of_rows:
             raise ValueError(f'Image has {self.shape[0]} rows. Cannot return image rows with more than {max_number_of_rows} rows. Please, increase `max_number_of_rows`')
-        
-        ################
-        # empty object #
-        ################
-        if self.data is None:
-            return None
 
-        ############
-        # get data #
-        ############
+        ####################################
+        # get data and ignore empty object #
+        ####################################
         ss = Spectra()
-        for i in range(self.shape[0]):
-            ss.append(Spectrum(x=self.x_centers, y=self.data[i, :]))
+        if len(self) > 0:
+            for i in range(self.shape[0]):
+                ss.append(Spectrum(x=self.x_centers, y=self.data[i, :]))
         ss._copy_attrs_from(self)
         return ss
     
@@ -7387,23 +7496,18 @@ class Image(_BrixsObject, metaclass=_Meta):
         if self.shape[1] > max_number_of_columns:
             raise ValueError(f'Image has {self.shape[1]} columns. Cannot return image columns with more than {max_number_of_columns} columns. Please, increase `max_number_of_columns`')
 
-        ################
-        # empty object #
-        ################
-        if self.data is None:
-            return None
-        
-        ############
-        # get data #
-        ############
+        ####################################
+        # get data and ignore empty object #
+        ####################################
         ss = Spectra()
-        for i in range(self.shape[1]):
-            ss.append(Spectrum(x=self.y_centers, y=self.data[:, i]))
+        if len(self) > 0:
+            for i in range(self.shape[1]):
+                ss.append(Spectrum(x=self.y_centers, y=self.data[:, i]))
         ss._copy_attrs_from(self)
         return ss
     
     def index2center(self, y, x):
-        """Return y and x pixel index  in terms of y_centers and x_centers
+        """Return y and x pixel index in terms of y_centers and x_centers
         
         Args:
             y, x (list or array): image positions in terms of pixel index
@@ -7437,33 +7541,16 @@ class Image(_BrixsObject, metaclass=_Meta):
     # copy #
     ########
     def _copy(self, x_start=None, x_stop=None, y_start=None, y_stop=None):
-        """Same as self.copy(), but attrs are NOT copied."""
+        """Same as self.copy(), but user attrs are NOT copied."""
         #############
         # copy data #
         #############
         data = copy.deepcopy(self.data)
 
-        #####################
-        # if limits is None #
-        #####################
-        if x_start is None and x_stop is None and y_start is None and y_stop is None:
-            im = Image(data=data)
-            im._x_step         = self.x_step
-            im._y_step         = self.y_step
-            im._x_monotonicity = self.x_monotonicity
-            im._y_monotonicity = self.y_monotonicity
-            im._factor         = self.factor
-            im._offset         = self.offset
-            im._x_centers      = copy.deepcopy(self.x_centers)
-            im._y_centers      = copy.deepcopy(self.y_centers)
-            im._x_edges        = copy.deepcopy(self.x_edges)
-            im._y_edges        = copy.deepcopy(self.y_edges)
-            return im
-        
-        ########################
-        # check if empty image #
-        ########################
-        if data is None:
+        #######################################
+        # if limits is None or image is empty #
+        #######################################
+        if (x_start is None and x_stop is None and y_start is None and y_stop is None) or len(data) == 0:
             im = Image(data=data)
             im._x_step         = self.x_step
             im._y_step         = self.y_step
@@ -7986,7 +8073,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             self._has_nan = False
             return
         
@@ -8005,7 +8092,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             list
         """
-        has_nan = self.check_nan()
+        if self.has_nan is None:
+            has_nan = self.check_nan()
 
         if has_nan:
             return np.argwhere(np.isnan(self.data))
@@ -8038,7 +8126,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         ##############
@@ -8084,7 +8172,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         s = Spectrum(x=self.y_centers)
@@ -8115,7 +8203,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         s = Spectrum(x=self.x_centers)
@@ -8141,7 +8229,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         s = Spectrum(x=self.y_centers)
@@ -8169,7 +8257,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         # check mode
@@ -8224,7 +8312,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
 
         # check mode
@@ -8943,7 +9031,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
         
         ###########
@@ -8991,7 +9079,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
         
         ###########
@@ -9040,7 +9128,7 @@ class Image(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.data is None:
+        if len(self) == 0:
             raise ValueError('cannot operate on empty image') 
         
         ###########
@@ -9351,6 +9439,12 @@ class Image(_BrixsObject, metaclass=_Meta):
 
         .. _numpy.histogram(): https://numpy.org/doc/stable/reference/generated/numpy.histogram.html
         """
+        #############################
+        # dealing with empty object #
+        #############################
+        if len(self) == 0:
+            return Spectrum().copy_attrs_from(self)
+        
         if start is None:
             start = self.min()
         if stop is None:
@@ -10754,12 +10848,12 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     
     def __init__(self, x=[], y=[], xlim=None, ylim=None, filepath=None, **kwargs): 
         """Initialize the object instance"""
-        ###########################  - Must contain all core attributes 
-        # Initializing attributes #  - Does not need to use attribute's default values
+        ###########################
+        # Initializing attributes #
         ###########################
         # core
-        self._x = None
-        self._y = None
+        self._x = np.array([], dtype='float')
+        self._y = np.array([], dtype='float')
 
         # check
         self._has_nan = None
@@ -10804,8 +10898,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     @x.setter
     def x(self, value):
         if value is None:
-            self._x = []
-            self._y = []
+            self._x = np.array([], dtype='float')
+            self._y = np.array([], dtype='float')
 
             self._has_nan = None
             return
@@ -10824,12 +10918,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
-        if self.y is not None:
-            assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
+        assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
 
         # empty array
         if len(value) == 0:
-            self._x = []
+            self._x = np.array([], dtype='float')
             self._has_nan = None
             return
         
@@ -10850,8 +10943,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     def y(self, value):
         # check None
         if value is None:
-            self._x = []
-            self._y = []
+            self._x = np.array([], dtype='float')
+            self._y = np.array([], dtype='float')
             self._has_nan = None
 
             return
@@ -10870,12 +10963,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
-        if self.x is not None:
-            assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
+        assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
 
         # empty array
         if len(value) == 0:
-            self._y = []
+            self._y = np.array([], dtype='float')
             self._has_nan = None
             return
         
@@ -10972,8 +11064,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     ###################################
     @property
     def data(self):
-        if self.x is not None:
-            return np.vstack((self.x, self.y)).transpose()
+        return np.vstack((self.x, self.y)).transpose()
     @data.setter
     def data(self, value):
         raise AttributeError('Attribute is "read only".')
@@ -10994,16 +11085,13 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     #################
     # magic methods #
     #################
-    def __setattr__(self, name, value):
-        if name in settings._forbidden_words['PhotonEvents']:
-            raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
-        super().__setattr__(name, value)
+    # def __setattr__(self, name, value):
+    #     if name in settings._forbidden_words['PhotonEvents']:
+    #         raise AttributeError(f'`{name}` is a reserved word and cannot be set as an attribute')
+    #     super().__setattr__(name, value)
 
     def __len__(self):
-        if self.x is None:
-            return 0
-        else:
-            return len(self.x)
+        return len(self.x)
 
     def __add__(self, object):
         if isinstance(object, PhotonEvents):
@@ -11086,8 +11174,8 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
     ###########
     # support #
     ###########
-    def _check_mask(self, mask):
-        """returns mask in the right format.
+    def _format_rois(self, value):
+        """returns a list of rectangular ROI in the right format and correct limits.
 
         Args:
             mask (None or list): list with 4 elements `(x_start, x_sto, y_start, y_stop)`, a list 
@@ -11105,13 +11193,13 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         #####################
         # if limits is None #
         #####################
-        if mask is None:
+        if value is None:
             return None
         
         ################################
         # assert that mask is Iterable #
         ################################
-        assert isinstance(mask, Iterable), f'`limits` must be an Iterable, not {type(mask)}'
+        assert isinstance(value, Iterable), f'`limits` must be an Iterable, not {type(value)}'
         
         ################
         # empty object #
@@ -11138,23 +11226,23 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ################
         # empty limits #
         ################
-        if len(mask) == 0:
+        if len(value) == 0:
             return ((xmin, xmax, ymin, ymax),)
 
         ##############
         # fix format #
         ##############
         # 4 elements 
-        if len(mask) == 4: # (xi, xf, yi, yf), or ((xi1, xf1, yi1, yf1), ..., (xi2, xf2, yi2, yf2))
-            if isinstance(mask[0], Iterable) == False:
-                if isinstance(mask[1], Iterable) == False and isinstance(mask[2], Iterable) == False and isinstance(mask[3], Iterable) == False:
-                    mask = [mask, ]
+        if len(value) == 4: # (xi, xf, yi, yf), or ((xi1, xf1, yi1, yf1), ..., (xi2, xf2, yi2, yf2))
+            if isinstance(value[0], Iterable) == False:
+                if isinstance(value[1], Iterable) == False and isinstance(value[2], Iterable) == False and isinstance(value[3], Iterable) == False:
+                    value = [value, ]
                 else:
-                    raise ValueError(f'wrong format for mask={mask}')
+                    raise ValueError(f'wrong format for value={value}')
         # 1, 2, 3 or more than 4 elements 
         final = []
-        for m in mask:
-            assert isinstance(m, Iterable), f'wrong format for mask={mask}'
+        for m in value:
+            assert isinstance(m, Iterable), f'wrong format for value={value}'
             temp = [m[0], m[1], m[2], m[3]]
             if temp[0] == None: temp[0] = xmin
             if temp[1] == None: temp[1] = xmax
@@ -11340,11 +11428,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
         return pe
 
-    def clip(self, mask, attrs2clip=None):
-        """Return a masked copy of the object.
+    def clip(self, rois, attrs2clip=None):
+        """Return a masked copy of the object based on rectangular rois.
 
         Args:
-            mask (list): list with rectangular coordinates `(x_start, x_stop, y_start, y_stop)`
+            rois (list): list with rectangular coordinates `(x_start, x_stop, y_start, y_stop)`
                 or a list with multiple rectangular coordinates, i.e., `[(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])`
             attrs2clip (None or list, optional): list of attrs to be cliped 
                 toghether with the data (x and y). attrs must be a list of same
@@ -11356,18 +11444,18 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ###############################
         # check if empty PhotonEvents #
         ###############################
-        if self.x is None:
+        if len(self) == 0:
             return PhotonEvents(x=None, y=None, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
 
         ######################
-        # assert mask format #
+        # assert rois format #
         ######################
-        assert isinstance(mask, Iterable), 'mask must be iterable'
-        if len(mask) == 4:
-            if isinstance(mask[0], Iterable) == False:
-                mask = [mask, ] 
-        for m in mask:
-            assert len(m) == 4, 'mask must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
+        assert isinstance(rois, Iterable), 'rois must be iterable'
+        if len(rois) == 4:
+            if isinstance(rois[0], Iterable) == False:
+                rois = [rois, ] 
+        for m in rois:
+            assert len(m) == 4, 'rois must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
         
         #################################
         # assert validity of attrs2clip #
@@ -11388,7 +11476,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         y = []
         xlim = None
         ylim = None
-        for x_start, x_stop, y_start, y_stop in mask: 
+        for x_start, x_stop, y_start, y_stop in rois: 
             _pe = self._copy(x_start=x_start, x_stop=x_stop, y_start=y_start, y_stop=y_stop, attrs2crop=attrs2clip)
             if _pe.x is not None:
                 x += list(_pe.x)
@@ -11501,7 +11589,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # kwargs #
         ##########
         if 'fmt' not in kwargs: # pick best format
-            if len(self._x) > 0:
+            if len(self) > 0:
                 decimal = max([numanip.n_decimal_places(x) for x in arraymanip.flatten(self.data)])
                 kwargs['fmt'] = f'%.{decimal}f'
         kwargs.setdefault('delimiter', ', ')
@@ -11532,10 +11620,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ########
         # save #
         ########
-        if self.x is None:
-            np.savetxt(Path(filepath), [], **kwargs)
-        else:
-            np.savetxt(Path(filepath), self.data, **kwargs)
+        np.savetxt(Path(filepath), self.data, **kwargs)
         return 
     
     def load(self, filepath, only_data=False, verbose=True, **kwargs):
@@ -11603,9 +11688,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             else:
                 pe._x = data[:, 0]
                 pe._y = data[:, 1]
-        else:
-            pe._x = None
-            pe._x = None
+        # else:
+        #     pe._x = None
+        #     pe._x = None
         
         ##########################
         # reset check attributes #
@@ -11646,7 +11731,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ################
         # empty object #
         ################
-        if self.x is None:
+        if len(self) == 0:
             self._has_nan = False
             return
         
@@ -11667,7 +11752,7 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         Returns:
             Spectrum
         """
-        if self.has_nan is None:
+        if len(self) == 0:
             self.check_nan()
 
         if self.has_nan:
