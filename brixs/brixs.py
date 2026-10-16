@@ -133,7 +133,7 @@ _BrixsObject
         
     
 
-    
+
 Copying attributes and objects
 ------------------------------
 copy_attrs_from()
@@ -873,9 +873,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             self._has_nan      = None
             return
         
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         # check type
         if not isinstance(value, Iterable):
             raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
@@ -910,9 +910,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         return self._y
     @y.setter
     def y(self, value):
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         # check None
         if value is None:
             if len(self.x) > 0:
@@ -1182,9 +1182,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         if limits is None:
             return None
         
-        ##################################
-        # assert that limits is Iterable #
-        ##################################
+        ####################################
+        # checking that limits is Iterable #
+        ####################################
         if not isinstance(limits, Iterable):
             raise TypeError(f'`limits` must be an Iterable, not {type(limits)}')
         
@@ -1434,10 +1434,11 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ############
         # filepath #
         ############
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-
         if not filepath.parent.exists():
-            raise FileExistsError(f'filepath folder does not exists.\nfolderpath: {filepath.parent}')
+            raise FileExistsError(f'filepath parent folder does not exists.\nfolderpath: {filepath.parent}')
         if filepath.exists():
             if not filepath.is_file():
                 raise FileNotFoundError('filepath must point to a file')
@@ -1554,6 +1555,8 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         ############
         # filepath #
         ############
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
         if not filepath.is_file():
             raise FileNotFoundError(f'filepath must point to a file, {filepath}')
@@ -2021,9 +2024,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectrum`
         """    
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         # x axis must be uniform if mode is roll
         if self.step is None:
             try:
@@ -2055,9 +2058,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectrum`
         """    
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         # x axis must be uniform if mode is roll
         if self.step is None:
             try:
@@ -2116,8 +2119,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         if limits is None: limits = (None, None)
         temp  = self._copy(limits=limits)
-        # if len(temp) == 0:
-            # raise ValueError('no data points within limits = {limits}')
+        if len(temp) == 0:
+            raise ValueError(f'no data points found within limits\n'
+                             f'limits: {limits}')
         value = -np.mean(temp.y)
         return self.set_offset(value)
     
@@ -2139,8 +2143,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         """
         if limits is None: limits = (None, None)
         temp = self._copy(limits=limits)
-        # if len(temp) == 0:
-            # raise ValueError('no data points within limits = {limits}')
+        if len(temp) == 0:
+            raise ValueError(f'no data points found within limits\n'
+                             f'limits: {limits}')
         return self.set_factor(value/np.mean(temp.y))
 
     ############
@@ -2165,9 +2170,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectrum`
         """
-        ################################
-        # assert spectrum is not empty #
-        ################################
+        #######################################
+        # checking that spectrum is not empty #
+        #######################################
         if len(self) > 0:
             return self.copy()
 
@@ -2223,7 +2228,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectrum`
         """
-        # assert spectrum is not empty
+        # checking that spectrum is not empty
         if len(self) > 0:
             return self.copy()
 
@@ -2339,7 +2344,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectrum`
         """
-        # assert spectrum is not empty
+        # checking that spectrum is not empty
         if len(self) > 0:
             return self.copy()
   
@@ -2487,9 +2492,9 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
 
         .. _numpy.trapz(): https://numpy.org/doc/stable/reference/generated/numpy.trapz.html
         """
-        ################################
-        # assert spectrum is not empty #
-        ################################
+        #######################################
+        # checking that spectrum is not empty #
+        #######################################
         if len(self) == 0:
             raise ValueError('Cannot operate on an empty Spectrum')
 
@@ -3015,11 +3020,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
             return ss 
         elif isinstance(item, Iterable):
-            # print(item)
-            # print([isinstance(_, bool) for _ in item])
-            # print(sum([isinstance(_, bool) for _ in item]))
-            # print(len(item))
-            # assert sum([isinstance(_, bool) for _ in item]) == len(item), f'Error when trying indexing via list. All list elements must be either True or False'#\nbool item list:{item}'
             if len(item) != len(self):
                 raise ValueError(f'Error when trying indexing via list. List must be the same size as number of spectra = {len(self)}')#All list elements must be either True or False'#\nbool item list:{item}'
             ss = Spectra()
@@ -3064,7 +3064,6 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectra`
         """
-        # assert all spectra has attr
         # check if all spectra has attr
         has = {i: hasattr(s, attr) for i, s in enumerate(self)}
         if False in [has[i] for i in has]:
@@ -3441,9 +3440,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if limits is None:
             return None
 
-        ##################################
-        # assert that limits is Iterable #
-        ##################################
+        ##############################
+        # check that limits is valid #
+        ##############################
         if not isinstance(limits, Iterable):
             raise TypeError(f'`limits` must be an Iterable, not {type(limits)}')
         
@@ -3581,9 +3580,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         See Also:
             :py:func:`Spectra.remove`.
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         error_message = 'Wrong input. Spectrum cannot be appended. Please, use one ' +\
                         'of the examples below:\n' +\
                         '\n' +\
@@ -3608,13 +3607,15 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 ss._data += [args[0]]
             elif isinstance(args[0], Iterable):
                 for i, s in enumerate(args[0]):
-                    assert isinstance(s, Spectrum), f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}'
+                    if not isinstance(s, Spectrum):
+                        raise TypeError(f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}')
                     ss._data += [s]
             else:
                 raise AttributeError(error_message)
         elif len(args)>1:
             for i, s in enumerate(args):
-                assert isinstance(s, Spectrum), f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}'
+                if not isinstance(s, Spectrum):
+                    raise TypeError(f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}')
                 ss._data += [s]
         else:
             raise AttributeError(error_message)
@@ -3641,9 +3642,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         See Also:
             :py:func:`Spectra.remove`.
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         error_message = 'Wrong input. Spectrum cannot be appended. Please, use one ' +\
                         'of the examples below:\n' +\
                         '\n' +\
@@ -3663,13 +3664,15 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 self._data += [args[0]]
             elif isinstance(args[0], Iterable):
                 for i, s in enumerate(args[0]):
-                    assert isinstance(s, Spectrum), f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}'
+                    if not isinstance(s, Spectrum): 
+                        raise TypeError(f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}')
                     self._data += [s]
             else:
                 raise AttributeError(error_message)
         elif len(args)>1:
             for i, s in enumerate(args):
-                assert isinstance(s, Spectrum), f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}'
+                if not isinstance(s, Spectrum): 
+                    raise TypeError(f'Cannot append item {i}.\nAll items must be of type brixs.Spectrum.\nItem {i} is of type: {type(s)}')
                 self._data += [s]
         else:
             raise AttributeError(error_message)
@@ -3875,10 +3878,14 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##############
         # folderpath #
         ##############
+        if not isinstance(folderpath, (str, Path)):
+            raise TypeError(f'folderpath must be a string or Path object, not {type(folderpath).__name__}')
         folderpath = Path(folderpath)
-        assert folderpath.exists(), f'folderpath does not exists.\nfolderpath: {folderpath}'
-        assert folderpath.is_dir(), f'folderpath is not a directory.\nfolderpath: {folderpath}'
-
+        if not folderpath.exists():
+            raise FileNotFoundError(f'folderpath does not exist: {folderpath}')
+        if folderpath.is_file():
+            raise NotADirectoryError(f'folderpath must point to a folder, not a file: {folderpath}')
+        
         #################
         # set filenames #
         #################
@@ -3943,10 +3950,13 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         #################################################################
         # check if folder points to a folder and that folderpath exists #
         #################################################################
+        if not isinstance(folderpath, (str, Path)):
+            raise TypeError(f'folderpath must be a string or Path object, not {type(folderpath).__name__}')
         folderpath = Path(folderpath)
-        assert isinstance(folderpath, str) or isinstance(folderpath, Path), f'folderpath is unknown format\n{folderpath}'
-        assert folderpath.exists(), f'folderpath does not exist\n{folderpath}'
-        assert folderpath.is_dir(), f'folderpath must point to a file\n{folderpath}'
+        if not folderpath.exists():
+            raise FileNotFoundError(f'folderpath does not exist: {folderpath}')
+        if folderpath.is_file():
+            raise NotADirectoryError(f'folderpath must point to a folder, not a file: {folderpath}')
 
         ################
         # get filelist #
@@ -4019,10 +4029,13 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-        if filepath.exists():
-            assert filepath.is_file(), 'filepath must point to a file'
+        if not filepath.parent.exists():
+            raise FileNotFoundError(f'filepath parent folder does not exist: {filepath.parent}')
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         #######################
         # check x is the same #
@@ -4151,9 +4164,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file\n{filepath}'
-        assert filepath.exists(), f'filepath does not exist\n{filepath}'
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ##########
         # kwargs #
@@ -4530,8 +4545,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as spectra\n'
+                             f'number of items in value: {len(value)}\n'
+                             f'number of spectra: {len(self)}')
+        
         ##############
         # set values #
         ##############
@@ -4576,8 +4594,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as spectra\n'
+                             f'number of items in value: {len(value)}\n'
+                             f'number of spectra: {len(self)}')
+    
         ##############
         # set values #
         ##############
@@ -4622,8 +4643,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as spectra\n'
+                             f'number of items in value: {len(value)}\n'
+                             f'number of spectra: {len(self)}')
         ##############
         # set values #
         ##############
@@ -4668,8 +4691,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as spectra\n'
+                             f'number of items in value: {len(value)}\n'
+                             f'number of spectra: {len(self)}')
+    
         ##############
         # set values #
         ##############
@@ -4817,8 +4843,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as spectra\n'
+                             f'number of items in value: {len(value)}\n'
+                             f'number of spectra: {len(self)}')
+        
         ##############
         # set values #
         ##############
@@ -4862,8 +4891,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the number of spectra.\nnumber of values: {len(value)}\nnumber of spectra: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as spectra\n'
+                             f'number of items in value: {len(value)}\n'
+                             f'number of spectra: {len(self)}')
+        
         ##############
         # set values #
         ##############
@@ -4912,9 +4944,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectra`
         """
-        ############################
-        # check for empty spectrum #
-        ############################
+        ##################################
+        # check that object is not empty #
+        ##################################
         text = ''
         flag = False
         for i, s in enumerate(self):
@@ -4933,7 +4965,7 @@ class Spectra(_BrixsObject, metaclass=_Meta):
             try:
                 ss[i] = s.floor(limits=limits)
                 text += f'{i}: ok\n'
-            except AssertionError:
+            except ValueError:
                 flag = True
                 _s   = Spectrum()
                 _s._copy_attrs_from(s)
@@ -5107,8 +5139,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             Spectra object with derivate spectra
         """
-        # assert spectrum is not empty
-        assert len(self) > 0, 'Cannot act on a empty Spectra'
+        ##################################
+        # check that object is not empty #
+        ##################################
+        if len(self) == 0:
+            raise ValueError('Cannot operate on an empty Spectra object')
 
         # copy
         ss = self.copy()
@@ -5137,9 +5172,12 @@ class Spectra(_BrixsObject, metaclass=_Meta):
 
         Returns:
             :py:class:`Spectra` with spectrum of length given by (len(s.x)-n+1)
-        """
-        # assert spectrum is not empty
-        assert len(self) > 0, 'Cannot act on a empty Spectra'
+        """        
+        ##################################
+        # check that object is not empty #
+        ##################################
+        if len(self) == 0:
+            raise ValueError('Cannot operate on an empty Spectra object')
 
         # copy
         ss = self.copy()
@@ -5173,8 +5211,11 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Spectra` spectrum of length given by (len(s.x)/n).
         """
-        # assert spectrum is not empty
-        assert len(self) > 0, 'Cannot act on a empty Spectra'
+        ##################################
+        # check that object is not empty #
+        ##################################
+        if len(self) == 0:
+            raise ValueError('Cannot operate on an empty Spectra object')
 
         # copy
         ss = self.copy()
@@ -5223,14 +5264,20 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if len(self) == 0:
             raise ValueError('cannot operate on empty spectra')
         
-        assert isinstance(indexes, Iterable), 'indexes must be a list'
+        #################
+        # validate input #
+        #################
+        if not isinstance(indexes, Iterable):
+            raise TypeError(f'indexes must be an iterable, not {type(indexes).__name__}')
 
-        # check weights
         if weights is None:
-            weights = [1]*len(indexes)
-        
-        assert isinstance(weights, Iterable), 'weights must be a list'
-        assert len(weights) == len(indexes), 'number of indexes must be the same as the number of weights'
+            weights = [1] * len(indexes)
+        if not isinstance(weights, Iterable):
+            raise TypeError(f'weights must be an iterable, not {type(weights).__name__}')
+        if len(weights) != len(indexes):
+            raise ValueError(f'indexes and weights must have the same number of items\n'
+                             f'number of indexes: {len(indexes)}\n'
+                             f'number of weights: {len(weights)}')
 
         ########################
         # check attrs to merge #
@@ -5238,9 +5285,15 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if attrs2merge is not None:
             for attr in attrs2merge:
                 temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
-                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+                if not isinstance(temp, Iterable):
+                    raise TypeError(f'{attr} must be an iterable, not {type(temp).__name__}')
+                if len(temp) != len(self):
+                    raise ValueError(f'{attr} must have the same number of items as spectra\n'
+                                     f'number of items in {attr}: {len(temp)}\n'
+                                     f'number of spectra: {len(self)}')
+                if not all(numanip.is_number(x) for x in temp):
+                    raise TypeError(f'all items in {attr} must be numbers')
+
 
         ss = Spectra()
         for j, i in enumerate(indexes):
@@ -5290,9 +5343,15 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if attrs2merge is not None:
             for attr in attrs2merge:
                 temp = self.__getattribute__(attr)
-                assert isinstance(temp, Iterable), f'{attr} must be an iterable type'
-                assert len(temp) == len(self), f'Lenght of attr {attr} must be the same as the number of spectra.\nlenght of attr: {len(attr)}\nnumber of spectra: {len(self)}'
-                assert sum([numanip.is_number(x) for x in temp]) == len(temp), f'{attr} must be a list of numbers'
+                if not isinstance(temp, Iterable):
+                    raise TypeError(f'{attr} must be an iterable, not {type(temp).__name__}')
+                if len(temp) != len(self):
+                    raise ValueError(f'{attr} must have the same number of items as spectra\n'
+                                     f'number of items in {attr}: {len(temp)}\n'
+                                     f'number of spectra: {len(self)}')
+                if not all(numanip.is_number(x) for x in temp):
+                    raise TypeError(f'all items in {attr} must be numbers')
+
 
         ss = Spectra()
         if attrs2merge is not None:
@@ -5470,7 +5529,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         # check centers
         if x_centers is not None:
-            assert len(x_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(x_centers)}\nnumber of spectra: {len(self)}'
+            if len(x_centers) != len(self):
+                raise ValueError(f'x_centers must have the same number of items as spectra\n'
+                                 f'number of x_centers: {len(x_centers)}\n'
+                                 f'number of spectra: {len(self)}')
         else:
             x_centers = list(range(len(self)))
 
@@ -5517,7 +5579,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         """
         # check centers
         if y_centers is not None:
-            assert len(y_centers) == len(self), f'centers must have the same number of items as the number of spectra.\nnumber of centers: {len(y_centers)}\nnumber of spectra: {len(self)}'
+            if len(y_centers) != len(self):
+                raise ValueError(f'y_centers must have the same number of items as spectra\n'
+                                 f'number of y_centers: {len(y_centers)}\n'
+                                 f'number of spectra: {len(self)}')
         else:
             y_centers = list(range(len(self)))
 
@@ -6199,7 +6264,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 _label = kwargs.pop('labels')
 
             if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
-                assert len(_label) == len(self), f'label must be a number of a list with length compatible with the number of spectra.\nnumber of labels: {len(_label)}\nnumber of spectra: {len(self)}'
+                if len(_label) != len(self):
+                    raise ValueError(f'label must have the same number of items as spectra\n'
+                                     f'number of labels: {len(_label)}\n'
+                                     f'number of spectra: {len(self)}')
                 label = _label
             else:
                 label = [_label]*len(self)
@@ -6218,7 +6286,10 @@ class Spectra(_BrixsObject, metaclass=_Meta):
                 _color = kwargs.pop('c')
             
             if isinstance(_color, Iterable) == True and isinstance(_color, str) == False:
-                assert len(_color) == len(self), f'`color` must be a number of a list with length compatible with the number of spectra.\nnumber of colors: {len(_color)}\nnumber of spectra: {len(self)}'
+                if len(_color) != len(self):
+                    raise ValueError(f'color must have the same number of items as spectra\n'
+                                     f'number of colors: {len(_color)}\n'
+                                     f'number of spectra: {len(self)}')
                 colors = _color
             else:
                 colors = [_color]*len(self)
@@ -6864,7 +6935,10 @@ class Image(_BrixsObject, metaclass=_Meta):
             else:
                 value = np.arange(0, self.data.shape[1])
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[1], f"number of x centers ({len(value)}) must be the same as the number of pixel columns ({self.shape[1]})"
+            if len(value) != self.shape[1]:
+                raise ValueError(f'value must have the same number of items as pixel columns\n'
+                                 f'number of values: {len(value)}\n'
+                                 f'number of pixel columns: {self.shape[1]}')
         else:
             raise ValueError(f"x centers must be None or an iterable (list, tuple, or 1D array)")
         
@@ -6891,7 +6965,10 @@ class Image(_BrixsObject, metaclass=_Meta):
             else:
                 value = np.arange(0, self.data.shape[0])
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[0], f"number of y centers ({len(value)}) must be the same as the number of pixel columns ({self.shape[0]})"
+            if len(value) != self.shape[0]:
+                raise ValueError(f'y_centers must have the same number of items as pixel rows\n'
+                                 f'number of y_centers: {len(value)}\n'
+                                 f'number of pixel rows: {self.shape[0]}')
         else:
             raise ValueError(f"y centers must be None or an iterable (list, tuple, or 1D array)")
         
@@ -6922,9 +6999,13 @@ class Image(_BrixsObject, metaclass=_Meta):
                 temp    = list(arraymanip.moving_average(centers, 2))
                 value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[1] + 1, f"number of x edges ({len(value)}) must be the same as the number of pixel columns ({self.shape[1]}) plus one ({self.shape[1] + 1})"
+            if len(value) != self.shape[1] + 1:
+                raise ValueError(f'x_edges must have one more item than the number of pixel columns\n'
+                                 f'number of x_edges: {len(value)}\n'
+                                 f'number of pixel columns: {self.shape[1]}')
             monotonicity = arraymanip.check_monotonicity(value)
-            assert monotonicity != 0, f"edge values must be a monotonically array (either increasing or decreasing)"
+            if monotonicity == 0:
+                raise ValueError('x_edges must be monotonically increasing or decreasing')
         else:
             raise ValueError(f"x edges must be None or an iterable (list, tuple, or 1D array)")
         
@@ -6950,9 +7031,13 @@ class Image(_BrixsObject, metaclass=_Meta):
                 temp    = list(arraymanip.moving_average(centers, 2))
                 value   = [centers[0] - temp[0]] + temp + [2*centers[-1] - temp[-1]]
         elif isinstance(value, Iterable):
-            assert len(value) == self.shape[0] + 1, f"number of y edges ({len(value)}) must be the same as the number of pixel rows ({self.shape[0]}) plus one ({self.shape[0] + 1})"
+            if len(value) != self.shape[0] + 1:
+                raise ValueError(f'y_edges must have one more item than the number of pixel rows\n'
+                                 f'number of y_edges: {len(value)}\n'
+                                 f'number of pixel rows: {self.shape[0]}')
             monotonicity = arraymanip.check_monotonicity(value)
-            assert monotonicity != 0, f"edge values must be a monotonically array (either increasing or decreasing)"
+            if monotonicity == 0:
+                raise ValueError('y_edges must be monotonically increasing or decreasing')
         else:
             raise ValueError(f"y edges must be None or an iterable (list, tuple, or 1D array)")
         self._y_edges = np.array(value, dtype='float')
@@ -7047,8 +7132,9 @@ class Image(_BrixsObject, metaclass=_Meta):
     #################
     def __getitem__(self, item):
         if isinstance(item, tuple):
-            # assert
-            assert len(item) == 2, 'indexing must be lenght 2. Tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop)'
+            if len(item) != 2:
+                raise IndexError('indexing must contain exactly two items: '
+                                 '(x_center, y_center) or [x_start:x_stop, y_start:y_stop]')
             
             # from centers to index
             if isinstance(item[0], slice) or isinstance(item[1], slice):
@@ -7075,8 +7161,9 @@ class Image(_BrixsObject, metaclass=_Meta):
 
     def __setitem__(self, item, value):
         if isinstance(item, tuple):
-            # assert
-            assert len(item) == 2, 'indexing must be lenght 2. Tuple of numbers (x_center, y_center) or slice (x_start:x_stop, y_start:y_stop)'
+            if len(item) != 2:
+                raise IndexError('indexing must contain exactly two items: '
+                                 '(x_center, y_center) or [x_start:x_stop, y_start:y_stop]')
             
             # from centers to index
             if isinstance(item[0], slice) or isinstance(item[1], slice):
@@ -7094,7 +7181,7 @@ class Image(_BrixsObject, metaclass=_Meta):
                     x_stop  = item[1]
             
                 # set slice
-                # assert that centers are monotonic
+                # check that centers are monotonic
                 if self.x_monotonicity is None:
                     try:
                         self.check_x_monotonicity()
@@ -7140,7 +7227,8 @@ class Image(_BrixsObject, metaclass=_Meta):
                 return 
 
             else:
-                assert numanip.is_number(value), f'value must be a number, not {type(value)}'
+                if not numanip.is_number(value):
+                    raise TypeError(f'value must be a number, not {type(value).__name__}')
                 self._data[arraymanip.index(self.y_centers, item[0]), arraymanip.index(self.x_centers, item[1])] = value
                 return 
         else:
@@ -7290,9 +7378,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         if value is None:
             return None
         
-        ##################################
-        # assert that limits is Iterable #
-        ##################################
+        #################################
+        # check that limits is Iterable #
+        #################################
         if not isinstance(value, Iterable):
             raise TypeError(f'`value` must be an Iterable, not {type(value)}')
         
@@ -7329,7 +7417,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         # 1, 2, 3 or more than 4 elements 
         final = []
         for m in value:
-            assert isinstance(m, Iterable), f'wrong format for mask={value}'
+            if not isinstance(m, Iterable):
+                raise TypeError(f'each ROI must be an iterable, not {type(m).__name__}\n'
+                                f'rois: {value}')
             temp = [m[0], m[1], m[2], m[3]]
             if temp[0] == None: temp[0] = xmin
             if temp[1] == None: temp[1] = xmax
@@ -7588,18 +7678,12 @@ class Image(_BrixsObject, metaclass=_Meta):
                 im._y_centers      = copy.deepcopy(self.y_centers)
                 im._x_edges        = copy.deepcopy(self.x_edges)
                 im._y_edges        = copy.deepcopy(self.y_edges)
-                return im
-            
-        ##################
-        # validate input #
-        ##################
-        # assert x_stop > x_start, f'x_start must be smaller than x_stop.'
-        # assert y_stop > y_start, f'y_start must be smaller than y_stop.'        
+                return im      
         
         ########
         # crop #
         ########
-        # assert that centers are monotonic
+        # check that centers are monotonic
         if self.x_monotonicity is None:
             try:
                 self.check_x_monotonicity()
@@ -7745,10 +7829,13 @@ class Image(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-        if filepath.exists():
-            assert filepath.is_file(), 'filepath must point to a file'
+        if not filepath.parent.exists():
+            raise FileNotFoundError(f'filepath parent folder does not exist: {filepath.parent}')
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ###################
         # check overwrite #
@@ -7793,9 +7880,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         ############
         # filepath #
         ############
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
-        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ########
         # read #
@@ -7842,10 +7931,13 @@ class Image(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-        if filepath.exists():
-            assert filepath.is_file(), 'filepath must point to a file'
+        if not filepath.parent.exists():
+            raise FileNotFoundError(f'filepath parent folder does not exist: {filepath.parent}')
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ###################
         # check overwrite #
@@ -7921,10 +8013,13 @@ class Image(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-        if filepath.exists():
-            assert filepath.is_file(), 'filepath must point to a file'
+        if not filepath.parent.exists():
+            raise FileNotFoundError(f'filepath parent folder does not exist: {filepath.parent}')
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ###################
         # check overwrite #
@@ -8019,9 +8114,11 @@ class Image(_BrixsObject, metaclass=_Meta):
         ############
         # filepath #
         ############
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
-        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ##########
         # kwargs #
@@ -8429,9 +8526,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Image`
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         # x axis must be uniform if mode is roll
         if self.x_step is None:
             try:
@@ -8439,14 +8536,17 @@ class Image(_BrixsObject, metaclass=_Meta):
             except ValueError:
                 raise ValueError(f'Cannot shift data, because x centers are not uniform. Use im.x_interp() to make data uniform, or shift data using im.set_roll()')
         
-        #####################################
-        # asserting validity of the input 2 #
-        #####################################
+        ########################################
+        # checking the validity of the input 2 #
+        ########################################
         centers = self.y_centers
         if isinstance(value, Iterable) == False:
             value = [value]*len(centers)
-        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
-
+        if len(value) != len(centers):
+            raise ValueError(f'value must have the same number of items as pixel rows\n'
+                             f'number of values: {len(value)}\n'
+                             f'number of rows: {len(centers)}')
+         
         #############
         # net shift #
         #############
@@ -8513,9 +8613,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Image`
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         # x axis must be uniform if mode is roll
         if self.y_step is None:
             try:
@@ -8523,14 +8623,16 @@ class Image(_BrixsObject, metaclass=_Meta):
             except ValueError:
                 raise ValueError(f'Cannot shift data, because y centers are not uniform. Use im.y_interp() to make data uniform, or shift data using im.set_roll()')
         
-        #####################################
-        # asserting validity of the input 2 #
-        #####################################
+        ########################################
+        # checking the validity of the input 2 #
+        ########################################
         centers = self.x_centers
         if isinstance(value, Iterable) == False:
             value = [value]*len(centers)
-        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of columns ({len(centers)})'
-
+        if len(value) != len(centers):
+            raise ValueError(f'value must have the same number of items as pixel columns\n'
+                             f'number of values: {len(value)}\n'
+                             f'number of columns: {len(centers)}')
         #############
         # net shift #
         #############
@@ -8587,13 +8689,16 @@ class Image(_BrixsObject, metaclass=_Meta):
         See Also:
             :py:func:`Image.set_vertical_shift`, :py:func:`Image.set_vertical_roll`, :py:func:`Image.set_horizontal_shift`
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         centers = self.y_centers
         if isinstance(value, Iterable) == False:
             value = [value]*len(centers)
-        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
+        if len(value) != len(centers):
+            raise ValueError(f'value must have the same number of items as pixel rows\n'
+                                f'number of values: {len(value)}\n'
+                                f'number of rows: {len(centers)}')
         
         #####################
         # everything to int #
@@ -8648,13 +8753,16 @@ class Image(_BrixsObject, metaclass=_Meta):
         See Also:
             :py:func:`Image.set_horizontal_roll`, :py:func:`Image.set_vertical_shift`, :py:func:`Image.set_horizontal_shift`
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         centers = self.x_centers
         if isinstance(value, Iterable) == False:
             value = [value]*len(centers)
-        assert len(value) == len(centers), f'Number of values ({len(value)}) must be the same as the number of rows ({len(centers)})'
+        if len(value) != len(centers):
+            raise ValueError(f'value must have the same number of items as pixel columns\n'
+                                f'number of values: {len(value)}\n'
+                                f'number of columns: {len(centers)}')
         
         #####################
         # everything to int #
@@ -8956,9 +9064,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Image` binned image
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ######################################
+        # checking the validity of the input #
+        ######################################
         if ncols is None:
             ncols = self.shape[1]
         if nrows is None:
@@ -8966,9 +9074,18 @@ class Image(_BrixsObject, metaclass=_Meta):
         if numanip.is_integer(ncols) == False or numanip.is_integer(nrows)  == False or ncols < 0 or nrows < 0:
             raise ValueError("Number of bins must be a positive integer.")
 
-        # is divisible
-        assert self.shape[1] % ncols == 0, f"The {self.shape[1]} pixels in a row is not evenly divisible by {ncols}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[1])))}"
-        assert self.shape[0] % nrows == 0, f"The {self.shape[0]} pixels in a column is not evenly divisible by {nrows}\nPlease, pick one of the following numbers: {np.sort(list(numanip.factors(self.shape[0])))}"
+        # check divisibility
+        if self.shape[1] % ncols != 0:
+            raise ValueError(f'number of pixel columns must be evenly divisible by ncols\n'
+                            f'number of pixel columns: {self.shape[1]}\n'
+                            f'ncols: {ncols}\n'
+                            f'valid values: {np.sort(list(numanip.factors(self.shape[1])))}')
+
+        if self.shape[0] % nrows != 0:
+            raise ValueError(f'number of pixel rows must be evenly divisible by nrows\n'
+                            f'number of pixel rows: {self.shape[0]}\n'
+                            f'nrows: {nrows}\n'
+                            f'valid values: {np.sort(list(numanip.factors(self.shape[0])))}')
 
         # is uniform
         if self.x_step is None:
@@ -9171,8 +9288,9 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             rotated image
         """
-        assert direction in ['clockwise', 'counterclockwise'], f"invalid direction `{direction}`. Valid options are 'clockwise', 'counterclockwise'"
-        
+        if direction not in ('clockwise', 'counterclockwise'):
+            raise ValueError(f'direction must be either `clockwise` or `counterclockwise`, not `{direction}`')
+                     
         im = self.copy()
         if direction == 'clockwise':
             im._data = np.rot90(self.data, k=3)
@@ -9392,7 +9510,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         Returns:
             y, x
         """
-        assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
+        if coordinates not in ('pixels', 'centers'):
+            raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
         candidates = [(y, x) for y, x in enumerate(self.data.argmax(axis=1))]
         y, x = candidates[np.argmax([self.data[y, x] for y, x in candidates])]
         if coordinates == 'centers':
@@ -9849,11 +9968,17 @@ class Image(_BrixsObject, metaclass=_Meta):
 
             is_near_edge is a dict indicates if the spot touched the edges of the image.
         """
-        assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-        assert numanip.is_integer(nx), f'n must be of type integer, not {type(nx)}'
-        assert numanip.is_integer(ny), f'n must be of type integer, not {type(ny)}'
-        assert nx >= 0, f'nx must be an integer number higher or equal to 0'
-        assert ny >= 0, f'ny must be an integer number higher or equal to 0'
+        # check if arguments make sense
+        if coordinates not in ('pixels', 'centers'):
+            raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
+        if not numanip.is_integer(nx):
+            raise TypeError(f'nx must be an integer, not {type(nx).__name__}')
+        if not numanip.is_integer(ny):
+            raise TypeError(f'ny must be an integer, not {type(ny).__name__}')
+        if nx < 0:
+            raise ValueError(f'nx must be greater than or equal to 0, not {nx}')
+        if ny < 0:
+            raise ValueError(f'ny must be greater than or equal to 0, not {ny}')
 
         # returns the full image if n is larger that the figure
         if ny > self.shape[0] and nx > self.shape[1]:
@@ -9913,18 +10038,28 @@ class Image(_BrixsObject, metaclass=_Meta):
             Image
         """
         # check if arguments make sense
-        assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-        assert numanip.is_integer(nx), f'n must be of type integer, not {type(nx)}'
-        assert numanip.is_integer(ny), f'n must be of type integer, not {type(ny)}'
-        assert nx >= 0, f'nx must be an integer number higher or equal to 0'
-        assert ny >= 0, f'ny must be an integer number higher or equal to 0'
+        if coordinates not in ('pixels', 'centers'):
+            raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
+        if not numanip.is_integer(nx):
+            raise TypeError(f'nx must be an integer, not {type(nx).__name__}')
+        if not numanip.is_integer(ny):
+            raise TypeError(f'ny must be an integer, not {type(ny).__name__}')
+        if nx < 0:
+            raise ValueError(f'nx must be greater than or equal to 0, not {nx}')
+        if ny < 0:
+            raise ValueError(f'ny must be greater than or equal to 0, not {ny}')
 
-        assert isinstance(pos, Iterable), f'pos must be an Iterable (list or tuple), not type {type(pos)}'
+
+        if not isinstance(pos, Iterable):
+            raise TypeError(f'pos must be an Iterable (list or tuple), not {type(pos).__name__}')
         if isinstance(pos[0], Iterable) == False:
             pos = [pos, ]
         else:
-            assert any([isinstance(_, Iterable) for _ in pos]), f'pos must be a pixel position (y, x) or a list of positions [(y1, x1), (y2, x2), ...]'
-            assert any([len(_) != 2 for _ in pos])==False, f'pos must be a pixel position (y, x) or a list of positions [(y1, x1), (y2, x2), ...]'
+            if not any(isinstance(_, Iterable) for _ in pos):
+                raise TypeError('pos must be a pixel position (y, x) or a list of positions '
+                                '[(y1, x1), (y2, x2), ...]')
+            if any(len(_) != 2 for _ in pos):
+                raise ValueError('each position in pos must contain exactly two items (y, x)')
             if coordinates == 'pixels':
                 xhigh = [x > self.shape[1] for _, x in pos]
                 xlow  = [x < 0 for _, x in pos]
@@ -9935,10 +10070,20 @@ class Image(_BrixsObject, metaclass=_Meta):
                 xlow  = [x < min(self.x_centers) for _, x in pos]
                 yhigh = [y > max(self.y_centers) for y, _ in pos]
                 ylow  = [y < min(self.y_centers) for y, _ in pos]
-            assert any(xhigh) == False, f'Some x positions are outide of the image. Indexes of bad positions: {np.where(xhigh)[0]}'
-            assert any(xlow)  == False, f'Some x positions are outide of the image. Indexes of bad positions: {np.where(xlow)[0]}'
-            assert any(yhigh) == False, f'Some y positions are outide of the image. Indexes of bad positions: {np.where(yhigh)[0]}'
-            assert any(ylow)  == False, f'Some y positions are outide of the image. Indexes of bad positions: {np.where(ylow)[0]}'
+            if any(xhigh):
+                raise ValueError(f'some x positions are outside the image\n'
+                                f'indexes of invalid positions: {np.where(xhigh)[0]}')
+            if any(xlow):
+                raise ValueError(f'some x positions are outside the image\n'
+                                f'indexes of invalid positions: {np.where(xlow)[0]}')
+            if any(yhigh):
+                raise ValueError(f'some y positions are outside the image\n'
+                                f'indexes of invalid positions: {np.where(yhigh)[0]}')
+            if any(ylow):
+                raise ValueError(f'some y positions are outside the image\n'
+                                f'indexes of invalid positions: {np.where(ylow)[0]}')
+
+
 
         # patch image
         im = self._copy()
@@ -10183,26 +10328,34 @@ class Image(_BrixsObject, metaclass=_Meta):
         if im.x_edges is None: 
             if im.x_monotonicity is None:
                 im.check_x_monotonicity()
-            assert im.x_monotonicity == 'increasing', 'x edges are not increasingly monotonic. Use im.fix_x_monotonicity() of adjust im.x_centers or im.x_edges directly'
+            if im.x_monotonicity != 'increasing':
+                raise ValueError('x edges must be monotonically increasing. '
+                                'Use im.fix_x_monotonicity() or adjust im.x_centers or im.x_edges directly')
             im = im.estimate_x_edges_from_centers()
         else:
             s = Spectrum(x=self.x_edges)
             try:
                 s.check_monotonicity()
-                assert s.monotonicity == 'increasing', 'x edges are not increasingly monotonic. Use im.fix_x_monotonicity() of adjust im.x_centers or im.x_edges directly'
+                if s.monotonicity != 'increasing':
+                    raise ValueError('x values must be monotonically increasing. '
+                                     'Use im.fix_x_monotonicity() or adjust s.x_edge directly')
             except ValueError:
                 raise ValueError('x edges are not increasingly monotonic. Use im.fix_x_monotonicity() of adjust im.x_centers or im.x_edges directly')
         
         if im.y_edges is None: 
             if im.y_monotonicity is None:
                 im.check_y_monotonicity()
-            assert im.y_monotonicity == 'increasing', 'y edges are not increasingly monotonic. Use im.fix_y_monotonicity() of adjust im.y_centers or im.y_edges directly'
+            if im.y_monotonicity != 'increasing':
+                raise ValueError('y edges must be monotonically increasing. '
+                                'Use im.fix_y_monotonicity() or adjust im.y_centers or im.y_edges directly')
             im = im.estimate_y_edges_from_centers()
         else:
             s = Spectrum(x=self.y_edges)
             try:
                 s.check_monotonicity()
-                assert s.monotonicity == 'increasing', 'y edges are not increasingly monotonic. Use im.fix_y_monotonicity() of adjust im.y_centers or im.y_edges directly'
+                if s.monotonicity != 'increasing':
+                    raise ValueError('y values must be monotonically increasing. '
+                                        'Use im.fix_y_monotonicity() or adjust s.y_edge directly')
             except ValueError:
                 raise ValueError('y edges are not increasingly monotonic. Use im.fix_y_monotonicity() of adjust im.y_centers or im.y_edges directly')
 
@@ -10412,7 +10565,8 @@ class Image(_BrixsObject, metaclass=_Meta):
         ##########
         # kwargs #
         ##########
-        assert origin == 'lower' or origin == 'upper', f'origin can only be `lower` or `upper`, not `{origin}`'
+        if origin not in ('lower', 'upper'):
+            raise ValueError(f'origin must be either `lower` or `upper`, not `{origin}`')
         kwargs['origin'] = origin
         kwargs.setdefault('cmap', 'jet')
         kwargs.setdefault('aspect', 'auto')
@@ -10903,9 +11057,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
 
             self._has_nan = None
             return
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # check type
         if not isinstance(value, Iterable):
             raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
@@ -10918,7 +11072,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 raise TypeError(f'The x-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a x-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
-        assert len(value) == len(self.y), f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).'
+        if len(value) != len(self.y):
+            raise ValueError(f'x must have the same number of items as y\n'
+                            f'number of x values: {len(value)}\n'
+                            f'number of y values: {len(self.y)}')
 
         # empty array
         if len(value) == 0:
@@ -10948,9 +11105,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
             self._has_nan = None
 
             return
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # check type
         if not isinstance(value, Iterable):
             raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is not an Iterable.\nThe type of the variable you passed is: {type(value)}\nAccepted types are: list, array, ...')
@@ -10963,7 +11120,10 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 raise TypeError(f'The y-array must be an Iterable (list or array) of numbers.\nYou are trying to set up a y-array which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
         
         # check length
-        assert len(value) == len(self.x), f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).'
+        if len(value) != len(self.x):
+            raise ValueError(f'y must have the same number of items as x\n'
+                            f'number of y values: {len(value)}\n'
+                            f'number of x values: {len(self.x)}')
 
         # empty array
         if len(value) == 0:
@@ -10986,9 +11146,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         return self._xlim
     @xlim.setter
     def xlim(self, value):
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if value is None:
             self._xlim = None#np.array((min(self.x), max(self.x)), dtype='float')
         else:
@@ -11003,14 +11163,15 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 raise TypeError(f'xlim must be an Iterable (list or array) of numbers.\nYou are trying to set up a xlim which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
             
             # check length
-            assert len(value) == 2, f'Length of xlim must be 2 and not: {len(value)}'
+            if len(value) != 2:
+                raise ValueError(f'ylim must contain exactly two items\n'
+                                 f'number of items: {len(value)}')
 
             # check min and max
-            assert value[1] > value[0], f'max value must be bigger than min value'
-
-            # check if data is within limits
-            # if self.x is not None:
-            #     assert max(self.x) <= value[-1] and min(self.x) >= value[0], f'xlim={value} not allowed because x coordinates (from {min(self.x)} to {max(self.x)}) are outside xlim. xlim set to None'
+            if value[1] <= value[0]:
+                raise ValueError(f'minimum must be smaller than maximum\n'
+                                 f'minimum: {value[0]}\n'
+                                 f'maximum: {value[1]}')
 
             #################
             # set attribute #
@@ -11025,9 +11186,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         return self._ylim
     @ylim.setter
     def ylim(self, value):
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if value is None:
             self._ylim = None#np.array((min(self.y), max(self.y)), dtype='float')
         else:
@@ -11040,17 +11201,18 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
                 _ = sum(value)
             except:
                 raise TypeError(f'ylim must be an Iterable (list or array) of numbers.\nYou are trying to set up a ylim which is Iterable, but is NOT ENTIRELY made of numbers because we fail to sum all the elements of the array you are passing.')
-            
+
             # check length
-            assert len(value) == 2, f'Length of ylim must be 2 and not: {len(value)}'
+            if len(value) != 2:
+                raise ValueError(f'ylim must contain exactly two items\n'
+                                 f'number of items: {len(value)}')
 
             # check min and max
-            assert value[1] > value[0], f'max value must be bigger than min value'
-
-            # check if data is within limits
-            # if self.y is not None:
-            #     assert max(self.y) <= value[-1] and min(self.y) >= value[0], f'ylim={value} not allowed bacause y coordinates (from {min(self.y)} to {max(self.y)}) are outside ylim. ylim set to None'
-
+            if value[1] <= value[0]:
+                raise ValueError(f'minimum must be smaller than maximum\n'
+                                 f'minimum: {value[0]}\n'
+                                 f'maximum: {value[1]}')
+        
             #################
             # set attribute #
             #################
@@ -11196,11 +11358,12 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if value is None:
             return None
         
-        ################################
-        # assert that mask is Iterable #
-        ################################
-        assert isinstance(value, Iterable), f'`limits` must be an Iterable, not {type(value)}'
-        
+        ##################
+        # validate input #
+        ##################
+        if not isinstance(value, Iterable):
+            raise TypeError(f'limits must be an Iterable, not {type(value).__name__}')
+
         ################
         # empty object #
         ################
@@ -11242,7 +11405,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         # 1, 2, 3 or more than 4 elements 
         final = []
         for m in value:
-            assert isinstance(m, Iterable), f'wrong format for value={value}'
+            if not isinstance(m, Iterable):
+                raise TypeError(f'm must be an Iterable, not {type(m).__name__}\n'
+                                f'value: {value}')
             temp = [m[0], m[1], m[2], m[3]]
             if temp[0] == None: temp[0] = xmin
             if temp[1] == None: temp[1] = xmax
@@ -11311,24 +11476,38 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if x_start <= min(self.x) and x_stop >= max(self.x):
             if y_start <= min(self.y) and y_stop >= max(self.y):
                 return PhotonEvents(x=x, y=y, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
-
-        #################################
-        # assert validity of attrs2clip #
-        #################################
+   
+        #######################
+        # validate attrs2crop #
+        #######################
         if attrs2crop is not None:
+            if not isinstance(attrs2crop, Iterable):
+                raise TypeError(f'attrs2crop must be an Iterable, not {type(attrs2crop).__name__}')
             _attrs2crop = {}
-            assert isinstance(attrs2crop, Iterable), f'attrs2crop must be a list (Iterable), not type `{type(attrs2crop)}`'
             for attr in attrs2crop:
-                assert hasattr(self, attr), f'attrs2crop cannot find attr `{attr}`'
-                assert isinstance(self.__getattribute__(attr), Iterable), f'cannot clip attr `{attr}`. It must be an Iterable'
-                assert len(self.__getattribute__(attr)), f'cannot clip attr `{attr}` (length={len(self.__getattribute__(attr))}) because it does not have the same lenght as the number of photon events ({len(self)})'
+                if not hasattr(self, attr):
+                    raise AttributeError(f'attribute not found: {attr}')
+                value = self.__getattribute__(attr)
+                if not isinstance(value, Iterable):
+                    raise TypeError(f'cannot crop {attr} because it is not an Iterable\n'
+                                    f'type: {type(value).__name__}')
+                if len(value) != len(self):
+                    raise ValueError(f'cannot crop {attr} because it does not have the same number of items as photon events\n'
+                                    f'number of items in {attr}: {len(value)}\n'
+                                    f'number of photon events: {len(self)}')
                 _attrs2crop[attr] = []
 
-        ##################
-        # validate input #
-        ##################
-        assert x_stop > x_start, f'x_start ({x_start}) must be smaller than x_stop ({x_stop})'
-        assert y_stop > y_start, f'y_start ({y_start}) must be smaller than y_stop ({y_stop})'     
+        ###################
+        # validate limits #
+        ###################
+        if x_stop <= x_start:
+            raise ValueError(f'x_start must be smaller than x_stop\n'
+                            f'x_start: {x_start}\n'
+                            f'x_stop: {x_stop}')
+        if y_stop <= y_start:
+            raise ValueError(f'y_start must be smaller than y_stop\n'
+                            f'y_start: {y_start}\n'
+                            f'y_stop: {y_stop}')
         
         ########
         # crop #
@@ -11447,26 +11626,40 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         if len(self) == 0:
             return PhotonEvents(x=None, y=None, xlim=copy.deepcopy(self.xlim), ylim=copy.deepcopy(self.ylim))
 
-        ######################
-        # assert rois format #
-        ######################
-        assert isinstance(rois, Iterable), 'rois must be iterable'
+        #################
+        # validate rois #
+        #################
+        if not isinstance(rois, Iterable):
+            raise TypeError(f'rois must be an Iterable, not {type(rois).__name__}')
         if len(rois) == 4:
-            if isinstance(rois[0], Iterable) == False:
-                rois = [rois, ] 
-        for m in rois:
-            assert len(m) == 4, 'rois must have the format: [(x1_start, x1_stop, y1_start, y1_stop), (x2_start, x2_stop, y2_start, y2_stop), ...])'
-        
-        #################################
-        # assert validity of attrs2clip #
-        #################################
+            if not isinstance(rois[0], Iterable):
+                rois = [rois]
+        for roi in rois:
+            if not isinstance(roi, Iterable):
+                raise TypeError(f'each ROI must be an Iterable, not {type(roi).__name__}\n'
+                                f'rois: {rois}')
+            if len(roi) != 4:
+                raise ValueError(f'each ROI must contain exactly four items: (x_start, x_stop, y_start, y_stop)\n'
+                                f'roi: {roi}')
+
+        #######################
+        # validate attrs2clip #
+        #######################
         if attrs2clip is not None:
+            if not isinstance(attrs2clip, Iterable):
+                raise TypeError(f'attrs2clip must be an Iterable, not {type(attrs2clip).__name__}')
             _attrs2clip = {}
-            assert isinstance(attrs2clip, Iterable), f'attrs2clip must be a list (Iterable), not type `{type(attrs2clip)}`'
             for attr in attrs2clip:
-                assert hasattr(self, attr), f'attrs2clip cannot find attr `{attr}`'
-                assert isinstance(self.__getattribute__(attr), Iterable), f'cannot clip attr `{attr}`. It must be an Iterable'
-                assert len(self.__getattribute__(attr)), f'cannot clip attr `{attr}` (length={len(self.__getattribute__(attr))}) because it does not have the same lenght as the number of photon events ({len(self)})'
+                if not hasattr(self, attr):
+                    raise AttributeError(f'attribute not found: {attr}')
+                value = self.__getattribute__(attr)
+                if not isinstance(value, Iterable):
+                    raise TypeError(f'cannot clip {attr} because it is not an Iterable\n'
+                                    f'type: {type(value).__name__}')
+                if len(value) != len(self):
+                    raise ValueError(f'cannot clip {attr} because it does not have the same number of items as photon events\n'
+                                    f'number of items in {attr}: {len(value)}\n'
+                                    f'number of photon events: {len(self)}')
                 _attrs2clip[attr] = []
 
         ########
@@ -11567,10 +11760,13 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ######################################
         # check if filepath points to a file #
         ######################################
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-        if filepath.exists():
-            assert filepath.is_file(), 'filepath must point to a file'
+        if not filepath.parent.exists():
+            raise FileNotFoundError(f'filepath parent folder does not exist: {filepath.parent}')
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ###################
         # check overwrite #
@@ -11653,9 +11849,11 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         ############
         # filepath #
         ############
+        if not isinstance(filepath, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
         filepath = Path(filepath)
-        assert filepath.is_file(), f'filepath must point to a file, {filepath}'
-        assert filepath.exists(),  f'filepath does not exist, {filepath}'
+        if filepath.exists() and not filepath.is_file():
+            raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
         ##########
         # kwargs #
@@ -11786,11 +11984,14 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`PhotonEvents`
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if isinstance(value, Iterable):
-            assert len(value) == len(self), f'value length ({len(value)}) must have the same length as the data\nLength of the data = {len(self)}.'
+            if len(value) != len(self):
+                raise ValueError(f'value must have the same number of items as data\n'
+                                f'number of values: {len(value)}\n'
+                                f'number of data points: {len(self)}')
         else:
             value = [value]*len(self)
 
@@ -11818,11 +12019,14 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`PhotonEvents`
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if isinstance(value, Iterable):
-            assert len(value) == len(self), f'value length ({len(value)}) must have the same length as the data\nLength of the data = {len(self)}.'
+            if len(value) != len(self):
+                raise ValueError(f'value must have the same number of items as data\n'
+                                f'number of values: {len(value)}\n'
+                                f'number of data points: {len(self)}')
         else:
             value = [value]*len(self)
 
@@ -11939,9 +12143,9 @@ class PhotonEvents(_BrixsObject, metaclass=_Meta):
         Returns:
             :py:class:`Image` binned image
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if numanip.is_integer(ncols) == False or numanip.is_integer(nrows) == False or ncols < 0 or nrows < 0:
             raise ValueError("Number of bins must be a positive integer.")
         ncols = int(ncols)
@@ -12501,7 +12705,10 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as Dummy objects\n'
+                            f'number of values: {len(value)}\n'
+                            f'number of objects: {len(self)}')
 
         ##############
         # set values #
@@ -12531,8 +12738,10 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as Dummy objects\n'
+                            f'number of values: {len(value)}\n'
+                            f'number of objects: {len(self)}')
         ##############
         # set values #
         ##############
@@ -12574,8 +12783,10 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as Dummy objects\n'
+                            f'number of values: {len(value)}\n'
+                            f'number of objects: {len(self)}')
         ##############
         # set values #
         ##############
@@ -12617,8 +12828,10 @@ class Dummy(_BrixsObject, metaclass=_Meta):
         ##################################
         # value must be the right length #
         ##################################
-        assert len(value) == len(self), f'value must have the same number of items as the lenght of Dummy.\nnumber of values: {len(value)}\nnumber of objects: {len(self)}'
-
+        if len(value) != len(self):
+            raise ValueError(f'value must have the same number of items as Dummy objects\n'
+                            f'number of values: {len(value)}\n'
+                            f'number of objects: {len(self)}')
         ##############
         # set values #
         ##############
