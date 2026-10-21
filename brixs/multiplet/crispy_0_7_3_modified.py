@@ -64,9 +64,14 @@ class _settings():
         return self._QUANTY_FILEPATH
     @QUANTY_FILEPATH.setter
     def QUANTY_FILEPATH(self, value):
+        if not isinstance(value, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(value).__name__}')
         value = Path(value)
-        assert value.exists(), 'Cannot find filepath'
-        assert value.is_file(), 'filepath does not point to a file'
+        if not value.parent.exists():
+            raise FileExistsError(f'filepath parent folder does not exists.\nfolderpath: {value.parent}')
+        if value.exists():
+            if not value.is_file():
+                raise FileNotFoundError('filepath must point to a file')
         self._QUANTY_FILEPATH = value
     @QUANTY_FILEPATH.deleter
     def QUANTY_FILEPATH(self):
@@ -79,7 +84,9 @@ class _settings():
     def WSL_NTHREADS(self, value):
         value = int(round(value))
         vmax = os.cpu_count()
-        assert value<=vmax and value>1, f'Invalid (WSL_NTHREADS={value}). It must be a integer higher or equal to 1 and less or equal to the max number of available threads on the machine (vmax={vmax})'
+        if not 1 <= value <= vmax:
+            raise ValueError(f'Invalid WSL_NTHREADS={value}. It must be an integer between '
+                             f'1 and {vmax} (inclusive).')
         self._WSL_NTHREADS = value
     @WSL_NTHREADS.deleter
     def WSL_NTHREADS(self):
@@ -90,9 +97,14 @@ class _settings():
         return self._WSL_QUANTY_FILEPATH
     @WSL_QUANTY_FILEPATH.setter
     def WSL_QUANTY_FILEPATH(self, value):
+        if not isinstance(value, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(value).__name__}')
         value = Path(value)
-        assert value.exists(), 'Cannot find filepath'
-        assert value.is_file(), 'filepath does not point to a file'
+        if not value.parent.exists():
+            raise FileExistsError(f'filepath parent folder does not exists.\nfolderpath: {value.parent}')
+        if value.exists():
+            if not value.is_file():
+                raise FileNotFoundError('filepath must point to a file')
         self._WSL_QUANTY_FILEPATH = value
     @WSL_QUANTY_FILEPATH.deleter
     def WSL_QUANTY_FILEPATH(self):
@@ -103,9 +115,14 @@ class _settings():
         return self._WSL_TEMP_FILEPATH
     @WSL_TEMP_FILEPATH.setter
     def WSL_TEMP_FILEPATH(self, value):
+        if not isinstance(value, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(value).__name__}')
         value = Path(value)
-        assert value.parent.exists(), 'Cannot find folderpath'
-        # assert value.is_file(), 'filepath does not point to a file'
+        if not value.parent.exists():
+            raise FileExistsError(f'filepath parent folder does not exists.\nfolderpath: {value.parent}')
+        if value.exists():
+            if not value.is_file():
+                raise FileNotFoundError('filepath must point to a file')
         self._WSL_TEMP_FILEPATH = value
     @WSL_TEMP_FILEPATH.deleter
     def WSL_TEMP_FILEPATH(self):
@@ -116,9 +133,13 @@ class _settings():
         return self._TEMPLATES_FOLDERPATH
     @TEMPLATES_FOLDERPATH.setter
     def TEMPLATES_FOLDERPATH(self, value):
-        value = Path(value)
-        assert value.exists(), 'Cannot find folderpath'
-        assert value.is_dir(), 'folderpath does not point to a folder'
+        if not isinstance(folderpath, (str, Path)):
+            raise TypeError(f'folderpath must be a string or Path object, not {type(folderpath).__name__}')
+        folderpath = Path(folderpath)
+        if not folderpath.exists():
+            raise FileNotFoundError(f'folderpath does not exist: {folderpath}')
+        if folderpath.is_file():
+            raise NotADirectoryError(f'folderpath must point to a folder, not a file: {folderpath}')
         self._TEMPLATES_FOLDERPATH = value
     @TEMPLATES_FOLDERPATH.deleter
     def TEMPLATES_FOLDERPATH(self):
@@ -129,9 +150,14 @@ class _settings():
         return self._PARAMETERS_FILEPATH
     @PARAMETERS_FILEPATH.setter
     def PARAMETERS_FILEPATH(self, value):
+        if not isinstance(value, (str, Path)):
+            raise TypeError(f'filepath must be a string or Path object, not {type(value).__name__}')
         value = Path(value)
-        assert value.exists(), 'Cannot find filepath'
-        assert value.is_file(), 'filepath does not point to a file'
+        if not value.parent.exists():
+            raise FileExistsError(f'filepath parent folder does not exists.\nfolderpath: {value.parent}')
+        if value.exists():
+            if not value.is_file():
+                raise FileNotFoundError('filepath must point to a file')
         self._PARAMETERS_FILEPATH = value
     @PARAMETERS_FILEPATH.deleter
     def PARAMETERS_FILEPATH(self):
@@ -223,8 +249,10 @@ class _hamiltonianState(MutableMapping):
     def __setitem__(self, name, value):
         if name not in self:
             raise ValueError(f'New terms cannot be created.\nInvalid term: {name}\nValid terms are: {list(self.keys())}')
-        assert isinstance(value, bool), f'hamiltonianState[{name}] must be a bool (True or False), not type: {type(value)}'
-
+        if not isinstance(value, bool):
+            raise TypeError(f'hamiltonianState[{name}] must be a bool (True or False), '
+                            f'not {type(value).__name__}')
+        
         if self.store[name] == False and value == True:  # from False to True
             
             # check if LMCT and MLCT are True at the same time
@@ -368,9 +396,13 @@ def quanty(filepath, wsl=False):
         Calculation output (stdout).
     """
     if wsl:
-        assert is_windows, 'Failed to recognized windows machine. One must be on a windows machine to run quanty with wsl'
-        assert settings.WSL_QUANTY_FILEPATH != '', 'settings.WSL_QUANTY_FILEPATH not set'
-        assert settings.WSL_TEMP_FILEPATH != '', 'settings.WSL_TEMP_FILEPATH not set'
+        if not is_windows:
+            raise RuntimeError('Failed to recognise Windows machine. Quanty with WSL can only be run '
+                            'on a Windows machine.')
+        if settings.WSL_QUANTY_FILEPATH == '':
+            raise RuntimeError('settings.WSL_QUANTY_FILEPATH is not set.')
+        if settings.WSL_TEMP_FILEPATH == '':
+            raise RuntimeError('settings.WSL_TEMP_FILEPATH is not set.')
 
         quanty_exe = Path(settings.WSL_QUANTY_FILEPATH).absolute()
         filepath   = Path(filepath).absolute()
@@ -410,7 +442,8 @@ def quanty(filepath, wsl=False):
 # export OMP_NUM_THREADS=2
 # /mnt/c/Users/galdin_c/github/quanty/quanty_lin/Quanty /mnt/c/Users/galdin_c/AppData/Local/Temp/tmpfh8gkcgi
     else:
-        assert settings.QUANTY_FILEPATH != '', 'settings.QUANTY_FILEPATH not set'
+        if settings.WSL_QUANTY_FILEPATH == '':
+            raise RuntimeError('settings.WSL_QUANTY_FILEPATH is not set.')
 
         quanty_exe = Path(settings.QUANTY_FILEPATH).absolute()
         filepath = Path(filepath).absolute()
@@ -635,13 +668,18 @@ class Calculation(object):
         self.k = k
 
         # geometry
-        assert isinstance(R, Iterable), 'R must be a list of type [[R1, angle1], [R2, angle2]]'
+        if not isinstance(R, Iterable):
+            raise TypeError('R must be a list of type [[R1, angle1], [R2, angle2]]')
         if len(R) > 0:
             for _ in R:
-                assert isinstance(_, Iterable), 'R must be a list of type [[R1, angle1], [R2, angle2]]'
-                assert isinstance(_[0], str), 'Rotations must be string'
-                assert _[0] in ['x', 'y', 'z'], 'Rotations must be `x`, `y`, or `z`'
-        assert tth >= 0 and tth <= 180, 'tth must be a number (in degrees) between 0 and 180'
+                if not isinstance(_, Iterable):
+                    raise TypeError('R must be a list of type [[R1, angle1], [R2, angle2]]')
+                if not isinstance(_[0], str):
+                    raise TypeError('Rotations must be strings')
+                if _[0] not in ['x', 'y', 'z']:
+                    raise ValueError('Rotations must be `x`, `y`, or `z`')
+        if not 0 <= tth <= 180:
+            raise ValueError('tth must be a number (in degrees) between 0 and 180')
         self._R   = R
         self._tth = tth
 
@@ -739,8 +777,8 @@ class Calculation(object):
         # magneticField_coordinate_system is set to 'lab' (and R is not empty), 
         # the magnetic field orientation needs to be rotated to the 
         # crystal field coordinate system)
-        assert magneticField_coordinate_system in ['cf', 'lab'], 'magneticField_coordinate_system must be either `cf` or `lab`'
-        self._magneticField_coordinate_system = magneticField_coordinate_system
+        if magneticField_coordinate_system not in ['cf', 'lab']:
+            raise ValueError('magneticField_coordinate_system must be either `cf` or `lab`')        self._magneticField_coordinate_system = magneticField_coordinate_system
         if magneticField is None:
             raise ValueError('Magnetic field value must be number bigger than 0.002 T. To turn off magnetic field hamiltonian, please use hamiltonianState["Magnetic Field"] = False')     
         elif magneticField < 0:
@@ -748,8 +786,8 @@ class Calculation(object):
         elif magneticField < 0.002:
             raise ValueError('Magnetic field cannot be smaller than 0.002 T. Please, turn off the magnetic field hamiltonian using hamiltonianState["Magnetic Field"] = False')     
         self._magneticField = magneticField 
-        assert len(magneticFieldOrientation) == 3, 'magneticFieldOrientation must be a vector, like [0, 1, 0].'
-        self._magneticFieldOrientation = br.normalize_vector(magneticFieldOrientation)
+        if len(magneticFieldOrientation) != 3:
+            raise ValueError('magneticFieldOrientation must be a vector, like [0, 1, 0].')        self._magneticFieldOrientation = br.normalize_vector(magneticFieldOrientation)
         self._update_magnetic_field_hamiltonian_data() 
 
         # experiment attributes
@@ -763,27 +801,32 @@ class Calculation(object):
         # validation
         if element is None:
             element = 'Ni'
-        assert element in settings.ELEMENTS, f'Not a valid element.\nValid elements are: {settings.ELEMENTS}'
-
+        if element not in settings.ELEMENTS:
+            raise ValueError(f'Not a valid element. Valid elements are: {settings.ELEMENTS}')
+        
         valid_charges = tuple(settings.PARAMETERS['elements'][element]['charges'].keys())
         if charge is None:
             charge = valid_charges[0]
-        assert charge in valid_charges, f'Not a valid oxidation state for {element}\nValid oxidation states are: {valid_charges}'
+        if charge not in valid_charges:
+            raise ValueError(f'Not a valid oxidation state for {element}. Valid oxidation states are: {valid_charges}')
 
         valid_symmetries = tuple(settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'].keys())
         if symmetry is None:
             symmetry = valid_symmetries[0]
-        assert symmetry in valid_symmetries, f'Not a valid symmetry for {element} {charge}\nValid symmetries are: {valid_symmetries}'
+        if symmetry not in valid_symmetries:
+            raise ValueError(f'Not a valid symmetry for {element} {charge}. Valid symmetries are: {valid_symmetries}')
 
         valid_experiments = tuple(settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'][symmetry]['experiments'].keys())
         if experiment is None:
             experiment = valid_experiments[0]
-        assert experiment in valid_experiments, f'Not a valid experiment for {element} {charge} {symmetry}\nValid experiments are: {valid_experiments}'
+        if experiment not in valid_experiments:
+            raise ValueError(f'Not a valid experiment for {element} {charge} {symmetry}. Valid experiments are: {valid_experiments}')
 
         valid_edges = tuple(settings.PARAMETERS['elements'][element]['charges'][charge]['symmetries'][symmetry]['experiments'][experiment]['edges'].keys())
         if edge is None:
             edge = valid_edges[0]
-        assert edge in valid_edges, f'Not a valid edge for {element} {charge} {symmetry} {experiment}\nValid edges are: {valid_edges}'
+        if edge not in valid_edges:
+            raise ValueError(f'Not a valid edge for {element} {charge} {symmetry} {experiment}. Valid edges are: {valid_edges}')
 
         # initialize primary attributes
         self._element    = element
@@ -927,7 +970,6 @@ class Calculation(object):
     def hamiltonianData(self):
         raise AttributeError('Cannot delete object.')
 
-
     # SPECTRA ATTRIBUTES
     @property
     def E(self):
@@ -937,7 +979,8 @@ class Calculation(object):
         if self.experiment == 'RIXS':
             if value is None:
                 value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][4]
-            assert value > 0, 'E cannot be negative'
+            if value <= 0:
+                raise ValueError('E must be greater than zero')
             self._E = value
         else:
             raise AttributeError(f'`E` (incidente photon energy) is only used for calculation of RIXS spectra and is not used for experiment of type: {self.experiment}') 
@@ -959,7 +1002,8 @@ class Calculation(object):
         if self.experiment == 'RIXS':
             pass
         else:
-            assert value > 0, 'xMin cannot be negative'
+            if value <= 0:
+                raise ValueError('xMin must be greater than zero')
         self._xMin = value
     @xMin.deleter
     def xMin(self):
@@ -978,7 +1022,8 @@ class Calculation(object):
         if self.experiment == 'RIXS':
             pass
         else:
-            assert value > 0, 'xMax cannot be negative'
+            if value <= 0:
+                raise ValueError('xMax must be greater than zero')
         self._xMax = value
     @xMax.deleter
     def xMax(self):
@@ -994,7 +1039,9 @@ class Calculation(object):
                 value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][3]
             else:
                 value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][3]
-        assert value >= 2, 'xNPoints cannot be less than 2.\nThe CreateResonantSpectra() function from Quanty prevents xNPoints to be less than 2.'
+        if value < 2:
+            raise ValueError('xNPoints cannot be less than 2. '
+                            'The CreateResonantSpectra() function from Quanty requires xNPoints to be at least 2.')
         self._xNPoints = int(value)
     @xNPoints.deleter
     def xNPoints(self):
@@ -1006,10 +1053,6 @@ class Calculation(object):
     @resonance.setter
     def resonance(self, value):
         raise AttributeError('`resonance` is defined based primary attributes (element, charge, symmetry, experiment, edge) and cannot be changed. Please, start a new Calculation() object')
-        # if value is None:
-        #     value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][4]
-        # assert value > 0, 'xEdge cannot be negative'
-        # self._xEdge = value
     @resonance.deleter
     def resonance(self):
         raise AttributeError('Cannot delete object.')
@@ -1020,7 +1063,8 @@ class Calculation(object):
         return self._k
     @k.setter
     def k(self, value):
-        assert len(value) == 3, 'k must be a vector, like [0, 1, 0].'
+        if len(value) != 3:
+            raise ValueError('k must be a vector, like [0, 1, 0].')
         self._k = br.normalize_vector(value)
     @k.deleter
     def k(self):
@@ -1033,7 +1077,8 @@ class Calculation(object):
         return self._tth
     @tth.setter
     def tth(self, value):
-        assert value >= 0 and value <= 180, 'tth must be a number (in degrees) between 0 and 180'
+        if not 0 <= value <= 180:
+            raise ValueError('tth must be a number (in degrees) between 0 and 180')
         self._tth = value
         self._update_geometry()
     @tth.deleter
@@ -1045,12 +1090,16 @@ class Calculation(object):
         return self._R
     @R.setter
     def R(self, value):
-        assert isinstance(value, Iterable), 'R must be a list of type [[R1, angle1], [R2, angle2]]'
+        if not isinstance(value, Iterable):
+            raise TypeError('R must be a list of type [[R1, angle1], [R2, angle2]]')
         if len(value) > 0:
             for _ in value:
-                assert isinstance(_, Iterable), 'R must be a list of type [[R1, angle1], [R2, angle2]]'
-                assert isinstance(_[0], str), 'Rotations must be string'
-                assert _[0] in ['x', 'y', 'z'], 'Rotations must be `x`, `y`, or `z`'
+                if not isinstance(_, Iterable):
+                    raise TypeError('R must be a list of type [[R1, angle1], [R2, angle2]]')
+                if not isinstance(_[0], str):
+                    raise TypeError('Rotations must be strings')
+                if _[0] not in ['x', 'y', 'z']:
+                    raise ValueError('Rotations must be `x`, `y`, or `z`')
         self._R = value
         self._update_geometry()
     @R.deleter
@@ -1073,9 +1122,6 @@ class Calculation(object):
     @kin.setter
     def kin(self, value):
         raise AttributeError('`kin` cannot be modified and it is fixed at [1, 0, 0]')
-        # assert len(value) == 3, 'kin must be a vector, like [0, 1, 0].'
-        # self._kin = br.normalize_vector(value)
-        # self._update_geometry()
     @kin.deleter
     def kin(self):
         raise AttributeError('Cannot delete object.')
@@ -1086,9 +1132,6 @@ class Calculation(object):
     @LVin.setter
     def LVin(self, value):
         raise AttributeError('`LVin` cannot be modified and it is fixed at [0, 0, 1]')
-        # assert len(value) == 3, 'LVin must be a vector, like [0, 1, 0].'
-        # self._LVin = br.normalize_vector(value)
-        # self._update_geometry()
     @LVin.deleter
     def LVin(self):
         raise AttributeError('Cannot delete object.')
@@ -1099,9 +1142,6 @@ class Calculation(object):
     @LHin.setter
     def LHin(self, value):
         raise AttributeError('`LHin` cannot be modified and it is fixed at [0, 1, 0]')
-        # assert len(value) == 3, 'LHin must be a vector, like [0, 1, 0].'
-        # self._LHin = br.normalize_vector(value)
-        # self._update_geometry()
     @LHin.deleter
     def LHin(self):
         raise AttributeError('Cannot delete object.')
@@ -1112,9 +1152,6 @@ class Calculation(object):
     @kout.setter
     def kout(self, value):
         raise AttributeError('`kout` cannot be modified. It is defined via automatically and depends on q.kin and q.tth')
-        # assert len(value) == 3, 'kout must be a vector, like [0, 1, 0].'
-        # self._kout = br.normalize_vector(value)
-        # self._update_geometry()
     @kout.deleter
     def kout(self):
         raise AttributeError('Cannot delete object.')
@@ -1125,9 +1162,6 @@ class Calculation(object):
     @LVout.setter
     def LVout(self, value):
         raise AttributeError('`LVout` cannot be modified. It is defined via automatically and depends on q.LVin and q.tth')
-        # assert len(value) == 3, 'LVout must be a vector, like [0, 1, 0].'
-        # self._LVout = br.normalize_vector(value)
-        # self._update_geometry()
     @LVout.deleter
     def LVout(self):
         raise AttributeError('Cannot delete object.')
@@ -1138,9 +1172,6 @@ class Calculation(object):
     @LHout.setter
     def LHout(self, value):
         raise AttributeError('`LHout` cannot be modified. It is defined via automatically and depends on q.LHin and q.tth')
-        # assert len(value) == 3, 'LHout must be a vector, like [0, 1, 0].'
-        # self._LHout = br.normalize_vector(value)
-        # self._update_geometry()
     @LHout.deleter
     def LHout(self):
         raise AttributeError('Cannot delete object.')
@@ -1151,9 +1182,6 @@ class Calculation(object):
     @kin_cf.setter
     def kin_cf(self, value):
         raise AttributeError('`kin` cannot be modified. It is defined via automatically and depends on q.LVin and q.R')
-        # assert len(value) == 3, 'k1 must be a vector, like [0, 1, 0].'
-        # self._kin_cf = br.normalize_vector(value)
-        # self._update_geometry()
     @kin_cf.deleter
     def kin_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1164,9 +1192,6 @@ class Calculation(object):
     @LVin_cf.setter
     def LVin_cf(self, value):
         raise AttributeError('`LVin_cf` cannot be modified. It is defined via automatically and depends on q.LVin and q.R')
-        # assert len(value) == 3, 'LVin_cf must be a vector, like [0, 1, 0].'
-        # self._LVin_cf = br.normalize_vector(value)
-        # self._update_geometry()
     @LVin_cf.deleter
     def LVin_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1177,9 +1202,6 @@ class Calculation(object):
     @LHin_cf.setter
     def LHin_cf(self, value):
         raise AttributeError('`LHin_cf` cannot be modified. It is defined via automatically and depends on q.LHin and q.R')
-        # assert len(value) == 3, 'LHin_cf must be a vector, like [0, 1, 0].'
-        # self._LHin_cf = br.normalize_vector(value)
-        # self._update_geometry()
     @LHin_cf.deleter
     def LHin_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1190,9 +1212,6 @@ class Calculation(object):
     @kout_cf.setter
     def kout_cf(self, value):
         raise AttributeError('`kout_cf` cannot be modified. It is defined via automatically and depends on q.kout and q.R')
-        # assert len(value) == 3, 'kout_cf must be a vector, like [0, 1, 0].'
-        # self._kout_cf = br.normalize_vector(value)
-        # self._update_geometry()
     @kout_cf.deleter
     def kout_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1203,9 +1222,6 @@ class Calculation(object):
     @LVout_cf.setter
     def LVout_cf(self, value):
         raise AttributeError('`LVout_cf` cannot be modified. It is defined via automatically and depends on q.LVout and q.R')
-        # assert len(value) == 3, 'LVout_cf must be a vector, like [0, 1, 0].'
-        # self._LVout_cf = br.normalize_vector(value)
-        # self._update_geometry()
     @LVout_cf.deleter
     def LVout_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1216,9 +1232,6 @@ class Calculation(object):
     @LHout_cf.setter
     def LHout_cf(self, value):
         raise AttributeError('`LHout_cf` cannot be modified. It is defined via automatically and depends on q.LHout and q.R')
-        # assert len(value) == 3, 'LHout_cf must be a vector, like [0, 1, 0].'
-        # self._LHout_cf = br.normalize_vector(value)
-        # self._update_geometry()
     @LHout_cf.deleter
     def LHout_cf(self):
         raise AttributeError('Cannot delete object.')
@@ -1229,7 +1242,8 @@ class Calculation(object):
         return self._temperature
     @temperature.setter
     def temperature(self, value):
-        assert value >= 0, 'Temperature cannot be negative.'
+        if value < 0:
+            raise ValueError('Temperature cannot be negative.')
         if value == 0:
             print('Temperature = 0\nnPsi set to 1.')
             self.nPsis = 1
@@ -1263,7 +1277,8 @@ class Calculation(object):
         return self._magneticField_coordinate_system
     @magneticField_coordinate_system.setter
     def magneticField_coordinate_system(self, value):
-        assert value in ['cf', 'lab'], 'magneticField_coordinate_system must be either `cf` or `lab`'
+        if value not in ['cf', 'lab']:
+            raise ValueError('magneticField_coordinate_system must be either `cf` or `lab`')
         self._magneticField_coordinate_system = value
         self._update_magnetic_field_hamiltonian_data()     
     @magneticField_coordinate_system.deleter
@@ -1275,7 +1290,8 @@ class Calculation(object):
         return self._magneticFieldOrientation
     @magneticFieldOrientation.setter
     def magneticFieldOrientation(self, value):
-        assert len(value) == 3, 'magneticFieldOrientation must be a vector, like [0, 1, 0].'
+        if len(value) != 3:
+            raise ValueError('magneticFieldOrientation must be a vector, like [0, 1, 0].')
         self._magneticFieldOrientation = br.normalize_vector(value)
         self._update_magnetic_field_hamiltonian_data()    
     @magneticFieldOrientation.deleter
@@ -1288,14 +1304,25 @@ class Calculation(object):
         return self._polarization
     @polarization.setter
     def polarization(self, value):
-        error = "Invalid value for `polarization`\nValid values are:\nXAS: 'isotropic', 'linear', and 'circular'\nXES: 'isotropic'\nXPS: 'isotropic'\nRIXS: 'isotropic', 'linear', and 'circular' ('linear' and 'circular' are not set for transitions from the 1s shell)"
-        assert type(value) == str, error
-        if self.experiment == 'RIXS' or self.experiment == 'XAS':
-            assert value.lower() in ['isotropic', 'circular', 'linear'], error
+        error = ("Invalid value for `polarization`\n"
+                "Valid values are:\n"
+                "XAS: 'isotropic', 'linear', and 'circular'\n"
+                "XES: 'isotropic'\n"
+                "XPS: 'isotropic'\n"
+                "RIXS: 'isotropic', 'linear', and 'circular' "
+                "('linear' and 'circular' are not set for transitions from the 1s shell)")
+        if not isinstance(value, str):
+            raise TypeError(error)
+        if self.experiment in ['RIXS', 'XAS']:
+            if value.lower() not in ['isotropic', 'circular', 'linear']:
+                raise ValueError(error)
             if self.experiment == 'RIXS' and self.edge.startswith('K'):
-                assert value.lower() in ['isotropic', ], error
-        elif self.experiment == 'XPS' or self.experiment == 'XES':
-            assert value.lower() in ['isotropic', ], error
+                if value.lower() != 'isotropic':
+                    raise ValueError(error)
+        elif self.experiment in ['XPS', 'XES']:
+            if value.lower() != 'isotropic':
+                raise ValueError(error)
+
         self._polarization = value
     @polarization.deleter
     def polarization(self):
@@ -1310,9 +1337,12 @@ class Calculation(object):
             self.nPsisAuto = 1
             value = self._nPsisMax
         else:
-            assert value > 0, 'The number of states must be larger than zero.'
-            assert value <= self._nPsisMax, f'The selected number of states exceeds the maximum.\nMaximum {self._nPsisMax}'
-        self._nPsis     = value
+            if value <= 0:
+                raise ValueError('The number of states must be larger than zero.')
+            if value > self._nPsisMax:
+                raise ValueError(f'The selected number of states exceeds the maximum. '
+                                f'Maximum: {self._nPsisMax}')
+        self._nPsis
         # self._nPsisAuto = 0
     @nPsis.deleter
     def nPsis(self):
@@ -1358,10 +1388,13 @@ class Calculation(object):
         return self._nConfigurations
     @nConfigurations.setter
     def nConfigurations(self, value):
-        assert value <= self.nConfigurationsMax, f'The maximum number of configurations is {self.nConfigurationsMax}'
-        assert value >= 1, f'The minimum number of configurations is 1'
-        assert isinstance(value, int), f'nConfigurations must be a int, not type: {type(value)}'
-        self._nConfigurations = value
+        if not isinstance(value, int):
+            raise TypeError(f'nConfigurations must be an int, not {type(value).__name__}')
+        if value > self.nConfigurationsMax:
+            raise ValueError(f'The maximum number of configurations is {self.nConfigurationsMax}')
+        if value < 1:
+            raise ValueError('The minimum number of configurations is 1')
+        self._nConfigurations = value   
     @nConfigurations.deleter
     def nConfigurations(self):
         raise AttributeError('Cannot delete object.')
@@ -1442,7 +1475,8 @@ class Calculation(object):
     def gamma1(self, value):
         if value is None:
             value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][5][0]
-        assert value > 0, 'gamma1 cannot be negative'
+        if value <= 0:
+            raise ValueError('gamma1 must be greater than zero'
         self._gamma1 = value
     @gamma1.deleter
     def gamma1(self):
@@ -1456,7 +1490,8 @@ class Calculation(object):
         if self.experiment == 'RIXS':
             if value is None:
                 value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][5][0]       
-            assert value > 0, 'gamma2 cannot be negative'
+            if value <= 0:
+                raise ValueError('gamma2 must be greater than zero'
             self._gamma2 = value
         else:
             raise AttributeError(f'`gamma2` is only used for calculation of RIXS spectra and is not used for experiment of type: {self.experiment}') 
@@ -1481,9 +1516,12 @@ class Calculation(object):
 
         tth  = self.tth
         R    = self.R
-        assert br.is_perpendicular(LVin, LHin) == True, 'LV and LH must be perpendicular'
-        assert br.is_perpendicular(LVin, kin) == True, 'LV and Kin must be perpendicular'
-        assert br.is_perpendicular(LHin, kin) == True, 'LV and Kin must be perpendicular'
+        if not br.is_perpendicular(LVin, LHin):
+            raise ValueError('LV and LH must be perpendicular')
+        if not br.is_perpendicular(LVin, kin):
+            raise ValueError('LV and Kin must be perpendicular')
+        if not br.is_perpendicular(LHin, kin):
+            raise ValueError('LH and Kin must be perpendicular')
         kout  = br.rotate_vector('z', tth, kin)  # out-going beam (lab coordinates)
         LHout = br.rotate_vector('z', tth, LHin)
         LVout = br.rotate_vector('z', tth, LVin)
@@ -2029,9 +2067,10 @@ class Calculation(object):
         return 
     
     def save_lua_script(self, filepath):
-        """Save lua script to a file"""
+        """Save lua script to a file."""
         # self.update_lua_script()
-        assert self.lua_script is not None, 'It seems like q.lua_script has not been created yet. Use q.update_lua_script()'
+        if self.lua_script is None:
+            raise RuntimeError('lua_script has not been created yet. Use update_lua_script() first.')
         with open(filepath, 'w') as f:
             f.write(self.lua_script)
         return
@@ -2481,9 +2520,13 @@ class Calculation(object):
                 >>> data['ss'].keys()   # -> rv, rh, lv, lh, r, l
                 >>> data['ims'].keys()  # -> rv, rh, lv, lh, r, l
         """
-        assert self.experiment in ['RIXS', ], 'This only works for experiment=RIXS'
-        assert update, 'the current implementation requires `update=True`. If you need `update=False`, this function must be revised'
-        assert npoints > 1, f'invalid npoints ({npoints}). npoints must be higher than 1'
+    if self.experiment != 'RIXS':
+        raise ValueError('This only works for experiment=RIXS')
+    if not update:
+        raise ValueError('The current implementation requires `update=True`. '
+                        'If you need `update=False`, this function must be revised.')
+    if npoints <= 1:
+        raise ValueError(f'Invalid npoints ({npoints}). npoints must be greater than 1')
 
         # update lua script
         self._is_energy_map = True

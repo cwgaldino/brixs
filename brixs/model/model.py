@@ -209,7 +209,8 @@ class Model_(lmfit.Parameters):
         """remove all components with index i2"""
         # valid i2
         i2s = self._get_list_of_indexes_i2()
-        assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
+        if i2 not in i2s:
+            raise ValueError(f'i2={i2} not found. Available i2: {i2s}')
 
         # remove
         for name in self:
@@ -299,7 +300,8 @@ class Model_(lmfit.Parameters):
             else:
                 raise ValueError('i2 not defined')
         else:
-            assert i2 in self._get_list_of_indexes_i2(), f'i2={i2} not found'
+            if i2 not in self._get_list_of_indexes_i2():
+                raise ValueError(f'i2={i2} not found')
         
         # Initialization
         indexes   = self._get_indexes_dict()
@@ -441,9 +443,9 @@ class Model_(lmfit.Parameters):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # if isinstance(value, Iterable) == False:
         #     value = [value]*len(self)
 
@@ -470,9 +472,9 @@ class Model_(lmfit.Parameters):
         Returns:
             None
         """      
-        ###################################
-        # asserting validity of the input #
-        ################################### 
+        ##################
+        # validate input #
+        ##################
         if value == 0:  # calib cannot be zero
             raise ValueError('cannot set calib = 0')
         elif value == 1:   # if calib is 1, do nothing
@@ -495,9 +497,9 @@ class Model_(lmfit.Parameters):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if value == 0:
             return
 
@@ -519,9 +521,9 @@ class Model_(lmfit.Parameters):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if value == 0:
             raise ValueError('cannot set factor = 0.')
         elif value == 1:
@@ -551,7 +553,8 @@ class Model_(lmfit.Parameters):
             array
         """
         # empty model
-        assert len(self) > 0, 'cannot estimate suitable x in a empty model'
+        if len(self) == 0:
+            raise ValueError('cannot estimate suitable x for an empty model')
 
         vmin = None
         vmax = None
@@ -779,7 +782,8 @@ class Model(lmfit.Parameters):
         """remove all components with index i2"""
         # valid i2
         i2s = self._get_list_of_indexes_i2()
-        assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
+        if i2 not in i2s:
+            raise ValueError(f'i2={i2} not found\navailable i2: {i2s}')
 
         # remove
         for name in self:
@@ -791,7 +795,8 @@ class Model(lmfit.Parameters):
         return list(self.components.keys())
 
     def copy_from_spectra(self):
-        assert isinstance(self.parent, br.Spectra), 'parent object must be of type br.Spectra'
+        if not isinstance(self.parent, br.Spectra):
+            raise TypeError('parent object must be of type br.Spectra')
         print('still not sure this works 100%')
 
         for i2, _s in enumerate(self.parent):
@@ -804,7 +809,8 @@ class Model(lmfit.Parameters):
         return
 
     def split_parameters_per_spectra(self):
-        assert isinstance(self.parent, br.Spectra), 'parent object must be of type br.Spectra'
+        if not isinstance(self.parent, br.Spectra):
+            raise TypeError('parent object must be of type br.Spectra')
         print('still not sure this works 100%')
 
         # remove expr from all parameters
@@ -848,7 +854,8 @@ class Model(lmfit.Parameters):
     
     def _get_dict_for_given_i2(self, i2):
         i2s = self._get_list_of_indexes_i2()
-        assert i2 in i2s, f'i2={i2} not found\navailable i2: {i2s}'
+        if i2 not in i2s:
+            raise ValueError(f'i2={i2} not found\navailable i2: {i2s}')
         final = {}
         for tag in self:
             if tag.split('_')[2] == str(i2):
@@ -910,8 +917,9 @@ class Model(lmfit.Parameters):
             else:
                 raise ValueError('i2 not defined')
         else:
-            assert i2 in self._get_list_of_indexes_i2(), f'i2={i2} not found'
-        
+            if i2 not in self._get_list_of_indexes_i2():
+                raise ValueError(f'i2={i2} not found')
+            
         # Initialization
         indexes   = self._get_indexes_dict()
         final     = ''
@@ -1039,7 +1047,6 @@ class Model(lmfit.Parameters):
         return model
     
     def copy_from(self, object):
-        # assert isinstance(self, object), 'cannot copy model from an'
         if isinstance(object, br.Spectrum) or isinstance(object, br.Spectra):
             model = object.model
         elif isinstance(object, Model):
@@ -1077,9 +1084,9 @@ class Model(lmfit.Parameters):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # if isinstance(value, Iterable) == False:
         #     value = [value]*len(self)
 
@@ -1106,9 +1113,9 @@ class Model(lmfit.Parameters):
         Returns:
             None
         """      
-        ###################################
-        # asserting validity of the input #
-        ################################### 
+        ##################
+        # validate input #
+        ##################
         if value == 0:  # calib cannot be zero
             raise ValueError('cannot set calib = 0')
         elif value == 1:   # if calib is 1, do nothing
@@ -1131,9 +1138,9 @@ class Model(lmfit.Parameters):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if value == 0:
             return
 
@@ -1155,9 +1162,9 @@ class Model(lmfit.Parameters):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         if value == 0:
             raise ValueError('cannot set factor = 0.')
         elif value == 1:
@@ -1187,7 +1194,8 @@ class Model(lmfit.Parameters):
             array
         """
         # empty model
-        assert len(self) > 0, 'cannot estimate suitable x in a empty model'
+        if len(self) == 0:
+            raise ValueError('cannot estimate suitable x for an empty model')
 
         vmin = None
         vmax = None
@@ -1403,103 +1411,179 @@ class _ComponentTemplate(object):
     #################
     def __repr__(self):
         return '\n'.join(["'" + self.tagnames[tag.split('_')[0]] + '_' + '_'.join(tag.split('_')[1:]) + "'" + ': ' + str(self.parent[tag])  for tag in self._get_all_tags()])
-
+    
     def __setitem__(self, value, _value):
         ##########
         # string #
         ##########
         if isinstance(value, str):
             split = value.split('_')
-            assert len(split) == 3, f'`{name}` is not a recognizable attr for component of type `{type(self)}`'
+            if len(split) != 3:
+                raise ValueError(f'`{value}` is not a recognizable attr for component of type '
+                                f'`{type(self)}`')
             name = split[0]
             i1   = split[1]
             i2   = split[2]
-
             # check if name is a valid attribute
-            assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
-
+            if name not in self.nametags:
+                raise ValueError(f'`{name}` is not a valid parameter for type `{type(self)}`\n'
+                                f'valid names: {list(self.nametags.keys())}')
             # check if i2 is valid
-            assert br.numanip.is_integer(i2), f'i2 must be a integer, not {type(i2)}'
+            if not br.numanip.is_integer(i2):
+                raise TypeError(f'i2 must be an integer, not {type(i2).__name__}')
             i2 = int(i2)
             indexes = self._get_indexes_dict()
-            assert i2 in indexes, f'i2={i2} is not valid\nvalid i2: {list(indexes.keys())}'
-
-            # check i1 is valid
-            assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
+            if i2 not in indexes:
+                raise ValueError(f'i2={i2} is not valid\n'
+                                f'valid i2: {list(indexes.keys())}')
+            # check if i1 is valid
+            if not br.numanip.is_integer(i1):
+                raise TypeError(f'i1 must be an integer, not {type(i1).__name__}')
             i1 = int(i1)
-            assert i1 in indexes[i2], f'i1={i1} is not valid\nvalid i1: {indexes[i2]}'
-
+            if i1 not in indexes[i2]:
+                raise ValueError(f'i1={i1} is not valid\n'
+                                f'valid i1: {indexes[i2]}')
             # set parameter value
             self.parent[self.nametags[name] + '_' + str(i1) + '_' + str(i2)].value = _value
-        ##########
+
+        #########
         # error #
-        ##########
+        #########
         else:
-            raise ValueError('key must be str or int')
+            raise TypeError(f'key must be str, not {type(value).__name__}')
         
     def __getitem__(self, value):
-        """getitem
+        """Return a component parameter.
 
-        for value int: value will be considered i1 (only works if i2 is unique)
-        for value str: value must match the parameter name
+        An integer key is interpreted as an i1 index and requires i2 to be unique.
+        A string key must contain either a parameter name or a parameter name
+        followed by the i1 and i2 indexes.
         """
         #######
         # int #
         #######
         if isinstance(value, int):
-            # return self._get_parameters_for_given_i2_i1(i1=value, i2=None) 
-            return self._get_dict_for_given_i2_i1(i1=value, i2=None) 
+            return self._get_dict_for_given_i2_i1(i1=value, i2=None)
+
         ##########
         # string #
         ##########
-        elif isinstance(value, str):
+        if isinstance(value, str):
             split = value.split('_')
-        if len(split) == 1:
-            name = split[0]
+            if len(split) == 1:
+                name = split[0]
 
-            # check if name is a valid attribute
-            assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
+                # check if name is a valid attribute
+                if name not in self.nametags:
+                    raise KeyError(f'`{name}` is not a valid parameter for type `{type(self)}`\n'
+                                f'valid names: {list(self.nametags.keys())}')
+
+                # check if i2 is unique
+                if not self._check_if_component_have_only_one_i2():
+                    raise ValueError('For now, this syntax requires i2 to be unique.')
+                i2 = self._get_list_of_indexes_i2()[0]
+
+                # check if i1 is unique
+                i1s = self._get_indexes_dict()[i2]
+                if len(i1s) != 1:
+                    raise ValueError('For now, this syntax requires i1 to be unique.')
+                i1 = int(i1s[0])
+
+                return self.parent[f'{self.nametags[name]}_{i1}_{i2}']
+            if len(split) == 3:
+                name, i1, i2 = split
+
+                # check if name is a valid attribute
+                if name not in self.nametags:
+                    raise KeyError(f'`{name}` is not a valid parameter for type `{type(self)}`\n'
+                                f'valid names: {list(self.nametags.keys())}')
+
+                # check if i2 is valid
+                if not br.numanip.is_integer(i2):
+                    raise ValueError(f'i2 must be an integer, not `{i2}`')
+                i2 = int(i2)
+
+                indexes = self._get_indexes_dict()
+                if i2 not in indexes:
+                    raise ValueError(f'i2={i2} is not valid\n'
+                                    f'valid i2: {list(indexes.keys())}')
+
+                # check if i1 is valid
+                if not br.numanip.is_integer(i1):
+                    raise ValueError(f'i1 must be an integer, not `{i1}`')
+                i1 = int(i1)
+
+                if i1 not in indexes[i2]:
+                    raise ValueError(f'i1={i1} is not valid\n'
+                                    f'valid i1: {indexes[i2]}')
+
+                return self.parent[f'{self.nametags[name]}_{i1}_{i2}']
+
+        raise KeyError(f'`{value}` is not a recognisable key for a component of type `{type(self)}`')
+
+    # def __getitem__(self, value):
+    #     """getitem
+
+    #     for value int: value will be considered i1 (only works if i2 is unique)
+    #     for value str: value must match the parameter name
+    #     """
+    #     #######
+    #     # int #
+    #     #######
+    #     if isinstance(value, int):
+    #         # return self._get_parameters_for_given_i2_i1(i1=value, i2=None) 
+    #         return self._get_dict_for_given_i2_i1(i1=value, i2=None) 
+    #     ##########
+    #     # string #
+    #     ##########
+    #     elif isinstance(value, str):
+    #         split = value.split('_')
+    #     if len(split) == 1:
+    #         name = split[0]
+
+    #         # check if name is a valid attribute
+    #         assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
             
-            # check i2 is unique
-            assert self._check_if_component_have_only_one_i2(), 'for now, this syntax requires i2 to be unique'
-            i2 = self._get_list_of_indexes_i2()[0]
+    #         # check i2 is unique
+    #         assert self._check_if_component_have_only_one_i2(), 'for now, this syntax requires i2 to be unique'
+    #         i2 = self._get_list_of_indexes_i2()[0]
 
-            # check i1 is unique
-            i1s = self._get_indexes_dict()[i2]
-            assert len(i1s) == 1, 'for now, this syntax requires i1 to be unique'
-            i1 = int(i1s[0])
+    #         # check i1 is unique
+    #         i1s = self._get_indexes_dict()[i2]
+    #         assert len(i1s) == 1, 'for now, this syntax requires i1 to be unique'
+    #         i1 = int(i1s[0])
 
-            return self.parent[self.nametags[name] + '_' + str(i1) + '_' + str(i2)]
+    #         return self.parent[self.nametags[name] + '_' + str(i1) + '_' + str(i2)]
 
-        elif len(split) == 3:
-            # assert len(split) == 3, f'`{name}` is not a recognizable attr for component of type `{type(self)}`'
-            name = split[0]
-            i1   = split[1]
-            i2   = split[2]
+    #     elif len(split) == 3:
+    #         # assert len(split) == 3, f'`{name}` is not a recognizable attr for component of type `{type(self)}`'
+    #         name = split[0]
+    #         i1   = split[1]
+    #         i2   = split[2]
 
-            # check if name is a valid attribute
-            assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
+    #         # check if name is a valid attribute
+    #         assert name in self.nametags, f'`{name}` is not a valid parameter for type `{type(self)}`\nvalid names: {list(self.nametags.keys())}'
 
-            # check if i2 is valid
-            assert br.numanip.is_integer(i2), f'i2 must be a integer, not {type(i2)}'
-            i2      = int(i2)
-            indexes = self._get_indexes_dict()
-            assert i2 in indexes, f'i2={i2} is not valid\nvalid i2: {list(indexes.keys())}'
+    #         # check if i2 is valid
+    #         assert br.numanip.is_integer(i2), f'i2 must be a integer, not {type(i2)}'
+    #         i2      = int(i2)
+    #         indexes = self._get_indexes_dict()
+    #         assert i2 in indexes, f'i2={i2} is not valid\nvalid i2: {list(indexes.keys())}'
 
-            # check i1 is valid
-            assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
-            i1 = int(i1)
-            assert i1 in indexes[i2], f'i1={i1} is not valid\nvalid i1: {indexes[i2]}'
+    #         # check i1 is valid
+    #         assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
+    #         i1 = int(i1)
+    #         assert i1 in indexes[i2], f'i1={i1} is not valid\nvalid i1: {indexes[i2]}'
 
-            # get parameter
-            return self.parent[self.nametags[name] + '_' + str(i1) + '_' + str(i2)]
-        ##########
-        # error #
-        ##########
-        elif len(split) != 1 and len(split) != 3:
-            raise KeyError(f'`{name}` is not a recognizable attr for component of type `{type(self)}`')
-        else:
-            raise KeyError('key must be str')# or int')
+    #         # get parameter
+    #         return self.parent[self.nametags[name] + '_' + str(i1) + '_' + str(i2)]
+    #     ##########
+    #     # error #
+    #     ##########
+    #     elif len(split) != 1 and len(split) != 3:
+    #         raise KeyError(f'`{name}` is not a recognizable attr for component of type `{type(self)}`')
+    #     else:
+    #         raise KeyError('key must be str')# or int')
         
     def __delitem__(self, value):
         """cannot be used"""
@@ -1520,9 +1604,9 @@ class _ComponentTemplate(object):
             None
         """
         #print(f'Warning: Cannot shift Component `{type(self).__name__}` as it does not have set_shift() implemented')
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # if value == 0:
         #     return
 
@@ -1545,9 +1629,9 @@ class _ComponentTemplate(object):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # if value == 0:
         #     return
 
@@ -1569,9 +1653,9 @@ class _ComponentTemplate(object):
         Returns:
             None
         """      
-        ###################################
-        # asserting validity of the input #
-        ################################### 
+        ##################
+        # validate input #
+        ##################
         # if value == 0:  # calib cannot be zero
         #     raise ValueError('cannot set calib = 0')
         # elif value == 1:   # if calib is 1, do nothing
@@ -1598,9 +1682,9 @@ class _ComponentTemplate(object):
         Returns:
             None
         """
-        ###################################
-        # asserting validity of the input #
-        ###################################
+        ##################
+        # validate input #
+        ##################
         # if value == 0:
         #     raise ValueError('cannot set factor = 0.')
         # elif value == 1:
@@ -1750,15 +1834,19 @@ class _ComponentTemplate(object):
             else:
                 raise ValueError('i2 not defined')
         else:
-            assert br.numanip.is_integer(i2), f'i2 must be a integer, not {type(i2)}'
-            assert i2 in indexes, f'i2={i2} not found'
+            if not br.numanip.is_integer(i2):
+                raise TypeError(f'i2 must be an integer, not {type(i2).__name__}')
+            if i2 not in indexes:
+                raise ValueError(f'i2={i2} not found')
 
         # check i1
         if i1 == 'all':
             i1 = indexes[i2]
         else:
-            assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
-            assert i1 in indexes[i2], f'i1 not found for i2={i2}'
+            if not br.numanip.is_integer(i1):
+                raise TypeError(f'i1 must be an integer, not {type(i1).__name__}')
+            if i1 not in indexes[i2]:
+                raise ValueError(f'i1={i1} not found for i2={i2}')
 
         return i1, i2
 
@@ -1784,7 +1872,8 @@ class _ComponentTemplate(object):
                 if i1 is None:
                     i1 = 0
                 else:
-                    assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
+                    if not br.numanip.is_integer(i1):
+                        raise TypeError(f'i1 must be an integer, not {type(i1).__name__}')
                 return i1, [0, ]
 
         # check i2
@@ -1793,11 +1882,18 @@ class _ComponentTemplate(object):
         else:
             if isinstance(i2, Iterable):
                 for _i2 in i2:
-                    assert br.numanip.is_integer(_i2), f'i2={_i2} must be a integer, not {type(i2)}'
-                    assert _i2 in i2s, f'Spectra does not have i2={_i2} not found. available i2={i2s}'
+                    if not br.numanip.is_integer(_i2):
+                        raise TypeError(f'i2={_i2} must be an integer, not '
+                                        f'{type(_i2).__name__}')
+                    if _i2 not in i2s:
+                        raise ValueError(f'Spectra does not have i2={_i2}. '
+                                        f'Available i2={i2s}')
             else:
-                assert br.numanip.is_integer(i2), f'i2 must be a integer, not {type(i2)}'
-                assert i2 in i2s, f'Spectra does not have i2={i2} not found. available i2={i2s}'
+                if not br.numanip.is_integer(i2):
+                    raise TypeError(f'i2 must be an integer, not {type(i2).__name__}')
+                if i2 not in i2s:
+                    raise ValueError(f'Spectra does not have i2={i2}. '
+                                    f'Available i2={i2s}')
                 i2 = [i2, ]
 
         # check i1
@@ -1811,7 +1907,8 @@ class _ComponentTemplate(object):
             i1 += 1
             # i1 = max([max(indexes[_i2]) for _i2 in i2 if _i2 in indexes]) + 1
         else:
-            assert br.numanip.is_integer(i1), f'i1 must be a integer, not {type(i1)}'
+            if not br.numanip.is_integer(i1):
+                raise TypeError(f'i1 must be an integer, not {type(i1).__name__}')
             
             check = {}
             for _i2 in i2:
@@ -1819,7 +1916,8 @@ class _ComponentTemplate(object):
                 if _i2 in indexes:
                     if i1 in indexes[_i2]:
                         check[_i2] = True
-            assert True not in list(check.values()), f'i1={i1} already exists for some i2\n{check}'
+            if True in check.values():
+                raise ValueError(f'i1={i1} already exists for some i2\n{check}')
         return i1, i2
     
     #########
@@ -2015,7 +2113,8 @@ class _ComponentTemplate(object):
             x array
         """
         # check if empty
-        assert len(self._get_all_tags()) > 0, 'cannot calculate suitable x for empty Component'
+        if len(self._get_all_tags()) == 0:
+            raise ValueError('Cannot calculate suitable x for an empty Component')
     
         # return suitable x
         vmin, vmax, step = self._get_min_max_step(i2=i2, i1=i1, verbose=verbose)
@@ -2255,17 +2354,21 @@ class Peaks(_ComponentTemplate):
         ###################
         i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
 
-        #######################################
-        # assert validity of parameter values #
-        #######################################
-        assert amp >= 0,          'amp cannot be negative'
-
-        assert w >= 0,            'w cannot be negative'
-        assert w_min >= 0,        'w_min cannot be negative'
-
-        assert m >= 0 and m <= 1, 'm must be between 0 and 1'
-        assert m_min >= 0 and m_min <= 1, 'm_min must be between 0 and 1'
-        assert m_max >= 0 and m_max <= 1, 'm_max must be between 0 and 1'
+        ################################
+        # check parameter value validity #
+        ##################################
+        if amp < 0:
+            raise ValueError('amp cannot be negative')
+        if w < 0:
+            raise ValueError('w cannot be negative')
+        if w_min < 0:
+            raise ValueError('w_min cannot be negative')
+        if not 0 <= m <= 1:
+            raise ValueError('m must be between 0 and 1')
+        if not 0 <= m_min <= 1:
+            raise ValueError('m_min must be between 0 and 1')
+        if not 0 <= m_max <= 1:
+            raise ValueError('m_max must be between 0 and 1')
 
 
         ##################
@@ -2441,7 +2544,8 @@ class Peaks(_ComponentTemplate):
 
         try:
             peaks, d = find_peaks(y2, prominence=prominence, width=width)
-            assert len(peaks) > 0, 'No peaks found.'
+            if len(peaks) == 0:
+                raise ValueError('No peaks found.')
             self.clear()
             for i in range(len(peaks)):
                 amp = d['prominences'][i] + max([y2[d['right_bases'][i]], y2[d['left_bases'][i]]])
@@ -2513,18 +2617,21 @@ class SecondDerivativePeaks(_ComponentTemplate):
         ###################
         i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
 
-        #######################################
-        # assert validity of parameter values #
-        #######################################
-        assert amp >= 0,          'amp cannot be negative'
-
-        assert w >= 0,            'w cannot be negative'
-        assert w_min >= 0,        'w_min cannot be negative'
-
-        assert m >= 0 and m <= 1, 'm must be between 0 and 1'
-        assert m_min >= 0 and m_min <= 1, 'm_min must be between 0 and 1'
-        assert m_max >= 0 and m_max <= 1, 'm_max must be between 0 and 1'
-
+        ##################################
+        # check parameter value validity #
+        ##################################
+        if amp < 0:
+            raise ValueError('amp cannot be negative')
+        if w < 0:
+            raise ValueError('w cannot be negative')
+        if w_min < 0:
+            raise ValueError('w_min cannot be negative')
+        if not 0 <= m <= 1:
+            raise ValueError('m must be between 0 and 1')
+        if not 0 <= m_min <= 1:
+            raise ValueError('m_min must be between 0 and 1')
+        if not 0 <= m_max <= 1:
+            raise ValueError('m_max must be between 0 and 1')
 
         ##################
         # add parameters #
@@ -2712,22 +2819,31 @@ class AsymmetricPeaks(_ComponentTemplate):
         ###################
         i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
 
-        #######################################
-        # assert validity of parameter values #
-        #######################################
-        assert amp >= 0,          'amp cannot be negative'
-
-        assert w1 >= 0,            'w1 cannot be negative'
-        assert w2 >= 0,            'w2 cannot be negative'
-        assert w1_min >= 0,        'w1_min cannot be negative'
-        assert w2_min >= 0,        'w2_min cannot be negative'
-
-        assert m1 >= 0 and m1 <= 1, 'm1 must be between 0 and 1'
-        assert m2 >= 0 and m2 <= 1, 'm2 must be between 0 and 1'
-        assert m1_min >= 0 and m1_min <= 1, 'm1_min must be between 0 and 1'
-        assert m1_max >= 0 and m1_max <= 1, 'm1_max must be between 0 and 1'
-        assert m2_min >= 0 and m2_min <= 1, 'm2_min must be between 0 and 1'
-        assert m2_max >= 0 and m2_max <= 1, 'm2_max must be between 0 and 1'
+        ##################################
+        # check parameter value validity #
+        ##################################
+        if amp < 0:
+            raise ValueError('amp cannot be negative')
+        if w1 < 0:
+            raise ValueError('w1 cannot be negative')
+        if w2 < 0:
+            raise ValueError('w2 cannot be negative')
+        if w1_min < 0:
+            raise ValueError('w1_min cannot be negative')
+        if w2_min < 0:
+            raise ValueError('w2_min cannot be negative')
+        if not 0 <= m1 <= 1:
+            raise ValueError('m1 must be between 0 and 1')
+        if not 0 <= m2 <= 1:
+            raise ValueError('m2 must be between 0 and 1')
+        if not 0 <= m1_min <= 1:
+            raise ValueError('m1_min must be between 0 and 1')
+        if not 0 <= m1_max <= 1:
+            raise ValueError('m1_max must be between 0 and 1')
+        if not 0 <= m2_min <= 1:
+            raise ValueError('m2_min must be between 0 and 1')
+        if not 0 <= m2_max <= 1:
+            raise ValueError('m2_max must be between 0 and 1')
 
         ##################
         # add parameters #
@@ -3134,13 +3250,15 @@ class Arctan(_ComponentTemplate):
         ###################
         i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
 
-        #######################################
-        # assert validity of parameter values #
-        #######################################
-        assert amp >= 0,          'amp cannot be negative'
-
-        assert w >= 0,            'w cannot be negative'
-        assert w_min >= 0,        'w_min cannot be negative'
+        ##################################
+        # check parameter value validity #
+        ##################################
+        if amp < 0:
+            raise ValueError('amp cannot be negative')
+        if w < 0:
+            raise ValueError('w cannot be negative')
+        if w_min < 0:
+            raise ValueError('w_min cannot be negative')
 
         ##################
         # add parameters #
@@ -3316,13 +3434,15 @@ class Erf(_ComponentTemplate):
         ###################
         i1, i2 = self._check_i1_i2(i1=i1, i2=i2)
 
-        #######################################
-        # assert validity of parameter values #
-        #######################################
-        assert amp >= 0,          'amp cannot be negative'
-
-        assert w >= 0,            'w cannot be negative'
-        assert w_min >= 0,        'w_min cannot be negative'
+        ##################################
+        # check parameter value validity #
+        ##################################
+        if amp < 0:
+            raise ValueError('amp cannot be negative')
+        if w < 0:
+            raise ValueError('w cannot be negative')
+        if w_min < 0:
+            raise ValueError('w_min cannot be negative')
 
         ##################
         # add parameters #

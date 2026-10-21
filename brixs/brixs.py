@@ -5264,9 +5264,9 @@ class Spectra(_BrixsObject, metaclass=_Meta):
         if len(self) == 0:
             raise ValueError('cannot operate on empty spectra')
         
-        #################
+        ##################
         # validate input #
-        #################
+        ##################
         if not isinstance(indexes, Iterable):
             raise TypeError(f'indexes must be an iterable, not {type(indexes).__name__}')
 

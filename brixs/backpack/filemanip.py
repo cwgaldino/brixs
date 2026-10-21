@@ -160,14 +160,25 @@ def copy_file(filepath, folderpath):
     Returns:
         None
     """
-    folderpath = Path(folderpath)
+    if not isinstance(filepath, (str, Path)):
+        raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
+    if not isinstance(folderpath, (str, Path)):
+        raise TypeError(f'folderpath must be a string or Path object, not {type(folderpath).__name__}')
+
     filepath = Path(filepath)
-    
-    assert folderpath.is_dir() == True,  'folderpath must point to a folder'
-    assert filepath.is_dir()   == False, 'filepath must point to a file'
-    assert filepath.exists()   == True,  'file cannot be found'
+    folderpath = Path(folderpath)
+    if not filepath.exists():
+        raise FileNotFoundError(f'filepath does not exist: {filepath}')
+    if not folderpath.exists():
+        raise FileNotFoundError(f'folderpath does not exist: {folderpath}')
+    if not filepath.is_file():
+        raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
+    if not folderpath.is_dir():
+        raise NotADirectoryError(f'folderpath must point to a folder, not a file: {folderpath}')
+
     shutil.copy(filepath, folderpath)
     return
+
 
 def copy_files(target, destination, verbose=True): 
     """copy all files from one directory to another.
@@ -179,10 +190,21 @@ def copy_files(target, destination, verbose=True):
     Returns:
         None
     """   
-    assert target.is_dir()      == True,  'target must point to a folder'
-    assert destination.is_dir() == True,  'destination must point to a folder'
-    assert target.exists()      == True,  'target cannot be found'
-    assert destination.exists() == True,  'destination cannot be found'
+    if not isinstance(target, (str, Path)):
+        raise TypeError(f'target must be a string or Path object, not {type(target).__name__}')
+    if not isinstance(destination, (str, Path)):
+        raise TypeError(f'destination must be a string or Path object, not {type(destination).__name__}')
+
+    target = Path(target)
+    destination = Path(destination)
+    if not target.exists():
+        raise FileNotFoundError(f'target does not exist: {target}')
+    if not destination.exists():
+        raise FileNotFoundError(f'destination does not exist: {destination}')
+    if not target.is_dir():
+        raise NotADirectoryError(f'target must point to a folder, not a file: {target}')
+    if not destination.is_dir():
+        raise NotADirectoryError(f'destination must point to a folder, not a file: {destination}')
 
     for filepath in filelist(dirpath=target):
         copy_file(filepath, destination)
@@ -692,7 +714,10 @@ def load_data(filepath, labels=None, force_array=False, **kwargs):
 
     # check labels length
     if labels is not None and force_array is False:
-        assert len(labels) == data.shape[1], 'labels must be the same length as the number of columns'
+        if len(labels) != data.shape[1]:
+            raise ValueError(f'labels must have the same number of items as columns\n'
+                             f'number of labels: {len(labels)}\n'
+                             f'number of columns: {data.shape[1]}')
         labels = [item.strip() for item in labels if item != '']  # remove empty items and trailing spaces
         datadict = {labels[i]: data[:, i] for i in range(len(labels)) if not labels[i].startswith('*')}
         return datadict

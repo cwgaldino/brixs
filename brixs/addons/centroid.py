@@ -54,11 +54,16 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
         pos2: list of positions [(y1, x1), (y2, x2), ...] for pixel values above threshold2
 
     """
-    assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-    assert br.is_integer(nx), f'n must be of type integer, not {type(nx)}'
-    assert br.is_integer(ny), f'n must be of type integer, not {type(ny)}'
-    assert nx >= 0, f'nx must be an integer number higher or equal to 0'
-    assert ny >= 0, f'ny must be an integer number higher or equal to 0'
+    if coordinates not in ('pixels', 'centers'):
+        raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
+    if not br.is_integer(nx):
+        raise TypeError(f'nx must be an integer, not {type(nx).__name__}')
+    if not br.is_integer(ny):
+        raise TypeError(f'ny must be an integer, not {type(ny).__name__}')
+    if nx < 0:
+        raise ValueError(f'nx must be greater than or equal to 0, not {nx}')
+    if ny < 0:
+        raise ValueError(f'ny must be greater than or equal to 0, not {ny}')
 
     if threshold2 is None:
         ys, xs   = np.where(self.data > threshold)
@@ -116,11 +121,16 @@ def get_brightest_pixel_position(self, y, x, ny, nx, coordinates='centers'):
     Returns:
         y, x
     """
-    assert coordinates in ['pixels', 'centers'], f'coordinates must be `pixels` or `centers`, not `{coordinates}`'
-    assert br.is_integer(nx), f'n must be of type integer, not {type(nx)}'
-    assert br.is_integer(ny), f'n must be of type integer, not {type(ny)}'
-    assert nx >= 0, f'nx must be an integer number higher or equal to 0'
-    assert ny >= 0, f'ny must be an integer number higher or equal to 0'
+    if coordinates not in ('pixels', 'centers'):
+        raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
+    if not br.is_integer(nx):
+        raise TypeError(f'nx must be an integer, not {type(nx).__name__}')
+    if not br.is_integer(ny):
+        raise TypeError(f'ny must be an integer, not {type(ny).__name__}')
+    if nx < 0:
+        raise ValueError(f'nx must be greater than or equal to 0, not {nx}')
+    if ny < 0:
+        raise ValueError(f'ny must be greater than or equal to 0, not {ny}')
 
     spot, yslice, xslice, is_near_edge = self.get_spot(y=y, x=x, ny=ny, nx=nx, coordinates=coordinates)
     _y, _x = spot.argmax(coordinates='pixels')
@@ -173,15 +183,22 @@ def enhance(self, bkg='auto', square=True, nx=2, ny=2):
     Returns:
         enhanced image
     """
-    if bkg is not None:
-        if bkg != 'auto':
-            assert br.is_number(bkg), 'bkg can only be `auto`, None, or a number'
-    assert isinstance(square, bool), 'square must be True or False'
+    if bkg is not None and bkg != 'auto':
+        if not br.is_number(bkg):
+            raise TypeError(f'bkg must be `auto`, None, or a number, not {type(bkg).__name__}')
+    if not isinstance(square, bool):
+        raise TypeError(f'square must be True or False, not {type(square).__name__}')
     if nx is not None:
-        assert br.is_integer(nx) and nx > 0, 'nx must be None, or an integer equal or higher than 1'
+        if not br.is_integer(nx):
+            raise TypeError(f'nx must be None or an integer, not {type(nx).__name__}')
+        if nx <= 0:
+            raise ValueError(f'nx must be greater than or equal to 1, not {nx}')
     if ny is not None:
-        assert br.is_integer(ny) and ny > 0, 'ny must be None, or an integer equal or higher than 1'
-
+        if not br.is_integer(ny):
+            raise TypeError(f'ny must be None or an integer, not {type(ny).__name__}')
+        if ny <= 0:
+            raise ValueError(f'ny must be greater than or equal to 1, not {ny}')
+    
     # bkg subtraction
     if bkg is not None:
         if bkg == 'auto':
@@ -383,14 +400,26 @@ def find_and_patch(self, nx, ny, threshold, threshold2=None,
         patched image and photon events list
     """
     if br.is_number(_patch_x_size):
-        assert br.is_integer(_patch_x_size), '_patch_x_size must be `auto` or an integer higher or equal than 1'
-    else:
-        assert _patch_x_size == 'auto', '_patch_x_size must be `auto` or an integer higher or equal than 1'
+        if not br.is_integer(_patch_x_size) or _patch_x_size < 1:
+            raise ValueError(f'_patch_x_size must be `auto` or an integer greater than or equal to 1, not {_patch_x_size}')
+    elif _patch_x_size != 'auto':
+        raise TypeError(f'_patch_x_size must be `auto` or an integer, not {type(_patch_x_size).__name__}')
     if br.is_number(_patch_y_size):
-        assert br.is_integer(_patch_y_size), '_patch_y_size must be `auto` or an integer higher or equal than 1'
-    else:
-        assert _patch_y_size == 'auto', '_patch_y_size must be `auto` or an integer higher or equal than 1'
-    assert br.is_number(_patch_value) or _patch_value == 'auto', '_patch_value must be `auto` or an number'
+        if not br.is_integer(_patch_y_size) or _patch_y_size < 1:
+            raise ValueError(f'_patch_y_size must be `auto` or an integer greater than or equal to 1, not {_patch_y_size}')
+    elif _patch_y_size != 'auto':
+        raise TypeError(f'_patch_y_size must be `auto` or an integer, not {type(_patch_y_size).__name__}')
+    if not br.is_number(_patch_value) and _patch_value != 'auto':
+        raise TypeError(f'_patch_value must be `auto` or a number, not {type(_patch_value).__name__}')
+    # if br.is_number(_patch_x_size):
+    #     assert br.is_integer(_patch_x_size), '_patch_x_size must be `auto` or an integer higher or equal than 1'
+    # else:
+    #     assert _patch_x_size == 'auto', '_patch_x_size must be `auto` or an integer higher or equal than 1'
+    # if br.is_number(_patch_y_size):
+    #     assert br.is_integer(_patch_y_size), '_patch_y_size must be `auto` or an integer higher or equal than 1'
+    # else:
+    #     assert _patch_y_size == 'auto', '_patch_y_size must be `auto` or an integer higher or equal than 1'
+    # assert br.is_number(_patch_value) or _patch_value == 'auto', '_patch_value must be `auto` or an number'
 
     if _patch_x_size == 'auto':
         _patch_x_size = nx
@@ -419,17 +448,41 @@ def centroid(self, nx, ny, threshold, threshold2=None, _bkg=None, _square=False,
         pe, pe2
         photon events list, and photon events list for double events
     """
-    assert _cm_spot_zero_type in ['zero', 'offset'], f'spot_zeroing_type must be `zero` or `offset`'
-    assert br.is_integer(nx) and nx >= 0, 'nx must an integer equal or higher than 0'
-    assert br.is_integer(ny) and ny >= 0, 'ny must an integer equal or higher than 0'
+    if _cm_spot_zero_type not in ('zero', 'offset'):
+        raise ValueError(f'_cm_spot_zero_type must be either `zero` or `offset`, not `{_cm_spot_zero_type}`')
+    if not br.is_integer(nx):
+        raise TypeError(f'nx must be an integer, not {type(nx).__name__}')
+    if nx < 0:
+        raise ValueError(f'nx must be greater than or equal to 0, not {nx}')
+    if not br.is_integer(ny):
+        raise TypeError(f'ny must be an integer, not {type(ny).__name__}')
+    if ny < 0:
+        raise ValueError(f'ny must be greater than or equal to 0, not {ny}')
     if _cm_nx == 'auto':
         _cm_nx = nx
     else:
-        assert br.is_integer(_cm_nx) and _cm_nx > 0, '_cm_nx must an integer equal or higher than 1'
+        if not br.is_integer(_cm_nx):
+            raise TypeError(f'_cm_nx must be `auto` or an integer, not {type(_cm_nx).__name__}')
+        if _cm_nx < 1:
+            raise ValueError(f'_cm_nx must be greater than or equal to 1, not {_cm_nx}')
     if _cm_ny == 'auto':
         _cm_ny = ny
     else:
-        assert br.is_integer(_cm_ny) and _cm_ny > 0, '_cm_ny must an integer equal or higher than 1'
+        if not br.is_integer(_cm_ny):
+            raise TypeError(f'_cm_ny must be `auto` or an integer, not {type(_cm_ny).__name__}')
+        if _cm_ny < 1:
+            raise ValueError(f'_cm_ny must be greater than or equal to 1, not {_cm_ny}')
+    # assert _cm_spot_zero_type in ['zero', 'offset'], f'spot_zeroing_type must be `zero` or `offset`'
+    # assert br.is_integer(nx) and nx >= 0, 'nx must an integer equal or higher than 0'
+    # assert br.is_integer(ny) and ny >= 0, 'ny must an integer equal or higher than 0'
+    # if _cm_nx == 'auto':
+    #     _cm_nx = nx
+    # else:
+    #     assert br.is_integer(_cm_nx) and _cm_nx > 0, '_cm_nx must an integer equal or higher than 1'
+    # if _cm_ny == 'auto':
+    #     _cm_ny = ny
+    # else:
+    #     assert br.is_integer(_cm_ny) and _cm_ny > 0, '_cm_ny must an integer equal or higher than 1'
 
     # find candidates
     pe, pe2 = self.find_candidates(nx=nx, ny=ny, threshold=threshold, threshold2=threshold2, _bkg=_bkg, _square=_square, _nx=_nx, _ny=_ny, MAX_NUMBER_OF_CANDIDATES=MAX_NUMBER_OF_CANDIDATES)
@@ -716,9 +769,10 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
     ###################
     # check n1 and n2 #
     ###################
-    assert n1 > 0,  f'n1 must be an positive integer'
-    assert n2 > 0,  f'n2 must be an positive even integer'
-    # assert n2%2 == 0, f'n2 must be an even number to ensure that the `center of mass` of a photon hit is calculated in a square where the pixel with the photon hit is the central one'
+    if n1 <= 0:
+        raise ValueError(f'n1 must be a positive integer, not {n1}')
+    if n2 <= 0:
+        raise ValueError(f'n2 must be a positive integer, not {n2}')
     
     #################################
     # check x_centers and y_centers #
@@ -745,15 +799,21 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
     ##########################
     # check double threshold #
     ##########################
-    assert double_threshold > avg_threshold, 'avg_threshold must be smaller than double_threshold'
-    
+    if double_threshold <= avg_threshold:
+        raise ValueError(f'double_threshold must be greater than avg_threshold\n'
+                        f'avg_threshold: {avg_threshold}\n'
+                        f'double_threshold: {double_threshold}')
+
     ###################
     # find candidates #
     ###################
     # remove the edges of image (because one cannot calculated the `center of mass` at the edges)
     # select pixels with intensity between low_threshold and high_threshold
     if avg_threshold_max is not None:
-        assert avg_threshold_max > avg_threshold, 'avg_threshold must be smaller than avg_threshold_max'
+        if avg_threshold_max <= avg_threshold:
+            raise ValueError(f'avg_threshold_max must be greater than avg_threshold\n'
+                            f'avg_threshold: {avg_threshold}\n'
+                            f'avg_threshold_max: {avg_threshold
         if n2 > 0:
             cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold)*(image.data[n2//2 : -n2//2, n2//2 : -n2//2] < avg_threshold_max))
         else:

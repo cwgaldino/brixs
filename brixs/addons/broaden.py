@@ -112,9 +112,12 @@ def _broaden(self, w, m=0, mode='same'):
     Return:
         Convolved spectrum        
     """
-    assert mode in ['same', 'valid'], 'mode can only be `same` or `valid`.'
-    assert w >= 0, 'w must be a positive number'
-    assert m >=0 and m<=1, 'm must be a number between 0 and 1'
+    if mode not in ['same', 'valid']:
+        raise ValueError('mode can only be `same` or `valid`.')
+    if w < 0:
+        raise ValueError('w must be a positive number')
+    if not 0 <= m <= 1:
+        raise ValueError('m must be a number between 0 and 1')
 
     # if broadening is zero, does nothing
     if w == 0:
@@ -281,7 +284,8 @@ def _broaden2(self, w):
     Return:
         broadened spectrum
     """
-    assert w >= 0, 'w must be a positive number'
+    if w < 0:
+        raise ValueError('w must be a non-negative number')
 
     # check step uniformity
     self.check_step()

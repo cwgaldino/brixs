@@ -163,7 +163,7 @@ def _process(scan, dark=None, slope=False, calib=False,
                         if len(_pe) > 0:
                             try:
                                 _im1 = _im.patch_from_photon_events(_pe, n=dark_cosmic_rays_patch_size)
-                            except AssertionError:
+                            except ValueError:
                                 print(f'ERROR: scan {dark}')
                                 _im1 = _im
                         else:
@@ -244,7 +244,7 @@ def _process(scan, dark=None, slope=False, calib=False,
                 if len(_pe) > 0:
                     try:
                         _im1 = _im.patch_from_photon_events(_pe, n=cosmic_rays_patch_size)
-                    except AssertionError:
+                    except ValueError:
                         print(f'ERROR: scan {scan}:{j}')
                         _im1 = _im
                 else:

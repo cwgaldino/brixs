@@ -307,7 +307,8 @@ def _fit_peak(self, guess_c=None, guess_A=None, guess_w=None, guess_offset=0, fi
         y0 = s0.y
 
     # smoothing
-    assert moving_average_window > 0, f'moving_average_window must be positive different than 0, not {moving_average_window}'
+    if moving_average_window <= 0:
+        raise ValueError(f'moving_average_window must be greater than 0, not {moving_average_window}')                                                                          
     if moving_average_window == 1:
         x = x0
         y = y0

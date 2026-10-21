@@ -51,7 +51,10 @@ def moving_average(x, n):
     if isinstance(n, int) == False:
         if n.is_integer() == False:
             raise ValueError('n must be a positive integer (> 1).')
-    assert n <= len(x), f'number of points to average (n={n}) must be equal or less than the length of the array ({len(x)})'
+    if n > len(x):
+        raise ValueError(f'n must be less than or equal to the number of items in x\n'
+                        f'n: {n}\n'
+                        f'number of items in x: {len(x)}')
 
     x = np.array(x)
     window = np.ones(int(n))/float(n)
@@ -360,7 +363,8 @@ def choose(x, limits):
     """
     # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in figmanip
 
-    assert isinstance(x, Iterable), 'input must be a iterable'
+    if not isinstance(x, Iterable):
+        raise TypeError(f'x must be an Iterable, not {type(x).__name__}')
     x = np.array(x)
 
     try:  # ((start, end), )
@@ -496,7 +500,8 @@ def array2list(arr):
     
 def flatten(x):
     """[EXPERIMENTAL] Return a copy of the array collapsed into one dimension."""
-    assert isinstance(x, Iterable), 'input must be Iterable (list, tuple, array)'
+    if not isinstance(x, Iterable):
+        raise TypeError(f'x must be an Iterable, not {type(x).__name__}')
 
     # empty array
     if len(x) == 0:
@@ -568,11 +573,16 @@ def digitize(x, bins, xmin=None, xmax=None):
     if isinstance(bins, Iterable)==False or isinstance(bins, str):
         if xmin is None: xmin = np.min(x)
         if xmax is None: xmax = np.max(x)
-        assert xmax > xmin, 'xmax must be higher than xmin'
+        if xmax <= xmin:
+            raise ValueError(f'xmax must be greater than xmin\n'
+                            f'xmin: {xmin}\n'
+                            f'xmax: {xmax}')
         bin_edges = np.histogram_bin_edges(x, bins=bins, range=(xmin, xmax), weights=None)
     else:
-        assert xmin is None, 'if bins is a list (assumed to be the bins edges), than xmin must be None'
-        assert xmax is None, 'if bins is a list (assumed to be the bins edges), than xmax must be None'
+        if xmin is not None:
+            raise ValueError('xmin must be None when bins contains the bin edges')
+        if xmax is not None:
+            raise ValueError('xmax must be None when bins contains the bin edges')
         bin_edges = bins
     temp = np.digitize(x, bins=bin_edges, right=False)
     

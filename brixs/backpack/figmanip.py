@@ -170,7 +170,9 @@ def _choose(x, ranges):
         1d list.
     """
     # DEVELOPER NOTE: Any changes to this function must also be applied to its copy in arraymanip
-    assert isinstance(x, Iterable), 'input must be a iterable'
+    if not isinstance(x, Iterable):
+        raise TypeError(f'x must be an Iterable, not {type(x).__name__}')
+
     x = np.array(x)
 
     try:  # ((start, end), )
@@ -378,9 +380,13 @@ def set_cycler(n='tab10', ls=1):
         available_colors = get_available_colors()
         for color in n:
             if isinstance(color, str):
-                assert color in available_colors, f'{color} is not a recognized color\nAvailable colors: {available_colors}'
+                if color not in available_colors:
+                    raise ValueError(f'color is not recognised: {color}\n'
+                                    f'available colors: {available_colors}')
             else:
-                assert len(color) == 3 or len(color) == 4, f'{color} is not recognized\ncolors must be rgb-alpha values or color names'        
+                if len(color) not in (3, 4):
+                    raise ValueError(f'color must contain 3 (RGB) or 4 (RGBA) values\n'
+                                    f'number of values: {len(color)}')
         colors = n
     else:
         raise ValueError(f'"n" must be False, int, str, or a list.\nType(n) = {type(n)}')
@@ -422,9 +428,6 @@ def set_cycler_from_colormap(name, n):
     Returns:
         None
     """
-    # available_colormaps = get_available_colormaps()
-    # assert name in available_colormaps, f'{name} is not a recognized colormap\nAvailable colormaps: {available_colormaps}'
-
     # cmap = matplotlib.cm.get_cmap(name)
     # colors = [cmap(j/n) for j in range(n)]
     colors = get_colors_from_colormap(name, n)
@@ -441,12 +444,15 @@ def get_colors_from_colormap(name, n):
         None
     """
     available_colormaps = get_available_colormaps()
-    assert name in available_colormaps, f'{name} is not a recognized colormap\nAvailable colormaps: {available_colormaps}'
+    if name not in available_colormaps:
+        raise ValueError(f'colormap is not recognised: {name}\n'
+                         f'available colormaps: {available_colormaps}')
 
     cmap   = matplotlib.cm.get_cmap(name)
     colors = [cmap(j/n) for j in range(n)]
     return colors
 # %%
+# ds positive for elongation
 
 # %% ================================ window ============================== %% #
 def set_window_position(*args):
@@ -1148,8 +1154,10 @@ def subplots(nrows, ncols, sharex=False, sharey=False, hspace=0.3, wspace=0.3, w
     #########
     # check #
     #########
-    assert nrows > 0, 'nrows must be > 0'
-    assert ncols > 0, 'ncols must be > 0'
+    if nrows <= 0:
+        raise ValueError(f'nrows must be greater than 0, not {nrows}')
+    if ncols <= 0:
+        raise ValueError(f'ncols must be greater than 0, not {ncols}')
 
     ###############
     # gridspec_kw #
@@ -1544,8 +1552,14 @@ def label_axes(axes, loc='upper left', color=None, start_letter='a', start_n=0):
     if isinstance(color, str) or color is None:
         color = [color]*len(axes)
     
-    assert len(axes) == len(loc),   'number of axes must be the same as number of locs'
-    assert len(axes) == len(color), 'number of axes must be the same as number of colors'
+    if len(axes) != len(loc):
+        raise ValueError(f'axes and loc must have the same number of items\n'
+                        f'number of axes: {len(axes)}\n'
+                        f'number of locs: {len(loc)}')
+    if len(axes) != len(color):
+        raise ValueError(f'axes and color must have the same number of items\n'
+                        f'number of axes: {len(axes)}\n'
+                        f'number of colors: {len(color)}')
 
     n = start_n
     j = ascii_lowercase.index(start_letter)
@@ -1655,7 +1669,8 @@ def merge_axes(ax1, ax2):
         merged axes object
     """
     # check if axes came from the same figure
-    assert ax1.figure == ax2.figure, 'axes must come from the same figure'
+    if ax1.figure != ax2.figure:
+        raise ValueError('ax1 and ax2 must belong to the same figure')
 
     # check if axes are neighbors and the same size
     xmin1 = ax1._subplotspec.rowspan.start
@@ -1668,12 +1683,15 @@ def merge_axes(ax1, ax2):
     ymin2 = ax2._subplotspec.colspan.start
     ymax2 = ax2._subplotspec.colspan.stop
 
-    assert xmin1 == xmin2 or ymin1 == ymin2, 'axes must be neighbors'
+    if xmin1 != xmin2 and ymin1 != ymin2:
+        raise ValueError('axes must be neighbours')
     if xmin1 == xmin2:
-        assert (xmax1 - xmin1) == (xmax2 - xmin2), 'axes must have the same height'
+        if (xmax1 - xmin1) != (xmax2 - xmin2):
+            raise ValueError('axes must have the same width')
     elif ymin1 == ymin2:
-        assert (ymax1 - ymin1) == (ymax2 - ymin2), 'axes must have the same width'
-
+        if (ymax1 - ymin1) != (ymax2 - ymin2):
+            raise ValueError('axes must have the same height')
+    
     # get new grid coordinates
     pos = ax1.get_position().get_points()
     xmin = min(xmin1, xmin2)
@@ -1844,14 +1862,16 @@ def ymove(value, ax=None):
 
 def sharex(axes):
     """Connect x axis. Cannot be used if the x-axis is already being shared with another Axes"""
-    assert isinstance(axes, Iterable), 'input must be a list of axes'
+    if not isinstance(axes, Iterable):
+        raise TypeError(f'axes must be an Iterable, not {type(axes).__name__}')
     for i, ax in enumerate(axes):
         ax.sharex(axes[0])
     return
 
 def sharey(axes):
     """Connect y axis. Cannot be used if the y-axis is already being shared with another Axes"""
-    assert isinstance(axes, Iterable), 'input must be a list of axes'
+    if not isinstance(axes, Iterable):
+        raise TypeError(f'axes must be an Iterable, not {type(axes).__name__}')
     for i, ax in enumerate(axes):
         ax.sharey(axes[0])
     return
@@ -2056,7 +2076,8 @@ def set_xticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
     #####################
     if ticks is None:
         if nticks is not None:
-            assert nticks > 1, 'nticks needs to be > 1.'
+            if nticks <= 1:
+                raise ValueError(f'nticks must be greater than 1, not {nticks}')
         if start is not None or stop is not None or nticks is not None or step is not None:
             if start is not None and stop is not None and nticks is not None:
                 ticks = np.linspace(start, stop, nticks)
@@ -2084,14 +2105,22 @@ def set_xticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
             # if pad is None:
             #     pad = (0, 0)
     else:
-        assert isinstance(ticks, Iterable), 'ticks must be iterable'
-        assert len(ticks) > 1, 'ticks must have length > 1'
+        if not isinstance(ticks, Iterable):
+            raise TypeError(f'ticks must be an Iterable, not {type(ticks).__name__}')
+        if len(ticks) <= 1:
+            raise ValueError(f'ticks must contain more than one item\n'
+                            f'number of ticks: {len(ticks)}')
         _ = ax.xaxis.set_ticks(ticks)
 
         # set labels
         if labels is not None:
-            assert isinstance(labels, Iterable), 'ticks must be iterable'
-            assert len(ticks) == len(labels), 'len(ticks) must be the same as len(labels)'
+            if not isinstance(labels, Iterable):
+                raise TypeError(f'labels must be an Iterable, not {type(labels).__name__}')
+
+            if len(labels) != len(ticks):
+                raise ValueError(f'labels and ticks must have the same number of items\n'
+                                f'number of labels: {len(labels)}\n'
+                                f'number of ticks: {len(ticks)}')
             if fontproperties is not None:
                 _ = ax.set_xticklabels(labels, fontproperties=fontproperties, visible=True)
             else:
@@ -2104,14 +2133,17 @@ def set_xticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
     # limits #
     ##########
     if pad is not None:
-        if isinstance(pad, Iterable) == False:
-            assert is_number(pad), 'pad must be a number or a tuple/list with length 2'
+        if not isinstance(pad, Iterable):
+            if not is_number(pad):
+                raise TypeError(f'pad must be a number or an Iterable with two items, not {type(pad).__name__}')
             pad = (pad, pad)
-
-        # check
-        assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
-        assert is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
-        assert is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
+        if len(pad) != 2:
+            raise ValueError(f'pad must contain exactly two items\n'
+                             f'number of items: {len(pad)}')
+        if not is_number(pad[0]):
+            raise TypeError(f'first item in pad must be a number, not {type(pad[0]).__name__}')
+        if not is_number(pad[1]):
+            raise TypeError(f'second item in pad must be a number, not {type(pad[1]).__name__}')
 
         # set limits
         step = ticks[1]  - ticks[0]
@@ -2130,8 +2162,10 @@ def set_xticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
             n_minor_ticks = int(round(step/minor_step))
             ax.xaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
     else:
-        assert isinstance(ticks, Iterable), 'minor_ticks must be iterable'
-        assert len(ticks) > 0, 'minor_ticks must have length > 0'
+        if not isinstance(ticks, Iterable):
+            raise TypeError(f'minor_ticks must be an Iterable, not {type(ticks).__name__}')
+        if len(ticks) == 0:
+            raise ValueError('minor_ticks must contain at least one item')
         _ = ax.xaxis.set_ticks(minor_ticks, minor=True)
 
     ###################
@@ -2244,7 +2278,8 @@ def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
     #####################
     if ticks is None:
         if nticks is not None:
-            assert nticks > 1, 'nticks needs to be > 1.'
+            if nticks <= 1:
+                raise ValueError(f'nticks must be greater than 1, not {nticks}')
         if start is not None or stop is not None or nticks is not None or step is not None:
             if start is not None and stop is not None and nticks is not None:
                 ticks = np.linspace(start, stop, nticks)
@@ -2272,14 +2307,21 @@ def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
             # if pad is None:
             #     pad = (0, 0)
     else:
-        assert isinstance(ticks, Iterable), 'ticks must be iterable'
-        assert len(ticks) > 1, 'ticks must have length > 1'
+        if not isinstance(ticks, Iterable):
+            raise TypeError(f'ticks must be an Iterable, not {type(ticks).__name__}')
+        if len(ticks) <= 1:
+            raise ValueError(f'ticks must contain more than one item\n'
+                            f'number of ticks: {len(ticks)}')
         _ = ax.yaxis.set_ticks(ticks)
 
         # set labels
         if labels is not None:
-            assert isinstance(labels, Iterable), 'ticks must be iterable'
-            assert len(ticks) == len(labels), 'len(ticks) must be the same as len(labels)'
+            if not isinstance(labels, Iterable):
+                raise TypeError(f'labels must be an Iterable, not {type(labels).__name__}')
+            if len(labels) != len(ticks):
+                raise ValueError(f'labels and ticks must have the same number of items\n'
+                                f'number of labels: {len(labels)}\n'
+                                f'number of ticks: {len(ticks)}')
             if fontproperties is not None:
                 _ = ax.set_yticklabels(labels, fontproperties=fontproperties, visible=True)
             else:
@@ -2292,15 +2334,19 @@ def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
     # limits #
     ##########
     if pad is not None:
-        if isinstance(pad, Iterable) == False:
-            assert is_number(pad), 'pad must be a number or a tuple/list with length 2'
+        if not isinstance(pad, Iterable):
+            if not is_number(pad):
+                raise TypeError(f'pad must be a number or an Iterable with two items, not {type(pad).__name__}')
             pad = (pad, pad)
-
-        # check
-        assert len(pad) == 2, 'pad must be a number or a tuple/list with length 2'
-        assert is_number(pad[0]), 'pad must be a number or a tuple/list with length 2'
-        assert is_number(pad[1]), 'pad must be a number or a tuple/list with length 2'
-
+        # check pad
+        if len(pad) != 2:
+            raise ValueError(f'pad must contain exactly two items\n'
+                            f'number of items: {len(pad)}')
+        if not is_number(pad[0]):
+            raise TypeError(f'pad items must be numbers, not {type(pad[0]).__name__}')
+        if not is_number(pad[1]):
+            raise TypeError(f'pad items must be numbers, not {type(pad[1]).__name_}')
+                    
         # set limits
         step = ticks[1]  - ticks[0]
         min_lim   = ticks[0]  - step*pad[0]
@@ -2318,8 +2364,10 @@ def set_yticks(ax=None, start=None, stop=None, nticks=None, step=None, ticks=Non
             n_minor_ticks = int(round(step/minor_step))
             ax.yaxis.set_minor_locator(AutoMinorLocator(n_minor_ticks+1))
     else:
-        assert isinstance(ticks, Iterable), 'minor_ticks must be iterable'
-        assert len(ticks) > 0, 'minor_ticks must have length > 0'
+        if not isinstance(ticks, Iterable):
+            raise TypeError(f'minor_ticks must be an Iterable, not {type(ticks).__name__}')
+        if len(ticks) == 0:
+            raise ValueError('minor_ticks must contain at least one item')
         _ = ax.yaxis.set_ticks(minor_ticks, minor=True)
 
     ###################
@@ -2698,9 +2746,12 @@ def leg(*args, **kwargs):
 
     # legend
     if coord is not None:   
-        # check
-        assert isinstance(coord, Iterable), 'coord must be a tuple of type (x, y)'
-        assert len(coord) == 2, 'coord must be a tuple of type (x, y)'
+        # check coord
+        if not isinstance(coord, Iterable):
+            raise TypeError(f'coord must be an Iterable with two items (x, y), not {type(coord).__name__}')
+        if len(coord) != 2:
+            raise ValueError(f'coord must contain exactly two items (x, y)\n'
+                            f'number of items: {len(coord)}')
 
         # covert to Data coordinates to axes coordinates
         _x, _y = ax.transData.transform(coord)
@@ -3162,7 +3213,10 @@ def axvlines(x, ymin=None, ymax=None, ax=None, **kwargs):
             _label = kwargs.pop('labels')
 
         if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
-            assert len(_label) == len(x), f'label must be a number of a list with length compatible with the number of lines.\nnumber of labels: {len(label)}\nnumber of spectra: {len(x)}'
+            if len(_label) != len(x):
+                raise ValueError(f'label must have the same number of items as lines\n'
+                                f'number of labels: {len(_label)}\n'
+                                f'number of lines: {len(x)}')
             label = _label
         else:
             label = [None]*len(x)
@@ -3182,7 +3236,10 @@ def axvlines(x, ymin=None, ymax=None, ax=None, **kwargs):
             _color = kwargs.pop('c')
 
         if isinstance(_color, Iterable) == True and isinstance(_color, str) == False:
-            assert len(_color) == len(x), f'`color` must be a number of a list with length compatible with the number of lines.\nnumber of colors: {len(_color)}\nnumber of lines: {len(x)}'
+            if len(_color) != len(x):
+                raise ValueError(f'color must have the same number of items as lines\n'
+                                f'number of colors: {len(_color)}\n'
+                                f'number of lines: {len(x)}')
             colors = _color
         else:
             colors = [_color]*len(x)
@@ -3201,7 +3258,10 @@ def axvlines(x, ymin=None, ymax=None, ax=None, **kwargs):
             _linestyle = kwargs.pop('ls')
 
         if isinstance(_linestyle, Iterable) == True and isinstance(_linestyle, str) == False:
-            assert len(_linestyle) == len(x), f'`linestyles` must be a number of a list with length compatible with the number of lines.\nnumber of linestyles: {len(_linestyle)}\nnumber of lines: {len(x)}'
+            if len(_linestyle) != len(x):
+                raise ValueError(f'linestyle must have the same number of items as lines\n'
+                                f'number of linestyles: {len(_linestyle)}\n'
+                                f'number of lines: {len(x)}')
             linestyles = _linestyle
         else:
             linestyles = [_linestyle]*len(x)
@@ -3261,7 +3321,10 @@ def axhlines(y, xmin=None, xmax=None, ax=None, **kwargs):
             _label = kwargs.pop('labels')
 
         if isinstance(_label, Iterable) == True and isinstance(_label, str) == False:
-            assert len(_label) == len(y), f'label must be a number of a list with length compatible with the number of lines.\nnumber of labels: {len(label)}\nnumber of spectra: {len(y)}'
+            if len(_label) != len(y):
+                raise ValueError(f'label must have the same number of items as lines\n'
+                                f'number of labels: {len(_label)}\n'
+                                f'number of lines: {len(y)}')
             label = _label
         else:
             label = [None]*len(y)
@@ -3281,7 +3344,10 @@ def axhlines(y, xmin=None, xmax=None, ax=None, **kwargs):
             _color = kwargs.pop('c')
 
         if isinstance(_color, Iterable) == True and isinstance(_color, str) == False:
-            assert len(_color) == len(y), f'`color` must be a number of a list with length compatible with the number of lines.\nnumber of colors: {len(_color)}\nnumber of lines: {len(y)}'
+            if len(_color) != len(y):
+                raise ValueError(f'color must have the same number of items as lines\n'
+                                f'number of colors: {len(_color)}\n'
+                                f'number of lines: {len(y)}')
             colors = _color
         else:
             colors = [_color]*len(y)
@@ -3300,7 +3366,10 @@ def axhlines(y, xmin=None, xmax=None, ax=None, **kwargs):
             _linestyle = kwargs.pop('ls')
 
         if isinstance(_linestyle, Iterable) == True and isinstance(_linestyle, str) == False:
-            assert len(_linestyle) == len(y), f'`linestyles` must be a number of a list with length compatible with the number of lines.\nnumber of linestyles: {len(_linestyle)}\nnumber of lines: {len(y)}'
+            if len(_linestyle) != len(y):
+                raise ValueError(f'linestyle must have the same number of items as lines\n'
+                                f'number of linestyles: {len(_linestyle)}\n'
+                                f'number of lines: {len(y)}')
             linestyles = _linestyle
         else:
             linestyles = [_linestyle]*len(y)
@@ -4033,7 +4102,9 @@ def _set_xticks_old(ax=None, start=None, stop=None, pad=None, nticks=None, step=
         else:
             ticks   = np.arange(start, stop + step*0.1, step) 
 
-        assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
+        if len(ticks) <= 1:
+            raise ValueError(f'ticks must contain at least two items\n'
+                            f'number of ticks: {len(ticks)}')
 
         # ticks shift to get better values (include zero)
         if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:
@@ -4216,7 +4287,9 @@ def _set_yticks_old(ax=None, start=None, stop=None, pad=None, nticks=None, step=
         else:
             ticks   = np.arange(start, stop + step*0.1, step) 
 
-        assert len(ticks) > 1, 'number of ticks needs to be equal or larger than 2'
+        if len(ticks) <= 1:
+            raise ValueError(f'ticks must contain at least two items\n'
+                            f'number of ticks: {len(ticks)}')
 
         # ticks shift to get better values (include zero)
         if any(x < 0 for x in ticks) and any(x > 0 for x in ticks) and 0 not in ticks:

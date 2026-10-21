@@ -29,7 +29,7 @@ not conflict with methods or attributes of the destination object.
 # %% ===================================================================== %% #
 # %% ====================== brixs expansion modules ====================== %% #
 # %% ===================================================================== %% #
-brixs expansion modules allows for posterior addition of new methods and attrs 
+brixs expansion modules allows for posteriori addition of new methods and attrs 
 after brixs has been imported. 
 
 For a module to be considered a `expansion module` it must satisfie two conditions:

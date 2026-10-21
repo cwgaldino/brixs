@@ -25,10 +25,13 @@ def _save_all_as_specfile(self, filepath):
     ######################################
     # check if filepath points to a file #
     ######################################
+    if not isinstance(filepath, (str, Path)):
+        raise TypeError(f'filepath must be a string or Path object, not {type(filepath).__name__}')
     filepath = Path(filepath)
-    assert filepath.parent.exists(), f'filepath folder does not exists.\nfolderpath: {filepath.parent}'
-    if filepath.exists():
-        assert filepath.is_file(), 'filepath must point to a file'
+    if not filepath.parent.exists():
+        raise FileNotFoundError(f'filepath parent folder does not exist: {filepath.parent}')
+    if filepath.exists() and not filepath.is_file():
+        raise IsADirectoryError(f'filepath must point to a file, not a folder: {filepath}')
 
     #######################
     # check x is the same #

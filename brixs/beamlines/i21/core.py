@@ -72,7 +72,9 @@ def _get_metadata(f, exp, verbose=False):
     Returns:
         dict
     """
-    assert exp in ('rixs', 'xas', 'linescan')
+    if exp not in ('rixs', 'xas', 'linescan'):
+        raise ValueError(f'exp must be either `rixs`, `xas`, or `linescan`, not `{exp}`')
+                     
     metadata = {}
     for name in settings.METADATA[exp]:
         key     = settings.METADATA[exp][name][0]
@@ -156,7 +158,8 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
         #     expected_number_of_images = number_of_images_in_the_file
                           
         if stop is None: stop = number_of_images_in_the_file
-        assert stop >= start, 'stop must be higher than start'
+        if stop < start:
+            raise ValueError('stop must be greater than or equal to start')
         if stop-start > settings.MAX_IMAGES_TO_LOAD_AT_ONCE:
             _text = 'This scan has too many images and it might crash the kernel\n' +\
                     'Please, load slices of this scan by using `start` and `stop` arguments\n' +\
