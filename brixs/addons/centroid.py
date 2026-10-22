@@ -22,6 +22,9 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
     1) search for all pixel values that satisfies: threshold < value < threshold2
     2) if many pixels above the threshold are close (< n), then keep only the
     one with maximum value (brightest pixel).
+    3) Brightest pixel positions that are closer than n pixels of another
+    brightest pixel position are removed from the main position list and put on
+    the secondary list
 
     Args:
         threshold (number): threshold value
@@ -48,10 +51,11 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
             Useful for preventing setting up the threshold too low.
 
     Returns:
-        pos, pos2
+        pos  (main position list)
+        pos2 (secondary position list)
 
         pos:  list of positions [(y1, x1), (y2, x2), ...] for pixel values between threshold and threshold2
-        pos2: list of positions [(y1, x1), (y2, x2), ...] for pixel values above threshold2
+        pos2: list of positions [(y1, x1), (y2, x2), ...] for pixel values above threshold2 or with close bright pixels
 
     """
     if coordinates not in ('pixels', 'centers'):
@@ -67,13 +71,17 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
 
     if threshold2 is None:
         ys, xs   = np.where(self.data > threshold)
-        ys2, xs2 = [], []
+        ys2, xs2 = np.array([], dtype=int), np.array([], dtype=int)
     else:
         ys, xs   = np.where(np.logical_and(self.data > threshold, self.data < threshold2))
-        ys2, xs2 = np.where(self.data > threshold2)
+        ys2, xs2 = np.where(self.data >= threshold2)
 
     if len(xs) > MAX_NUMBER_OF_CANDIDATES:
-        raise ValueError(f'number of positions positions above the threshold ({len(xs)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES or `threshold`')
+        raise ValueError(
+            f'number of positions above the threshold '
+            f'({len(xs)}) is higher than '
+            f'MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. '
+            f'Maybe try increasing MAX_NUMBER_OF_CANDIDATES or `threshold`')
     
 
     # get brightest pixel
@@ -88,8 +96,6 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
                     central2.append(bright_pixel)
             else:
                 central2.append((y, x))
-        if coordinates == 'centers':
-            central2 = [self.index2center(y=_[0], x=_[1]) for _ in central2]
 
     for y, x in zip(ys, xs):
         if ny>0 or nx>0:
@@ -99,8 +105,31 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
                 central.append(bright_pixel)
         else:
             central.append((y, x))
+
+    # remove positions that are too close from each other
+    if len(central) > 0:
+        central = np.asarray(central)
+        ys = central[:, 0]
+        xs = central[:, 1]
+
+        dx = np.abs(xs[:, None] - xs[None, :])
+        dy = np.abs(ys[:, None] - ys[None, :])
+
+        close = (dx <= nx) & (dy <= ny)
+        np.fill_diagonal(close, False)  # A photon should not count itself
+        has_neighbor = close.any(axis=1)
+
+        isolated = central[~has_neighbor].tolist()
+        neighboring = central[has_neighbor].tolist()
+        central = isolated
+        for position in neighboring:
+            if position not in central2:
+                central2.append(position)
+
+    # converto from pixel to centers
     if coordinates == 'centers':
-        central = [self.index2center(y=_[0], x=_[1]) for _ in central]
+        central  = [self.index2center(y=_[0], x=_[1]) for _ in central]
+        central2 = [self.index2center(y=_[0], x=_[1]) for _ in central2]
 
     return central, central2
 br.Image.get_positions_above_threshold = get_positions_above_threshold
@@ -310,7 +339,7 @@ def find_candidates(self, nx, ny, threshold, threshold2=None,
         _y1, _x1 = _a
         for j, _b in enumerate(final[i+1:]):
             _y2, _x2 = _b
-            if abs(_y2-_y1) < ny and abs(_x2-_x1) < nx:
+            if abs(_y2-_y1) <= ny and abs(_x2-_x1) <= nx:
                 to_remove_from_final.append(i)
                 to_remove_from_final.append(j)
                 if im[_y1, _x1] > im[_y2, _x2]:

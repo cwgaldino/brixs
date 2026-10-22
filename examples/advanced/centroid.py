@@ -58,7 +58,7 @@ the centroid method,
             applied. Note that _cm_bkg = 0 implies no 
             flooring before calculating center of mass (same as _cm_bkg=None). 
             Note that, center of mass calculation can yield less precise 
-            results if image is not floored and _cm_bkg >> n. For most cases, 
+            results if image is not floored and _cm_n >> n. For most cases, 
             None is recommended (I think). Default is None.
         _cm_nx, _cm_ny (int): Use this to overwrite the number of neighbors when
             calculating the center of mass of a photon hit candidate, e.g., if 
@@ -67,7 +67,7 @@ the centroid method,
         _cm_spot_zero_type (str): when calculating the center of mass of a 
             candidate, pixels around the candidate cannot be negative, otherwise
             center of mass calculation can yield to less precise result (the
-            result of the center of mass calculation can even be a detector
+            result of the center of mass calculation can even yield a photon
             position "outside" the range of the detector). Therefore, if a 
             negative pixel intensity is present around a candidate there is 
             two thing we can do 1) set it to zero (which makes sense because

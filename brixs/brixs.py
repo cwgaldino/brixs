@@ -2179,7 +2179,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         #######################################
         # checking that spectrum is not empty #
         #######################################
-        if len(self) > 0:
+        if len(self) == 0:
             return self.copy()
 
         ##############################################
@@ -2235,7 +2235,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         # checking that spectrum is not empty
-        if len(self) > 0:
+        if len(self) == 0:
             return self.copy()
 
         # copy x and y and calculate derivative
@@ -2351,7 +2351,7 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
             :py:class:`Spectrum`
         """
         # checking that spectrum is not empty
-        if len(self) > 0:
+        if len(self) == 0:
             return self.copy()
   
         # sort start and stop
