@@ -813,7 +813,7 @@ def _centroid(self, n1, n2, avg_threshold, double_threshold, floor=False, avg_th
         if avg_threshold_max <= avg_threshold:
             raise ValueError(f'avg_threshold_max must be greater than avg_threshold\n'
                             f'avg_threshold: {avg_threshold}\n'
-                            f'avg_threshold_max: {avg_threshold
+                            f'avg_threshold_max: {avg_threshold}')
         if n2 > 0:
             cp = np.argwhere((image.data[n2//2:-n2//2, n2//2:-n2//2] > avg_threshold)*(image.data[n2//2 : -n2//2, n2//2 : -n2//2] < avg_threshold_max))
         else:

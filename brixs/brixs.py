@@ -888,7 +888,10 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         
         # check length
         if len(value) != len(self.y):
-            raise ValueError(f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).')
+            if len(self.y) == 0:
+                self._y = np.arange(0, len(value))  # this allows us to do br.Spectrum(x=[1, 2, 3])
+            else:
+                raise ValueError(f'Length of x array (len={len(value)}) you are trying to set is not compatible with current length of the y array (len={len(self.y)}).')
         
         #################
         # set attribute #
@@ -934,7 +937,10 @@ class Spectrum(_BrixsObject, metaclass=_Meta):
         
         # check length
         if len(value) != len(self.x):
-            raise ValueError(f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).')
+            if len(self.x) == 0:
+                self._x = np.arange(0, len(value))  # this allows us to do br.Spectrum(y=[1, 2, 3])
+            else:
+                raise ValueError(f'Length of y-array (len={len(value)}) you are trying to set is not compatible with current length of the x-array (len={len(self.x)}).')
 
         #################
         # set attribute #
