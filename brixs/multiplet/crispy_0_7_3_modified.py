@@ -133,9 +133,9 @@ class _settings():
         return self._TEMPLATES_FOLDERPATH
     @TEMPLATES_FOLDERPATH.setter
     def TEMPLATES_FOLDERPATH(self, value):
-        if not isinstance(folderpath, (str, Path)):
+        if not isinstance(value, (str, Path)):
             raise TypeError(f'folderpath must be a string or Path object, not {type(folderpath).__name__}')
-        folderpath = Path(folderpath)
+        folderpath = Path(value)
         if not folderpath.exists():
             raise FileNotFoundError(f'folderpath does not exist: {folderpath}')
         if folderpath.is_file():
@@ -778,7 +778,8 @@ class Calculation(object):
         # the magnetic field orientation needs to be rotated to the 
         # crystal field coordinate system)
         if magneticField_coordinate_system not in ['cf', 'lab']:
-            raise ValueError('magneticField_coordinate_system must be either `cf` or `lab`')        self._magneticField_coordinate_system = magneticField_coordinate_system
+            raise ValueError('magneticField_coordinate_system must be either `cf` or `lab`')        
+        self._magneticField_coordinate_system = magneticField_coordinate_system
         if magneticField is None:
             raise ValueError('Magnetic field value must be number bigger than 0.002 T. To turn off magnetic field hamiltonian, please use hamiltonianState["Magnetic Field"] = False')     
         elif magneticField < 0:
@@ -787,7 +788,8 @@ class Calculation(object):
             raise ValueError('Magnetic field cannot be smaller than 0.002 T. Please, turn off the magnetic field hamiltonian using hamiltonianState["Magnetic Field"] = False')     
         self._magneticField = magneticField 
         if len(magneticFieldOrientation) != 3:
-            raise ValueError('magneticFieldOrientation must be a vector, like [0, 1, 0].')        self._magneticFieldOrientation = br.normalize_vector(magneticFieldOrientation)
+            raise ValueError('magneticFieldOrientation must be a vector, like [0, 1, 0].')        
+        self._magneticFieldOrientation = br.normalize_vector(magneticFieldOrientation)
         self._update_magnetic_field_hamiltonian_data() 
 
         # experiment attributes
@@ -1476,7 +1478,7 @@ class Calculation(object):
         if value is None:
             value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][0][5][0]
         if value <= 0:
-            raise ValueError('gamma1 must be greater than zero'
+            raise ValueError('gamma1 must be greater than zero')
         self._gamma1 = value
     @gamma1.deleter
     def gamma1(self):
@@ -1491,7 +1493,7 @@ class Calculation(object):
             if value is None:
                 value = settings.PARAMETERS['elements'][self.element]['charges'][self.charge]['symmetries'][self.symmetry]['experiments'][self.experiment]['edges'][self.edge]['axes'][1][5][0]       
             if value <= 0:
-                raise ValueError('gamma2 must be greater than zero'
+                raise ValueError('gamma2 must be greater than zero')
             self._gamma2 = value
         else:
             raise AttributeError(f'`gamma2` is only used for calculation of RIXS spectra and is not used for experiment of type: {self.experiment}') 
@@ -2520,246 +2522,246 @@ class Calculation(object):
                 >>> data['ss'].keys()   # -> rv, rh, lv, lh, r, l
                 >>> data['ims'].keys()  # -> rv, rh, lv, lh, r, l
         """
-    if self.experiment != 'RIXS':
-        raise ValueError('This only works for experiment=RIXS')
-    if not update:
-        raise ValueError('The current implementation requires `update=True`. '
-                        'If you need `update=False`, this function must be revised.')
-    if npoints <= 1:
-        raise ValueError(f'Invalid npoints ({npoints}). npoints must be greater than 1')
+        if self.experiment != 'RIXS':
+            raise ValueError('This only works for experiment=RIXS')
+        if not update:
+            raise ValueError('The current implementation requires `update=True`. '
+                            'If you need `update=False`, this function must be revised.')
+        if npoints <= 1:
+            raise ValueError(f'Invalid npoints ({npoints}). npoints must be greater than 1')
 
-        # update lua script
-        self._is_energy_map = True
-        try:
-            self.update_lua_script()
-        except Exception as e:
-            raise e
-        finally:
-            self._is_energy_map = False
+            # update lua script
+            self._is_energy_map = True
+            try:
+                self.update_lua_script()
+            except Exception as e:
+                raise e
+            finally:
+                self._is_energy_map = False
 
-        # adjust lua script for energy map
-        replacements = odict()
-        replacements['$Emin1'] = Emin
-        replacements['$Emax1'] = Emax
-        replacements['$NE1']   = npoints - 1
+            # adjust lua script for energy map
+            replacements = odict()
+            replacements['$Emin1'] = Emin
+            replacements['$Emax1'] = Emax
+            replacements['$NE1']   = npoints - 1
 
-        for replacement in replacements:
-            self.lua_script = self.lua_script.replace(
-                replacement, str(replacements[replacement]))
+            for replacement in replacements:
+                self.lua_script = self.lua_script.replace(
+                    replacement, str(replacements[replacement]))
 
-        # save temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
-            fp.write(self.lua_script.encode('utf-8'))
-            fp.close()
-            _out = quanty(fp.name, wsl=wsl)
-        os.unlink(fp.name)
-        
-        # get spectra from output
-        _x = np.linspace(self.xMin, self.xMax, self.xNPoints)  # _x = np.linspace(self.xMin, self.xMax, self.xNPoints + 1)
-
-        if self.polarization.lower() == 'isotropic':
-            # =============== iso =============== #
-            _out2 = _out.split('Here starts Giso spectrum:')[1].split('Here ends Giso spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss.append(br.Spectrum(_x, _y))
-
-            # calculation metadata
-            parameters = self.get_parameters()
-            for _ss in (ss, ):
-                _ss.E = np.linspace(Emin, Emax, npoints)
-                for _name in parameters:
-                    _ss.__setattr__(_name, parameters[_name])
-                _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+            # save temporary file
+            with tempfile.NamedTemporaryFile(delete=False) as fp:
+                fp.write(self.lua_script.encode('utf-8'))
+                fp.close()
+                _out = quanty(fp.name, wsl=wsl)
+            os.unlink(fp.name)
             
-            # create images
-            im = ss.stack_spectra_as_columns()
-            im.x_centers = ss.E
+            # get spectra from output
+            _x = np.linspace(self.xMin, self.xMax, self.xNPoints)  # _x = np.linspace(self.xMin, self.xMax, self.xNPoints + 1)
 
-            # create xas
-            xas = br.Spectrum(x=ss.E, y=ss.calculate_y_sum())
+            if self.polarization.lower() == 'isotropic':
+                # =============== iso =============== #
+                _out2 = _out.split('Here starts Giso spectrum:')[1].split('Here ends Giso spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss.append(br.Spectrum(_x, _y))
 
-            # output is everything before first spectrum
-            out = _out.split('Here starts Giso spectrum:')[0]
-
-            return {'ss': ss, 'im': im, 'xas': xas}, out
-        elif self.polarization.lower() == 'linear':
-            # =============== vv =============== #
-            _out2 = _out.split('Here starts Gvv spectrum:')[1].split('Here ends Gvv spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            ss_vv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_vv.append(br.Spectrum(_x, _y))
-
-            # =============== vh =============== #
-            _out2 = _out.split('Here starts Gvh spectrum:')[1].split('Here ends Gvh spectrum')[0].split('\n')
-            ss_vh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_vh.append(br.Spectrum(_x, _y))
-
-            # =============== hv =============== #
-            _out2 = _out.split('Here starts Ghv spectrum:')[1].split('Here ends Ghv spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            ss_hv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_hv.append(br.Spectrum(_x, _y))
-
-            # =============== hh =============== #
-            _out2 = _out.split('Here starts Ghh spectrum:')[1].split('Here ends Ghh spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            ss_hh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_hh.append(br.Spectrum(_x, _y))
-
-            # =============== v and h =============== #
-            ss_v = br.Spectra()
-            ss_h = br.Spectra()
-            for i in range(len(ss_hh)):
-                _s = br.Spectra([ss_vv[i], ss_vh[i]]).calculate_average()
-                ss_v.append(_s)
-
-                _s = br.Spectra([ss_hv[i], ss_hh[i]]).calculate_average()
-                ss_h.append(_s)
-
-            # calculation metadata
-            parameters = self.get_parameters()
-            for _ss in (ss_vv, ss_vh, ss_hv, ss_hh, ss_v, ss_h):
-                _ss.E = np.linspace(Emin, Emax, npoints)
-                for _name in parameters:
-                    _ss.__setattr__(_name, parameters[_name])
-                _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
-            
-            # create images
-            ss  = {'vv':ss_vv, 'vh':ss_vh, 'hv':ss_hv, 'hh':ss_hh, 'v':ss_v, 'h':ss_h}
-            ims = {}
-            for _pol in ss:
-                ims[_pol] = ss[_pol].stack_spectra_as_columns()
-                ims[_pol].x_centers = ss[_pol].E
-
-            # create xas
-            xas = {}
-            for _pol in ss:
-                xas[_pol] = br.Spectrum(x=ss[_pol].E, y=ss[_pol].calculate_y_sum())
-
-            # output is everything before first spectrum
-            out = _out.split('Here starts Gvv spectrum:')[0]
+                # calculation metadata
+                parameters = self.get_parameters()
+                for _ss in (ss, ):
+                    _ss.E = np.linspace(Emin, Emax, npoints)
+                    for _name in parameters:
+                        _ss.__setattr__(_name, parameters[_name])
+                    _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
                 
-            return {'ss': ss, 'im': im, 'xas': xas}, out
-        elif self.polarization.lower() == 'circular':
-            # =============== rv =============== #
-            _out2 = _out.split('Here starts Grv spectrum:')[1].split('Here ends Grv spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            ss_rv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_rv.append(br.Spectrum(_x, _y))
+                # create images
+                im = ss.stack_spectra_as_columns()
+                im.x_centers = ss.E
 
-            # =============== rh =============== #
-            _out2 = _out.split('Here starts Grh spectrum:')[1].split('Here ends Grh spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss_rh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_rh.append(br.Spectrum(_x, _y))
+                # create xas
+                xas = br.Spectrum(x=ss.E, y=ss.calculate_y_sum())
 
-            # =============== lv =============== #
-            _out2 = _out.split('Here starts Glv spectrum:')[1].split('Here ends Glv spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
-            ss_lv = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_lv.append(br.Spectrum(_x, _y))
+                # output is everything before first spectrum
+                out = _out.split('Here starts Giso spectrum:')[0]
 
-            # =============== lh =============== #
-            _out2 = _out.split('Here starts Glh spectrum:')[1].split('Here ends Glh spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss_lh = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_lh.append(br.Spectrum(_x, _y))
+                return {'ss': ss, 'im': im, 'xas': xas}, out
+            elif self.polarization.lower() == 'linear':
+                # =============== vv =============== #
+                _out2 = _out.split('Here starts Gvv spectrum:')[1].split('Here ends Gvv spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                ss_vv = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_vv.append(br.Spectrum(_x, _y))
 
-            # =============== rr =============== #
-            _out2 = _out.split('Here starts Grr spectrum:')[1].split('Here ends Grr spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss_rr = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_rr.append(br.Spectrum(_x, _y))
+                # =============== vh =============== #
+                _out2 = _out.split('Here starts Gvh spectrum:')[1].split('Here ends Gvh spectrum')[0].split('\n')
+                ss_vh = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_vh.append(br.Spectrum(_x, _y))
 
-            # =============== rl =============== #
-            _out2 = _out.split('Here starts Grl spectrum:')[1].split('Here ends Grl spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss_rl = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_rl.append(br.Spectrum(_x, _y))
+                # =============== hv =============== #
+                _out2 = _out.split('Here starts Ghv spectrum:')[1].split('Here ends Ghv spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                ss_hv = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_hv.append(br.Spectrum(_x, _y))
 
-            # =============== lr =============== #
-            _out2 = _out.split('Here starts Glr spectrum:')[1].split('Here ends Glr spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss_lr = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_lr.append(br.Spectrum(_x, _y))
+                # =============== hh =============== #
+                _out2 = _out.split('Here starts Ghh spectrum:')[1].split('Here ends Ghh spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                ss_hh = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_hh.append(br.Spectrum(_x, _y))
 
-            # =============== ll =============== #
-            _out2 = _out.split('Here starts Gll spectrum:')[1].split('Here ends Gll spectrum')[0].split('\n')
-            _out3 = [_ for _ in _out2 if _ != '']
-            # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
-            ss_ll = br.Spectra()
-            for i in np.arange(2, (npoints+1)*2, 2):
-                _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
-                ss_ll.append(br.Spectrum(_x, _y))
-            
-            # =============== r and l =============== #
-            ss_r = br.Spectra()
-            ss_l = br.Spectra()
-            for i in range(len(ss_lh)):
-                _s = br.Spectra([ss_rv[i], ss_rh[i]]).calculate_average()
-                ss_r.append(_s)
+                # =============== v and h =============== #
+                ss_v = br.Spectra()
+                ss_h = br.Spectra()
+                for i in range(len(ss_hh)):
+                    _s = br.Spectra([ss_vv[i], ss_vh[i]]).calculate_average()
+                    ss_v.append(_s)
 
-                _s = br.Spectra([ss_lv[i], ss_lh[i]]).calculate_average()
-                ss_l.append(_s)
+                    _s = br.Spectra([ss_hv[i], ss_hh[i]]).calculate_average()
+                    ss_h.append(_s)
 
-            # calculation metadata
-            parameters = self.get_parameters()
-            for _ss in (ss_rv, ss_rh, ss_lv, ss_lh, ss_rr, ss_rl, ss_lr, ss_ll, ss_r, ss_l):
-                _ss.E = np.linspace(Emin, Emax, npoints)
-                for _name in parameters:
-                    _ss.__setattr__(_name, parameters[_name])
-                _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+                # calculation metadata
+                parameters = self.get_parameters()
+                for _ss in (ss_vv, ss_vh, ss_hv, ss_hh, ss_v, ss_h):
+                    _ss.E = np.linspace(Emin, Emax, npoints)
+                    for _name in parameters:
+                        _ss.__setattr__(_name, parameters[_name])
+                    _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+                
+                # create images
+                ss  = {'vv':ss_vv, 'vh':ss_vh, 'hv':ss_hv, 'hh':ss_hh, 'v':ss_v, 'h':ss_h}
+                ims = {}
+                for _pol in ss:
+                    ims[_pol] = ss[_pol].stack_spectra_as_columns()
+                    ims[_pol].x_centers = ss[_pol].E
 
-            # create images
-            ss  = {'rv':ss_rv, 'rh':ss_rh, 'lv':ss_lv, 'lh':ss_lh, 'rr':ss_rr, 'rl':ss_rl, 'lr':ss_lr, 'll':ss_ll, 'r':ss_r, 'l':ss_l}
-            ims = {}
-            for _pol in ss:
-                ims[_pol] = ss[_pol].stack_spectra_as_columns()
-                ims[_pol].x_centers = ss[_pol].E
+                # create xas
+                xas = {}
+                for _pol in ss:
+                    xas[_pol] = br.Spectrum(x=ss[_pol].E, y=ss[_pol].calculate_y_sum())
 
-            # create xas
-            xas = {}
-            for _pol in ss:
-                xas[_pol] = br.Spectrum(x=ss[_pol].E, y=ss[_pol].calculate_y_sum())
+                # output is everything before first spectrum
+                out = _out.split('Here starts Gvv spectrum:')[0]
+                    
+                return {'ss': ss, 'im': im, 'xas': xas}, out
+            elif self.polarization.lower() == 'circular':
+                # =============== rv =============== #
+                _out2 = _out.split('Here starts Grv spectrum:')[1].split('Here ends Grv spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                ss_rv = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_rv.append(br.Spectrum(_x, _y))
 
-            # output is everything before first spectrum
-            out = _out.split('Here starts Grv spectrum:')[0]
+                # =============== rh =============== #
+                _out2 = _out.split('Here starts Grh spectrum:')[1].split('Here ends Grh spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss_rh = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_rh.append(br.Spectrum(_x, _y))
 
-            return {'ss': ss, 'ims': ims, 'xas': xas}, out
-        return 
+                # =============== lv =============== #
+                _out2 = _out.split('Here starts Glv spectrum:')[1].split('Here ends Glv spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                _y = [float(_.split(' ')[2]) for _ in _out3[5:]]
+                ss_lv = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_lv.append(br.Spectrum(_x, _y))
+
+                # =============== lh =============== #
+                _out2 = _out.split('Here starts Glh spectrum:')[1].split('Here ends Glh spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss_lh = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_lh.append(br.Spectrum(_x, _y))
+
+                # =============== rr =============== #
+                _out2 = _out.split('Here starts Grr spectrum:')[1].split('Here ends Grr spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss_rr = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_rr.append(br.Spectrum(_x, _y))
+
+                # =============== rl =============== #
+                _out2 = _out.split('Here starts Grl spectrum:')[1].split('Here ends Grl spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss_rl = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_rl.append(br.Spectrum(_x, _y))
+
+                # =============== lr =============== #
+                _out2 = _out.split('Here starts Glr spectrum:')[1].split('Here ends Glr spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss_lr = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_lr.append(br.Spectrum(_x, _y))
+
+                # =============== ll =============== #
+                _out2 = _out.split('Here starts Gll spectrum:')[1].split('Here ends Gll spectrum')[0].split('\n')
+                _out3 = [_ for _ in _out2 if _ != '']
+                # _x = [float(_.split(' ')[0]) for _ in _out3[5:]]
+                ss_ll = br.Spectra()
+                for i in np.arange(2, (npoints+1)*2, 2):
+                    _y = [float(_.strip().replace('  ', ' ').split(' ')[i]) for _ in _out3[5:]]
+                    ss_ll.append(br.Spectrum(_x, _y))
+                
+                # =============== r and l =============== #
+                ss_r = br.Spectra()
+                ss_l = br.Spectra()
+                for i in range(len(ss_lh)):
+                    _s = br.Spectra([ss_rv[i], ss_rh[i]]).calculate_average()
+                    ss_r.append(_s)
+
+                    _s = br.Spectra([ss_lv[i], ss_lh[i]]).calculate_average()
+                    ss_l.append(_s)
+
+                # calculation metadata
+                parameters = self.get_parameters()
+                for _ss in (ss_rv, ss_rh, ss_lv, ss_lh, ss_rr, ss_rl, ss_lr, ss_ll, ss_r, ss_l):
+                    _ss.E = np.linspace(Emin, Emax, npoints)
+                    for _name in parameters:
+                        _ss.__setattr__(_name, parameters[_name])
+                    _ss.hamiltonian['hamiltonianData'] = remove_greek_letters_from_hamiltonianData(_ss.hamiltonian['hamiltonianData'])
+
+                # create images
+                ss  = {'rv':ss_rv, 'rh':ss_rh, 'lv':ss_lv, 'lh':ss_lh, 'rr':ss_rr, 'rl':ss_rl, 'lr':ss_lr, 'll':ss_ll, 'r':ss_r, 'l':ss_l}
+                ims = {}
+                for _pol in ss:
+                    ims[_pol] = ss[_pol].stack_spectra_as_columns()
+                    ims[_pol].x_centers = ss[_pol].E
+
+                # create xas
+                xas = {}
+                for _pol in ss:
+                    xas[_pol] = br.Spectrum(x=ss[_pol].E, y=ss[_pol].calculate_y_sum())
+
+                # output is everything before first spectrum
+                out = _out.split('Here starts Grv spectrum:')[0]
+
+                return {'ss': ss, 'ims': ims, 'xas': xas}, out
+            return 
 
     def get_initial_wavefunctions(self):
         """Returns a string with details of the initial havefunctions

@@ -15,15 +15,15 @@ import brixs as br
 # %%
 
 # %% ============================= support =============================== %% #
-def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, coordinates='centers', MAX_NUMBER_OF_CANDIDATES=1000):
+def get_positions_above_threshold_old(self, threshold, threshold2=None, nx=0, ny=0, coordinates='centers', MAX_NUMBER_OF_CANDIDATES=1000):
     """returns list of y, x positions where pixel intensity is above threshold
 
     This is an approximate description of the algorithm:
     1) search for all pixel values that satisfies: threshold < value < threshold2
-    2) if many pixels above the threshold are close (< n), then keep only the
+    2) if pixel positions above the threshold are close (< n), then keep only the
     one with maximum value (brightest pixel).
     3) Brightest pixel positions that are closer than n pixels of another
-    brightest pixel position are removed from the main position list and put on
+    brightest pixel position are removed from the main list and put on
     the secondary list
 
     Args:
@@ -119,7 +119,7 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
         np.fill_diagonal(close, False)  # A photon should not count itself
         has_neighbor = close.any(axis=1)
 
-        isolated = central[~has_neighbor].tolist()
+        isolated    = central[~has_neighbor].tolist()
         neighboring = central[has_neighbor].tolist()
         central = isolated
         for position in neighboring:
@@ -132,9 +132,77 @@ def get_positions_above_threshold(self, threshold, threshold2=None, nx=0, ny=0, 
         central2 = [self.index2center(y=_[0], x=_[1]) for _ in central2]
 
     return central, central2
+# br.Image.get_positions_above_threshold = get_positions_above_threshold
+
+def get_positions_above_threshold(self, threshold, threshold2=None, coordinates='centers'):
+    """returns list of y, x positions where pixel intensity is above threshold
+
+    This is an approximate description of the algorithm:
+    1) search for all pixel values that satisfies: threshold < value < threshold2
+    2) if pixel positions above the threshold are close (< n), then keep only the
+    one with maximum value (brightest pixel).
+    3) Brightest pixel positions that are closer than n pixels of another
+    brightest pixel position are removed from the main list and put on
+    the secondary list
+
+    Args:
+        threshold (number): threshold value
+        threshold2 (number, optional): upper limit for threshold. If 
+            threshold2 is not None, pixel values
+            above threshold2 will be placed in a separate list. Default is None.
+        nx, ny (int, optional): If n>0, only the brightest pixel around the first 
+            n neighbors of the (y, x) positions will trigger the threshold,
+            e.g., if n=0 and all first neighbors around (y, x) are above the 
+            threshold, then all positions (y-1, x-1), ..., (y+1, x+1), all 
+            positions which intensity is above threshold will be considered.
+            However, if n=1 and all first neighbors around (y, x) are above the 
+            threshold, only the (yb, xb) with the brightest intensity amongst
+            all (y-1, x-1), ..., (y+1, x+1) will be considered. This is helpful
+            when bright spot are more than one pixel wide. Default is n=0.
+        coordinates (str, optional): If `pixels`, (y, x) is given in pixel 
+            coordinates. If `centers`, (y, x) is given in terms of x_centers
+            and y_centers. Default is `centers`.
+        MAX_NUMBER_OF_CANDIDATES (int, optional): raises error if number of 
+            pixels with intensity higher than the threshold is larger than 
+            MAX_NUMBER_OF_CANDIDATES. Note that this will take into account
+            every pixel with intensity above the threshold (without excluding
+            pixels around (nx, ny) brightest pixels. Default is 1000.
+            Useful for preventing setting up the threshold too low.
+
+    Returns:
+        pos  (main position list)
+        pos2 (secondary position list)
+
+        pos:  list of positions [(y1, x1), (y2, x2), ...] for pixel values between threshold and threshold2
+        pos2: list of positions [(y1, x1), (y2, x2), ...] for pixel values above threshold2 or with close bright pixels
+
+    """
+    if coordinates not in ('pixels', 'centers'):
+        raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
+
+    if threshold2 is None:
+        ys, xs   = np.where(self.data > threshold)
+        ys2, xs2 = np.array([], dtype=int), np.array([], dtype=int)
+    else:
+        ys, xs   = np.where(np.logical_and(self.data > threshold, self.data < threshold2))
+        ys2, xs2 = np.where(self.data >= threshold2)
+
+    central  = []
+    central2 = []
+    for y, x in zip(ys, xs):
+        central.append((y, x))
+    for y, x in zip(ys2, xs2):
+        central2.append((y, x))
+
+    # converto from pixel to centers
+    if coordinates == 'centers':
+        central  = [self.index2center(y=_[0], x=_[1]) for _ in central]
+        central2 = [self.index2center(y=_[0], x=_[1]) for _ in central2]
+
+    return central, central2
 br.Image.get_positions_above_threshold = get_positions_above_threshold
 
-def get_brightest_pixel_position(self, y, x, ny, nx, coordinates='centers'):
+def get_brightest_pixel_position(self, y, x, ny, nx, coordinates='centers', ):
     """Returns the positions of the most intense pixel around y, x
 
     Args:
@@ -236,10 +304,6 @@ def enhance(self, bkg='auto', square=True, nx=2, ny=2):
             im = self.set_offset(-bkg)
     else:
         im = self.copy()
-
-    # square
-    if square:
-        im = im.multiply(im)
     
     # moving average
     if nx is not None:
@@ -248,6 +312,10 @@ def enhance(self, bkg='auto', square=True, nx=2, ny=2):
     if ny is not None:
         if ny > 1:
             im = im.moving_average_y(ny)
+
+    # square
+    if square:
+        im = im.multiply(im)
 
     return im
 br.Image.enhance = enhance
@@ -259,7 +327,7 @@ def find_candidates(self, nx, ny, threshold, threshold2=None,
 
     This is an approximate description of the algorithm:
     1) enhance image (floor, square, moving average)
-    2) get all positions where pixel intensity is above threshold
+    2) get all positions where pixel intensity is above threshold (in the enhanced image)
     3) for positions that are too close (<=nx, <=ny), keep only the one for the brightest pixel
     4) go back to the original image and find brightest pixel around the positions
     suggested by the enhanced image 
@@ -318,45 +386,124 @@ def find_candidates(self, nx, ny, threshold, threshold2=None,
     im = self.enhance(bkg=_bkg, square=_square, nx=_nx, ny=_ny)
 
     # find photon hit candidates from the enhanced image
-    pos, pos2 = im.get_positions_above_threshold(threshold=threshold, threshold2=threshold2, ny=ny, nx=nx, coordinates='centers', MAX_NUMBER_OF_CANDIDATES=MAX_NUMBER_OF_CANDIDATES)
+    # pos, pos2 = im.get_positions_above_threshold(threshold=threshold, threshold2=threshold2, ny=ny, nx=nx, coordinates='centers', MAX_NUMBER_OF_CANDIDATES=MAX_NUMBER_OF_CANDIDATES)
+    pos, pos2 = im.get_positions_above_threshold(threshold=threshold, threshold2=threshold2, coordinates='pixels')
     
+    if len(pos) + len(pos2) > MAX_NUMBER_OF_CANDIDATES:
+        raise ValueError(f'number of photon hit candidates ({len(pos)+len(pos2)}) is higher than MAX_NUMBER_OF_CANDIDATES={MAX_NUMBER_OF_CANDIDATES}. Maybe try increasing MAX_NUMBER_OF_CANDIDATES or `threshold`')
+
+
+    # convert from pixel to centers
+    central  = [self.index2center(y=_[0], x=_[1]) for _ in pos]
+    central2 = [self.index2center(y=_[0], x=_[1]) for _ in pos2]
+
     # get brightest pixel around candidates in the original image
-    final  = []
-    final2 = []
-    for _pos in pos2:
-        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], ny=ny, nx=nx, coordinates='centers')
-        if (y, x) not in final2:
-            final2.append((y, x))
-    for _pos in pos:
-        y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], ny=ny, nx=nx, coordinates='centers')
-        if (y, x) not in final and (y, x) not in final2:
-            final.append((y, x))
-    
-    # remove two brightest pixels that are closer then nx and ny
-    to_remove_from_final = []
-    to_add_to_final2 = []
-    for i, _a in enumerate(final):
-        _y1, _x1 = _a
-        for j, _b in enumerate(final[i+1:]):
-            _y2, _x2 = _b
-            if abs(_y2-_y1) <= ny and abs(_x2-_x1) <= nx:
-                to_remove_from_final.append(i)
-                to_remove_from_final.append(j)
-                if im[_y1, _x1] > im[_y2, _x2]:
-                    to_add_to_final2.append(i)
+    central  = []
+    central2 = []
+    if ny>0 or nx>0:
+        if threshold2 is not None:
+            for _y, _x in pos2:
+
+                if _nx%2 == 0 and _ny%2 == 0:
+                    # this is new, it is because if _n is even and large and 
+                    # the detector has large spots, than getting a spot that is
+                    # centered around an corner is more intuitive
+                    spot, yslice, xslice, is_near_edge = self.get_spot(y=_y, x=_x, ny=ny, nx=nx, coordinates='centers')
+                    spot = br.Image(data=spot.data[1:, 1:])
+                    _y, _x = spot.argmax(coordinates='pixels')
+                    _y = int(yslice.start+_y+1)
+                    _x = int(xslice.start+_x+1)
+                    _y, _x = self.index2center(y=_y, x=_x)
                 else:
-                    to_add_to_final2.append(j)
-    to_remove_from_final = br.remove_duplicates(to_remove_from_final)
-    to_add_to_final2 = br.remove_duplicates(to_add_to_final2)
+                    _y, _x = self.get_brightest_pixel_position(y=_y, x=_x, ny=ny, nx=nx, coordinates='centers')
+                bright_pixel = (_y, _x)
+                if bright_pixel not in central2:
+                    central2.append(bright_pixel)
+
+        if len(pos) > 0:
+            for _y, _x in pos:
+                if _nx%2 == 0 and _ny%2 == 0:
+                    spot, yslice, xslice, is_near_edge = self.get_spot(y=_y, x=_x, ny=ny, nx=nx, coordinates='centers')
+                    spot = br.Image(data=spot.data[1:, 1:])
+                    _y, _x = spot.argmax(coordinates='pixels')
+                    _y = int(yslice.start+_y+1)
+                    _x = int(xslice.start+_x+1)
+                    _y, _x = self.index2center(y=_y, x=_x)
+                else:
+                    _y, _x = self.get_brightest_pixel_position(y=_y, x=_x, ny=ny, nx=nx, coordinates='centers')
+                bright_pixel = (_y, _x)
+                if bright_pixel not in central and bright_pixel not in central2:
+                    central.append(bright_pixel)
+    else:
+        central  = pos
+        central2 = pos2
+
+    # remove positions that are too close from each other
+    if len(central) > 0:
+        central = np.asarray(central)
+        ys = central[:, 0]
+        xs = central[:, 1]
+
+        dx = np.abs(xs[:, None] - xs[None, :])
+        dy = np.abs(ys[:, None] - ys[None, :])
+
+        close = (dx <= nx) & (dy <= ny)
+        np.fill_diagonal(close, False)  # A photon should not count itself
+        has_neighbor = close.any(axis=1)
+
+        isolated    = central[~has_neighbor].tolist()
+        neighboring = central[has_neighbor].tolist()
+        central = isolated
+        for position in neighboring:
+            if position not in central2:
+                central2.append(position)
 
     # build photon events list
-    x=[_[1] for i, _ in enumerate(final) if i not in to_remove_from_final]
-    y=[_[0] for i, _ in enumerate(final) if i not in to_remove_from_final]
+    x=[_[1] for i, _ in enumerate(central)]
+    y=[_[0] for i, _ in enumerate(central)]
     pe = br.PhotonEvents(x=x, y=y)
 
-    x=[_[1] for i, _ in enumerate(final2)] + [_[1] for i, _ in enumerate(final) if i in to_add_to_final2]
-    y=[_[0] for i, _ in enumerate(final2)] + [_[0] for i, _ in enumerate(final) if i in to_add_to_final2]
+    x=[_[1] for i, _ in enumerate(central2)]
+    y=[_[0] for i, _ in enumerate(central2)]
     pe2 = br.PhotonEvents(x=x, y=y)
+    
+    # # get brightest pixel around candidates in the original image
+    # final  = []
+    # final2 = []
+    # for _pos in pos2:
+    #     y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], ny=ny, nx=nx, coordinates='centers')
+    #     if (y, x) not in final2:
+    #         final2.append((y, x))
+    # for _pos in pos:
+    #     y, x = self.get_brightest_pixel_position(y=_pos[0], x=_pos[1], ny=ny, nx=nx, coordinates='centers')
+    #     if (y, x) not in final and (y, x) not in final2:
+    #         final.append((y, x))
+    
+    # # remove two brightest pixels that are closer then nx and ny
+    # to_remove_from_final = []
+    # to_add_to_final2 = []
+    # for i, _a in enumerate(final):
+    #     _y1, _x1 = _a
+    #     for j, _b in enumerate(final[i+1:]):
+    #         _y2, _x2 = _b
+    #         if abs(_y2-_y1) <= ny and abs(_x2-_x1) <= nx:
+    #             to_remove_from_final.append(i)
+    #             to_remove_from_final.append(j)
+    #             if im[_y1, _x1] > im[_y2, _x2]:
+    #                 to_add_to_final2.append(i)
+    #             else:
+    #                 to_add_to_final2.append(j)
+    # to_remove_from_final = br.remove_duplicates(to_remove_from_final)
+    # to_add_to_final2 = br.remove_duplicates(to_add_to_final2)
+
+    # # build photon events list
+    # x=[_[1] for i, _ in enumerate(final) if i not in to_remove_from_final]
+    # y=[_[0] for i, _ in enumerate(final) if i not in to_remove_from_final]
+    # pe = br.PhotonEvents(x=x, y=y)
+
+    # x=[_[1] for i, _ in enumerate(final2)] + [_[1] for i, _ in enumerate(final) if i in to_add_to_final2]
+    # y=[_[0] for i, _ in enumerate(final2)] + [_[0] for i, _ in enumerate(final) if i in to_add_to_final2]
+    # pe2 = br.PhotonEvents(x=x, y=y)
 
     return pe, pe2
 br.Image.find_candidates = find_candidates

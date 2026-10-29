@@ -9947,12 +9947,11 @@ class Image(_BrixsObject, metaclass=_Meta):
 
     
     def get_spot(self, y, x, ny, nx, coordinates='centers'):
-        """return a square image with side (ny*2+1, nx*2+1) with pixels surrounding x, y
+        """return a rectangular image with sides (ny*2+1, nx*2+1) containing pixels surrounding x, y
 
         Note:
             if x, y is too close to the edges, spot is considered up the edge and 
-            final spot may not be a square array and may have sides shorter than  
-            n*2+1
+            final spot may have sides shorter than n*2+1
 
         Args:
             y, x (tuple or list): (y, x) position in terms of pixel value (if 
@@ -9960,7 +9959,7 @@ class Image(_BrixsObject, metaclass=_Meta):
                 coordinates='centers').
             ny, nx (int): number of neighbors to include, e.g., if ny=nx=1, only first neighbors 
                 will be considered and the spot will be a 3x3 array.
-            coordinates (str, optional): `pixels` if pixel positions are given in 
+            coordinates (str, optional): `pixels` if pixel positions (x, y) are given in 
                 pixel coordinates or `centers` if positions are given in terms of 
                 y_centers and x_centers.
 
@@ -9977,6 +9976,10 @@ class Image(_BrixsObject, metaclass=_Meta):
         # check if arguments make sense
         if coordinates not in ('pixels', 'centers'):
             raise ValueError(f'coordinates must be either `pixels` or `centers`, not `{coordinates}`')
+        if not numanip.is_number(x):
+            raise TypeError(f'x must be a number, not {type(x).__name__}')
+        if not numanip.is_number(y):
+            raise TypeError(f'y must be a number, not {type(y).__name__}')
         if not numanip.is_integer(nx):
             raise TypeError(f'nx must be an integer, not {type(nx).__name__}')
         if not numanip.is_integer(ny):

@@ -130,7 +130,10 @@ def readrixs(scan=None, start=0, stop=None, verbose=False, folderpath='auto', pr
 
     # get filepath
     if prefix     == 'auto': prefix     = settings.PREFIX
-    if folderpath == 'auto': folderpath = settings.FOLDERPATH
+    if folderpath == 'auto': 
+        folderpath = settings.FOLDERPATH
+        if folderpath == '':
+            raise ValueError('You are trying to use folderpath="auto" but i21.settings.FOLDERPATH seem to be undefined, please, define i21.settings.FOLDERPATH')
     if filepath   == 'auto': filepath   = folderpath/ (prefix + str(scan) + '.nxs')       
 
     # open nexus file
@@ -214,7 +217,10 @@ def readxas(scan=None, verbose=False, folderpath='auto', prefix='auto', filepath
 
     # get filepath
     if prefix     == 'auto': prefix     = settings.PREFIX
-    if folderpath == 'auto': folderpath = settings.FOLDERPATH
+    if folderpath == 'auto': 
+        folderpath = settings.FOLDERPATH
+        if folderpath == '':
+            raise ValueError('You are trying to use folderpath="auto" but i21.settings.FOLDERPATH seem to be undefined, please, define i21.settings.FOLDERPATH')
     if filepath   == 'auto': filepath   = folderpath/ (prefix + str(scan) + '.nxs')       
 
     # open nexus file
@@ -274,7 +280,10 @@ def readline(scan=None, verbose=False, folderpath='auto', prefix='auto', filepat
 
     # get filepath
     if prefix     == 'auto': prefix     = settings.PREFIX
-    if folderpath == 'auto': folderpath = settings.FOLDERPATH
+    if folderpath == 'auto': 
+        folderpath = settings.FOLDERPATH
+        if folderpath == '':
+            raise ValueError('You are trying to use folderpath="auto" but i21.settings.FOLDERPATH seem to be undefined, please, define i21.settings.FOLDERPATH')
     if filepath   == 'auto': filepath   = folderpath/ (prefix + str(scan) + '.nxs')      
 
     # open nexus file
