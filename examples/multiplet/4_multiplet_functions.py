@@ -67,25 +67,25 @@ q.save_lua_script('test.lua')
 out = multiplet.quanty('test.lua')
 
 # run calculation
-s, out = q.run()
-print(out)
+out = q.run()
+print(out['output'])
 
 # calculation parameters are stored inside the Spectrum object as attrs
-s.get_attrs()
-s.initial
+out['iso'].get_attrs()
+out['iso'].initial
 
 # plot calculated spectrum
 plt.figure()
-s.plot()
+out['iso'].plot()
 
 # if more than one spectrum is created during the calculation, q.run() returns
 # a dictionary
 q = multiplet.Calculation(element='Cu', charge='2+', symmetry='D4h', experiment='RIXS', edge='L2,3-M4,5 (2p3d)')
 q.polarization = 'linear'
-data, out = q.run()
-print(data.keys())
+out = q.run()
+print(out.keys())
 
 br.figure()
-data['vv'].plot()
-data['hh'].plot()
-print(data['vv'].get_attrs())
+out['vv'].plot()
+out['hh'].plot()
+print(out['vv'].get_attrs())

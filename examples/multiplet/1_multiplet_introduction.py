@@ -102,11 +102,8 @@ print(q.resonance)
 # %% ===================================================================== %% #
 # %% ====================== 4) run calculation ========================= %% #
 # %% ===================================================================== %% #
-ss, out = q.run()
-# `ss` can be a br.Spectrum or a dictionary depending on the type of calculation
-# and `out` is the output text
-# since `ss` can be a br.Spectrum, one can save it to a file using ss.save(filepath)
-
+out = q.run()
+# out is a dictionary with `out['output']` being the output text
 
 # %% ===================================================================== %% #
 # %% ==================== 5) Check available elements ==================== %% #

@@ -180,6 +180,8 @@ hamiltonianData (dict, optional): dictionary with values for the strength
 ###############################################################################
 template (string): loaded template
 lua_script (string): lua script to be run
+templatePath (path, read only): filepath where template was loaded from
+templateName (string, read only): name of the template file
 """
 
 # %% ========================== Standard imports ========================= %% #
@@ -231,7 +233,7 @@ q.templateName    # read only
 q.templatePath    # read only
 
 # set polarization type
-q.polarizations
+q.polarization
 
 # Calculation parameters
 q.verbosity
@@ -292,6 +294,8 @@ print(q.hamiltonianData)
 print(q.template)
 q.update_lua_script()  # Use q.update_lua_script() update lua script
 q.lua_script  
+q.templatePath  # read only
+q.templateName  # read only
 # %%
 
 

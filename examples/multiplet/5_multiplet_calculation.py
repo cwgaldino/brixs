@@ -88,26 +88,26 @@ for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
 
 # run calculation
-s, out = q.run()
+out = q.run()
 
 # plot calculated spectrum
 plt.figure()
-s.plot()
+out['iso'].plot()
 br.labels.xas()
 
 # change spin-orbit
 h = 'Final Hamiltonian'
 q.hamiltonianData['Atomic'][h]['ζ(2p)'][1] = 1.2
-s, out = q.run()
-s.plot()
+out = q.run()
+out['iso'].plot()
 
 # broadening
 plt.figure()
-s.plot(label='raw', marker='o')
-s.broaden(0.5, m=0).plot(label='0.5 gaussian')
-s.broaden(0.5, m=1).plot(label='0.5 lorentzian')
-s.broaden(0.5, m=0.5).plot(label='0.5 (lorentzian + gaussian)')
-s.broaden(0.5, m=1).broaden(0.5, m=0).plot(label='0.5 lorentzian + 0.5 gaussian')
+out['iso'].plot(label='raw', marker='o')
+out['iso'].broaden(0.5, m=0).plot(label='0.5 gaussian')
+out['iso'].broaden(0.5, m=1).plot(label='0.5 lorentzian')
+out['iso'].broaden(0.5, m=0.5).plot(label='0.5 (lorentzian + gaussian)')
+out['iso'].broaden(0.5, m=1).broaden(0.5, m=0).plot(label='0.5 lorentzian + 0.5 gaussian')
 br.leg()
 br.labels.xas()
 # %%
@@ -135,12 +135,12 @@ for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
 
 # run calculation
-ss, out = q.run()
+out = q.run()
 
 # plot calculated spectrum
 plt.figure()
-ss['v'].plot(label='LV')
-ss['h'].plot(label='LH')
+out['v'].plot(label='LV')
+out['h'].plot(label='LH')
 br.labels.xas()
 # %%
 
@@ -161,28 +161,28 @@ Dt = 0.06
 #################
 # Crystal Field #
 #################
-for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
+for h in ['Initial Hamiltonian', 'Intermediate Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dq(3d)'] = round(Dq, 5)
     q.hamiltonianData['Crystal Field'][h]['Ds(3d)'] = round(Ds, 5)
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
 
 # run calculation
-ss, out = q.run()
+out = q.run()
 
 # plot calculated spectrum 1 
 plt.figure()
-ss['vv'].plot(label='LV in, LV out')
-ss['vh'].plot(label='LV in, LH out')
-ss['hv'].plot(label='LH in, LV out')
-ss['hh'].plot(label='LH in, LH out')
-ss['v'].plot(label='LV in, LH and LV out')
-ss['h'].plot(label='LH in, LH and LV out')
+out['vv'].plot(label='LV in, LV out')
+out['vh'].plot(label='LV in, LH out')
+out['hv'].plot(label='LH in, LV out')
+out['hh'].plot(label='LH in, LH out')
+out['v'].plot(label='LV in, LH and LV out')
+out['h'].plot(label='LH in, LH and LV out')
 br.labels.xas()
 
 # XLD
 plt.figure()
-ss['v'].plot(label='LV in')
-ss['h'].plot(label='LH in')
+out['v'].plot(label='LV in')
+out['h'].plot(label='LH in')
 br.labels.xas()
 # %%
 
@@ -206,30 +206,30 @@ q.gamma1 = 1
 #################
 # Crystal Field #
 #################
-for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
+for h in ['Initial Hamiltonian', 'Intermediate Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dq(3d)'] = round(Dq, 5)
     q.hamiltonianData['Crystal Field'][h]['Ds(3d)'] = round(Ds, 5)
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
 # %%
 
 # %% run calculation
-ss, im, xas, out = q.run_rixs_energy_map(Emin=q.resonance-10, Emax=q.resonance+30, npoints=300)
+out = q.run_rixs_energy_map(Emin=q.resonance-10, Emax=q.resonance+30, npoints=300)
 
 # plot map
 br.figure()
-im.plot(origin='lower')
-xas.set_factor(1.8/max(xas.y)).plot(color='white')
+out['im'].plot(origin='lower')
+out['xas'].set_factor(1.8/max(out['xas'].y)).plot(color='white')
 br.labels.energy_map('Energy map')
 # %%
 
 # %% run same calculation but with larger gamma1
 q.gamma1 = 2
-ss2, im2, xas2, out2 = q.run_rixs_energy_map(Emin=q.resonance-10, Emax=q.resonance+30, npoints=300)
+out2 = q.run_rixs_energy_map(Emin=q.resonance-10, Emax=q.resonance+30, npoints=300)
 
 # plot map
 br.figure()
-im2.plot(origin='lower')
-xas2.set_factor(1.8/max(xas2.y)).plot(color='white')
+out2['im'].plot(origin='lower')
+out2['xas'].set_factor(1.8/max(out2['xas'].y)).plot(color='white')
 br.labels.energy_map('Energy map with larger gamma1')
 # %%
 
@@ -238,7 +238,7 @@ br.labels.energy_map('Energy map with larger gamma1')
 # note that m goes from 0 to 1 and is the amount of Lorentizan compared to Gaussian (pseudo-voigt)
 # To apply a lorentzian and a gaussian broadening use im.broaden_x(w, m=0).broaden_x(w, m=1)
 # or im.broaden_x(w, m=m)
-im3  = im.broaden_x(2, m=0)
+im3  = out['im'].broaden_x(2, m=0)
 xas3 = im3.integrated_columns_vs_x_centers()
 xas3 = xas3.set_factor(1/max(xas3))
 
@@ -252,7 +252,7 @@ ss3 = im3.get_columns(max_number_of_columns=im3.shape[1])
 # %%
 
 # %% broadening x and broadening y
-im4  = im.broaden_x(2, m=0).broaden_y(0.1, m=0)
+im4  = out['im'].broaden_x(2, m=0).broaden_y(0.1, m=0)
 xas4 = im4.integrated_columns_vs_x_centers()
 xas4 = xas4.set_factor(1/max(xas4))
 
@@ -284,7 +284,7 @@ q.gamma1 = 1
 #################
 # Crystal Field #
 #################
-for h in ['Initial Hamiltonian', 'Final Hamiltonian']:
+for h in ['Initial Hamiltonian', 'Intermediate Hamiltonian', 'Final Hamiltonian']:
     q.hamiltonianData['Crystal Field'][h]['Dq(3d)'] = round(Dq, 5)
     q.hamiltonianData['Crystal Field'][h]['Ds(3d)'] = round(Ds, 5)
     q.hamiltonianData['Crystal Field'][h]['Dt(3d)'] = round(Dt, 5)
@@ -295,8 +295,8 @@ energies = np.linspace(q.resonance-10, q.resonance+30, 300)  # 300 points
 ss = br.Spectra()
 for E in energies:
     q.E = E
-    s, out = q.run()
-    ss.append(s)
+    out = q.run()
+    ss.append(out['iso'])
 
 # get map
 im = ss.stack_spectra_as_columns()
